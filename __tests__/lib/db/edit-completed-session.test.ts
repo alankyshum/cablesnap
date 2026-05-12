@@ -301,10 +301,11 @@ describe('editCompletedSession', () => {
 
 describe('BLD-1186: cache recompute on volume change', () => {
   it('writes cached_volume_kg / cached_e1rm_kg after a weight change', async () => {
-    // Simulate recomputeSetCaches loading the parent row (weight=20, reps=10).
-    // The mock does not persist writes, so get() still returns the pre-update row;
-    // what matters here is that the recompute path is triggered and completes.
-    g.__mockGetResult = { id: 'set-1', weight: 20, reps: 10, set_type: 'normal' };
+    // Mock returns the POST-edit row that recomputeSetCaches will read.
+    // Weight changed 20 → 40; reps stays 10. The mock's get() must reflect
+    // the persisted (post-write) values so the assertion verifies the EDITED
+    // weight drove the cache computation, not the stale pre-edit value.
+    g.__mockGetResult = { id: 'set-1', weight: 40, reps: 10, set_type: 'normal' };
 
     await editCompletedSession(
       'sess-1',
@@ -315,13 +316,14 @@ describe('BLD-1186: cache recompute on volume change', () => {
       (c: any) => 'cached_volume_kg' in (c.values ?? {}),
     );
     expect(cacheUpdate).toBeDefined();
-    // cached_volume_kg = parent.weight(20) × parent.reps(10) = 200 (legacy row, no segments)
-    expect(cacheUpdate.values.cached_volume_kg).toBe(200);
-    expect(cacheUpdate.values.cached_e1rm_kg).toBeCloseTo(20 * (1 + 10 / 30), 5);
+    // cached_volume_kg = edited weight(40) × reps(10) = 400 (legacy row, no segments)
+    expect(cacheUpdate.values.cached_volume_kg).toBe(400);
+    expect(cacheUpdate.values.cached_e1rm_kg).toBeCloseTo(40 * (1 + 10 / 30), 5);
   });
 
   it('writes cached_volume_kg / cached_e1rm_kg after a reps change', async () => {
-    g.__mockGetResult = { id: 'set-1', weight: 100, reps: 5, set_type: 'normal' };
+    // Mock returns the POST-edit row: reps changed 5 → 8, weight stays 100.
+    g.__mockGetResult = { id: 'set-1', weight: 100, reps: 8, set_type: 'normal' };
 
     await editCompletedSession(
       'sess-1',
@@ -332,12 +334,16 @@ describe('BLD-1186: cache recompute on volume change', () => {
       (c: any) => 'cached_volume_kg' in (c.values ?? {}),
     );
     expect(cacheUpdate).toBeDefined();
-    // cached_volume_kg = 100 × 5 = 500 (mock returns the pre-update row)
-    expect(cacheUpdate.values.cached_volume_kg).toBe(500);
+    // cached_volume_kg = weight(100) × edited reps(8) = 800
+    expect(cacheUpdate.values.cached_volume_kg).toBe(800);
   });
 
   it('does NOT write cache cols for non-volume-only changes (e.g. rpe)', async () => {
-    // Leave g.__mockGetResult = null so if recomputeSetCaches is called it exits early.
+    // Use a non-null mockGetResult so that IF recomputeSetCaches were called it
+    // would proceed past the early-exit guard and produce a cached_volume_kg write.
+    // By asserting no such write occurs, we confirm recomputeSetCaches was not invoked.
+    g.__mockGetResult = { id: 'set-1', weight: 60, reps: 5, set_type: 'normal' };
+
     await editCompletedSession(
       'sess-1',
       { upserts: [{ id: 'set-1', exercise_id: 'e-1', rpe: 8 }], deletes: [] },
@@ -347,5 +353,12 @@ describe('BLD-1186: cache recompute on volume change', () => {
       (c: any) => 'cached_volume_kg' in (c.values ?? {}),
     );
     expect(cacheUpdate).toBeUndefined();
+    // Exactly one write: the rpe column update. No cache write.
+    const rpeUpdate = g.__mockUpdateCalls.find(
+      (c: any) => 'rpe' in (c.values ?? {}),
+    );
+    expect(rpeUpdate).toBeDefined();
+    expect(rpeUpdate.values).toHaveProperty('rpe', 8);
+    expect(rpeUpdate.values).not.toHaveProperty('cached_volume_kg');
   });
 });

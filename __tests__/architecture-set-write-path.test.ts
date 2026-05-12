@@ -252,6 +252,70 @@ describe("Architecture: sessions.ts applyEditUpdate delegates to sets.ts (BLD-11
   }
 });
 
+// ─── Test 6: sessions.ts — column-based ban on volume writes (BLD-1201) ───────
+//
+// Test 5 (above) is function-name-based: it checks that the NAMED functions
+// applyEditUpdate / swapExerciseInSession / undoSwapInSession / renumberSessionSets
+// behave correctly. But if a NEW function is added to lib/db/sessions.ts that
+// writes weight / reps / set_type directly via db.update(workoutSets), neither
+// Test 4 nor Test 5 would catch it.
+//
+// This test enforces a column-based invariant: NO call to
+// db.update(workoutSets).set({...}) in lib/db/sessions.ts may include the
+// volume-affecting columns weight, reps, set_type (or set_type underscore form).
+// The allowlist is zero — if the column appears in the .set({}) argument, it fails.
+
+describe("Architecture: sessions.ts — no volume-column writes via db.update(workoutSets) (BLD-1201)", () => {
+  const sessionsContent = readFile("lib/db/sessions.ts");
+
+  it("no db.update(workoutSets).set(...) in sessions.ts writes weight, reps, or set_type", () => {
+    // Find every occurrence of `db.update(workoutSets)` in the file.
+    // For each, extract the subsequent `.set({ ... })` argument text and
+    // fail if it contains any volume-affecting column name.
+    const VOLUME_COLUMNS = /\b(?:weight|reps|set_type|setType)\s*:/;
+    const updatePattern = /db\.update\(workoutSets\)/g;
+    const violations: string[] = [];
+
+    let match: RegExpExecArray | null;
+    while ((match = updatePattern.exec(sessionsContent)) !== null) {
+      const afterMatch = sessionsContent.slice(match.index);
+
+      // Find the opening `{` of the `.set({` call — walk forward to `.set(`
+      const setCallStart = afterMatch.indexOf(".set(");
+      if (setCallStart === -1) continue;
+
+      // Capture balanced braces starting from the `{` after `.set(`
+      const braceStart = afterMatch.indexOf("{", setCallStart);
+      if (braceStart === -1) continue;
+
+      let depth = 1;
+      let pos = braceStart + 1;
+      while (pos < afterMatch.length && depth > 0) {
+        if (afterMatch[pos] === "{") depth++;
+        else if (afterMatch[pos] === "}") depth--;
+        pos++;
+      }
+      const setContent = afterMatch.slice(braceStart, pos);
+
+      if (VOLUME_COLUMNS.test(setContent)) {
+        const lineNum = sessionsContent.slice(0, match.index).split("\n").length;
+        violations.push(
+          `lib/db/sessions.ts:${lineNum}: ${afterMatch.slice(0, 120).trim()}`
+        );
+      }
+    }
+
+    if (violations.length > 0) {
+      throw new Error(
+        "lib/db/sessions.ts: db.update(workoutSets) with volume-affecting columns (weight/reps/set_type).\n" +
+        "All volume writes in sessions.ts MUST route through updateSetForSessionEdit() in lib/db/sets.ts.\n" +
+        "This ensures recomputeSetCaches() is always invoked after every volume mutation.\n\n" +
+        "Violations:\n" + violations.map((v) => `  - ${v}`).join("\n")
+      );
+    }
+  });
+});
+
 //
 // Verify that the specific functions in session-sets.ts that update volume-affecting
 // fields no longer contain direct db.update(workoutSets) calls. They must delegate
