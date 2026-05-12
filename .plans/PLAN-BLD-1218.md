@@ -4,7 +4,8 @@
 **Parent**: BLD-1217 (Product evolution heartbeat)
 **Author**: CEO
 **Date**: 2026-05-12
-**Status**: DRAFT → IN_REVIEW
+**Revision**: rev2 (addresses QD + techlead REQUEST CHANGES from rev1)
+**Status**: DRAFT → IN_REVIEW (rev2)
 
 ## Problem Statement
 
@@ -34,10 +35,10 @@ CableSnap's bare-Android user base (the owner runs a Z Fold6, see GH #461/#533/#
 Add a Health Connect integration layer (Android-only, gracefully no-op on iOS/web) that supports three data flows, each independently toggleable from a new "Settings → Integrations → Health Connect" screen:
 
 1. **Read body weight** (one-way IN): on app foreground + nightly background fetch, query the latest `Weight` record from Health Connect; if newer than CableSnap's body profile entry, prompt the user once to import (or auto-import if "auto-import body weight" toggle is ON).
-2. **Write workouts** (one-way OUT): on session completion (after `completeSession()`), push an `ExerciseSession` record (type=`STRENGTH_TRAINING`) with start/end timestamps, plus an `ActiveCaloriesBurned` estimate derived from total volume × MET coefficient.
+2. **Write workouts** (one-way OUT): on session completion (after `completeSession()`), push an `ExerciseSession` record (type=`STRENGTH_TRAINING`) with start/end timestamps + title. **V1 does NOT write `ActiveCaloriesBurned`** — Google Fit / Samsung Health / etc. derive a better estimate from `ExerciseSession` duration + body weight when no explicit calorie record is present (see B5 in rev1 review). Calorie/Power/HeartRate writes are deferred to a future "Recovery V2" plan.
 3. **Write nutrition** (one-way OUT): on each food log entry, push a `Nutrition` record (calories, protein, carbs, fat, fiber, sugar, sodium) with the meal type metadata.
 
-Plus a "Write hydration" toggle for the existing water log.
+Plus a "Write hydration" toggle for the existing water log (one HC `Hydration` record per `water_logs` row, not per cup — see C1).
 
 ### UX Design
 
@@ -50,16 +51,23 @@ Plus a "Write hydration" toggle for the existing water log.
 
 **Active session:**
 - No UI changes during workout — sync happens silently after `completeSession()` returns success.
-- If the post-completion write fails, show a non-blocking toast: "Workout saved locally. Health Connect sync failed — retry from Settings." Failure does NOT block the success toast or roll back the session.
+- If the post-completion write fails, show a non-blocking toast: "Workout saved locally. Health Connect sync failed — retry from Settings." Failure does NOT block the success toast or roll back the session. The `health_connect_sync_log` row remains `pending` and is retried on next foreground.
+
+**Body weight import prompt (active-session guard — C2):**
+- Foreground body-weight pulls only emit a prompt when:
+  1. No active session is in progress (`useSessionStore` selector reports no active session), AND
+  2. `useSessionActions.completeSession()` did NOT return within the last 5 minutes (post-session grace window).
+- If gate fails, the candidate weight is queued in `dismissed_weight_imports` keyed by HC record ID with `state='deferred'` and re-evaluated on the next foreground transition that satisfies the gate.
 
 **Body weight import prompt:**
 - When auto-import is OFF and a newer Health Connect weight is detected: bottom sheet titled "Update body weight?" showing old → new value, source app name (e.g. "Withings Health Mate"), and timestamp. Buttons: **Update** / **Not now** / **Always import automatically**.
 
 **Empty / disabled / error states:**
-- Health Connect not installed → "Install Health Connect to enable this feature" + Play Store CTA.
-- Permission denied → toggle reverts to OFF, show "Permission denied. Tap to retry." inline.
-- Sync failure → status row shows "Last attempt failed: [reason]" with a manual "Retry now" button.
-- iOS / web build → entire Integrations row is hidden (FOSS variant respects this too).
+- Health Connect not installed → "Install Health Connect to enable this feature" + Play Store CTA (deep-link via `<queries>` for `com.google.android.apps.healthdata`). On a no-Play device the CTA degrades to plain text guidance.
+- Permission denied / revoked → toggle reverts to OFF, show "Permission denied. Tap to retry." inline.
+- Sync failure → status row shows "Last attempt failed: [reason]" with a manual "Retry now" button driven by the `health_connect_sync_log` table.
+- iOS / web build → entire Integrations row is hidden (`Platform.OS !== 'android'`).
+- Android FOSS variant on a no-HC-APK device → row is **visible**, displays "Install Health Connect" CTA (B3 — we ship in both variants and degrade at runtime via `library.isAvailable()`; never gate on build flavor).
 
 **Accessibility:**
 - All toggles have `accessibilityRole="switch"` with descriptive labels.
@@ -69,54 +77,154 @@ Plus a "Write hydration" toggle for the existing water log.
 ### Technical Approach
 
 **Architecture:**
-- New module `lib/health-connect.ts` — pure interface defining `readLatestBodyWeight()`, `writeWorkout()`, `writeNutrition()`, `writeHydration()`, `requestPermissions()`, `hasPermission()`. Returns `Result<T, HealthConnectError>` types.
-- Platform implementation `lib/health-connect.android.ts` wraps the JNI bridge.
+- New module `lib/health-connect.ts` — pure interface defining `readLatestBodyWeight()`, `writeWorkout()`, `writeNutrition()`, `writeHydration()`, `requestPermissions()`, `getGrantedPermissions()`, `isAvailable()`. Returns `Result<T, HealthConnectError>` types.
+- Platform implementation `lib/health-connect.android.ts` wraps the JNI bridge into `react-native-health-connect`.
 - Platform stub `lib/health-connect.ts` for iOS/web returns `{ available: false }` from every call; never throws.
 - Settings UI in `app/settings/health-connect.tsx`.
-- Hook integration: `hooks/useSessionActions.ts` `completeSession()` finalisation → fire-and-forget `writeWorkout()` (wrapped in try/catch, never block). Same pattern for nutrition log mutations and water log mutations.
-- Background body-weight pull: piggyback on existing `useAppForeground` hook; throttle to ≤1 call/hour.
+- Hook integration: `hooks/useSessionActions.ts` `completeSession()` finalisation → enqueue a `pending` row in `health_connect_sync_log` IN THE SAME SQLite TRANSACTION as the session completion, then fire-and-forget the sync worker. Same pattern for nutrition log mutations and water log mutations.
+- A single in-process worker drains the `health_connect_sync_log` FIFO with bounded retries (max 5, exponential backoff capped at 1h). Triggered on app foreground, on session completion, on food/water log mutation, and on manual "Retry now".
+- Background body-weight pull: piggyback on existing `useAppForeground` hook; throttle to ≤1 call/hour via `health_connect_state.last_body_weight_pull_at`.
 
-**Data model additions (SQLite):**
-- New table `health_connect_state` (singleton row): `last_body_weight_pull_at`, `last_workout_push_at`, `last_nutrition_push_at`, plus `dismissed_weight_imports` JSON for prompt dedup.
-- New columns on `sessions` table: `hc_record_id` (text, nullable) — Health Connect's record ID returned on successful write; used for delete-cascade if the user deletes the session in CableSnap.
-- New columns on `food_logs` and `water_logs`: same `hc_record_id` pattern.
-- Migration is additive; FOSS variant works unchanged.
+**Pre-write permission gate (B6):**
+- `assertWritePermissions(recordTypes: HealthConnectRecordType[])` helper invoked before EVERY public write call.
+- Calls `getGrantedPermissions()` (cached for ≤30s to avoid hot-path JNI thrash on bursty food entries) and intersects with the permissions required for the record type.
+- On missing permission: abort the write, mark the sync_log row `failed` with `error='permission_revoked'`, flip the data-type toggle OFF, surface a single non-spammy toast.
+
+**Data model additions (SQLite) — replaces rev1's `hc_record_id` columns:**
+
+New table `health_connect_sync_log` (mirrors the proven `strava_sync_log` shape at `lib/db/tables.ts:311–322`):
+
+```sql
+CREATE TABLE health_connect_sync_log (
+  id              TEXT PRIMARY KEY,                  -- local UUID, also passed as HC clientRecordId
+  op_kind         TEXT NOT NULL CHECK (op_kind IN (
+                    'write_workout','write_nutrition','write_hydration',
+                    'delete_workout','delete_nutrition','delete_hydration'
+                  )),
+  source_table    TEXT NOT NULL,                     -- 'sessions'|'food_logs'|'water_logs'
+  source_row_id   TEXT NOT NULL,                     -- FK to source row
+  payload_json    TEXT NOT NULL,                     -- snapshot of what to write (resilient to source edits)
+  hc_record_ids   TEXT,                              -- JSON array of HC server-side IDs (populated on synced)
+  status          TEXT NOT NULL CHECK (status IN ('pending','synced','failed','permanently_failed','tombstoned')),
+  error           TEXT,
+  retry_count     INTEGER NOT NULL DEFAULT 0,
+  created_at      INTEGER NOT NULL,
+  synced_at       INTEGER,
+  UNIQUE (op_kind, source_table, source_row_id)
+);
+CREATE INDEX idx_hc_sync_log_status ON health_connect_sync_log (status);
+```
+
+- Insert in the **same SQLite transaction** as the source row mutation. Never trust an in-memory promise.
+- Every HC write passes `metadata.clientRecordId = <sync_log.id>` so the HC client itself dedups our retries server-side. This (not just our server-generated IDs) is the correctness gate against duplicates after crash.
+- Multi-record writes (currently only `ExerciseSession` in V1; future `Recovery V2` may add `Power`/`HeartRate`) store an **array** of HC record IDs in `hc_record_ids`.
+- Cascade-delete is async: the user deletes a session/food log/water log → we INSERT a `delete_*` sync_log row in the same SQLite transaction → worker drains it via `deleteRecords(byClientRecordId=<original sync_log.id>)` → marks the row `tombstoned`. If HC is uninstalled / unreachable, the tombstone replays on reinstall.
+
+Plus a small singleton `health_connect_state` table for cross-cutting state:
+- `last_body_weight_pull_at INTEGER`
+- `dismissed_weight_imports TEXT` (JSON: `{ [hcRecordId]: { state: 'dismissed' | 'deferred', at: ts } }`)
+- `auto_import_body_weight INTEGER` (boolean)
+- Per-toggle `enabled_at` timestamps for backfill cutoff (CSV-imported historical sessions older than `enabled_at` are NOT pushed).
+
+Migration is additive; no existing tables changed.
 
 **Native dependency choice:**
-- Use community library **`react-native-health-connect`** (MIT, actively maintained, 1k+ stars). Verified compatible with Expo 55 and React Native 0.74+ via Expo config plugin. We will write a small Expo config plugin under `plugins/with-health-connect/` if upstream's plugin shape conflicts with our existing `with-form-clips-backup` style.
-- Bundle adds ~120 KB to APK; gracefully tree-shaken on iOS via platform extension.
+- Use community library **`react-native-health-connect@3.5.0`** (MIT, actively maintained). Verified deps: `androidx.health.connect:connect-client:1.1.0-alpha11` + `org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3` only — zero GMS / Firebase / MLKit transitive pulls (B3 verified by techlead).
+- The `1.1.0-alpha11` HC client is required for `deleteRecords(byClientRecordId)` semantics we rely on for cascade-delete; `1.0.0` stable lacks this. Pin exactly, monitor monthly, document as known stability risk.
+- **Library v3 dropped its bundled Expo config plugin.** No `app-plugin` field, no `plugin/` export, README points at non-existent `expo-health-connect`. **We MUST author our own** — see "Expo config plugin" below.
+- Bundle adds ~250 KB to APK after R8/dex (raw AAR ≈800 KB unstripped; the rev1 "120 KB" claim was incorrect).
+- Gracefully tree-shaken on iOS via `lib/health-connect.ts` platform extension (no native imports).
 
-**Permissions / manifest:**
-- Add to `AndroidManifest.xml` via Expo plugin: `android.permission.health.READ_WEIGHT`, `WRITE_EXERCISE`, `WRITE_NUTRITION`, `WRITE_HYDRATION`, plus the `<intent-filter>` for `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE` (Health Connect requires apps to surface a rationale activity).
-- Add `<queries>` for `com.google.android.apps.healthdata` so the Play Store install deep-link works on Android 11+.
+**Expo config plugin — `plugins/with-health-connect.js` (B2):**
 
-**FOSS variant compatibility:**
-- Health Connect SDK is shipped via the Play services Health SDK, but the on-device store + permission UI are part of `com.google.android.apps.healthdata`, which is a regular APK any user can install (also available on F-Droid via the user, not Google Play). The library itself does not depend on GMS/Firebase, so the FOSS build can include it.
-- Verify with `fdroid-foss-build` skill before shipping.
+This is a real Slice 1 deliverable, not "if upstream's plugin shape conflicts". Three concrete jobs:
+
+1. `withAndroidManifest`: add the V1 permissions block, the `<queries>` for `com.google.android.apps.healthdata`, and register a new `RationaleActivity` with the Android-14+ permissions-rationale `<intent-filter>` (`android.intent.action.VIEW_PERMISSION_USAGE` + category `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE`).
+2. `withDangerousMod`: write `RationaleActivity.kt` (no-op activity that opens our existing in-app help screen) into `android/app/src/main/java/<package>/RationaleActivity.kt`. Idempotent via sentinel marker `// cablesnap:hc:rationale-activity`.
+3. `withMainActivity`: inject in `MainActivity.kt`'s `onCreate()`:
+   ```kotlin
+   // cablesnap:hc:permission-delegate-begin
+   import dev.matinzd.healthconnect.permissions.HealthConnectPermissionDelegate
+   HealthConnectPermissionDelegate.setPermissionDelegate(this)
+   // cablesnap:hc:permission-delegate-end
+   ```
+   This is REQUIRED by `react-native-health-connect@2+` for `requestPermission()` to return results. Without it the JS promise never resolves. Sentinel-marker idempotent (mirrors `with-wearos-module.js` discipline).
+
+Plugin chain ordering (C4): place between `with-form-clips-backup` and the Sentry plugin in `app.config.ts`. No collisions verified — HC touches `<queries>`, permissions, and a new activity; existing plugins touch `data_extraction_rules.xml`, `full_backup_content.xml`, `settings.gradle`, `app/build.gradle`, FOSS manifest strip, signing config — disjoint. Plugin header documents the constraint.
+
+**Permissions / manifest (V1 only — minimises Play declaration scope per B5):**
+- `android.permission.health.READ_WEIGHT`
+- `android.permission.health.WRITE_EXERCISE`
+- `android.permission.health.WRITE_NUTRITION`
+- `android.permission.health.WRITE_HYDRATION`
+- `<queries>` block for `com.google.android.apps.healthdata`
+- `<intent-filter>` for `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE` on `RationaleActivity`
+
+NOT in V1 (deferred): `WRITE_ACTIVE_CALORIES_BURNED`, `WRITE_HEART_RATE`, `WRITE_POWER`, `WRITE_EXERCISE_ROUTE`. Each one widens the Play Health Connect declaration form scope.
+
+**FOSS variant compatibility (B3):**
+- `androidx.health.connect:connect-client` is pure AndroidX (sourced from Google's Maven Repo but NOT GMS — F-Droid Inclusion Criteria allow `androidx.*` artifacts). Ship the dependency in BOTH `release` and `releaseFdroid`.
+- **Do NOT add a `releaseFdroidImplementation { exclude … }` block.** Do NOT gate the Settings row on Play vs FOSS.
+- Gate at runtime: `Platform.OS === 'android' && library.isAvailable()`. On a no-Play / no-HC-APK device, `isAvailable()` returns false and our existing degrade path shows the install CTA.
+- **Hard gate (C6 / AC11)** — extend the existing `with-wearos-module` APK grep gate with two new assertions:
+  ```
+  unzip -l android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk \
+    | grep -c 'com/google/android/gms/' == 0
+  unzip -l android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk \
+    | grep -c 'androidx/health/connect/' > 0
+  ```
+- F-Droid metadata: add a one-line note in the description: "Optional Health Connect integration — requires Health Connect (sideload from Play Store, F-Droid, or Aurora)". No anti-features changes.
 
 **Performance:**
 - All Health Connect calls happen off the JS thread (library uses native coroutines).
 - Background body-weight pull runs only on foreground transition, never via headless task / WorkManager — keeps battery cost negligible.
+- `getGrantedPermissions()` cache (≤30s) avoids JNI thrash on bursty food entry.
+- Sync worker uses `setImmediate`-style scheduling; no `setInterval`.
 
-**Privacy / storage:**
+**Privacy / observability:**
 - We never copy Health Connect data into our SQLite for analytics. Only the *last fetched value* of body weight is mirrored into the user's body profile, which they already manage manually today.
 - All writes are tagged with our package name in Health Connect, so the user can revoke and bulk-delete from the system UI.
 - Toggles default to OFF. First launch never silently writes.
+- **Sentry breadcrumb sanitisation (C3) — explicit allowlist schema:**
+  ```ts
+  type HealthConnectBreadcrumb = {
+    operation: 'write_workout' | 'write_nutrition' | 'write_hydration'
+             | 'read_weight'   | 'request_permission' | 'delete_record';
+    errorCategory: 'permission_revoked' | 'not_installed' | 'sdk_exception' | 'unknown';
+    errorCode?: string; // HC SDK error code only, no message text
+  };
+  ```
+  Forbidden in breadcrumbs: any HC record values, source app names, timestamps, record IDs, meal contents, weight deltas, user package names, error message strings.
+  Enforced via a unit test that snapshots the breadcrumb payload from a fixed set of error fixtures (AC9b).
+
+## Pre-Implementation Critical Path (B1)
+
+**Google Play Health Connect declaration form is a hard release blocker.** Per the library README and Google's official docs, any app using HC permissions on Play must submit a declaration form covering each `WRITE_*` / `READ_*` permission used. Approval can take ~7 days, plus a server-side whitelist propagation of 5–7 business days. Without an approved declaration the app gets rejected at Play review (or pulled post-release).
+
+- **Owner:** CEO (cannot be delegated to an agent — requires real human identity on a Play Console account).
+- **Trigger:** filed BEFORE Slice 5 ships to Play. Can be filed in parallel with Slice 0 spike.
+- **Permissions to declare (V1, minimised per B5):** `READ_WEIGHT`, `WRITE_EXERCISE`, `WRITE_NUTRITION`, `WRITE_HYDRATION`. (`WRITE_ACTIVE_CALORIES_BURNED` deliberately excluded — see B5.)
+- **F-Droid release is unaffected** — declaration form is Play-only. Slices 0–4 can proceed without it; Slice 5 Play submission gates on it.
+- A standing CEO approval (Paperclip `create-approval --type general`) tracks this dependency and unblocks Slice 5 Play submission when approved.
 
 ## Scope
 
 **In scope (V1):**
-- Read body weight (one-way IN with prompt or auto-import).
-- Write completed workouts (ExerciseSession + ActiveCaloriesBurned).
+- Read body weight (one-way IN with prompt or auto-import; active-session guard per C2).
+- Write completed workouts (`ExerciseSession` ONLY — `ActiveCaloriesBurned` deferred per B5).
 - Write nutrition records.
-- Write hydration records.
-- Settings screen with per-type toggles, status, manual retry.
-- Graceful no-op on iOS / web / Health Connect-not-installed.
-- Migration & cascade delete of Health Connect records when the source CableSnap row is deleted.
+- Write hydration records (one HC `Hydration` record per `water_logs` row per C1).
+- Settings screen with per-type toggles, status, manual retry (driven by `health_connect_sync_log`).
+- Graceful no-op on iOS / web / Health Connect-not-installed (runtime gate via `library.isAvailable()`, NOT build flavor).
+- `health_connect_sync_log` outbox table + worker for crash-safe, idempotent writes (B4).
+- Cascade delete via `clientRecordId` lookup on the source-row delete path.
+- Custom Expo config plugin (`plugins/with-health-connect.js`) covering manifest mutations, RationaleActivity, and MainActivity permission-delegate injection (B2).
+- Pre-write `getGrantedPermissions()` runtime check on every public write (B6).
 - Documentation in README + a new help screen entry.
 
 **Out of scope (deferred):**
-- Read sleep / HRV / heart rate (saved for a future "Recovery V2" plan that uses these for readiness scoring — needs psych review).
+- **`ActiveCaloriesBurned` / `Power` / `HeartRate` writes** — defer to "Recovery V2" plan (uses HR data for accurate kcal). Reasons in B5: (a) MET × volume estimate is visibly wrong vs measured watch burn, (b) downstream (Google Fit / Samsung Health) derives a better estimate from `ExerciseSession` duration alone when no explicit calorie record is present, (c) reduces Play declaration scope.
+- Read sleep / HRV / heart rate (saved for "Recovery V2" — needs psych review).
 - Read steps / activity outside CableSnap (no current consumer in our model).
 - Apple HealthKit (iOS) — separate plan; iOS user base is currently 0 and would need TestFlight infra.
 - Bidirectional workout sync (i.e. importing workouts logged elsewhere into CableSnap) — risk of duplicate / conflict logic too high for V1.
@@ -124,17 +232,31 @@ Plus a "Write hydration" toggle for the existing water log.
 
 ## Acceptance Criteria
 
-- [ ] **AC1** On Android, fresh install: Settings → Integrations → Health Connect is visible. iOS / web / explicit FOSS-only build: row is hidden. [TODO-test: BLD-1218]
+- [ ] **AC1** On Android, fresh install: Settings → Integrations → Health Connect is visible in BOTH `release` and `releaseFdroid` build variants (gated only by `Platform.OS === 'android'`, NOT by build flavor). iOS / web: row is hidden. [TODO-test: BLD-1218]
 - [ ] **AC2** Tapping "Read body weight" toggle when Health Connect is not installed shows the install CTA, does not crash, does not flip the toggle ON. [TODO-test: BLD-1218]
-- [ ] **AC3** Granting `READ_WEIGHT` permission and toggling ON triggers a one-time pull. If a newer weight exists, the bottom-sheet prompt appears with old → new + source + timestamp. [TODO-test: BLD-1218]
+- [ ] **AC3** Granting `READ_WEIGHT` permission and toggling ON triggers a one-time pull. If a newer weight exists AND no active session is in progress AND `completeSession()` did not return within last 5 min, the bottom-sheet prompt appears with old → new + source + timestamp. [TODO-test: BLD-1218]
 - [ ] **AC4** Tapping "Always import automatically" persists, suppresses the prompt, and updates body profile silently on subsequent newer weights. [TODO-test: BLD-1218]
-- [ ] **AC5** Completing a session with "Write workouts" ON results in (a) the success toast firing on time, (b) within 5s an `ExerciseSession` record visible in Health Connect's "Recent activity" list with correct start/end + a non-zero `ActiveCaloriesBurned` value, (c) `sessions.hc_record_id` populated. [TODO-test: BLD-1218]
-- [ ] **AC6** Logging a food entry with "Write nutrition" ON results in a `Nutrition` record with calories + macros + meal type matching the log entry within 2s. [TODO-test: BLD-1218]
-- [ ] **AC7** Deleting a CableSnap session that has `hc_record_id` set removes the corresponding Health Connect record (verified by checking Health Connect after deletion). [TODO-test: BLD-1218]
-- [ ] **AC8** Revoking permission in Health Connect's system UI causes the next write to fail gracefully with a toast and the toggle to flip OFF. [TODO-test: BLD-1218]
-- [ ] **AC9** PR passes typecheck, all existing tests, and adds new unit tests for the pure helpers (calorie estimation, dedup logic, prompt thresholding). [TODO-test: BLD-1218]
+- [ ] **AC5** Completing a session with "Write workouts" ON results in (a) the success toast firing on time, (b) within 5s an `ExerciseSession` record visible in Health Connect's "Recent activity" list with correct start/end + title (NO `ActiveCaloriesBurned` record), (c) `health_connect_sync_log` row transitions `pending → synced` with `hc_record_ids` populated as a single-element JSON array. [TODO-test: BLD-1218]
+- [ ] **AC6** Logging a food entry with "Write nutrition" ON results in a `Nutrition` record with calories + macros + meal type matching the log entry within 2s, and a `synced` sync_log row with `clientRecordId == sync_log.id`. [TODO-test: BLD-1218]
+- [ ] **AC7** Deleting a CableSnap session with a `synced` sync_log row enqueues a `delete_workout` sync_log row in the same SQLite transaction; worker calls `deleteRecords(byClientRecordId)` and tombstones the original. Verified by HC record count == 0 after worker drains. [TODO-test: BLD-1218]
+- [ ] **AC8** Revoking `WRITE_NUTRITION` in Health Connect's system UI WITHOUT backgrounding CableSnap causes the next food log write to: (a) fail via `assertWritePermissions` BEFORE calling HC, (b) mark sync_log row `failed` with `error='permission_revoked'`, (c) flip the Nutrition toggle OFF, (d) surface a single non-spammy toast. The food log itself persists in CableSnap normally. [TODO-test: BLD-1218]
+- [ ] **AC9** PR passes typecheck, all existing tests, and adds new unit tests for the pure helpers (sync_log state machine, prompt thresholding, permission allowlist). [TODO-test: BLD-1218]
+- [ ] **AC9b** Sentry breadcrumb sanitisation snapshot test: feeding a fixed set of error fixtures into the wrapper produces breadcrumbs containing ONLY `{operation, errorCategory, errorCode?}` keys — no record values, app names, timestamps, IDs, meal contents, weight deltas, or error message strings. [TODO-test: BLD-1218]
 - [ ] **AC10** No new lint warnings. [TODO-test: BLD-1218]
-- [ ] **AC11** FOSS variant `releaseFdroid` builds and runs (verified with `fdroid-foss-build` skill). [TODO-test: BLD-1218]
+- [ ] **AC11** FOSS variant `releaseFdroid` APK grep gate (mirrors `.plans/PLAN-BLD-716.md` AC10b style):
+  ```
+  unzip -l android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk \
+    | grep -c 'com/google/android/gms/' == 0
+  unzip -l android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk \
+    | grep -c 'androidx/health/connect/' > 0
+  ```
+  Wired into `with-wearos-module.js` (or a new `scripts/verify-fdroid-no-gms.sh`) as a hard build gate. [TODO-test: BLD-1218]
+- [ ] **AC12** Outbox crash safety: terminate the app between `writeRecord` succeeding in HC and SQLite commit; on relaunch, the next worker tick must NOT create a duplicate (verified by HC record count == 1, guaranteed by `clientRecordId` server-side dedup). [TODO-test: BLD-1218]
+- [ ] **AC13** Permission revoked mid-multi-record write: outbox row marked `failed`, partial HC records (if any from a prior partial success) are tombstoned via cleanup pass; single non-spammy toast shown. [TODO-test: BLD-1218]
+- [ ] **AC14** Editing a previously-`synced` food log: enqueue a `delete_nutrition` (worker tombstones the old HC record by `clientRecordId`) followed by a fresh `write_nutrition` with a new `clientRecordId`. Net HC state shows the new value, no orphan old record. [TODO-test: BLD-1218]
+- [ ] **AC15** Permissions Rationale Activity is reachable from HC's permission UI (manual verification recorded in PR description with screenshot from Z Fold6). [TODO-test: BLD-1218 manual]
+- [ ] **AC16** Body-weight prompt does NOT appear during an in-progress session OR within 5 min of `completeSession()` returning; appears on the next foreground transition outside that window (active-session guard per C2). [TODO-test: BLD-1218]
+- [ ] **AC17** CSV import re-creates historical sessions: imported sessions with `created_at < health_connect_state.workouts_enabled_at` are NOT pushed to HC (no retroactive backfill — avoids HC historical-write rate limits + dedup risk). [TODO-test: BLD-1218]
 
 ## Edge Cases
 
@@ -146,36 +268,39 @@ Plus a "Write hydration" toggle for the existing water log.
 | Multiple concurrent body weights pushed by different apps in same minute | Pull picks the most recent by timestamp; ties broken by latest writer (deterministic). |
 | Body weight pulled but user dismisses prompt | Stored in `dismissed_weight_imports` keyed by Health Connect record ID; do not re-prompt for the same record. New record IDs trigger fresh prompts. |
 | Network unavailable | Irrelevant — Health Connect is fully on-device. |
-| Health Connect SDK throws unexpected exception | Caught at the wrapper, logged via Sentry breadcrumb (no PII), surfaced as generic "Sync failed" toast. |
-| User runs CableSnap on Android < 9 (Health Connect minSdk = 26 / behavioural baseline = 28) | Library reports `not_supported`; row shows "Requires Android 9 or newer", toggle disabled. |
+| Health Connect SDK throws unexpected exception | Caught at the wrapper, logged via Sentry breadcrumb (sanitised allowlist per C3 — operation + errorCategory + errorCode only), surfaced as generic "Sync failed" toast. |
+| User runs CableSnap on Android < 8 (HC requires API 26 / Android 8) | Library reports `not_supported`; row shows "Requires Android 8 or newer", toggle disabled. (Our `minSdkVersion` is already 26 so this should not occur in practice.) |
 | User logs a session offline, comes online later | No effect — we write to Health Connect immediately on completion regardless of network. |
 | User deletes Health Connect app | Next call returns `not_installed`; toggles auto-flip OFF; status row shows install CTA. |
-| FOSS variant on a phone without Google Play Services | Health Connect itself does not require GMS; library should still function. Verify in QA. |
-| CSV import re-creates historical sessions | Imported sessions do NOT get retroactively pushed to Health Connect (would create duplicates). Skip if `created_at` < toggle's `enabled_at` timestamp. |
+| FOSS variant on a phone without Google Play Services | HC dependency is pure AndroidX (no GMS) so library binds. The HC APK itself is Play-only — runtime `library.isAvailable()` returns false, install CTA shown. AC11 grep gate enforces no GMS leakage in `releaseFdroid`. |
+| CSV import re-creates historical sessions | Imported sessions with `created_at < health_connect_state.workouts_enabled_at` do NOT get retroactively pushed (avoids HC historical-write rate limits + duplicates). Per AC17. |
 | Session crosses midnight | Health Connect supports ranged records; pass full start/end without splitting. |
 
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| `react-native-health-connect` library has Expo 55 / RN 0.74 incompatibility | Medium | High | Validate during techlead spike (Phase 1.5). Fallback: write our own thin Kotlin module under `modules/`. |
-| FOSS variant breaks because of unexpected GMS pull-in | Low | High | Run `fdroid-foss-build` skill end-to-end as part of acceptance. |
-| Performance regression from background pull | Low | Medium | Throttle to 1/hour; off-thread; profile session-completion latency before/after. |
-| User confusion about what "on-device" means → privacy complaint | Medium | Medium | Crystal-clear settings copy + link to Google's official Health Connect docs + README section. |
-| Calorie estimate wildly inaccurate → user trust hit | Medium | Medium | Use a conservative MET-based formula; document the assumption in a tooltip; defer "true" estimation to a later iteration with HR data. |
-| Health Connect API changes between Android 14 → 15 → 16 | Low | Medium | Pin library version, monitor changelog, gate via runtime version check. |
-| Re-prompt fatigue on body weight imports | Medium | Low | Per-record-ID dedup + "Always import" opt-out makes fatigue impossible. |
-| Sentry leakage of Health Connect data into breadcrumbs | Low | High | Wrapper sanitises all error payloads; no record values logged. |
+| Slice 0 spike reveals `react-native-health-connect@3.5.0` New-Architecture / Expo 55 prebuild incompatibility | Medium | High | Slice 0 is throwaway; if it fails, fall back to a thin Kotlin module under `modules/health-connect/`. Slices 1+ blocked until spike green. |
+| Custom `with-health-connect.js` plugin breaks across `expo prebuild` reruns | Low | High | Sentinel-marker pattern proven by `with-wearos-module.js`; idempotency unit-tested in Slice 1. |
+| `androidx.health.connect.client:1.1.0-alpha11` API changes before stable | Medium | Medium | Pinned exact version; monthly changelog watch; runtime SDK-version probe behind interface. |
+| Play Health Connect declaration form rejected or delayed | Medium | High | File during Slice 0; Slice 5 Play submission is the only step gated on it. F-Droid release ships independently. |
+| FOSS variant unexpectedly leaks GMS via transitive deps | Low | High | AC11 hard grep gate in CI / build script — fails the build if `com/google/android/gms/` count != 0. |
+| Outbox worker drains too aggressively → JNI thrash on bursty food entry | Low | Medium | `getGrantedPermissions` cache 30s; worker batches by op_kind; debounce 250ms on enqueue cluster. |
+| User confusion about what "on-device" means → privacy complaint | Medium | Medium | Crystal-clear settings copy + link to Google's official Health Connect docs + README section + per-permission rationale copy before system permission sheet. |
+| Re-prompt fatigue on body weight imports | Low | Low | Per-record-ID dedup + active-session guard + "Always import" opt-out. |
+| Sentry leakage of Health Connect data into breadcrumbs | Low | High | Strict allowlist schema (C3) + AC9b snapshot test. |
 
-## Implementation Slices (preliminary — techlead may revise)
+## Implementation Slices (revised per techlead C5)
 
-1. **Slice 1**: Library evaluation spike + Expo plugin scaffold + Settings shell + iOS/web no-op stubs.
-2. **Slice 2**: Read body weight (permission flow, prompt sheet, auto-import toggle, dedup state).
-3. **Slice 3**: Write workouts (calorie estimation helper, completion hook integration, cascade delete).
-4. **Slice 4**: Write nutrition + hydration (food log hook, water log hook).
-5. **Slice 5**: README + help screen + FOSS build verification + manual end-to-end QA.
+0. **Slice 0 — Throwaway feasibility spike (techlead).** Add `react-native-health-connect@3.5.0`, run `expo prebuild --platform android --clean`, run `./gradlew :app:assembleRelease` AND `./gradlew :app:assembleReleaseFdroid`. Grep both APKs: `androidx/health/connect/*` must be present in both, `com/google/android/gms/*` must be absent in `releaseFdroid`. Smoke-test HC permission flow on a real device (Z Fold6) or Android emulator with HC sideloaded. Discard the branch. **Output:** comment on this issue with grep counts + go/no-go.
+   - **Hard gate**: Slices 1–5 do NOT start until Slice 0 reports green.
+1. **Slice 1 — Foundations (claudecoder).** `plugins/with-health-connect.js` (manifest + RationaleActivity.kt + MainActivity.kt patch w/ sentinel markers) + `lib/health-connect.ts` interface + `lib/health-connect.android.ts` skeleton + iOS/web stubs + Settings row shell + `health_connect_sync_log` + `health_connect_state` migrations + the broadened APK grep gate (AC11). No data flows yet.
+2. **Slice 2 — Read body weight (claudecoder).** Permission flow, foreground pull throttle (≤1/hour), bottom-sheet prompt with active-session guard (C2 / AC16), auto-import toggle, `dismissed_weight_imports` dedup state.
+3. **Slice 3 — Write workouts (claudecoder).** `ExerciseSession`-only via outbox; completion-hook integration in `useSessionActions.completeSession()`; cascade delete via `clientRecordId`. NO `ActiveCaloriesBurned` writes (B5).
+4. **Slice 4 — Write nutrition + hydration (claudecoder).** Food log + water log hooks via outbox; one HC `Hydration` per `water_logs` row (C1); edit-as-delete-then-write (AC14).
+5. **Slice 5 — Polish + release (techlead).** README + help screen + FOSS APK grep verification on real artefact + Play declaration form filing reminder (CEO unblock dependency) + manual end-to-end QA on owner's Z Fold6 + screenshot of RationaleActivity reachable from HC's permission UI (AC15).
 
-Suggested ownership: Slices 1, 5 → techlead. Slices 2, 3, 4 → claudecoder.
+**Test strategy note:** HC requires a real device with the HC APK installed. Unit-test the pure helpers (sync_log state machine, breadcrumb sanitiser, prompt dedup, permission allowlist, calorie/permission helpers) at AC9; wrap the JNI-bound `lib/health-connect.android.ts` exports behind a minimal `IHealthConnectNative` interface so tests can swap the native module with a fake. Manual E2E on owner's Z Fold6 is the AC for end-to-end. CI cannot exercise the real native path.
 
 ## Review Feedback
 
@@ -281,4 +406,24 @@ This is grep-able in CI and unambiguous.
 _N/A — Classification = NO. No behavioural triggers introduced (no nudges, streaks, reminders, motivational copy, identity framing, or rewards). User-initiated, opt-in per data type, off by default._
 
 ### CEO Decision
-_Pending_
+
+**rev2 PROCEED PENDING RE-REVIEW.** Plan rewritten 2026-05-12T19:5x to address all six techlead blockers (B1–B6) and six corrections (C1–C6). Since techlead's blocker set subsumes QD's, addressing techlead's also addresses QD's:
+
+| Issue | Resolution in rev2 |
+|---|---|
+| B1 / Play declaration | New "Pre-Implementation Critical Path" section; CEO files form during Slice 0; Slice 5 Play submission gated on approval; F-Droid unaffected. |
+| B2 / Custom Expo plugin | Technical Approach now specifies `plugins/with-health-connect.js` with three jobs (`withAndroidManifest`, `withDangerousMod` for `RationaleActivity.kt`, `withMainActivity` for `setPermissionDelegate`). Sentinel-marker discipline matches `with-wearos-module.js`. New Slice 1 deliverable. |
+| B3 / FOSS variant | Ship HC dep in BOTH variants. No `releaseFdroidImplementation { exclude … }` block. UI gate on `Platform.OS === 'android' && library.isAvailable()` ONLY — never on build flavor. AC1 + AC11 reflect this. |
+| B4 / sync_log table | `hc_record_id` columns dropped; `health_connect_sync_log` table mirroring `strava_sync_log` shape introduced. `clientRecordId = sync_log.id` passed on every HC write for server-side dedup. AC5/AC6/AC7/AC12/AC14 cover the state machine. |
+| B5 / Drop ActiveCaloriesBurned | Removed from V1 scope, permission list, AC5, and risk row. Deferred to "Recovery V2". |
+| B6 / Runtime permission gate | `assertWritePermissions` helper specified with 30s `getGrantedPermissions` cache; AC8 explicitly verifies revoke-without-background flow. |
+| C1 hydration granularity | One HC `Hydration` per `water_logs` row — captured in Scope, AC14, edge case. |
+| C2 active-session prompt guard | Captured in UX Design (Body weight import prompt) + AC16. |
+| C3 Sentry allowlist | Explicit allowlist schema in Privacy section + AC9b snapshot test. |
+| C4 plugin chain ordering | Documented in Technical Approach (between `with-form-clips-backup` and Sentry). |
+| C5 slice restructure | Implementation Slices section rewritten as Slice 0–5 with techlead spike as hard gate. |
+| C6 AC11 grep gate | AC11 replaced with literal `unzip + grep -c` commands matching `.plans/PLAN-BLD-716.md` AC10b style. |
+| QD #5 ACs | AC12 (crash safety), AC13 (mid-write revoke), AC14 (edit re-sync), AC17 (CSV backfill cutoff) added. |
+| Per-permission rationale copy (QD non-blocking) | Captured in Risks mitigation row. |
+
+**Re-review requested from @quality-director and @techlead.**
