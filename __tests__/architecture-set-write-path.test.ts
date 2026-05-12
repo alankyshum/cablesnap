@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 /**
- * BLD-1170: Architecture invariants for workout_sets and workout_set_segments write-path.
+ * BLD-1170 / BLD-1186: Architecture invariants for workout_sets and workout_set_segments write-path.
  *
  * These tests enforce the architectural constraint that:
  *   1. Only lib/db/sets.ts may write directly to workout_set_segments (insert/update/delete).
@@ -11,6 +11,9 @@
  *      updateSetsBatch, updateSetWarmup, updateSetType, updateSetStackMarker,
  *      updateSetManualWeight) no longer contain direct db.update(workoutSets) calls —
  *      they delegate to lib/db/sets.ts.
+ *   4. lib/db/sessions.ts db.update(workoutSets) calls are limited to non-volume
+ *      functions only — applyEditUpdate MUST delegate to lib/db/sets.ts
+ *      (updateSetForSessionEdit), not write workoutSets directly.
  *
  * If any of these tests fail, it means a new write site was added without routing
  * through recomputeSetCaches(), which would silently desync cached_volume_kg /
@@ -139,8 +142,13 @@ describe("Architecture: hooks do not bypass DB layer for workout_sets (BLD-1170)
 // AC #267 (BLD-1170 scope — write-path ban): Only lib/db/sets.ts may call
 // db.update(workoutSets) for volume-affecting fields. lib/db/session-sets.ts
 // retains db.update(workoutSets) for NON-volume fields (notes, tempo, rpe,
-// duration, variant, etc.) — explicitly allowed. lib/db/sessions.ts retains
-// db.update(workoutSets) for set renumbering and exercise swaps — also allowed.
+// duration, variant, etc.) — explicitly allowed.
+//
+// lib/db/sessions.ts retains db.update(workoutSets) ONLY for:
+//   - swapExerciseInSession / undoSwapInSession (exercise_id swaps — non-volume)
+//   - renumberSessionSets (set_number only — non-volume)
+// applyEditUpdate MUST NOT contain db.update(workoutSets) — it delegates to
+// updateSetForSessionEdit in lib/db/sets.ts (BLD-1186).
 //
 // Per tech-lead ruling (BLD-1170, 2026-05-11): AC #267 is split between slices:
 //   - BLD-1170 (this slice): write-path ban — db.update(workoutSets) exclusivity
@@ -148,14 +156,13 @@ describe("Architecture: hooks do not bypass DB layer for workout_sets (BLD-1170)
 // The formula ban is out of scope here and will be enforced by BLD-1174.
 
 describe("Architecture: db.update(workoutSets) only from approved files (BLD-1170 AC#267)", () => {
-  it("no file outside lib/db/sets.ts and lib/db/session-sets.ts calls db.update(workoutSets)", () => {
+  it("no file outside lib/db/sets.ts, lib/db/session-sets.ts, and lib/db/sessions.ts calls db.update(workoutSets)", () => {
     // lib/db/session-sets.ts is explicitly allowed because it retains legitimate
     // non-volume writes (notes, tempo, duration, rpe, variant, etc.). The individual
     // volume-write functions in session-sets.ts are verified by Test 3 above.
-    // lib/db/sessions.ts is explicitly allowed because it contains:
-    //   - swapExerciseInSession / undoSwapInSession (exercise_id swaps — non-volume)
-    //   - applyEditUpdate (inside editCompletedSession transaction — recomputed post-TX)
-    //   - set renumbering (set_number — non-volume)
+    // lib/db/sessions.ts is explicitly allowed because it contains non-volume writes
+    // (exercise_id swaps and set_number renumbering). The applyEditUpdate function
+    // in sessions.ts is verified below (Test 5) to have NO db.update(workoutSets).
     const APPROVED_FILES = new Set([
       "lib/db/sets.ts",
       "lib/db/session-sets.ts",
@@ -175,12 +182,74 @@ describe("Architecture: db.update(workoutSets) only from approved files (BLD-117
     if (violations.length > 0) {
       throw new Error(
         "db.update(workoutSets) found outside approved files.\n" +
-        "Only lib/db/sets.ts (volume writes) and lib/db/session-sets.ts (non-volume writes)\n" +
-        "may call db.update(workoutSets). All other callers must use a lib/db/sets.ts helper.\n\n" +
+        "Only lib/db/sets.ts (volume writes), lib/db/session-sets.ts (non-volume writes),\n" +
+        "and lib/db/sessions.ts (swap + renumber only) may call db.update(workoutSets).\n\n" +
         "Violations:\n" + violations.map((v) => `  - ${v}`).join("\n")
       );
     }
   });
+});
+
+// ─── Test 5: sessions.ts applyEditUpdate delegates to sets.ts (BLD-1186) ─────
+//
+// applyEditUpdate is the only function in sessions.ts that writes
+// volume-affecting columns (weight, reps, set_type). After BLD-1186 it must
+// delegate all writes to updateSetForSessionEdit in lib/db/sets.ts, so there
+// is no direct db.update(workoutSets) inside its body.
+//
+// The ALLOWED functions in sessions.ts that may retain db.update(workoutSets):
+//   - swapExerciseInSession   (exercise_id swap — non-volume)
+//   - undoSwapInSession       (exercise_id undo — non-volume)
+//   - renumberSessionSets     (set_number only — non-volume)
+
+describe("Architecture: sessions.ts applyEditUpdate delegates to sets.ts (BLD-1186)", () => {
+  const sessionsContent = readFile("lib/db/sessions.ts");
+
+  function extractFunctionBody(source: string, funcName: string): string {
+    // Match both `export async function foo` and `async function foo`
+    const pattern = new RegExp(
+      `(?:export )?async function ${funcName}\\b[^{]*\\{`,
+    );
+    const match = pattern.exec(source);
+    if (!match) return "";
+
+    let depth = 1;
+    let pos = match.index + match[0].length;
+    const start = pos;
+    while (pos < source.length && depth > 0) {
+      if (source[pos] === "{") depth++;
+      else if (source[pos] === "}") depth--;
+      pos++;
+    }
+    return source.slice(start, pos - 1);
+  }
+
+  it("applyEditUpdate does not contain direct db.update(workoutSets)", () => {
+    const body = extractFunctionBody(sessionsContent, "applyEditUpdate");
+    expect(body).not.toBe(""); // function must exist
+    expect(body).not.toMatch(/\bdb\.update\(workoutSets\)/);
+  });
+
+  it("applyEditUpdate calls updateSetForSessionEdit from lib/db/sets.ts", () => {
+    const body = extractFunctionBody(sessionsContent, "applyEditUpdate");
+    expect(body).not.toBe(""); // function must exist
+    expect(body).toMatch(/\bupdateSetForSessionEdit\b/);
+  });
+
+  // Verify the non-volume functions that are allowed to retain db.update(workoutSets)
+  const ALLOWED_WITH_DIRECT_UPDATE = [
+    "swapExerciseInSession",
+    "undoSwapInSession",
+    "renumberSessionSets",
+  ];
+
+  for (const funcName of ALLOWED_WITH_DIRECT_UPDATE) {
+    it(`${funcName} still uses db.update(workoutSets) for non-volume writes`, () => {
+      const body = extractFunctionBody(sessionsContent, funcName);
+      expect(body).not.toBe(""); // function must exist
+      expect(body).toMatch(/\bdb\.update\(workoutSets\)/);
+    });
+  }
 });
 
 //
