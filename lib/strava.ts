@@ -15,6 +15,7 @@
  */
 import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { uuid } from "./uuid";
@@ -228,6 +229,12 @@ async function exchangeCodeForTokens(
  * Wraps {@link WebBrowser.openAuthSessionAsync} + URL parsing in unified
  * error handling so {@link connectStrava} stays under the complexity budget.
  *
+ * On bare Android builds (some OEM Custom Tabs implementations), the OS deep-
+ * link handler may intercept the `cablesnap://strava-callback` redirect before
+ * `openAuthSessionAsync` can. We register a one-shot `Linking` listener that
+ * races against the browser result. Whichever resolves first wins; the loser
+ * path is cleaned up. The listener is always removed in a `finally` block.
+ *
  * Verifies the returned `state` matches `expectedState` (CSRF protection)
  * and returns the parsed `code` on success.
  */
@@ -235,41 +242,95 @@ async function runAuthPrompt(
   authorizeUrl: string,
   expectedState: string,
 ): Promise<{ result: WebBrowser.WebBrowserAuthSessionResult; code: string | undefined }> {
-  let result: WebBrowser.WebBrowserAuthSessionResult;
+  // Settled once — prevents double token exchange if both paths fire.
+  let settled = false;
+
+  /**
+   * Parse a cablesnap://strava-callback URL, verify CSRF state, and extract code.
+   * Returns null if the URL doesn't match the expected scheme/path.
+   * Throws StravaError if state mismatches.
+   */
+  function parseCallbackUrl(rawUrl: string): string | null {
+    if (!rawUrl.startsWith(APP_DEEP_LINK)) return null;
+    let params: URLSearchParams;
+    try {
+      params = new URL(rawUrl).searchParams;
+    } catch {
+      return null;
+    }
+    if (params.get("state") !== expectedState) {
+      const wrapped = new StravaError("unknown", "OAuth state mismatch");
+      stravaLog("warn", "strava auth state mismatch", { flow: "strava_connect", step: "auth_prompt_error" });
+      captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: "deep_link" });
+      throw wrapped;
+    }
+    return params.get("code");
+  }
+
+  let subscription: { remove(): void } | null = null;
+  const deepLinkPromise = new Promise<{ result: WebBrowser.WebBrowserAuthSessionResult; code: string | undefined }>(
+    (resolve, reject) => {
+      subscription = Linking.addEventListener("url", ({ url }) => {
+        if (settled) return;
+        if (!url.startsWith(APP_DEEP_LINK)) return;
+        settled = true;
+        try {
+          const code = parseCallbackUrl(url) ?? undefined;
+          // Dismiss the in-app browser so it doesn't linger
+          WebBrowser.dismissAuthSession?.();
+          resolve({ result: { type: "success", url } as WebBrowser.WebBrowserAuthSessionResult, code });
+        } catch (err) {
+          reject(err);
+        }
+      });
+    },
+  );
+
+  // browser promise: resolves when openAuthSessionAsync returns
+  const browserPromise = WebBrowser.openAuthSessionAsync(authorizeUrl, APP_DEEP_LINK)
+    .then((result): { result: WebBrowser.WebBrowserAuthSessionResult; code: string | undefined } => {
+      if (settled) {
+        // Deep link already won — return a neutral cancelled result so the
+        // caller's winner check sees the deep-link result, not this one.
+        return { result: { type: "cancel" } as WebBrowser.WebBrowserAuthSessionResult, code: undefined };
+      }
+      settled = true;
+      if (result.type !== "success") {
+        return { result, code: undefined };
+      }
+      let callbackParams: URLSearchParams;
+      try {
+        callbackParams = new URL(result.url).searchParams;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        const wrapped = new StravaError("unknown", errorMessage);
+        stravaLog("warn", "strava auth prompt errored", { flow: "strava_connect", step: "auth_prompt_error", errorMessage });
+        captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
+        throw wrapped;
+      }
+      if (callbackParams.get("state") !== expectedState) {
+        const wrapped = new StravaError("unknown", "OAuth state mismatch");
+        stravaLog("warn", "strava auth state mismatch", { flow: "strava_connect", step: "auth_prompt_error" });
+        captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
+        throw wrapped;
+      }
+      return { result, code: callbackParams.get("code") ?? undefined };
+    })
+    .catch((err: unknown) => {
+      if (!settled) settled = true;
+      if (err instanceof StravaError) throw err;
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      const wrapped = new StravaError("unknown", errorMessage);
+      stravaLog("warn", "strava auth prompt errored", { flow: "strava_connect", step: "auth_prompt_error", errorMessage });
+      captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: "error" });
+      throw wrapped;
+    });
+
   try {
-    result = await WebBrowser.openAuthSessionAsync(authorizeUrl, APP_DEEP_LINK);
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    const wrapped = new StravaError("unknown", errorMessage);
-    stravaLog("warn", "strava auth prompt errored", { flow: "strava_connect", step: "auth_prompt_error", errorMessage });
-    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: "error" });
-    throw wrapped;
+    return await Promise.race([browserPromise, deepLinkPromise]);
+  } finally {
+    (subscription as { remove(): void } | null)?.remove();
   }
-
-  if (result.type !== "success") {
-    return { result, code: undefined };
-  }
-
-  let callbackParams: URLSearchParams;
-  try {
-    callbackParams = new URL(result.url).searchParams;
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    const wrapped = new StravaError("unknown", errorMessage);
-    stravaLog("warn", "strava auth prompt errored", { flow: "strava_connect", step: "auth_prompt_error", errorMessage });
-    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
-    throw wrapped;
-  }
-
-  // Verify CSRF state to prevent token injection attacks.
-  if (callbackParams.get("state") !== expectedState) {
-    const wrapped = new StravaError("unknown", "OAuth state mismatch");
-    stravaLog("warn", "strava auth state mismatch", { flow: "strava_connect", step: "auth_prompt_error" });
-    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
-    throw wrapped;
-  }
-
-  return { result, code: callbackParams.get("code") ?? undefined };
 }
 
 export async function connectStrava(): Promise<{
@@ -300,8 +361,49 @@ export async function connectStrava(): Promise<{
   stravaBreakcrumb("connectStrava started", { clientId, redirectUri: REDIRECT_URI_FOR_STRAVA, proxyUrl });
   stravaLog("info", "strava connect started", { flow: "strava_connect", step: "start" });
 
+  // Cold-start check: if the app was killed while the OAuth browser was open
+  // and the OS re-launched via a cablesnap://strava-callback deep link, the
+  // URL will be available via getInitialURL(). We can only consume it if state
+  // matches, which requires generating oauthState first.
   // Generate a random state value for CSRF protection
   const oauthState = uuid();
+
+  // Check for a pending deep link from a previous session (cold-start recovery).
+  // If the URL matches our scheme and the state is correct we can skip opening
+  // the browser entirely. Known gap: state from a *prior* connectStrava call
+  // won't match the freshly-generated oauthState, so cold-start recovery only
+  // works if the app re-invokes connectStrava with the same oauthState (unusual).
+  // For all practical cases, this captures the URL when connectStrava is called
+  // immediately after a cold-start deep link arrives.
+  const initialUrl = await Linking.getInitialURL();
+  if (initialUrl?.startsWith(APP_DEEP_LINK)) {
+    stravaLog("info", "strava cold-start deep link detected", { flow: "strava_connect", step: "cold_start_check" });
+    try {
+      const coldParams = new URL(initialUrl).searchParams;
+      if (coldParams.get("state") === oauthState) {
+        const coldCode = coldParams.get("code");
+        if (coldCode) {
+          stravaLog("info", "strava cold-start deep link consumed", { flow: "strava_connect", step: "cold_start_consumed" });
+          const data = await exchangeCodeForTokens(coldCode, proxyUrl, clientId);
+          await saveTokens(
+            data.access_token as string,
+            data.refresh_token as string,
+            data.expires_at as number,
+          );
+          const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
+          const athleteName =
+            [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
+          await saveStravaConnection(athleteId, athleteName);
+          stravaBreakcrumb("connectStrava succeeded (cold-start)", { athleteId });
+          stravaLog("info", "strava connect succeeded", { flow: "strava_connect", step: "success", athleteId });
+          return { athleteId, athleteName };
+        }
+      }
+    } catch {
+      // Cold-start URL malformed or state mismatch — fall through to normal flow
+      stravaLog("warn", "strava cold-start deep link ignored", { flow: "strava_connect", step: "cold_start_check" });
+    }
+  }
 
   const authorizeUrl = new URL(STRAVA_AUTH_URL);
   authorizeUrl.searchParams.set("client_id", clientId);

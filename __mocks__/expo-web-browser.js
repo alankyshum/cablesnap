@@ -3,6 +3,7 @@ module.exports = {
   openBrowserAsync: jest.fn().mockResolvedValue({ type: "cancel" }),
   openAuthSessionAsync: jest.fn().mockResolvedValue({ type: "cancel" }),
   dismissBrowser: jest.fn(),
+  dismissAuthSession: jest.fn(),
   maybeCompleteAuthSession: jest.fn(),
   WebBrowserResultType: {
     CANCEL: "cancel",
