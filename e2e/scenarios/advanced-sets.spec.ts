@@ -39,6 +39,17 @@ test.describe("@scenario advanced-sets", () => {
       !["mobile", "mobile-narrow"].includes(testInfo.project.name),
       "advanced-sets spec: mobile and mobile-narrow viewports only",
     );
+    // All tests in this spec require E2E_USE_STATIC=1 (pre-built bundle served with
+    // COOP/COEP/CORP headers).  Without it, `useAppInit` detects
+    // `crossOriginIsolated === false` via `webNeedsUnsupportedFallback()` and the
+    // root layout renders `<WebUnsupportedScreen>` instead of the normal app tree —
+    // no route (including /settings or /settings/advanced-sets) is reachable.
+    // Build:  npx expo export -p web --dev --no-minify
+    // Run:    E2E_USE_STATIC=1 npx playwright test e2e/scenarios/advanced-sets.spec.ts
+    test.skip(
+      !process.env.E2E_USE_STATIC,
+      "requires E2E_USE_STATIC=1 — dev server lacks COOP/COEP headers, rendering WebUnsupportedScreen instead of the app. See e2e/README.md.",
+    );
   });
 
   test("help screen renders all three advanced set type entries", async ({ page }) => {
@@ -95,7 +106,7 @@ test.describe("@scenario advanced-sets", () => {
 
     // First load
     await page.goto("/settings/advanced-sets");
-    await expect(page.getByText("Rest-pause")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Rest-pause", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
 
     // Simulate kill + relaunch: reload the page and navigate directly to the route
     await page.reload();
@@ -121,7 +132,6 @@ test.describe("@scenario advanced-sets", () => {
   // useAppInit short-circuits (webNeedsUnsupportedFallback=true) and seedScenario()
   // never runs — body[data-test-ready='true'] is never set. See e2e/README.md.
   test("rest_pause set renders via production session-detail path (AC #265)", async ({ page }) => {
-    test.skip(!process.env.E2E_USE_STATIC, "requires E2E_USE_STATIC=1 — see e2e/README.md");
     await page.addInitScript((scenario) => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
@@ -152,7 +162,6 @@ test.describe("@scenario advanced-sets", () => {
   // and useSessionDetail reads previously persisted rows from the IndexedDB DB.
   // Requires E2E_USE_STATIC=1 — see comment on the AC #265 test above.
   test("advanced set data survives reload (AC #265 — kill+relaunch via persistent DB)", async ({ page }) => {
-    test.skip(!process.env.E2E_USE_STATIC, "requires E2E_USE_STATIC=1 — see e2e/README.md");
     // addInitScript re-runs on every navigation including page.reload().
     // The sessionStorage gate ensures __TEST_SCENARIO__ is injected only once (first load).
     await page.addInitScript(() => {
