@@ -27,11 +27,13 @@
 
 import { Platform } from "react-native";
 import { getDatabase } from "./helpers";
+import { bulkInsertSegments, type BulkSegmentInput } from "./sets";
 
 export const SUPPORTED_SCENARIOS = [
   "completed-workout",
   "workout-history",
   "form-clips",
+  "advanced-sets",
 ] as const;
 
 export type ScenarioKey = (typeof SUPPORTED_SCENARIOS)[number];
@@ -80,6 +82,9 @@ export async function seedScenario(): Promise<void> {
       break;
     case "workout-history":
       await seedWorkoutHistory(db);
+      break;
+    case "advanced-sets":
+      await seedAdvancedSets(db);
       break;
     case "form-clips":
       await seedFormClips(db);
@@ -270,4 +275,45 @@ export async function seedFormClips(
       completed,
     ],
   );
+}
+
+// AC #265: seeds a completed session with one rest_pause set (8+3+2 @ 100 kg)
+// and its three segments, so E2E specs can verify the production session-detail
+// mount path renders advanced-set data correctly.
+// Segments are inserted via bulkInsertSegments() to keep the cached-column
+// invariant (cached_volume_kg / cached_e1rm_kg) consistent.
+export async function seedAdvancedSets(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+): Promise<void> {
+  const now = Date.now();
+
+  await db.runAsync(
+    `INSERT OR IGNORE INTO exercises
+       (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ["scenario-adv-exercise-1", "Bench Press", "strength", "[]", "[]", "barbell", "", "intermediate", 0],
+  );
+
+  await db.runAsync(
+    `INSERT OR IGNORE INTO workout_sessions
+       (id, name, started_at, completed_at, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    ["scenario-advanced-session-1", "Advanced Sets E2E Session", now - 3600000, now - 100, null, now - 3600000],
+  );
+
+  await db.runAsync(
+    `INSERT OR IGNORE INTO workout_sets
+       (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, exercise_position, set_type)
+     VALUES (?, ?, ?, ?, ?, ?, 1, ?, 0, 'rest_pause')`,
+    ["scenario-advanced-set-1", "scenario-advanced-session-1", "scenario-adv-exercise-1", 1, 100, 13, now - 200],
+  );
+
+  // Route through bulkInsertSegments so cached_volume_kg / cached_e1rm_kg stay in sync
+  const segments: BulkSegmentInput[] = [
+    { segmentNumber: 1, reps: 8, weight: 100, restAfterSeconds: 30, completedAt: now - 600 },
+    { segmentNumber: 2, reps: 3, weight: 100, restAfterSeconds: 30, completedAt: now - 400 },
+    { segmentNumber: 3, reps: 2, weight: 100, restAfterSeconds: null, completedAt: now - 200 },
+  ];
+
+  await bulkInsertSegments("scenario-advanced-set-1", segments);
 }

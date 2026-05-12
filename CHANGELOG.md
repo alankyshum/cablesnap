@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - Progression suggestions now correctly evaluate advanced set types (rest-pause, cluster, myo-reps) using the working-set reps of the activation segment, rather than the inflated total-reps sum.
+- **CSV export/import round-trip for advanced sets**: rest-pause, cluster, and myo-rep set segment data (reps, weights, rests per mini-set) is now preserved when you export and re-import your workout CSV. Unknown set types in imported CSVs are automatically normalised to "normal" instead of being silently dropped.
 
 ## v0.26.33 — 2026-05-12
 <!-- versionCode: 103 -->
@@ -30,6 +31,7 @@ marker) at release time.
 - **Advanced set schemes (analytics)**: rest-pause, cluster, and myo-rep sets now contribute correct volume and e1RM values to all analytics surfaces (weekly/monthly trends, exercise history bests, achievements). Previously, multi-segment sets were excluded or under-counted due to the reps ≤ 12 filter.
 - **Adaptive Macro Coach** (off by default): Enable in Settings → Nutrition → Adaptive Macro Coach to get a weekly advisory card that suggests a calorie target based on your trend weight and average intake over the past two weeks. The coach is advisory only — your target is never changed without your tap. Includes a hard safety floor (based on your sex and estimated metabolic rate), a ±300 kcal/week cap, Right Why check-in, and a one-tap one-month pause.
 - **Tempo Coach (haptic engine)**: Enable "Tempo Coach" in Settings → Preferences to get a haptic rep guide during your sets. When active, a vibration cues each phase of your tempo (eccentric → bottom pause → concentric → top pause) in real time. A compact overlay shows the current phase and lets you stop the coach at any time. The coach auto-stops when the set is logged and cancels if you background the app.
+- **Advanced Set Types — CSV round-trip**: CSV export now includes `set_type`, `mini_set_reps`, `mini_set_weights`, and `mini_set_rests` columns for rest-pause, cluster, and myo-rep sets. These trailing columns are ignored by older importers (back-compat). CSV import parses and clamps mini-set data to 8 segments. Settings → Advanced Set Types explains each set type in plain language.
 
 ## v0.26.32 — 2026-05-11
 <!-- versionCode: 102 -->

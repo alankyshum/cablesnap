@@ -309,6 +309,42 @@ export async function updateSetWeightAndFields(
 
 // ─── Segment mutations ───────────────────────────────────────────────────────
 
+export type BulkSegmentInput = {
+  segmentNumber: number;
+  reps: number;
+  weight: number | null;
+  restAfterSeconds: number | null;
+  completedAt: number | null;
+};
+
+/**
+ * Insert multiple segments for a single parent set and recompute caches ONCE.
+ *
+ * Use this instead of calling insertSegment() in a loop to avoid N×recomputeSetCaches
+ * calls. Required for callers that bulk-insert segment data (e.g., CSV import) — they
+ * MUST route through this function to keep cached_volume_kg / cached_e1rm_kg in sync.
+ */
+export async function bulkInsertSegments(setId: string, segments: BulkSegmentInput[]): Promise<void> {
+  if (segments.length === 0) return;
+  const db = await getDrizzle();
+  const now = Date.now();
+
+  for (const seg of segments) {
+    await db.insert(workoutSetSegments).values({
+      id: uuid(),
+      set_id: setId,
+      segment_number: seg.segmentNumber,
+      reps: seg.reps,
+      weight: seg.weight,
+      rest_after_seconds: seg.restAfterSeconds,
+      completed_at: seg.completedAt,
+      created_at: now,
+    });
+  }
+
+  await recomputeSetCaches(setId);
+}
+
 export type InsertSegmentParams = {
   setId: string;
   segmentNumber: number;

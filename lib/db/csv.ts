@@ -27,6 +27,12 @@ export type WorkoutCSVRow = {
   stack_name_at_log: string | null;
   // BLD-1168: advanced set type (rest_pause, cluster, myo_reps, or legacy normal/warmup/dropset/failure).
   set_type: string | null;
+  /** Semicolon-separated reps per mini-set, e.g. "8;3;2". Null/empty for non-advanced sets (back-compat). */
+  mini_set_reps: string | null;
+  /** Semicolon-separated weights (kg) per mini-set. Empty element means inherit parent weight. */
+  mini_set_weights: string | null;
+  /** Semicolon-separated rest durations (seconds) after each mini-set. */
+  mini_set_rests: string | null;
 };
 
 export type NutritionCSVRow = {
@@ -85,6 +91,33 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
       stack_marker: workoutSets.stack_marker,
       stack_name_at_log: workoutSets.stack_name_at_log,
       set_type: workoutSets.set_type,
+      // BLD-1176 AC #257: correlated subqueries aggregate per-set segments in order.
+      // GROUP_CONCAT skips NULLs, so COALESCE turns NULL weight/rest into '' for empty-element
+      // preservation (empty element = inherit parent weight or no recorded rest).
+      mini_set_reps: sql<string | null>`(
+        SELECT GROUP_CONCAT(seg.reps, ';')
+        FROM (
+          SELECT reps FROM workout_set_segments
+          WHERE set_id = ${workoutSets.id}
+          ORDER BY segment_number
+        ) seg
+      )`,
+      mini_set_weights: sql<string | null>`(
+        SELECT GROUP_CONCAT(COALESCE(seg.weight, ''), ';')
+        FROM (
+          SELECT weight FROM workout_set_segments
+          WHERE set_id = ${workoutSets.id}
+          ORDER BY segment_number
+        ) seg
+      )`,
+      mini_set_rests: sql<string | null>`(
+        SELECT GROUP_CONCAT(COALESCE(seg.rest_after_seconds, ''), ';')
+        FROM (
+          SELECT rest_after_seconds FROM workout_set_segments
+          WHERE set_id = ${workoutSets.id}
+          ORDER BY segment_number
+        ) seg
+      )`,
     })
     .from(workoutSessions)
     .innerJoin(workoutSets, sql`${workoutSets.session_id} = ${workoutSessions.id}`)

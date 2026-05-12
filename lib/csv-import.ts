@@ -21,6 +21,12 @@ export type ImportedSet = {
   notes: string;
   /** BLD-1169: set type normalised at the parser boundary via normalizeSetType. */
   set_type: SetType;
+  /** Semicolon-separated reps per mini-set. Clamped to 8 segments at DB insertion. */
+  mini_set_reps?: string | null;
+  /** Semicolon-separated weights (kg) per mini-set. Empty element = inherit parent weight. */
+  mini_set_weights?: string | null;
+  /** Semicolon-separated rest durations (seconds) after each mini-set. */
+  mini_set_rests?: string | null;
 };
 
 export type ImportedSession = {
@@ -52,6 +58,17 @@ export type CsvParseError = {
 // ---- Constants ----
 
 const LBS_TO_KG = 0.45359237;
+
+/** Maximum number of mini-set segments allowed on import. AC #260. */
+const MAX_SEGMENTS = 8;
+
+/** Clamp a semicolon-separated segment string to MAX_SEGMENTS entries. Returns null if input is null/empty. */
+function clampSegments(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const parts = value.split(";");
+  if (parts.length <= MAX_SEGMENTS) return value;
+  return parts.slice(0, MAX_SEGMENTS).join(";");
+}
 
 // ---- Date parsing ----
 
@@ -145,6 +162,9 @@ function buildSession({
     durationSeconds: row.durationSeconds,
     notes: row.notes,
     set_type: normalizeSetType(row.set_type),
+    mini_set_reps: clampSegments(row.mini_set_reps),
+    mini_set_weights: clampSegments(row.mini_set_weights),
+    mini_set_rests: clampSegments(row.mini_set_rests),
   }));
   const firstRow = sessionRows[0];
   return {
