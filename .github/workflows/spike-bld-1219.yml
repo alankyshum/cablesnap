@@ -1,0 +1,186 @@
+name: Spike BLD-1219 — Health Connect feasibility
+
+# One-shot spike for BLD-1219 (Slice 0 of PLAN-BLD-1218 Health Connect plan).
+#
+# What this proves:
+#   1. Adding `react-native-health-connect` does NOT break the existing
+#      Expo plugin chain (with-wearos-module + with-form-clips-backup +
+#      Sentry + with-release-signing).
+#   2. `./gradlew :app:assembleRelease` succeeds (Play flavor / `release`).
+#   3. `./gradlew :app:assembleReleaseFdroid` succeeds (FOSS flavor).
+#   4. DEX-strings gate (per plan §Risk Q2):
+#        - `release`            : androidx/health/connect/* > 0
+#                                 GMS/Firebase/MlKit counts unchanged
+#        - `releaseFdroid`      : androidx/health/connect/* > 0
+#                                 GMS/Firebase/MlKit count == 0
+#   5. Both APKs are uploaded as workflow artifacts so BLD-1220 (real-device
+#      smoke test on Z Fold6) can pull them.
+#
+# Out of scope: real-device permission round-trip (BLD-1220), runtime code,
+# Settings UI, sync_log migration. Plugin authoring is deferred to Slice 1.
+#
+# THROWAWAY: branch `bld-1219-slice0-spike` is kept until BLD-1220 closes,
+# then deleted. No PR is opened against main.
+
+on:
+  workflow_dispatch:
+    inputs:
+      hc_version:
+        description: 'react-native-health-connect version to spike (default 3.5.0 per plan)'
+        required: false
+        default: '3.5.0'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spike-bld-1219
+  cancel-in-progress: true
+
+jobs:
+  build-and-gate:
+    name: Spike build + DEX-strings gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout spike branch
+        uses: actions/checkout@v4
+
+      - name: Sanity — refuse to run on main
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            echo "::error::Spike workflow must NOT run on main. Dispatch from bld-1219-slice0-spike branch."
+            exit 1
+          fi
+          echo "Running on ref: ${GITHUB_REF}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Health Connect dependency
+        run: |
+          set -euo pipefail
+          HC_VERSION="${{ inputs.hc_version }}"
+          echo "Pinning react-native-health-connect@${HC_VERSION}"
+          # --no-audit/--no-fund for cleaner logs; --save records to package.json
+          # --legacy-peer-deps mirrors what `expo install` tolerates for RN-only
+          # libs that haven't published a peer-dep range matching RN 0.83.x yet
+          # (HC 3.5.0 declares >=0.71). If the lock-step rejects we'll see it
+          # here and the spike has its first NO-GO signal.
+          npm install --save --legacy-peer-deps "react-native-health-connect@${HC_VERSION}"
+          echo "--- package.json change ---"
+          grep -n 'react-native-health-connect' package.json || true
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Generate native project (expo prebuild)
+        env:
+          # Sentry plugin tolerates missing secrets at prebuild — see
+          # scheduled-release.yml comment.
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: npx expo prebuild --clean --platform android
+
+      - name: Boost Gradle JVM heap
+        run: |
+          set -euo pipefail
+          PROPS=android/gradle.properties
+          if grep -q '^org.gradle.jvmargs=' "$PROPS"; then
+            sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m|' "$PROPS"
+          else
+            echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
+          fi
+          grep '^org.gradle.jvmargs=' "$PROPS"
+
+      - name: Build APKs (release + releaseFdroid)
+        run: |
+          # No keystore.properties → with-release-signing falls back to
+          # debug-keystore signing for the `release` build type. That is
+          # acceptable for a feasibility spike; the DEX gate inspects bytecode
+          # which is signing-independent. BLD-1220's smoke test uses the
+          # debug-signed APK directly (sideload bypasses Play signature).
+          set -euo pipefail
+          cd android
+          ./gradlew \
+            :app:assembleRelease \
+            :app:assembleReleaseFdroid \
+            --no-daemon --stacktrace
+          cd ..
+          ls -la android/app/build/outputs/apk/release/
+          ls -la android/app/build/outputs/apk/releaseFdroid/
+
+      - name: DEX-strings gate
+        id: dex_gate
+        run: |
+          set -euo pipefail
+          PASS=true
+          for VAR in release releaseFdroid; do
+            APK=$(ls android/app/build/outputs/apk/$VAR/app-*.apk | head -1)
+            TMP=$(mktemp -d)
+            unzip -q -o "$APK" 'classes*.dex' -d "$TMP"
+            HC_COUNT=$(strings "$TMP"/classes*.dex | grep -c 'androidx/health/connect/' || true)
+            GMS_COUNT=$(strings "$TMP"/classes*.dex | grep -cE 'com/google/android/gms/wearable|FirebaseInitProvider|MlKitInitProvider' || true)
+            echo ""
+            echo "=== $VAR (apk=$(basename "$APK")) ==="
+            echo "androidx/health/connect/  count: $HC_COUNT"
+            echo "GMS/Firebase/MlKit         count: $GMS_COUNT"
+            if [ "$HC_COUNT" -le 0 ]; then
+              echo "::error::$VAR — Health Connect classes missing (HC_COUNT=$HC_COUNT). Spike NO-GO."
+              PASS=false
+            fi
+            if [ "$VAR" = "releaseFdroid" ] && [ "$GMS_COUNT" -ne 0 ]; then
+              echo "::error::releaseFdroid — GMS/Firebase/MlKit leak detected ($GMS_COUNT classes). Spike NO-GO; HC dep pulls forbidden Google libs into FOSS flavor."
+              PASS=false
+            fi
+          done
+          if [ "$PASS" = false ]; then
+            echo "verdict=NO-GO" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "verdict=GO" >> "$GITHUB_OUTPUT"
+          echo "::notice::DEX gate passed — Slice 0 build feasibility = GO. Awaiting BLD-1220 device smoke test."
+
+      - name: Upload release APK (Play flavor)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spike-bld-1219-app-release
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload releaseFdroid APK (FOSS flavor)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spike-bld-1219-app-releaseFdroid
+          path: android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Spike summary
+        if: always()
+        run: |
+          echo "## Spike BLD-1219 — Slice 0 Health Connect feasibility" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**HC version:** \`${{ inputs.hc_version }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**DEX gate verdict:** \`${{ steps.dex_gate.outputs.verdict || 'unreachable (build failed)' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Artifacts: \`spike-bld-1219-app-release\`, \`spike-bld-1219-app-releaseFdroid\` (30-day retention)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Next step: BLD-1220 — owner sideloads the FOSS APK on Z Fold6 and runs READ_WEIGHT permission round-trip." >> "$GITHUB_STEP_SUMMARY"
