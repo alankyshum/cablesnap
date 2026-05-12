@@ -240,7 +240,7 @@ describe('Workout Session Acceptance', () => {
     )
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
-    const completeBtn = buttons.find((b) => b.text === 'OK')
+    const completeBtn = buttons.find((b) => b.text === 'Complete')
     await completeBtn!.onPress!()
 
     expect(mockDb.completeSession).toHaveBeenCalledWith('sess-2')
@@ -490,7 +490,7 @@ describe('Workout Session Acceptance', () => {
     fireEvent.press(finishBtn)
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
-    const completeBtn = buttons.find((b) => b.text === 'OK')
+    const completeBtn = buttons.find((b) => b.text === 'Complete')
     await completeBtn!.onPress!()
 
     expect(mockDb.completeSession).toHaveBeenCalledWith('sess-nav')
@@ -517,7 +517,7 @@ describe('Workout Session Acceptance', () => {
     fireEvent.press(finishBtn)
 
     const buttons = alertSpy.mock.calls[0][2] as { text?: string; style?: string; onPress?: () => Promise<void> | void }[]
-    const completeBtn = buttons.find((b) => b.text === 'OK')
+    const completeBtn = buttons.find((b) => b.text === 'Complete')
     await completeBtn!.onPress!()
 
     expect(mockDb.completeSession).toHaveBeenCalledWith('sess-empty')

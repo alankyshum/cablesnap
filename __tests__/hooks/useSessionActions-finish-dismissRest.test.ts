@@ -157,4 +157,61 @@ describe("useSessionActions — finish() dismisses rest timer (BLD-1137 AC7)", (
     expect(callOrder[0]).toBe("dismissRest");
     expect(callOrder[1]).toBe("completeSession");
   });
+
+  describe("BLD-1207 / GH#589 — Complete Workout no-op regression", () => {
+    it("invokes confirmAction with destructive=false and 'Complete' label", async () => {
+      const { confirmAction } = jest.requireMock("../../lib/confirm");
+      mockGetSessionSets.mockResolvedValue([{ id: "s1", completed: true }]);
+
+      const { result } = renderHook(() => useSessionActions(createParams()));
+
+      await act(async () => {
+        result.current.finish();
+        await flush();
+      });
+
+      expect(confirmAction).toHaveBeenCalledWith(
+        "Complete Workout?",
+        expect.any(String),
+        expect.any(Function),
+        false,
+        "Complete"
+      );
+    });
+
+    it("surfaces an error toast when completeSession throws (no silent no-op)", async () => {
+      const showError = jest.fn();
+      mockCompleteSession.mockRejectedValueOnce(new Error("DB write failed"));
+      mockGetSessionSets.mockResolvedValue([{ id: "s1", completed: true }]);
+
+      const { result } = renderHook(() => useSessionActions(createParams({ showError })));
+
+      await act(async () => {
+        result.current.finish();
+        await flush();
+      });
+
+      expect(showError).toHaveBeenCalledWith(
+        expect.stringMatching(/couldn'?t finish workout/i)
+      );
+      expect(mockReplace).not.toHaveBeenCalledWith("/session/summary/session-1");
+    });
+
+    it("does not navigate to summary when the finish chain throws", async () => {
+      const showError = jest.fn();
+      mockCompleteSession.mockRejectedValueOnce(new Error("boom"));
+      mockGetSessionSets.mockResolvedValue([{ id: "s1", completed: true }]);
+
+      const { result } = renderHook(() => useSessionActions(createParams({ showError })));
+
+      await act(async () => {
+        result.current.finish();
+        await flush();
+      });
+
+      expect(mockCompleteSession).toHaveBeenCalled();
+      expect(showError).toHaveBeenCalled();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+  });
 });
