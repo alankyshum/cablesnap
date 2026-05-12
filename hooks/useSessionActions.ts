@@ -44,7 +44,7 @@ import {
   getRecentStackHistory,
   updateSetRepsAndDuration,
 } from "../lib/db/session-sets";
-import { ADVANCED_SET_TYPES, insertSegment, deleteSegment, collapseAdvancedSetToNormal, getSegmentsForSets } from "../lib/db/sets";
+import { insertSegment, deleteSegment, collapseAdvancedSetToNormal, getSegmentsForSets } from "../lib/db/sets";
 import { getLastVariant, isCableExercise } from "../lib/cable-variant";
 import { resolveMarker } from "../lib/cable-stack";
 import {
@@ -1089,6 +1089,7 @@ export function useSessionActions({
       "Complete Workout?",
       `Duration: ${formatTime(elapsed)}`,
       async () => {
+
         // BLD-1207 / GH#589: the critical "save the workout" steps must
         // never silently no-op. Previously a thrown rejection inside
         // dismissRest() / flushAllPinnedNotes() / completeSession() was
@@ -1150,10 +1151,18 @@ export function useSessionActions({
         // Strava sync (non-blocking — never prevents workout completion)
         try {
           const { syncSessionToStrava } = await import("../lib/strava");
-          const synced = await syncSessionToStrava(id!);
-          if (synced) {
+          const result = await syncSessionToStrava(id!);
+          if (result.status === "synced") {
             showToast("Synced to Strava ✓");
+          } else if (result.status === "queued") {
+            showToast("Strava sync queued — will retry");
+          } else if (result.status === "failed") {
+            showToast("Strava sync failed — check Settings", {
+              action: { label: "Settings", onPress: () => router.push("/settings/strava") },
+              duration: 6000,
+            });
           }
+          // "skipped" → no toast (not connected or no sets)
         } catch {
           showError("Strava sync failed");
         }

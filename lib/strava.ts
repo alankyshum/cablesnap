@@ -612,33 +612,61 @@ async function uploadActivity(
 
 // ---- Sync Orchestration ----
 
-export async function syncSessionToStrava(sessionId: string): Promise<boolean> {
+export type SyncResult =
+  | { status: "synced"; activityId: string }
+  | { status: "queued"; error: Error }
+  | { status: "failed"; error: Error }
+  | { status: "skipped" };
+
+/** Returns true if the upload error represents a permanent auth revocation. */
+function isPermanentAuthError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes("Strava access revoked");
+}
+
+export async function syncSessionToStrava(sessionId: string): Promise<SyncResult> {
   stravaLog("info", "strava upload started", { flow: "strava_upload", step: "start", sessionId });
   const connected = await isStravaConnected();
-  if (!connected) return false;
+  if (!connected) return { status: "skipped" };
 
   // Check for completed sets first
   const sets = await getSessionSets(sessionId);
   const completed = sets.filter((s) => s.completed);
-  if (completed.length === 0) return false;
+  if (completed.length === 0) return { status: "skipped" };
 
   await createSyncLogEntry(sessionId);
 
+  let activityId: string;
   try {
-    const activityId = await uploadActivity(sessionId);
-    await markSyncSuccess(sessionId, activityId);
-    stravaLog("info", "strava upload succeeded", {
-      flow: "strava_upload",
-      step: "success",
-      sessionId,
-      activityId,
-    });
-    return true;
+    activityId = await uploadActivity(sessionId);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await markSyncFailed(sessionId, message);
-    throw err;
+    const error = err instanceof Error ? err : new Error(String(err));
+    await markSyncFailed(sessionId, error.message);
+    if (isPermanentAuthError(err)) {
+      return { status: "failed", error };
+    }
+    // Transient failure -- reconcile queue will retry
+    return { status: "queued", error };
   }
+
+  // Upload succeeded -- activity is on Strava. Bookkeeping failure must not flip the toast.
+  try {
+    await markSyncSuccess(sessionId, activityId);
+  } catch (bookkeepingErr) {
+    captureStravaError(
+      bookkeepingErr instanceof Error ? bookkeepingErr : new Error(String(bookkeepingErr)),
+      "strava_upload",
+      "db_write",
+      { sessionId, activityId }
+    );
+  }
+
+  stravaLog("info", "strava upload succeeded", {
+    flow: "strava_upload",
+    step: "success",
+    sessionId,
+    activityId,
+  });
+  return { status: "synced", activityId };
 }
 
 export async function reconcileStravaQueue(): Promise<void> {
