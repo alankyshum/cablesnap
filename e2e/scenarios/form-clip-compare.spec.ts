@@ -159,7 +159,7 @@ test.describe("@scenario form-clip-compare", () => {
     await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
 
     // Count badge should show "2".
-    await expect(page.getByText("2")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("2", { exact: true }).first()).toBeVisible({ timeout: 5000 });
 
     await page.screenshot({
       path: path.join(OUT_DIR, "grid-seed.png"),
