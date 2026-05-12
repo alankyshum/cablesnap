@@ -124,17 +124,17 @@ Plus a "Write hydration" toggle for the existing water log.
 
 ## Acceptance Criteria
 
-- [ ] On Android, fresh install: Settings → Integrations → Health Connect is visible. iOS / web / explicit FOSS-only build: row is hidden.
-- [ ] Tapping "Read body weight" toggle when Health Connect is not installed shows the install CTA, does not crash, does not flip the toggle ON.
-- [ ] Granting `READ_WEIGHT` permission and toggling ON triggers a one-time pull. If a newer weight exists, the bottom-sheet prompt appears with old → new + source + timestamp.
-- [ ] Tapping "Always import automatically" persists, suppresses the prompt, and updates body profile silently on subsequent newer weights.
-- [ ] Completing a session with "Write workouts" ON results in (a) the success toast firing on time, (b) within 5s an `ExerciseSession` record visible in Health Connect's "Recent activity" list with correct start/end + a non-zero `ActiveCaloriesBurned` value, (c) `sessions.hc_record_id` populated.
-- [ ] Logging a food entry with "Write nutrition" ON results in a `Nutrition` record with calories + macros + meal type matching the log entry within 2s.
-- [ ] Deleting a CableSnap session that has `hc_record_id` set removes the corresponding Health Connect record (verified by checking Health Connect after deletion).
-- [ ] Revoking permission in Health Connect's system UI causes the next write to fail gracefully with a toast and the toggle to flip OFF.
-- [ ] PR passes typecheck, all existing tests, and adds new unit tests for the pure helpers (calorie estimation, dedup logic, prompt thresholding).
-- [ ] No new lint warnings.
-- [ ] FOSS variant `releaseFdroid` builds and runs (verified with `fdroid-foss-build` skill).
+- [ ] **AC1** On Android, fresh install: Settings → Integrations → Health Connect is visible. iOS / web / explicit FOSS-only build: row is hidden. [TODO-test: BLD-1218]
+- [ ] **AC2** Tapping "Read body weight" toggle when Health Connect is not installed shows the install CTA, does not crash, does not flip the toggle ON. [TODO-test: BLD-1218]
+- [ ] **AC3** Granting `READ_WEIGHT` permission and toggling ON triggers a one-time pull. If a newer weight exists, the bottom-sheet prompt appears with old → new + source + timestamp. [TODO-test: BLD-1218]
+- [ ] **AC4** Tapping "Always import automatically" persists, suppresses the prompt, and updates body profile silently on subsequent newer weights. [TODO-test: BLD-1218]
+- [ ] **AC5** Completing a session with "Write workouts" ON results in (a) the success toast firing on time, (b) within 5s an `ExerciseSession` record visible in Health Connect's "Recent activity" list with correct start/end + a non-zero `ActiveCaloriesBurned` value, (c) `sessions.hc_record_id` populated. [TODO-test: BLD-1218]
+- [ ] **AC6** Logging a food entry with "Write nutrition" ON results in a `Nutrition` record with calories + macros + meal type matching the log entry within 2s. [TODO-test: BLD-1218]
+- [ ] **AC7** Deleting a CableSnap session that has `hc_record_id` set removes the corresponding Health Connect record (verified by checking Health Connect after deletion). [TODO-test: BLD-1218]
+- [ ] **AC8** Revoking permission in Health Connect's system UI causes the next write to fail gracefully with a toast and the toggle to flip OFF. [TODO-test: BLD-1218]
+- [ ] **AC9** PR passes typecheck, all existing tests, and adds new unit tests for the pure helpers (calorie estimation, dedup logic, prompt thresholding). [TODO-test: BLD-1218]
+- [ ] **AC10** No new lint warnings. [TODO-test: BLD-1218]
+- [ ] **AC11** FOSS variant `releaseFdroid` builds and runs (verified with `fdroid-foss-build` skill). [TODO-test: BLD-1218]
 
 ## Edge Cases
 
@@ -180,7 +180,16 @@ Suggested ownership: Slices 1, 5 → techlead. Slices 2, 3, 4 → claudecoder.
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+**REQUEST CHANGES** — plan is directionally strong, but V1 is not ready to execute until these quality/data-integrity gaps are resolved:
+
+1. **FOSS/Play variant contract is contradictory and unsafe.** The UX section says the row is hidden for the explicit FOSS-only build, while the FOSS compatibility section says the FOSS build can include Health Connect. Resolve this to a single architecture: Health Connect dependency, Expo plugin, manifest permissions, and Settings row must be Play-variant only unless Tech Lead proves the dependency is FOSS-safe with `releaseFdroid`.
+2. **`hc_record_id` alone is not enough for idempotency.** If Health Connect write succeeds and SQLite update fails/crashes before persisting the returned ID, retry can duplicate workouts/nutrition/hydration. Require deterministic per-record external IDs or a durable pending-sync table with operation state, all Health Connect record IDs per logical write, and replay/delete semantics.
+3. **Workout mapping is under-specified.** The plan writes both `ExerciseSession` and `ActiveCaloriesBurned`, but only stores one `sessions.hc_record_id`; it also omits `WRITE_ACTIVE_CALORIES_BURNED` from the manifest permission list. Add explicit multi-record mapping, permission request, delete cascade, and partial-write rollback/retry behavior.
+4. **Prompt timing needs an active-session guard.** Body-weight import prompts triggered on app foreground must not appear during an active workout or immediately over the completion flow. Queue the prompt until the user is outside session logging.
+5. **Backfill/edit/delete semantics need acceptance criteria.** Current AC covers initial writes and session delete, but not nutrition/water deletes, edits after successful sync, app crash between write and local persistence, permission revocation during a multi-record sync, or historical backfill rate limits. Add behavioral AC before implementation.
+6. **Privacy logging must be stricter.** Sentry breadcrumbs should include only sanitized error category/code and operation type, never health values, source app names, timestamps, Health Connect record IDs, meal contents, or body weight deltas.
+
+Non-blocking UX refinements: keep per-data-type toggles, inline retry affordances, and source/timestamp in the body-weight sheet; add "why we need this permission" copy per data type so the system permission sheet is not surprising.
 
 ### Tech Lead (Feasibility)
 _Pending_
