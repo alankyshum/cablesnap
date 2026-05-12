@@ -9,7 +9,6 @@ import type { ImportedSession } from "../csv-import";
 import type { MatchResult } from "../exercise-matcher";
 import type { NlpResult } from "../exercise-nlp";
 import type { Category, Equipment, Difficulty, MuscleGroup } from "../types";
-import { normalizeSetType } from "./sets";
 
 // ---- Types ----
 
@@ -149,7 +148,7 @@ export async function importCsvSessions(
             completedAt,
             set.rpe,
             set.notes,
-            normalizeSetType(set.set_type ?? "normal"),
+            set.set_type,
           ]
         );
         setsInserted++;

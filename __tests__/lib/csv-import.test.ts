@@ -58,6 +58,46 @@ describe("parseCsvExport", () => {
     expect("type" in result && result.type).toBe("unrecognized_format");
   });
 
+  // BLD-1169 AC #269: CSV import is a mandatory read boundary — any
+  // garbage / nullish set_type from a hand-edited or older CableSnap CSV
+  // must coerce to "normal" rather than leak a raw string downstream.
+  describe("CableSnap set_type read-boundary normalization", () => {
+    const HEADER =
+      "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date,stack_marker,stack_name_at_log,set_type";
+    const baseRow = (setType: string) =>
+      `2025-01-15,Bench,1,100,5,,,8,,,,,workout,,,,,${setType}`;
+
+    function firstSetTypeFromCablesnapCsv(csv: string): string {
+      const result = parseCsvExport(csv);
+      if ("type" in result) throw new Error(`parse failed: ${result.type}`);
+      const set = result.sessions[0]?.sets[0];
+      if (!set) throw new Error("no set parsed");
+      return set.set_type;
+    }
+
+    it.each([
+      ["valid normal", "normal", "normal"],
+      ["valid warmup", "warmup", "warmup"],
+      ["advanced rest_pause survives", "rest_pause", "rest_pause"],
+      ["advanced cluster survives", "cluster", "cluster"],
+      ["advanced myo_reps survives", "myo_reps", "myo_reps"],
+      ["wrong-case WARMUP coerces to normal", "WARMUP", "normal"],
+      ["legacy drop_set_v2 typo coerces to normal", "drop_set_v2", "normal"],
+      ["unknown future_type coerces to normal", "future_type", "normal"],
+      ["empty string coerces to normal", "", "normal"],
+    ])("set_type %s → %s", (_label, raw, expected) => {
+      const csv = `${HEADER}\n${baseRow(raw)}\n`;
+      expect(firstSetTypeFromCablesnapCsv(csv)).toBe(expected);
+    });
+
+    it("missing set_type column entirely coerces to normal", () => {
+      const headerWithoutSetType =
+        "date,exercise,set_number,weight,reps,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date,stack_marker,stack_name_at_log";
+      const row = "2025-01-15,Bench,1,100,5,,,8,,,,,workout,,,,";
+      expect(firstSetTypeFromCablesnapCsv(`${headerWithoutSetType}\n${row}\n`)).toBe("normal");
+    });
+  });
+
   describe("Strong format", () => {
     const strongCsv = [
       "Date,Workout Name,Exercise Name,Set Order,Weight,Reps,RPE,Duration,Notes",
@@ -165,7 +205,7 @@ describe("convertWeights", () => {
   it("converts lbs to kg", () => {
     const sessions = [
       { date: 0, name: "Test", durationSeconds: null, sets: [
-        { exerciseRawName: "Bench", matchedExerciseId: null, matchConfidence: null as "high" | "medium" | "low" | null, weight: 225, reps: 5, setNumber: 1, rpe: null, durationSeconds: null, notes: "" },
+        { exerciseRawName: "Bench", matchedExerciseId: null, matchConfidence: null as "high" | "medium" | "low" | null, weight: 225, reps: 5, setNumber: 1, rpe: null, durationSeconds: null, notes: "", set_type: "normal" as const },
       ] },
     ];
     const converted = convertWeights(sessions, "lbs");
@@ -176,7 +216,7 @@ describe("convertWeights", () => {
   it("preserves kg weights unchanged", () => {
     const sessions = [
       { date: 0, name: "Test", durationSeconds: null, sets: [
-        { exerciseRawName: "Bench", matchedExerciseId: null, matchConfidence: null as "high" | "medium" | "low" | null, weight: 100, reps: 5, setNumber: 1, rpe: null, durationSeconds: null, notes: "" },
+        { exerciseRawName: "Bench", matchedExerciseId: null, matchConfidence: null as "high" | "medium" | "low" | null, weight: 100, reps: 5, setNumber: 1, rpe: null, durationSeconds: null, notes: "", set_type: "normal" as const },
       ] },
     ];
     const converted = convertWeights(sessions, "kg");
@@ -186,7 +226,7 @@ describe("convertWeights", () => {
   it("handles null weights", () => {
     const sessions = [
       { date: 0, name: "Test", durationSeconds: null, sets: [
-        { exerciseRawName: "Push-ups", matchedExerciseId: null, matchConfidence: null as "high" | "medium" | "low" | null, weight: null, reps: 20, setNumber: 1, rpe: null, durationSeconds: null, notes: "" },
+        { exerciseRawName: "Push-ups", matchedExerciseId: null, matchConfidence: null as "high" | "medium" | "low" | null, weight: null, reps: 20, setNumber: 1, rpe: null, durationSeconds: null, notes: "", set_type: "normal" as const },
       ] },
     ];
     const converted = convertWeights(sessions, "lbs");
