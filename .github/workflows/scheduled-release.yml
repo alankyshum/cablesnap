@@ -247,6 +247,77 @@ jobs:
           fi
           echo "Wrote $SIDECAR ($(wc -c < "$SIDECAR") bytes)"
 
+      # BLD-1185: Release notes are generated AFTER `Commit and push` so they
+      # always reflect the final post-recovery CHANGELOG.md. If we generated
+      # them earlier, a successful push-rejection recovery (which resets onto
+      # fresh origin/main and re-runs scripts/release-apply-bump.sh) would
+      # leave `steps.release_notes.outputs.notes` based on the pre-recovery
+      # CHANGELOG, omitting any concurrent contributor bullet that was
+      # promoted into the v$VERSION section by the regenerate step.
+      - name: Commit and push
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main' && inputs.republish_current != true
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.next_version.outputs.version }}"
+          VCODE="${{ steps.next_vcode.outputs.version_code }}"
+          git config user.name "CableSnap Release Bot"
+          git config user.email "release-bot@cablesnap.app"
+
+          stage_paths() {
+            git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
+              CHANGELOG.md \
+              lib/changelog.generated.ts \
+              fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
+          }
+
+          stage_paths
+          if git diff --cached --quiet; then
+            echo "Version files already at v$VERSION — skipping commit."
+            exit 0
+          fi
+          git commit -m "release: v$VERSION"
+
+          # BLD-1185: retry up to 5 times on push rejection. On ANY rejection
+          # we hard-reset onto fresh origin/main and re-apply the bump from
+          # scratch via `scripts/release-apply-bump.sh`. This is the single
+          # recovery codepath — the script is idempotent and the reset is
+          # cheap, so we deliberately drop the "plain rebase fast path" that
+          # earlier versions of this step used. That fast path is unsafe:
+          # `lib/changelog.generated.ts`, the F-Droid sidecar, and (later)
+          # GitHub Release notes are all derived from `CHANGELOG.md`, so a
+          # successful three-way merge of just `CHANGELOG.md` left those
+          # generated artefacts stale relative to the rebased CHANGELOG and
+          # could publish a release whose APK + sidecar + GitHub Release notes
+          # disagreed with the merged CHANGELOG.md (reviewer + QD blocker on
+          # PR #575). Always regenerating from the post-reset CHANGELOG.md
+          # eliminates the divergence and preserves any concurrent
+          # `## Unreleased` bullets automatically.
+          pushed=0
+          for i in 1 2 3 4 5; do
+            if git push origin main; then
+              pushed=1
+              break
+            fi
+            echo "::warning::Push rejected (attempt $i). Resetting onto fresh origin/main and regenerating bump..."
+            git fetch origin main
+            git reset --hard origin/main
+            bash scripts/release-apply-bump.sh "$VERSION" "$VCODE"
+            stage_paths
+            if git diff --cached --quiet; then
+              echo "::notice::No staged delta after regenerate — concurrent merge already shipped v$VERSION? exiting."
+              pushed=1
+              break
+            fi
+            git commit -m "release: v$VERSION"
+
+            # Brief jitter to avoid lockstep with other concurrent pushers.
+            sleep $((RANDOM % 5 + 2))
+          done
+          if [ "$pushed" -ne 1 ]; then
+            echo "::error::Failed to push release commit after 5 recovery attempts."
+            exit 1
+          fi
+
       - name: Generate release notes
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         id: release_notes
@@ -256,6 +327,14 @@ jobs:
           # synthesised `git log` output that shipped in v0.26.20–v0.26.22.
           # macOS/BSD-safe awk: extract from the first `## v$VERSION` header
           # up to (but not including) the next `## ` header.
+          #
+          # BLD-1185: this step intentionally runs AFTER `Commit and push` so
+          # it reads the post-recovery CHANGELOG.md. If push rejection
+          # triggered the regenerate path, the local CHANGELOG.md now reflects
+          # the merged-on-top concurrent contributor bullets (because the
+          # script promoted them into the v$VERSION section), and the release
+          # notes here will include them. Generating these notes earlier
+          # caused a real release-consistency bug — see PR #575 review thread.
           set -euo pipefail
           VERSION="${{ steps.next_version.outputs.version }}"
           BODY=$(awk -v v="$VERSION" '
@@ -285,76 +364,6 @@ jobs:
             echo "The Wear OS companion APK (\`cablesnap-wear.apk\`) is distributed via the Play Store only — F-Droid's Inclusion Criteria reject the GMS Wearable dependency the watch app needs. The F-Droid build of CableSnap (\`cablesnap-fdroid.apk\`) is fully functional on its own; the watch APK is an optional companion."
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
-
-      # Dry-run mode: when dispatched from a non-main ref (e.g. a PR branch),
-      # skip the "Commit and push" and "Create GitHub Release" steps. All other
-      # steps — including keystore decode, assembleRelease, and apksigner
-      # fingerprint verification — still run, so the signing path can be
-      # exercised and independently verified before merge.
-      - name: Commit and push
-        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main' && inputs.republish_current != true
-        run: |
-          set -euo pipefail
-          VERSION="${{ steps.next_version.outputs.version }}"
-          VCODE="${{ steps.next_vcode.outputs.version_code }}"
-          git config user.name "CableSnap Release Bot"
-          git config user.email "release-bot@cablesnap.app"
-
-          stage_paths() {
-            git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
-              CHANGELOG.md \
-              lib/changelog.generated.ts \
-              fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
-          }
-
-          stage_paths
-          if git diff --cached --quiet; then
-            echo "Version files already at v$VERSION — skipping commit."
-            exit 0
-          fi
-          git commit -m "release: v$VERSION"
-
-          # BLD-1185: retry up to 5 times on push rejection. Try a plain
-          # `git pull --rebase` first (preserves history when no derived
-          # artefacts conflict). If the rebase produces a conflict — almost
-          # always CHANGELOG.md / lib/changelog.generated.ts / F-Droid sidecar
-          # because those are derived from `## Unreleased` — abort the rebase,
-          # hard-reset onto fresh main, and re-apply the bump from scratch via
-          # `scripts/release-apply-bump.sh`. Any concurrent `## Unreleased`
-          # bullets are preserved automatically because the script promotes the
-          # post-reset CHANGELOG.md.
-          pushed=0
-          for i in 1 2 3 4 5; do
-            if git push origin main; then
-              pushed=1
-              break
-            fi
-            echo "::warning::Push rejected (attempt $i). Recovering against fresh origin/main..."
-            git fetch origin main
-
-            if git pull --rebase origin main; then
-              echo "::notice::Plain rebase succeeded on attempt $i — retrying push."
-            else
-              echo "::warning::Rebase produced conflicts on attempt $i — switching to regenerate-on-conflict path."
-              git rebase --abort || true
-              git reset --hard origin/main
-              bash scripts/release-apply-bump.sh "$VERSION" "$VCODE"
-              stage_paths
-              if git diff --cached --quiet; then
-                echo "::notice::No staged delta after regenerate — concurrent merge already shipped v$VERSION? exiting."
-                pushed=1
-                break
-              fi
-              git commit -m "release: v$VERSION"
-            fi
-
-            # Brief jitter to avoid lockstep with other concurrent pushers.
-            sleep $((RANDOM % 5 + 2))
-          done
-          if [ "$pushed" -ne 1 ]; then
-            echo "::error::Failed to push release commit after 5 rebase attempts."
-            exit 1
-          fi
 
       - name: Dry-run notice (non-main ref)
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref != 'refs/heads/main'

@@ -46,8 +46,8 @@ if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
     echo "::error::VERSION must look like X.Y.Z, got: $VERSION" >&2
     exit 1
 fi
-if ! printf '%s' "$VCODE" | grep -Eq '^[0-9]+$'; then
-    echo "::error::VERSION_CODE must be a positive integer, got: $VCODE" >&2
+if ! printf '%s' "$VCODE" | grep -Eq '^[1-9][0-9]*$'; then
+    echo "::error::VERSION_CODE must be a positive integer (>= 1), got: $VCODE" >&2
     exit 1
 fi
 

@@ -62,10 +62,16 @@ function git(args: string[], cwd: string): string {
 }
 
 /**
- * Try to push; on rejection, attempt plain rebase, fall back to
- * regenerate-on-conflict by hard-resetting onto fresh origin/main and
- * re-running release-apply-bump.sh. Mirrors the shell logic in
+ * Try to push; on ANY rejection, hard-reset onto fresh origin/main and
+ * re-run release-apply-bump.sh. Mirrors the simplified shell logic in
  * .github/workflows/scheduled-release.yml "Commit and push" step.
+ *
+ * BLD-1185: the earlier two-branch design (try plain rebase first, fall
+ * back to regenerate on conflict) was unsafe — a successful plain rebase
+ * could merge a concurrent `CHANGELOG.md` bullet into the release commit
+ * while leaving `lib/changelog.generated.ts` + F-Droid sidecar +
+ * downstream GitHub Release notes generated from the pre-rebase CHANGELOG.
+ * Single recovery codepath (always reset + regenerate) closes that gap.
  */
 function commitAndPushWithRecovery(opts: {
     cwd: string;
@@ -102,33 +108,21 @@ function commitAndPushWithRecovery(opts: {
             git(["push", "origin", "main"], cwd);
             return { pushed: true, recoveredViaRegenerate, attempts: i };
         } catch {
-            // rejected — recover
+            // rejected — recover via reset + regenerate
         }
         git(["fetch", "origin", "main"], cwd);
+        git(["reset", "--hard", "origin/main"], cwd);
+        sh("bash", [localScript, version, vcode], cwd, { SKIP_CHANGELOG_GEN: "1" });
+        stagePaths();
         try {
-            git(["pull", "--rebase", "origin", "main"], cwd);
-            // plain rebase succeeded — loop and retry push
-            continue;
+            git(["diff", "--cached", "--quiet"], cwd);
+            // no delta — concurrent merge already shipped this version
+            return { pushed: true, recoveredViaRegenerate: true, attempts: i };
         } catch {
-            // rebase conflict → regenerate path
-            try {
-                git(["rebase", "--abort"], cwd);
-            } catch {
-                /* nothing to abort */
-            }
-            git(["reset", "--hard", "origin/main"], cwd);
-            sh("bash", [localScript, version, vcode], cwd, { SKIP_CHANGELOG_GEN: "1" });
-            stagePaths();
-            try {
-                git(["diff", "--cached", "--quiet"], cwd);
-                // no delta — concurrent merge already shipped this version
-                return { pushed: true, recoveredViaRegenerate: true, attempts: i };
-            } catch {
-                /* delta exists */
-            }
-            git(["commit", "-m", `release: v${version}`], cwd);
-            recoveredViaRegenerate = true;
+            /* delta exists */
         }
+        git(["commit", "-m", `release: v${version}`], cwd);
+        recoveredViaRegenerate = true;
     }
     return { pushed: false, recoveredViaRegenerate, attempts: maxAttempts };
 }
@@ -212,6 +206,30 @@ function readChangelog(repo: string): string {
     return fs.readFileSync(path.join(repo, "CHANGELOG.md"), "utf8");
 }
 
+/**
+ * Mirror the awk extraction used by the workflow's "Generate release notes"
+ * step (.github/workflows/scheduled-release.yml). We assert against this in
+ * the BLD-1185 review fixture below to prove the post-recovery CHANGELOG.md
+ * — not the pre-recovery snapshot — is what drives the GitHub Release body.
+ */
+function extractReleaseNotesBody(changelog: string, version: string): string {
+    const lines = changelog.split("\n");
+    const headerRe = new RegExp(`^## v${version.replace(/\./g, "\\.")}([^0-9]|$)`);
+    const out: string[] = [];
+    let inSection = false;
+    for (const line of lines) {
+        if (!inSection) {
+            if (headerRe.test(line)) {
+                inSection = true;
+            }
+            continue;
+        }
+        if (line.startsWith("## ")) break;
+        out.push(line);
+    }
+    return out.join("\n");
+}
+
 describe("BLD-1185 release-apply-bump.sh + commit-and-push recovery", () => {
     let sb: Sandbox;
     afterEach(() => {
@@ -224,7 +242,7 @@ describe("BLD-1185 release-apply-bump.sh + commit-and-push recovery", () => {
         }
     });
 
-    it("AC1: clean push (no concurrent merge) succeeds via plain path", () => {
+    it("AC1: clean push (no concurrent merge) succeeds on first attempt without recovery", () => {
         sb = makeSandbox();
         sh("bash", [path.join(sb.runner, "scripts", "release-apply-bump.sh"), "1.0.1", "101"], sb.runner, { SKIP_CHANGELOG_GEN: "1" });
         const result = commitAndPushWithRecovery({
@@ -294,6 +312,56 @@ describe("BLD-1185 release-apply-bump.sh + commit-and-push recovery", () => {
         // The fresh `## Unreleased` placeholder must exist above v1.0.1.
         expect(cl.indexOf("## Unreleased")).toBeGreaterThan(-1);
         expect(cl.indexOf("## Unreleased")).toBeLessThan(cl.indexOf("## v1.0.1"));
+    });
+
+    it("AC4 (BLD-1185 review blocker): non-conflicting concurrent CHANGELOG bullet is promoted into v$VERSION via reset+regenerate, so downstream release-note extraction sees it", () => {
+        sb = makeSandbox();
+
+        // Runner applies the bump locally.
+        sh("bash", [path.join(sb.runner, "scripts", "release-apply-bump.sh"), "1.0.1", "101"], sb.runner, { SKIP_CHANGELOG_GEN: "1" });
+
+        // Interloper appends a NEW bullet at the END of the `## Unreleased`
+        // bullet list. Crucially this is the variant that — under the OLD
+        // try-plain-rebase-first recovery — would three-way-merge cleanly,
+        // leaving generated artefacts stale. With the new "always reset +
+        // regenerate" recovery, the bullet is instead promoted into the
+        // v$VERSION block by re-running the bump script on the post-reset
+        // CHANGELOG.md.
+        const interCl = readChangelog(sb.interloper).replace(
+            "- existing bullet 3\n",
+            "- existing bullet 3\n- non-conflicting concurrent bullet (BLD-1185 reviewer fixture)\n",
+        );
+        fs.writeFileSync(path.join(sb.interloper, "CHANGELOG.md"), interCl);
+        git(["add", "CHANGELOG.md"], sb.interloper);
+        git(["commit", "-m", "docs: append non-conflicting bullet"], sb.interloper);
+        git(["push", "origin", "main"], sb.interloper);
+
+        const result = commitAndPushWithRecovery({
+            cwd: sb.runner,
+            version: "1.0.1",
+            vcode: "101",
+        });
+        expect(result.pushed).toBe(true);
+        expect(result.recoveredViaRegenerate).toBe(true);
+
+        const verify = path.join(sb.root, "verify");
+        sh("git", ["clone", sb.origin, verify], sb.root);
+        const cl = readChangelog(verify);
+
+        // Final v1.0.1 section must contain the concurrent bullet.
+        expect(cl).toMatch(/^## v1\.0\.1 /m);
+        const v101Match = cl.match(/^## v1\.0\.1 [\s\S]*?(?=^## )/m);
+        expect(v101Match).not.toBeNull();
+        expect(v101Match![0]).toContain(
+            "non-conflicting concurrent bullet (BLD-1185 reviewer fixture)",
+        );
+
+        // Mirror the workflow's "Generate release notes" awk extraction
+        // against the post-recovery CHANGELOG: it must include the
+        // concurrent contributor bullet. This is the canary for QD's
+        // blocker — release notes generated from the FINAL CHANGELOG.
+        const notes = extractReleaseNotesBody(cl, "1.0.1");
+        expect(notes).toContain("non-conflicting concurrent bullet (BLD-1185 reviewer fixture)");
     });
 
     it("script is idempotent: running it twice on the same checkout yields identical CHANGELOG.md", () => {
