@@ -143,7 +143,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   const endAtRef = useRef<number | null>(null);
   /** BLD-1137: replaces legacy notificationIdRef with three-id object. */
   const notificationIdsRef = useRef<{ preEnd?: string | null; complete?: string | null; liveOngoing?: string | null }>({});
-  /** BLD-1137: setInterval handle for the 5s live countdown re-present. */
+  /** BLD-1137: setInterval handle for the 15 s live countdown re-present (BLD-1208). */
   const liveCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   /** BLD-1137: preview snapshot ref so recomputeActiveRest can re-use without refetching. */
   const previewRef = useRef<NextSetPreview>(null);
