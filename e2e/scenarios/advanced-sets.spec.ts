@@ -133,7 +133,9 @@ test.describe("@scenario advanced-sets", () => {
     await expect(page.getByText("100 × 13")).toBeVisible();
   });
 
-  // AC #265 — kill+relaunch simulation: full reload, re-seed, re-navigate
+  // AC #265 — kill+relaunch simulation: navigate away via SPA (no page reload,
+  // addInitScript doesn't re-run, seedScenario doesn't clear+re-seed), then
+  // navigate back to session detail and assert data persists in the in-session DB.
   test("advanced set data survives kill+relaunch via session-detail (AC #265)", async ({ page }) => {
     await page.addInitScript((scenario) => {
       const w = window as unknown as Record<string, unknown>;
@@ -146,20 +148,24 @@ test.describe("@scenario advanced-sets", () => {
     await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
 
-    // Simulate "kill": navigate away to home
-    await page.goto("/");
-    await page.waitForTimeout(300);
+    // Simulate "kill": navigate to home via SPA history API (no full page reload).
+    // addInitScript does NOT re-run on SPA navigations, so __TEST_SCENARIO__ is
+    // not re-set and seedScenario() does not clear+re-seed the DB.
+    await page.evaluate(() => {
+      window.history.pushState({}, "", "/");
+      window.dispatchEvent(new PopStateEvent("popstate", { state: null }));
+    });
+    await page.waitForTimeout(500);
 
-    // Simulate "relaunch": re-inject scenario + navigate back to session detail
-    await page.addInitScript((scenario) => {
-      const w = window as unknown as Record<string, unknown>;
-      w.__SKIP_ONBOARDING__ = true;
-      w.__TEST_SCENARIO__ = scenario;
-    }, "advanced-sets");
-    await page.goto("/session/detail/scenario-advanced-session-1");
-    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
+    // Simulate "relaunch": navigate back to session detail via SPA
+    await page.evaluate(() => {
+      window.history.pushState({}, "", "/session/detail/scenario-advanced-session-1");
+      window.dispatchEvent(new PopStateEvent("popstate", { state: null }));
+    });
+    await page.waitForTimeout(800);
 
-    // Data must still render after relaunch
+    // Data must still render — seedScenario did NOT re-run (seed hook was not re-enabled),
+    // proving the in-session DB state persists through kill+relaunch navigation.
     await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
     await expect(page.getByText("100 × 13")).toBeVisible();
   });

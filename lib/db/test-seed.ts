@@ -27,6 +27,7 @@
 
 import { Platform } from "react-native";
 import { getDatabase } from "./helpers";
+import { bulkInsertSegments, type BulkSegmentInput } from "./sets";
 
 export const SUPPORTED_SCENARIOS = [
   "completed-workout",
@@ -279,6 +280,8 @@ export async function seedFormClips(
 // AC #265: seeds a completed session with one rest_pause set (8+3+2 @ 100 kg)
 // and its three segments, so E2E specs can verify the production session-detail
 // mount path renders advanced-set data correctly.
+// Segments are inserted via bulkInsertSegments() to keep the cached-column
+// invariant (cached_volume_kg / cached_e1rm_kg) consistent.
 export async function seedAdvancedSets(
   db: Awaited<ReturnType<typeof getDatabase>>,
 ): Promise<void> {
@@ -305,18 +308,12 @@ export async function seedAdvancedSets(
     ["scenario-advanced-set-1", "scenario-advanced-session-1", "scenario-adv-exercise-1", 1, 100, 13, now - 200],
   );
 
-  const segments: [string, string, number, number, number, number | null, number][] = [
-    ["scenario-seg-1", "scenario-advanced-set-1", 1, 8, 100, 30, now - 600],
-    ["scenario-seg-2", "scenario-advanced-set-1", 2, 3, 100, 30, now - 400],
-    ["scenario-seg-3", "scenario-advanced-set-1", 3, 2, 100, null, now - 200],
+  // Route through bulkInsertSegments so cached_volume_kg / cached_e1rm_kg stay in sync
+  const segments: BulkSegmentInput[] = [
+    { segmentNumber: 1, reps: 8, weight: 100, restAfterSeconds: 30, completedAt: now - 600 },
+    { segmentNumber: 2, reps: 3, weight: 100, restAfterSeconds: 30, completedAt: now - 400 },
+    { segmentNumber: 3, reps: 2, weight: 100, restAfterSeconds: null, completedAt: now - 200 },
   ];
 
-  for (const [id, setId, segNum, reps, weight, rest, createdAt] of segments) {
-    await db.runAsync(
-      `INSERT OR IGNORE INTO workout_set_segments
-         (id, set_id, segment_number, reps, weight, rest_after_seconds, completed_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, setId, segNum, reps, weight, rest, createdAt, createdAt],
-    );
-  }
+  await bulkInsertSegments("scenario-advanced-set-1", segments);
 }
