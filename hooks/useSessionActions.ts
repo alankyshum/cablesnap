@@ -43,9 +43,8 @@ import {
   updateSetManualWeight,
   getRecentStackHistory,
   updateSetRepsAndDuration,
-  updateSetType,
 } from "../lib/db/session-sets";
-import { ADVANCED_SET_TYPES, insertSegment, deleteSegment, deleteAllSegmentsForSet, getSegmentsForSets } from "../lib/db/sets";
+import { ADVANCED_SET_TYPES, insertSegment, deleteSegment, collapseAdvancedSetToNormal, getSegmentsForSets } from "../lib/db/sets";
 import { getLastVariant, isCableExercise } from "../lib/cable-variant";
 import { resolveMarker } from "../lib/cable-stack";
 import {
@@ -1391,10 +1390,10 @@ export function useSessionActions({
       const set = allSets.find((s) => s.id === setId);
       if (!set) return;
       const segments = set.segments ?? [];
-      // Use MAX(segment_number) + 1 to avoid collisions after mid-list deletes.
-      const nextSegmentNumber = segments.length > 0
-        ? Math.max(...segments.map((s) => s.segment_number)) + 1
-        : 1;
+      // deleteSegment renumbers remaining segments to contiguous 1..N, so the
+      // next slot is always (length + 1). This keeps mini-set labels meaningful
+      // under the 8-cap.
+      const nextSegmentNumber = segments.length + 1;
       await insertSegment({
         setId,
         segmentNumber: nextSegmentNumber,
@@ -1418,19 +1417,18 @@ export function useSessionActions({
 
   const handleCollapseToNormal = useCallback(
     async (setId: string) => {
-      // Capture Σreps before deleting — deleteAllSegmentsForSet recomputes
-      // caches with 0 segments, leaving parent.reps = 0 for advanced types.
-      const allSets = groups.flatMap((g) => g.sets);
-      const set = allSets.find((s) => s.id === setId);
-      const totalReps = (set?.segments ?? []).reduce((sum, seg) => sum + seg.reps, 0);
-
-      await deleteAllSegmentsForSet(setId);
-      await updateSetType(setId, "normal");
-      // Restore the summed reps that deleteAllSegmentsForSet zeroed out.
-      await updateSetRepsAndDuration(setId, totalReps > 0 ? totalReps : null, undefined);
-      updateGroupSet(setId, { set_type: "normal", segments: [], reps: totalReps > 0 ? totalReps : null });
+      // Atomic collapse: deletes segments, sets type='normal' + reps=Σ, AND
+      // rewrites cached_volume_kg / cached_e1rm_kg from parent.weight × Σreps.
+      // Doing these as separate calls leaves caches stuck at 0 because
+      // recomputeSetCaches early-returns for non-advanced sets with no segments.
+      const totalReps = await collapseAdvancedSetToNormal(setId);
+      updateGroupSet(setId, {
+        set_type: "normal",
+        segments: [],
+        reps: totalReps > 0 ? totalReps : null,
+      });
     },
-    [groups, updateGroupSet]
+    [updateGroupSet]
   );
 
   return {

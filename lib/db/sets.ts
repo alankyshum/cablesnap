@@ -420,7 +420,10 @@ export async function updateSegment(params: UpdateSegmentParams): Promise<void> 
   await recomputeSetCaches(params.setId);
 }
 
-/** Delete a mini-set segment and recompute parent caches. */
+/** Delete a mini-set segment, renumber remaining segments contiguously (1..N),
+ *  and recompute parent caches. Renumbering keeps mini-set labels meaningful
+ *  under the 8-cap (e.g. after deleting #4 from [1..8], the rest become [1..7]
+ *  and the next insert lands at 8 — never 9). */
 export async function deleteSegment(segmentId: string, setId: string): Promise<void> {
   const db = await getDrizzle();
 
@@ -428,6 +431,7 @@ export async function deleteSegment(segmentId: string, setId: string): Promise<v
     .delete(workoutSetSegments)
     .where(and(eq(workoutSetSegments.id, segmentId), eq(workoutSetSegments.set_id, setId)));
 
+  await renumberSegments(setId);
   await recomputeSetCaches(setId);
 }
 
@@ -490,6 +494,94 @@ export async function updateSetForSessionEdit(
   if (updates.weight !== undefined || updates.reps !== undefined || updates.set_type !== undefined) {
     await recomputeSetCaches(setId);
   }
+}
+
+/**
+ * Re-number a set's remaining segments to be contiguous 1..N ordered by their
+ * current segment_number. Two-pass write avoids transient collisions on the
+ * unique (set_id, segment_number) index.
+ */
+async function renumberSegments(setId: string): Promise<void> {
+  const db = await getDrizzle();
+  const rows = await db
+    .select({ id: workoutSetSegments.id, segment_number: workoutSetSegments.segment_number })
+    .from(workoutSetSegments)
+    .where(eq(workoutSetSegments.set_id, setId))
+    .orderBy(workoutSetSegments.segment_number)
+    .all();
+
+  if (rows.length === 0) return;
+  // Skip work if already contiguous 1..N.
+  const alreadyContiguous = rows.every((r, i) => r.segment_number === i + 1);
+  if (alreadyContiguous) return;
+
+  // Pass 1: park each row at a unique negative slot to dodge the unique index.
+  for (let i = 0; i < rows.length; i++) {
+    await db
+      .update(workoutSetSegments)
+      .set({ segment_number: -(i + 1) })
+      .where(eq(workoutSetSegments.id, rows[i].id));
+  }
+  // Pass 2: assign final contiguous 1..N positions.
+  for (let i = 0; i < rows.length; i++) {
+    await db
+      .update(workoutSetSegments)
+      .set({ segment_number: i + 1 })
+      .where(eq(workoutSetSegments.id, rows[i].id));
+  }
+}
+
+/**
+ * Atomically collapse an advanced set (rest_pause/cluster/myo_reps) back to
+ * a normal set. Computes summed reps from segments, deletes them, sets
+ * set_type='normal' + reps=Σ, and writes legacy cached_volume_kg /
+ * cached_e1rm_kg derived from the parent's weight × summed reps.
+ *
+ * This is the ONLY safe path for the collapse transition: doing
+ * delete-segments → set-type → set-reps as separate calls leaves caches
+ * stuck at zero because recomputeSetCaches early-returns for non-advanced
+ * sets with no segments (it preserves their backfilled caches), so the
+ * post-delete recompute that ran while set_type was still advanced
+ * stays at 0 forever.
+ *
+ * Returns the summed reps that were written (>= 0).
+ */
+export async function collapseAdvancedSetToNormal(setId: string): Promise<number> {
+  const db = await getDrizzle();
+
+  const parent = await db
+    .select({ id: workoutSets.id, weight: workoutSets.weight })
+    .from(workoutSets)
+    .where(eq(workoutSets.id, setId))
+    .get();
+  if (!parent) return 0;
+
+  const segs = await db
+    .select({ reps: workoutSetSegments.reps })
+    .from(workoutSetSegments)
+    .where(eq(workoutSetSegments.set_id, setId))
+    .all();
+
+  const summedReps = segs.reduce((s, r) => s + (r.reps ?? 0), 0);
+
+  await db.delete(workoutSetSegments).where(eq(workoutSetSegments.set_id, setId));
+
+  const { cachedVolumeKg, cachedE1rmKg } = computeSetCacheValues(
+    { weight: parent.weight ?? null, reps: summedReps, isAdvancedSet: false },
+    [],
+  );
+
+  await db
+    .update(workoutSets)
+    .set({
+      set_type: "normal",
+      reps: summedReps > 0 ? summedReps : null,
+      cached_volume_kg: cachedVolumeKg,
+      cached_e1rm_kg: cachedE1rmKg,
+    })
+    .where(eq(workoutSets.id, setId));
+
+  return summedReps;
 }
 
 /**
