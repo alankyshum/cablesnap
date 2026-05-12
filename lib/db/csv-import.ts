@@ -137,7 +137,7 @@ export async function importCsvSessions(
         const setId = uuid();
         await database.runAsync(
           `INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, set_type)
-           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 'normal')`,
+           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)`,
           [
             setId,
             sessionId,
@@ -148,6 +148,7 @@ export async function importCsvSessions(
             completedAt,
             set.rpe,
             set.notes,
+            set.set_type,
           ]
         );
         setsInserted++;

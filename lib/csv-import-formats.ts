@@ -25,6 +25,8 @@ export type ParsedCsvRow = {
   kind?: string | null;
   daySessionExerciseId?: string | null;
   daySessionDate?: string | null;
+  /** BLD-1169: raw set_type string from CableSnap CSV; normalised at DB insertion. */
+  set_type?: string | null;
 };
 
 export type FormatDefinition = {
@@ -203,6 +205,8 @@ const cablesnap: FormatDefinition = {
       kind,
       daySessionExerciseId,
       daySessionDate,
+      // BLD-1169: pass raw set_type through; normalizeSetType is applied at DB insertion.
+      set_type: row["set_type"]?.trim() || null,
     };
   },
   detectWeightUnit() {

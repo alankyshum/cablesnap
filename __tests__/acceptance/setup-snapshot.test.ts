@@ -33,6 +33,7 @@ describe("Setup Snapshot — CSV export includes pulley_pin (BLD-1114 AC-CSV)", 
     pulley_pin: null,
     stack_marker: null,
     stack_name_at_log: null,
+    set_type: null,
   };
 
   it("header includes pulley_pin column", () => {

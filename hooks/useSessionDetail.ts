@@ -109,8 +109,9 @@ export function useSessionDetail(id: string | undefined) {
     let total = 0;
     for (const g of groups) {
       for (const s of g.sets) {
-        if (s.completed && s.set_type !== "warmup" && s.weight && s.reps) {
-          total += s.weight * s.reps;
+        // BLD-1174: use cached_volume_kg (segment-aware); fall back to weight*reps for legacy rows
+        if (s.completed && s.set_type !== "warmup") {
+          total += s.cached_volume_kg ?? (s.weight && s.reps ? s.weight * s.reps : 0);
         }
       }
     }

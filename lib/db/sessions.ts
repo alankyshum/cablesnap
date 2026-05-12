@@ -11,7 +11,7 @@ import {
   stravaSyncLog,
 } from "./schema";
 import { cascadeDeleteClipsForSession } from "../media/form-clips";
-import { recomputeSetCaches } from "./sets";
+import { recomputeSetCaches, normalizeSetType } from "./sets";
 
 // Re-export from split modules for backward compatibility
 export {
@@ -392,7 +392,7 @@ export async function createTemplateFromSession(
         rest_seconds: 90,
         link_id: linkId,
         link_label: "",
-        set_types: JSON.stringify(group.map((s) => s.set_type ?? "normal")),
+        set_types: JSON.stringify(group.map((s) => normalizeSetType(s.set_type))),
       });
     }
   });
@@ -633,7 +633,7 @@ function buildEditInsertRow(
     round: u.round ?? null,
     tempo: u.tempo ?? null,
     swapped_from_exercise_id: u.swapped_from_exercise_id ?? null,
-    set_type: u.set_type ?? "normal",
+    set_type: normalizeSetType(u.set_type),
     duration_seconds: u.duration_seconds ?? null,
     exercise_position: u.exercise_position ?? 0,
     bodyweight_modifier_kg: u.bodyweight_modifier_kg ?? null,

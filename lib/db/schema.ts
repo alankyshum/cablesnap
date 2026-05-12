@@ -151,8 +151,8 @@ export const workoutSets = sqliteTable("workout_sets", {
   // BLD-1168: cached aggregate columns — single source of truth for all analytics surfaces.
   // Populated exclusively by recomputeSetCaches(setId) in lib/db/sets.ts.
   // DEFAULT 0 so pre-migration rows have a defined value (backfill in migrate() sets correct values).
-  cached_volume_kg: real("cached_volume_kg").default(0),
-  cached_e1rm_kg: real("cached_e1rm_kg").default(0),
+  cached_volume_kg: real("cached_volume_kg").default(0).notNull(),
+  cached_e1rm_kg: real("cached_e1rm_kg").default(0).notNull(),
 }, (table) => [
   index("idx_workout_sets_exercise").on(table.exercise_id),
   index("idx_workout_sets_session").on(table.session_id),

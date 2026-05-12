@@ -28,6 +28,36 @@ export type { SetSegment };
  *  must store reps=0 / cached_volume_kg=0 / cached_e1rm_kg=0 (not legacy parent fallback). */
 export const ADVANCED_SET_TYPES: ReadonlySet<SetType> = new Set(["rest_pause", "cluster", "myo_reps"]);
 
+const VALID_SET_TYPES: ReadonlySet<string> = new Set([
+  "normal", "warmup", "dropset", "failure", "rest_pause", "cluster", "myo_reps",
+]);
+
+/** Tracks whether we've already warned about a given unknown value this process lifetime. */
+const _warnedSetTypes = new Set<unknown>();
+
+/**
+ * Normalises an untrusted `set_type` value (from DB row, CSV, backup, share-link payload)
+ * to a valid `SetType`.
+ *
+ * - Returns `raw` unchanged if it is one of the seven valid set-type strings.
+ * - Coerces any other value (unknown string, null, undefined, "") to "normal".
+ * - Emits a single `console.warn` per unknown value (dev-mode only) on first coercion.
+ *
+ * **Call this at every read boundary** — DB hydration, CSV import, backup restore,
+ * share-payload deserialiser, and UI label lookup — so that unknown values from older
+ * app versions or external sources never reach typed code as an invalid string.
+ */
+export function normalizeSetType(raw: unknown): SetType {
+  if (typeof raw === "string" && VALID_SET_TYPES.has(raw)) {
+    return raw as SetType;
+  }
+  if (__DEV__ && !_warnedSetTypes.has(raw)) {
+    _warnedSetTypes.add(raw);
+    console.warn(`[normalizeSetType] Unknown set_type "${String(raw)}" coerced to "normal"`);
+  }
+  return "normal";
+}
+
 // ─── Pure computation (exported for tests) ─────────────────────────────────
 
 export type SegmentInput = { reps: number; weight: number | null };

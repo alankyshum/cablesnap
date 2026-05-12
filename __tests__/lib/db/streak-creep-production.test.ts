@@ -39,7 +39,9 @@ function createSchema(db: DatabaseSync) {
     CREATE TABLE workout_sets (
       id TEXT PRIMARY KEY, session_id TEXT, exercise_id TEXT,
       weight REAL, reps INTEGER, completed INTEGER DEFAULT 0,
-      set_type TEXT DEFAULT 'normal'
+      set_type TEXT DEFAULT 'normal',
+      cached_volume_kg REAL DEFAULT 0,
+      cached_e1rm_kg REAL DEFAULT 0
     );
     CREATE TABLE exercises (id TEXT PRIMARY KEY, name TEXT NOT NULL, primary_muscles TEXT);
     CREATE TABLE body_weight (id TEXT PRIMARY KEY, weight REAL NOT NULL, date TEXT NOT NULL);

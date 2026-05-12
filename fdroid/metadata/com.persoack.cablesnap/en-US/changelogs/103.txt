@@ -1,0 +1,3 @@
+- **Advanced set schemes (analytics)**: rest-pause, cluster, and myo-rep sets now contribute correct volume and e1RM values to all analytics surfaces (weekly/monthly trends, exercise history bests, achievements). Previously, multi-segment sets were excluded or under-counted due to the reps ≤ 12 filter.
+- **Adaptive Macro Coach** (off by default): Enable in Settings → Nutrition → Adaptive Macro Coach to get a weekly advisory card that suggests a calorie target
+…see in-app release notes
