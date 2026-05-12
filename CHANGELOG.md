@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - Progression suggestions now correctly evaluate advanced set types (rest-pause, cluster, myo-reps) using the working-set reps of the activation segment, rather than the inflated total-reps sum.
+- **CSV export/import round-trip for advanced sets**: rest-pause, cluster, and myo-rep set segment data (reps, weights, rests per mini-set) is now preserved when you export and re-import your workout CSV. Unknown set types in imported CSVs are automatically normalised to "normal" instead of being silently dropped.
 
 ## v0.26.33 — 2026-05-12
 <!-- versionCode: 103 -->
