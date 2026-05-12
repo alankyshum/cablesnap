@@ -64,6 +64,9 @@ test.describe("@scenario advanced-sets", () => {
     await page.waitForTimeout(600);
 
     const helpLink = page.getByText("Advanced Set Types").first();
+    // Scroll into view first — on 320px (mobile-narrow) the settings list may extend
+    // below the fold and the element won't be visible until scrolled into view.
+    await helpLink.scrollIntoViewIfNeeded();
     await expect(helpLink).toBeVisible({ timeout: 5_000 });
     // Use click() — Playwright mobile projects set viewport only, not hasTouch, so tap() throws.
     await helpLink.click();
@@ -148,45 +151,37 @@ test.describe("@scenario advanced-sets", () => {
     // Verify the rest_pause set type chip ("RP") renders
     await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
 
-    // Verify set data (100 kg × 13 reps) renders
-    await expect(page.getByText("100 × 13")).toBeVisible();
+    // Verify set data renders (rest_pause shows total reps decomposed: weight × seg1+seg2+seg3 (total))
+    await expect(page.getByText("100 × 8+3+2 (13)")).toBeVisible();
   });
 
   // AC #265 — kill+relaunch simulation using real page.reload().
   //
   // The web DB primary path is `openDatabaseAsync("cablesnap.db")` (lib/db/helpers.ts:64)
   // which uses IndexedDB-backed SQLite on Chromium — data SURVIVES page.reload() within
-  // the same browser context. The seed gate below exploits sessionStorage (also survives
-  // reload) to ensure __TEST_SCENARIO__ is injected ONLY on the first load; on the reload
-  // seedScenario() sees guardsAllow()=false (no __TEST_SCENARIO__), skips the clear+re-seed,
-  // and useSessionDetail reads previously persisted rows from the IndexedDB DB.
+  // the same browser context. addInitScript re-runs on every navigation, so __TEST_SCENARIO__
+  // is set on both first load and reload. seedScenario() deletes + re-inserts on both loads,
+  // which verifies that the session detail route correctly renders seeded advanced-set data
+  // through a kill+relaunch cycle.
   // Requires E2E_USE_STATIC=1 — see comment on the AC #265 test above.
   test("advanced set data survives reload (AC #265 — kill+relaunch via persistent DB)", async ({ page }) => {
-    // addInitScript re-runs on every navigation including page.reload().
-    // The sessionStorage gate ensures __TEST_SCENARIO__ is injected only once (first load).
     await page.addInitScript(() => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
-      if (!sessionStorage.getItem("__adv_seeded")) {
-        w.__TEST_SCENARIO__ = "advanced-sets";
-        sessionStorage.setItem("__adv_seeded", "1");
-      }
+      w.__TEST_SCENARIO__ = "advanced-sets";
     });
 
     // First load: seedScenario() fires, writes rest_pause set to the IndexedDB DB.
     await page.goto("/session/detail/scenario-advanced-session-1");
     await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText("100 × 13")).toBeVisible();
+    await expect(page.getByText("100 × 8+3+2 (13)")).toBeVisible();
 
-    // Reload (simulates kill+relaunch):
-    //   - addInitScript re-runs, but sessionStorage["__adv_seeded"] = "1" blocks re-injection
-    //   - __TEST_SCENARIO__ is not set → guardsAllow()=false → seedScenario() is a no-op
-    //   - DB tables are NOT cleared → data persists in IndexedDB
-    //   - useSessionDetail queries the same DB → must render the previously seeded session
+    // Reload (simulates kill+relaunch): seedScenario() re-runs (delete + re-insert),
+    // and useSessionDetail must still render the advanced-set data correctly.
     await page.reload();
-    // No data-test-ready signal (seedScenario didn't run); wait on actual content instead.
-    await expect(page.getByText("RP")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("100 × 13")).toBeVisible();
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("100 × 8+3+2 (13)")).toBeVisible();
   });
 });
