@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.34 — 2026-05-12
+<!-- versionCode: 104 -->
+
 - **Rest timer (Android)**: Fixed notification spam where finishing a set would stack 12–24+ shade entries instead of showing one. The live countdown now dismisses the previous entry before re-presenting, and updates every 15 s instead of every 5 s.
 - **WearOS rest-complete bridging**: The "rest complete" chime now appears on paired Wear OS watches. Previously the notification used a low-importance channel that the Wear OS Companion skips; it now uses a HIGH-importance channel.
 - **Fix: "Complete Workout" button no longer silently no-ops** — confirm dialog now reads "Complete" (was "OK"), and any error during finish (rest dismiss, pinned-note flush, session save) is surfaced as a toast instead of being swallowed. Your in-progress workout remains intact and resumable on failure. (#589, BLD-1207)
