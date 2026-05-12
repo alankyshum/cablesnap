@@ -414,6 +414,64 @@ describe("useRestTimer", () => {
     expect(result.current.selectedDurationSeconds).toBe(45);
   });
 
+  it("BLD-1208 — cold-start restore path uses LIVE_COUNTDOWN_TICK_MS (15s) cadence, not 5s", async () => {
+    const endTimestamp = Date.now() + 90000;
+    mockGetAppSetting.mockImplementation(async (key: string) => {
+      if (key === "rest_timer_default_seconds") return "90";
+      if (key === "rest_timer_active_state") {
+        return JSON.stringify({
+          sessionId: "session-1",
+          endTimestamp,
+          durationSeconds: 90,
+          breakdown: {
+            totalSeconds: 90,
+            baseSeconds: 90,
+            factors: [],
+            isDefault: true,
+            reasonShort: "",
+            reasonAccessible: "",
+          },
+          notificationId: "notif-id-restore",
+          liveEnabled: true,
+          previewSnapshot: null,
+          isLastSet: false,
+          cueSeconds: 0,
+        });
+      }
+      return "true";
+    });
+
+    // Simulate app is in foreground during restore
+    const origCurrentState = AppState.currentState;
+    Object.defineProperty(AppState, "currentState", { value: "active", writable: true, configurable: true });
+
+    try {
+      const { result } = renderHook(() => useRestTimer(defaultOptions));
+
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      // Initial restore call
+      const callsAfterRestore = mockPresentLiveRestCountdown.mock.calls.length;
+      expect(callsAfterRestore).toBeGreaterThanOrEqual(1);
+
+      // Advance by 5s — should NOT trigger another live countdown call (old 5s cadence)
+      await act(async () => { jest.advanceTimersByTime(5000); });
+      expect(mockPresentLiveRestCountdown.mock.calls.length).toBe(callsAfterRestore);
+
+      // Advance by another 10s (total 15s) — NOW it should fire (15s cadence)
+      await act(async () => { jest.advanceTimersByTime(10000); });
+      expect(mockPresentLiveRestCountdown.mock.calls.length).toBe(callsAfterRestore + 1);
+
+      // Confirm result is still counting
+      expect(result.current.rest).toBeGreaterThan(0);
+    } finally {
+      Object.defineProperty(AppState, "currentState", { value: origCurrentState, writable: true, configurable: true });
+    }
+  });
+
   it("does not schedule notification when notifications unavailable", async () => {
     mockIsAvailable.mockReturnValue(false);
     const { result } = renderHook(() => useRestTimer(defaultOptions));

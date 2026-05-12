@@ -39,6 +39,13 @@ import {
 } from "../lib/notifications";
 import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
 
+/**
+ * Interval between live countdown shade updates (ms).
+ * 15s is frequent enough for human perception during a rest and minimises
+ * shade churn vs the previous 5s cadence (BLD-1208).
+ */
+const LIVE_COUNTDOWN_TICK_MS = 15_000;
+
 export type SetContext = {
   exerciseId: string;
   sessionId: string;
@@ -136,7 +143,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   const endAtRef = useRef<number | null>(null);
   /** BLD-1137: replaces legacy notificationIdRef with three-id object. */
   const notificationIdsRef = useRef<{ preEnd?: string | null; complete?: string | null; liveOngoing?: string | null }>({});
-  /** BLD-1137: setInterval handle for the 5s live countdown re-present. */
+  /** BLD-1137: setInterval handle for the 15 s live countdown re-present (BLD-1208). */
   const liveCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   /** BLD-1137: preview snapshot ref so recomputeActiveRest can re-use without refetching. */
   const previewRef = useRef<NextSetPreview>(null);
@@ -262,9 +269,9 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
               return;
             }
             void presentLiveRestCountdown(remaining, effectivePreview, sessionId).catch(() => {});
-            liveCountdownIntervalRef.current = setTimeout(scheduleNext, 5000) as unknown as ReturnType<typeof setInterval>;
+            liveCountdownIntervalRef.current = setTimeout(scheduleNext, LIVE_COUNTDOWN_TICK_MS) as unknown as ReturnType<typeof setInterval>;
           };
-          liveCountdownIntervalRef.current = setTimeout(scheduleNext, 5000) as unknown as ReturnType<typeof setInterval>;
+          liveCountdownIntervalRef.current = setTimeout(scheduleNext, LIVE_COUNTDOWN_TICK_MS) as unknown as ReturnType<typeof setInterval>;
         }
       }
 
@@ -593,9 +600,9 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
             const rem = Math.max(0, Math.floor((endAtRef.current - Date.now()) / 1000));
             if (rem <= 0) { stopLiveCountdownInterval(); return; }
             void presentLiveRestCountdown(rem, restoredState.previewSnapshot, sessionId).catch(() => {});
-            liveCountdownIntervalRef.current = setTimeout(scheduleNext, 5000) as unknown as ReturnType<typeof setInterval>;
+            liveCountdownIntervalRef.current = setTimeout(scheduleNext, LIVE_COUNTDOWN_TICK_MS) as unknown as ReturnType<typeof setInterval>;
           };
-          liveCountdownIntervalRef.current = setTimeout(scheduleNext, 5000) as unknown as ReturnType<typeof setInterval>;
+          liveCountdownIntervalRef.current = setTimeout(scheduleNext, LIVE_COUNTDOWN_TICK_MS) as unknown as ReturnType<typeof setInterval>;
         }
 
         // BLD-1137: AC12 — Re-schedule OS notifications lost on Android force-kill or device restart.
