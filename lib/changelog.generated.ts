@@ -10,10 +10,16 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.33",
+    "date": "2026-05-12",
+    "versionCode": 103,
+    "body": "- **Advanced set schemes (analytics)**: rest-pause, cluster, and myo-rep sets now contribute correct volume and e1RM values to all analytics surfaces (weekly/monthly trends, exercise history bests, achievements). Previously, multi-segment sets were excluded or under-counted due to the reps ≤ 12 filter.\n- **Adaptive Macro Coach** (off by default): Enable in Settings → Nutrition → Adaptive Macro Coach to get a weekly advisory card that suggests a calorie target based on your trend weight and average intake over the past two weeks. The coach is advisory only — your target is never changed without your tap. Includes a hard safety floor (based on your sex and estimated metabolic rate), a ±300 kcal/week cap, Right Why check-in, and a one-tap one-month pause.\n- **Tempo Coach (haptic engine)**: Enable \"Tempo Coach\" in Settings → Preferences to get a haptic rep guide during your sets. When active, a vibration cues each phase of your tempo (eccentric → bottom pause → concentric → top pause) in real time. A compact overlay shows the current phase and lets you stop the coach at any time. The coach auto-stops when the set is logged and cancels if you background the app."
+  },
+  {
     "version": "0.26.32",
     "date": "2026-05-11",
     "versionCode": 102,
-    "body": "- **Form Check Comparison**: Compare form clips side-by-side from the Form Library or from the clip player with synchronized play/pause/reset, A↔B swap, in-sheet clip picker, and landscape layout support."
+    "body": "- **Form Check Comparison**: Compare form clips side-by-side from the Form Library or from the clip player with synchronized play/pause/reset, A↔B swap, in-sheet clip picker, and landscape layout support.\n- **Tempo Coach (data layer)**: Set a per-exercise default tempo (e.g. `3-1-2-0`), which auto-fills on every new set for that exercise. Edit tempo per-set via the new Set Options sheet. Tempo is preserved across CSV import/export and template initialization."
   },
   {
     "version": "0.26.31",
