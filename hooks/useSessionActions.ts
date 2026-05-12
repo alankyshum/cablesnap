@@ -1150,10 +1150,18 @@ export function useSessionActions({
         // Strava sync (non-blocking — never prevents workout completion)
         try {
           const { syncSessionToStrava } = await import("../lib/strava");
-          const synced = await syncSessionToStrava(id!);
-          if (synced) {
+          const result = await syncSessionToStrava(id!);
+          if (result.status === "synced") {
             showToast("Synced to Strava ✓");
+          } else if (result.status === "queued") {
+            showToast("Strava sync queued — will retry");
+          } else if (result.status === "failed") {
+            showToast("Strava sync failed — check Settings", {
+              action: { label: "Settings", onPress: () => router.push("/settings/strava") },
+              duration: 6000,
+            });
           }
+          // "skipped" → no toast (not connected or no sets)
         } catch {
           showError("Strava sync failed");
         }
