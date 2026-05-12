@@ -91,7 +91,7 @@ export function computeSetCacheValues(
     const r = parent.reps ?? 0;
     return {
       cachedVolumeKg: w * r,
-      cachedE1rmKg: r > 0 ? w * (1 + r / 30) : 0,
+      cachedE1rmKg: r > 0 && r <= 12 ? w * (1 + r / 30) : 0, // BLD-1183: align with backfill cap
       totalReps: r,
     };
   }

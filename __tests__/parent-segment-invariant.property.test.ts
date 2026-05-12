@@ -91,7 +91,7 @@ function expectedE1rm(parent: { weight: number | null; reps: number | null; isAd
     if (parent.isAdvancedSet) return 0;
     const r = parent.reps ?? 0;
     const w = parent.weight ?? 0;
-    return r > 0 ? w * (1 + r / 30) : 0;
+    return r > 0 && r <= 12 ? w * (1 + r / 30) : 0; // BLD-1183: mirror reps<=12 cap in computeSetCacheValues
   }
   let maxE1rm = 0;
   for (const seg of segments) {
