@@ -136,18 +136,16 @@ describe("Architecture: hooks do not bypass DB layer for workout_sets (BLD-1170)
 
 // ─── Test 4: repo-wide db.update(workoutSets) exclusivity to lib/db/sets.ts ──
 //
-// AC #267 (partial — write-path half): Only lib/db/sets.ts may call
-// db.update(workoutSets) for volume-affecting fields. session-sets.ts retains
-// db.update(workoutSets) for NON-volume fields (notes, tempo, rpe, duration,
-// variant, etc.) — those are intentional and excluded via per-file allowlist.
+// AC #267 (BLD-1170 scope — write-path ban): Only lib/db/sets.ts may call
+// db.update(workoutSets) for volume-affecting fields. lib/db/session-sets.ts
+// retains db.update(workoutSets) for NON-volume fields (notes, tempo, rpe,
+// duration, variant, etc.) — explicitly allowed. lib/db/sessions.ts retains
+// db.update(workoutSets) for set renumbering and exercise swaps — also allowed.
 //
-// NOTE: The e1RM formula ban (`weight * reps`, `weight * (1 + reps/30)`) is NOT
-// enforced here because the analytics surfaces (lib/db/e1rm-trends.ts,
-// lib/db/monthly-report.ts, etc.) still use raw formulas pending BLD-1174
-// (Slice 5: analytics surfaces → cached columns). Adding that check here would
-// break CI before BLD-1174 merges. The formula ban will be enforced by BLD-1174's
-// architecture test once those files are migrated to read cached_volume_kg /
-// cached_e1rm_kg directly.
+// Per tech-lead ruling (BLD-1170, 2026-05-11): AC #267 is split between slices:
+//   - BLD-1170 (this slice): write-path ban — db.update(workoutSets) exclusivity
+//   - BLD-1174 (analytics slice): formula ban — raw weight*reps / e1RM formulas
+// The formula ban is out of scope here and will be enforced by BLD-1174.
 
 describe("Architecture: db.update(workoutSets) only from approved files (BLD-1170 AC#267)", () => {
   it("no file outside lib/db/sets.ts and lib/db/session-sets.ts calls db.update(workoutSets)", () => {

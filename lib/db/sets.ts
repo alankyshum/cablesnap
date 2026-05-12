@@ -1,21 +1,23 @@
 /**
  * BLD-1168: Single write-path for workout_sets mutations.
  *
- * ARCHITECTURE INVARIANT: Only this file may UPDATE workout_sets or issue
- * INSERT/UPDATE/DELETE on workout_set_segments. All callers must route through
- * the functions here so that recomputeSetCaches() is guaranteed to run after
- * every mutation and the cached_volume_kg / cached_e1rm_kg columns remain in sync.
+ * ARCHITECTURE INVARIANT (enforced by __tests__/architecture-set-write-path.test.ts):
+ *   - Only this file may call db.update(workoutSets) for volume-affecting fields.
+ *   - Only this file may INSERT/UPDATE/DELETE on workout_set_segments.
+ *   - All callers must route through the functions here so that
+ *     recomputeSetCaches() is guaranteed to run after every mutation and the
+ *     cached_volume_kg / cached_e1rm_kg columns remain in sync.
  *
- * The architecture grep-test (__tests__/architecture-set-write-path.test.ts)
- * enforcing this invariant is added in Slice 2 (BLD-1170). It will fail CI
- * if any file outside this module contains:
- *   - UPDATE workout_sets / db.update(workoutSets)
- *   - INSERT INTO workout_set_segments / UPDATE workout_set_segments / DELETE FROM workout_set_segments
- *   - weight * reps  (raw ad-hoc volume computation)
- *   - weight * (1 + reps / 30)  (raw ad-hoc e1RM computation)
+ * Note: lib/db/session-sets.ts retains db.update(workoutSets) for non-volume
+ * fields (notes, tempo, rpe, duration, variant, etc.) — explicitly allowed.
+ * lib/db/sessions.ts retains db.update(workoutSets) for set renumbering and
+ * exercise swaps — also explicitly allowed.
+ *
+ * Raw e1RM formula migration (weight*reps, weight*(1+reps/30)) is out of scope
+ * for this slice — that is covered by BLD-1174 (analytics surfaces migration).
  */
 import { eq, and } from "drizzle-orm";
-import { getDrizzle } from "./helpers";
+import { getDrizzle, withTransaction } from "./helpers";
 import { workoutSets, workoutSetSegments } from "./schema";
 import { uuid } from "../uuid";
 import type { SetSegment, SetType } from "../types";
@@ -206,16 +208,26 @@ export async function updateSetRepsAndDurationAtomic(
 
 
 /**
- * Runs all updates then all cache recomputations to minimise round-trips.
+ * Batch-update weight and reps for multiple sets, then recompute caches.
+ * The writes run inside a single transaction so a mid-batch failure leaves no
+ * partial state, matching the original updateSetsBatch contract.
  */
 export async function batchUpdateSetWeightReps(
   updates: { id: string; weight: number | null; reps: number | null }[],
 ): Promise<void> {
   if (updates.length === 0) return;
-  const db = await getDrizzle();
-  for (const u of updates) {
-    await db.update(workoutSets).set({ weight: u.weight, reps: u.reps }).where(eq(workoutSets.id, u.id));
-  }
+  await withTransaction(async (db) => {
+    const stmt = await db.prepareAsync(
+      "UPDATE workout_sets SET weight = ?, reps = ? WHERE id = ?",
+    );
+    try {
+      for (const u of updates) {
+        await stmt.executeAsync([u.weight, u.reps, u.id]);
+      }
+    } finally {
+      await stmt.finalizeAsync();
+    }
+  });
   for (const u of updates) {
     await recomputeSetCaches(u.id);
   }
