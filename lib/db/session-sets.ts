@@ -9,6 +9,7 @@ import { uuid } from "../uuid";
 import { getDrizzle, withTransaction, getDatabase } from "./helpers";
 import { workoutSets, exercises, workoutSessions, setMedia } from "./schema";
 import { cascadeDeleteClipsForSets } from "../media/form-clips";
+import { normalizeSetType } from "./sets";
 
 export async function getSessionSets(
   sessionId: string
@@ -70,7 +71,7 @@ export async function getSessionSets(
     round: r.round ?? null,
     tempo: r.tempo ?? null,
     swapped_from_exercise_id: r.swapped_from_exercise_id ?? null,
-    set_type: (r.set_type as SetType) ?? "normal",
+    set_type: normalizeSetType(r.set_type),
     duration_seconds: r.duration_seconds ?? null,
     exercise_position: r.exercise_position ?? 0,
     bodyweight_modifier_kg: r.bodyweight_modifier_kg ?? null,
@@ -140,7 +141,7 @@ export async function getSourceSessionSets(
     link_id: r.link_id,
     tempo: r.tempo,
     exercise_exists: r.exercise_exists != null,
-    set_type: (r.set_type as SetType) ?? "normal",
+    set_type: normalizeSetType(r.set_type),
   }));
 }
 
@@ -680,9 +681,9 @@ export async function getPreviousSets(
 export async function getPreviousSetsBatch(
   exerciseIds: string[],
   currentSessionId: string
-): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; completed: boolean; rpe: number | null; pulley_pin: number | null }[]>> {
+): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: SetType; completed: boolean; rpe: number | null; pulley_pin: number | null }[]>> {
   if (exerciseIds.length === 0) return {};
-  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: string | null; completed: boolean; rpe: number | null; pulley_pin: number | null }[]> = {};
+  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: SetType; completed: boolean; rpe: number | null; pulley_pin: number | null }[]> = {};
   const db = await getDrizzle();
   // Step 1: Find all completed sessions per exercise, ordered by most recent
   const sessionRows = await db
@@ -735,7 +736,7 @@ export async function getPreviousSetsBatch(
     const correctSession = sessionMap[row.exercise_id];
     if (!correctSession || row.session_id !== correctSession) continue;
     if (!result[row.exercise_id]) result[row.exercise_id] = [];
-    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds, set_type: row.set_type, completed: row.completed === 1, rpe: row.rpe ?? null, pulley_pin: row.pulley_pin ?? null });
+    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds, set_type: normalizeSetType(row.set_type), completed: row.completed === 1, rpe: row.rpe ?? null, pulley_pin: row.pulley_pin ?? null });
   }
   return result;
 }

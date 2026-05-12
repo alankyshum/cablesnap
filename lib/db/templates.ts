@@ -16,6 +16,7 @@ import {
   workoutSets,
 } from "./schema";
 import { mapRow } from "./exercises";
+import { normalizeSetType } from "./sets";
 
 export type InitialSetSeed = {
   sessionId: string;
@@ -45,13 +46,16 @@ export function parseTemplateTargetReps(targetReps: string, setNumber: number): 
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
-function parseTemplateSetTypes(raw: string | null | undefined, targetSets: number): SetType[] {
+export function parseTemplateSetTypes(raw: string | null | undefined, targetSets: number): SetType[] {
   if (!raw) return normalizeTemplateSetTypes(undefined, targetSets);
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return normalizeTemplateSetTypes(undefined, targetSets);
+    // BLD-1169 AC #269: route every element through normalizeSetType so advanced
+    // types (rest_pause, cluster, myo_reps) survive instead of being silently
+    // dropped by the legacy 4-type allow-list.
     return normalizeTemplateSetTypes(
-      parsed.filter((value): value is SetType => value === "normal" || value === "warmup" || value === "dropset" || value === "failure"),
+      parsed.map((value) => normalizeSetType(value)),
       targetSets,
     );
   } catch {
@@ -902,7 +906,7 @@ export async function syncTemplateFromSession(
         setTypes: [],
       });
     }
-    sessionGroups.get(key)!.setTypes.push((s.set_type as SetType) ?? "normal");
+    sessionGroups.get(key)!.setTypes.push(normalizeSetType(s.set_type));
   }
 
   // ── STARTER TEMPLATE: diff first, then inline-clone if needed ─────────────
