@@ -341,7 +341,10 @@ jobs:
       - name: Commit and push
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main' && inputs.republish_current != true
         run: |
+          set -euo pipefail
           VERSION="${{ steps.next_version.outputs.version }}"
+          VCODE="${{ steps.next_vcode.outputs.version_code }}"
+          DATE=$(date -u +%Y-%m-%d)
           git config user.name "CableSnap Release Bot"
           git config user.email "release-bot@cablesnap.app"
           git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
@@ -352,27 +355,10 @@ jobs:
             echo "Version files already at v$VERSION — skipping commit."
           else
             git commit -m "release: v$VERSION"
-            # Retry up to 5 times with rebase, in case main moved during the workflow
-            # (e.g. a Dependabot merge landed between checkout and push).
-            pushed=0
-            for i in 1 2 3 4 5; do
-              if git push origin main; then
-                pushed=1
-                break
-              fi
-              echo "::warning::Push rejected (attempt $i). Rebasing onto remote main and retrying..."
-              git fetch origin main
-              git pull --rebase origin main || {
-                echo "::error::Rebase failed on attempt $i — aborting."
-                exit 1
-              }
-              # Brief jitter to avoid lockstep with other concurrent pushers.
-              sleep $((RANDOM % 5 + 2))
-            done
-            if [ "$pushed" -ne 1 ]; then
-              echo "::error::Failed to push release commit after 5 rebase attempts."
-              exit 1
-            fi
+            # Delegate the push-with-recovery loop to a standalone script so the
+            # conflict-recovery path is independently testable (BLD-1185).
+            VERSION="$VERSION" VCODE="$VCODE" DATE="$DATE" \
+              bash scripts/release-push-with-recovery.sh
           fi
 
       - name: Dry-run notice (non-main ref)
