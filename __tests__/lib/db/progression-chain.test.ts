@@ -164,7 +164,43 @@ describe("getProgressionSuggestion", () => {
   it("returns shouldSuggest=false when latest session has sets under 12 reps", async () => {
     mockDb.getAllAsync.mockResolvedValueOnce([{ count: 5 }]);
     mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 1 }]);
+    // BLD-1172: workSets row with 11 reps — explicitly under the 12-rep threshold
+    mockDb.getAllAsync.mockResolvedValueOnce([{ id: "ws-1", set_type: "normal", reps: 11 }]);
+    // BLD-1172: batch segments query (normal sets have no segments → empty array)
+    mockDb.getAllAsync.mockResolvedValueOnce([]);
+    const result = await getProgressionSuggestion("e2", chain);
+    expect(result.shouldSuggest).toBe(false);
+  });
+
+  it("returns shouldSuggest=true for myo_reps when activation-segment reps >= 12", async () => {
+    // AC #271 variant: myo_reps set with total reps=32 (sum), but activation segment = 15.
+    // getWorkingRepsForOverloadDecision returns 15 (first segment) not 32 (total).
+    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 5 }]);
+    mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
+    mockDb.getAllAsync.mockResolvedValueOnce([{ id: "ws-2", set_type: "myo_reps", reps: 32 }]);
+    // Batch segments: activation segment (15 reps) + 2 mini-clusters (9, 8)
+    mockDb.getAllAsync.mockResolvedValueOnce([
+      { id: "seg-1", set_id: "ws-2", segment_number: 1, reps: 15, created_at: 1 },
+      { id: "seg-2", set_id: "ws-2", segment_number: 2, reps: 9, created_at: 1 },
+      { id: "seg-3", set_id: "ws-2", segment_number: 3, reps: 8, created_at: 1 },
+    ]);
+    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]); // nextLogged = 0
+    const result = await getProgressionSuggestion("e2", chain);
+    expect(result.shouldSuggest).toBe(true);
+    expect(result.nextExercise).toEqual({ id: "e3", name: "Diamond Push-Up" });
+  });
+
+  it("returns shouldSuggest=false for rest_pause when first-segment reps < 12", async () => {
+    // AC #270 variant: rest_pause set with total reps=13 but first segment only 8.
+    // getWorkingRepsForOverloadDecision returns 8 (first segment) not 13 (total).
+    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 5 }]);
+    mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
+    mockDb.getAllAsync.mockResolvedValueOnce([{ id: "ws-3", set_type: "rest_pause", reps: 13 }]);
+    // Batch segments: first segment 8 reps (working effort) + rest-pause continuation 5 reps
+    mockDb.getAllAsync.mockResolvedValueOnce([
+      { id: "seg-4", set_id: "ws-3", segment_number: 1, reps: 8, created_at: 1 },
+      { id: "seg-5", set_id: "ws-3", segment_number: 2, reps: 5, created_at: 1 },
+    ]);
     const result = await getProgressionSuggestion("e2", chain);
     expect(result.shouldSuggest).toBe(false);
   });
@@ -172,9 +208,11 @@ describe("getProgressionSuggestion", () => {
   it("returns shouldSuggest=true when all criteria met", async () => {
     mockDb.getAllAsync.mockResolvedValueOnce([{ count: 5 }]);
     mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 3 }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]);
+    // BLD-1172: workSets query now returns actual rows {id, set_type, reps}
+    mockDb.getAllAsync.mockResolvedValueOnce([{ id: "ws-1", set_type: "normal", reps: 15 }]);
+    // BLD-1172: batch segments query (normal sets have no segments → empty array)
+    mockDb.getAllAsync.mockResolvedValueOnce([]);
+    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]); // nextLogged = 0
     const result = await getProgressionSuggestion("e2", chain);
     expect(result.shouldSuggest).toBe(true);
     expect(result.nextExercise).toEqual({ id: "e3", name: "Diamond Push-Up" });
@@ -184,9 +222,11 @@ describe("getProgressionSuggestion", () => {
   it("returns shouldSuggest=false when next exercise already logged recently", async () => {
     mockDb.getAllAsync.mockResolvedValueOnce([{ count: 5 }]);
     mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 3 }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 2 }]);
+    // BLD-1172: workSets with reps >= 12 so we reach the nextLogged check
+    mockDb.getAllAsync.mockResolvedValueOnce([{ id: "ws-1", set_type: "normal", reps: 15 }]);
+    // BLD-1172: batch segments query (normal sets have no segments → empty array)
+    mockDb.getAllAsync.mockResolvedValueOnce([]);
+    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 2 }]); // nextLogged = 2 → recently logged
     const result = await getProgressionSuggestion("e2", chain);
     expect(result.shouldSuggest).toBe(false);
   });
@@ -194,8 +234,8 @@ describe("getProgressionSuggestion", () => {
   it("returns shouldSuggest=false when no normal completed sets exist", async () => {
     mockDb.getAllAsync.mockResolvedValueOnce([{ count: 5 }]);
     mockDb.getAllAsync.mockResolvedValueOnce([{ session_id: "sess-1" }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]);
-    mockDb.getAllAsync.mockResolvedValueOnce([{ count: 0 }]);
+    // BLD-1172: empty workSets array → hits workSets.length === 0 early-exit
+    mockDb.getAllAsync.mockResolvedValueOnce([]);
     const result = await getProgressionSuggestion("e2", chain);
     expect(result.shouldSuggest).toBe(false);
   });
