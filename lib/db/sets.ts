@@ -435,6 +435,9 @@ export type SessionEditUpdateFields = {
  * editCompletedSession). Centralising the write here guarantees
  * recomputeSetCaches() always runs after a weight / reps / set_type change,
  * eliminating the post-TX recompute loop that previously lived in sessions.ts.
+ *
+ * Must be called from inside `withTransaction` so that recomputeSetCaches()
+ * reads-after-writes see the just-written values within the same SQLite tx.
  */
 export async function updateSetForSessionEdit(
   setId: string,
