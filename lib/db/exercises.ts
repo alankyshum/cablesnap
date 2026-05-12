@@ -6,7 +6,7 @@ import { getDrizzle, query, withTransaction } from "./helpers";
 import { exercises, templateExercises } from "./schema";
 import type { ExerciseRow } from "./schema";
 import { getWorkingRepsForOverloadDecision } from "../sets-accessors";
-import { getSegmentsForSet } from "./sets";
+import type { SetSegment, SetType } from "../types";
 
 function mapRow(row: ExerciseRow): Exercise {
   return {
@@ -309,12 +309,13 @@ export async function getProgressionSuggestion(
   }
 
   // Load all completed work sets (normal + advanced) from the latest session.
-  // BLD-1172: use getWorkingRepsForOverloadDecision() instead of set.reps directly,
-  // because for advanced set types (rest_pause, cluster, myo_reps) set.reps is the
-  // SUM of all mini-set reps, which would incorrectly inflate the progression check.
-  // The accessor returns the first-segment reps (the heaviest working effort) for
-  // advanced types, and set.reps unchanged for normal/warmup/dropset/failure.
-  const workSets = await query<{ id: string; set_type: string; reps: number | null }>(
+  // BLD-1172: Behaviour change from pre-BLD-1168 code: the old guard required
+  // set_type = 'normal'. Now advanced set types (rest_pause, cluster, myo_reps)
+  // also count toward progression, using the first-segment reps via the named
+  // accessor so that the rep count is not inflated by total-segment sums.
+  // This is intentional per PLAN-BLD-1168 §Progression — advanced sets should
+  // qualify a session for progression suggestions just as normal sets do.
+  const workSets = await query<{ id: string; set_type: SetType; reps: number | null }>(
     `SELECT id, set_type, reps
      FROM workout_sets
      WHERE session_id = ?
@@ -329,13 +330,25 @@ export async function getProgressionSuggestion(
     return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
   }
 
+  // Batch-load all segments for the work sets in a single query (avoids N+1).
+  const setIds = workSets.map((ws) => ws.id);
+  const allSegments = await query<SetSegment>(
+    `SELECT * FROM workout_set_segments
+     WHERE set_id IN (${setIds.map(() => "?").join(",")})
+     ORDER BY segment_number`,
+    setIds
+  );
+  const segmentsBySetId = new Map<string, SetSegment[]>();
+  for (const seg of allSegments) {
+    const list = segmentsBySetId.get(seg.set_id) ?? [];
+    list.push(seg);
+    segmentsBySetId.set(seg.set_id, list);
+  }
+
   // Check every work set reached >= 12 reps using the named accessor.
   for (const ws of workSets) {
-    const segments = await getSegmentsForSet(ws.id);
-    const workingReps = getWorkingRepsForOverloadDecision(
-      { ...ws, set_type: ws.set_type as import("../types").SetType } as import("../types").WorkoutSet,
-      segments,
-    );
+    const segments = segmentsBySetId.get(ws.id) ?? [];
+    const workingReps = getWorkingRepsForOverloadDecision(ws, segments);
     if (workingReps < 12) {
       return { shouldSuggest: false, nextExercise: { id: nextExercise.id, name: nextExercise.name }, isTerminal: false };
     }

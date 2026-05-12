@@ -7,12 +7,16 @@
  * `set.reps` is the SUM of all mini-set reps — using it directly inflates
  * overload decisions and plateau detection.
  *
- * The architecture grep-test (__tests__/architecture-set-write-path.test.ts)
- * enforces this invariant and will fail CI if any file outside
- * lib/db/sets.ts / lib/sets-accessors.ts reads `.reps` on a WorkoutSet.
+ * This invariant will be enforced by the Slice 8 grep-test
+ * (__tests__/architecture-set-write-path.test.ts, BLD-1176), which will fail
+ * CI if any file outside lib/db/sets.ts / lib/sets-accessors.ts reads `.reps`
+ * on a WorkoutSet directly.
  */
-import type { WorkoutSet, SetSegment } from "./types";
+import type { SetType, SetSegment } from "./types";
 import { ADVANCED_SET_TYPES } from "./db/sets";
+
+/** Minimal set fields required by all reps accessors. */
+type SetRepsInput = Pick<{ set_type: SetType; reps: number | null }, "set_type" | "reps">;
 
 /**
  * Returns the reps count to use when deciding whether to increase load
@@ -24,7 +28,7 @@ import { ADVANCED_SET_TYPES } from "./db/sets";
  * Use when asking "did the user achieve the target reps to progress weight?".
  */
 export function getWorkingRepsForOverloadDecision(
-  set: WorkoutSet,
+  set: SetRepsInput,
   segments: SetSegment[],
 ): number {
   if (!ADVANCED_SET_TYPES.has(set.set_type) || segments.length === 0) {
@@ -46,7 +50,7 @@ export function getWorkingRepsForOverloadDecision(
  * - normal / warmup / dropset / failure: returns `set.reps`.
  */
 export function getEffortRepsForPlateau(
-  set: WorkoutSet,
+  set: SetRepsInput,
   segments: SetSegment[],
 ): number {
   if (!ADVANCED_SET_TYPES.has(set.set_type) || segments.length === 0) {
@@ -65,7 +69,7 @@ export function getEffortRepsForPlateau(
  * load × reps product (combined with segment weight).
  */
 export function getHeaviestSegmentReps(
-  set: WorkoutSet,
+  set: SetRepsInput,
   segments: SetSegment[],
 ): number {
   if (!ADVANCED_SET_TYPES.has(set.set_type) || segments.length === 0) {
@@ -82,7 +86,7 @@ export function getHeaviestSegmentReps(
  * Use when computing training volume (total reps × load).
  */
 export function getTotalRepsForVolume(
-  set: WorkoutSet,
+  set: SetRepsInput,
   segments: SetSegment[],
 ): number {
   if (!ADVANCED_SET_TYPES.has(set.set_type) || segments.length === 0) {
