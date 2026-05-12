@@ -60,6 +60,11 @@ export function useAppInit() {
             await seedScenario();
           } catch (err) {
             console.warn("[test-seed] scenario seed failed:", err);
+            // Surface seed errors in E2E test runs so error-context snapshots capture the cause.
+            if (typeof document !== "undefined" && document.body) {
+              document.body.dataset.testSeedError =
+                err instanceof Error ? err.message : String(err);
+            }
           }
         }
 

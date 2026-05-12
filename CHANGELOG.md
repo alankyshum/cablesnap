@@ -26,6 +26,7 @@ marker) at release time.
 - **WearOS rest-complete bridging**: The "rest complete" chime now appears on paired Wear OS watches. Previously the notification used a low-importance channel that the Wear OS Companion skips; it now uses a HIGH-importance channel.
 - **Fix: "Complete Workout" button no longer silently no-ops** — confirm dialog now reads "Complete" (was "OK"), and any error during finish (rest dismiss, pinned-note flush, session save) is surfaced as a toast instead of being swallowed. Your in-progress workout remains intact and resumable on failure. (#589, BLD-1207)
 - Strava activities synced from CableSnap now include a small footer crediting the app with a link to the GitHub project.
+- **Advanced set E2E tests**: fixed `.tap()` → `.click()`, strict-mode `getByText` for "Cluster", and added `E2E_USE_STATIC=1` skip guards on session-detail tests that require SharedArrayBuffer (COOP/COEP headers).
 - **Strava connect** (Android): Fixed a silent connection failure on some OEM Android builds (Samsung Z Fold6 and similar) where the OAuth redirect was not intercepted, leaving the connection incomplete.
 - **Strava sync**: Upload outcome is now accurately reflected in the post-workout toast — "Synced to Strava ✓" on success, "queued — will retry" on transient failure, and "check Settings" with a navigation shortcut on permanent failure (e.g. revoked token).
 - Progression suggestions now correctly evaluate advanced set types (rest-pause, cluster, myo-reps) using the working-set reps of the activation segment, rather than the inflated total-reps sum.

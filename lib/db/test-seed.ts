@@ -296,9 +296,9 @@ export async function seedAdvancedSets(
 
   await db.runAsync(
     `INSERT OR IGNORE INTO workout_sessions
-       (id, name, started_at, completed_at, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    ["scenario-advanced-session-1", "Advanced Sets E2E Session", now - 3600000, now - 100, null, now - 3600000],
+       (id, name, started_at, completed_at, notes)
+     VALUES (?, ?, ?, ?, ?)`,
+    ["scenario-advanced-session-1", "Advanced Sets E2E Session", now - 3600000, now - 100, null],
   );
 
   await db.runAsync(
