@@ -1,5 +1,5 @@
 /**
- * Scenario spec: advanced-sets (BLD-1176 AC #264 / AC #273).
+ * Scenario spec: advanced-sets (BLD-1176 AC #264 / AC #265 / AC #273).
  *
  * Navigates to Settings → Advanced Set Types help screen via the production
  * mount path (/settings → press "Advanced Set Types") and verifies:
@@ -8,11 +8,9 @@
  *  2. None of the forbidden aspirational phrases appear in the rendered text.
  *  3. Screenshots captured at mobile + mobile-narrow viewports.
  *
- * Scope note on AC #265 (kill+relaunch data persistence): AC #265 is about
- * advanced set DATA (rest-pause segments) surviving app kill+relaunch through
- * the production session-detail path. That coverage belongs to BLD-1175
- * (Slice 7 — mini-set editor + live logging). This spec verifies only that
- * the help-screen route survives a page reload (static content, no DB state).
+ * AC #265 — advanced-set data persistence through production session-detail path:
+ *  4. A seeded rest_pause set renders via /session/detail/[id] with "RP" chip.
+ *  5. After a full page reload (kill+relaunch simulation) the data re-renders.
  *
  * Refs: BLD-1168, BLD-1176.
  */
@@ -111,5 +109,58 @@ test.describe("@scenario advanced-sets", () => {
     const screenshotPath = path.join(OUT_DIR, `advanced-sets-help-${viewport}.png`);
     await page.screenshot({ path: screenshotPath, fullPage: true });
     expect(screenshotPath).toBeTruthy();
+  });
+
+  // AC #265 — advanced set data through production session-detail mount path
+  test("rest_pause set renders via production session-detail path (AC #265)", async ({ page }) => {
+    await page.addInitScript((scenario) => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+      w.__TEST_SCENARIO__ = scenario;
+    }, "advanced-sets");
+
+    await page.goto("/session/detail/scenario-advanced-session-1");
+
+    // Wait for seedScenario() to complete and signal readiness
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Verify the rest_pause set type chip ("RP") renders
+    await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
+
+    // Verify set data (100 kg × 13 reps) renders
+    await expect(page.getByText("100 × 13")).toBeVisible();
+  });
+
+  // AC #265 — kill+relaunch simulation: full reload, re-seed, re-navigate
+  test("advanced set data survives kill+relaunch via session-detail (AC #265)", async ({ page }) => {
+    await page.addInitScript((scenario) => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+      w.__TEST_SCENARIO__ = scenario;
+    }, "advanced-sets");
+
+    // First "launch": seed + navigate to session detail
+    await page.goto("/session/detail/scenario-advanced-session-1");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
+
+    // Simulate "kill": navigate away to home
+    await page.goto("/");
+    await page.waitForTimeout(300);
+
+    // Simulate "relaunch": re-inject scenario + navigate back to session detail
+    await page.addInitScript((scenario) => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+      w.__TEST_SCENARIO__ = scenario;
+    }, "advanced-sets");
+    await page.goto("/session/detail/scenario-advanced-session-1");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
+
+    // Data must still render after relaunch
+    await expect(page.getByText("RP")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("100 × 13")).toBeVisible();
   });
 });
