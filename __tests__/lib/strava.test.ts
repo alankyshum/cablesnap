@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable max-lines */
 import * as fs from "fs";
 import * as path from "path";
 
@@ -383,7 +384,7 @@ describe("Strava Integration — Behavioral", () => {
 
     const result = await strava.syncSessionToStrava("s1");
 
-    expect(result).toBe(true);
+    expect(result).toEqual({ status: "synced", activityId: "12345" });
     expect(db.createSyncLogEntry).toHaveBeenCalledWith("s1");
     expect(db.markSyncSuccess).toHaveBeenCalledWith("s1", "12345");
     // Verify activity payload
@@ -395,11 +396,11 @@ describe("Strava Integration — Behavioral", () => {
   it("syncSessionToStrava skips when not connected", async () => {
     db.getStravaConnection.mockResolvedValue(null);
     const result = await strava.syncSessionToStrava("s1");
-    expect(result).toBe(false);
+    expect(result).toEqual({ status: "skipped" });
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("syncSessionToStrava marks failure on API error", async () => {
+  it("syncSessionToStrava returns queued (not throw) on transient API error", async () => {
     db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
     db.getSessionSets.mockResolvedValue([
       { exercise_name: "Bench", weight: 80, reps: 8, completed: true, set_type: "working" },
@@ -419,8 +420,86 @@ describe("Strava Integration — Behavioral", () => {
       text: async () => "Internal Server Error",
     });
 
-    await expect(strava.syncSessionToStrava("s2")).rejects.toThrow();
+    const result = await strava.syncSessionToStrava("s2");
+    expect(result.status).toBe("queued");
     expect(db.markSyncFailed).toHaveBeenCalledWith("s2", expect.stringContaining("500"));
+  });
+
+  it("(BLD-1204-a) upload OK + markSyncSuccess throws \u2192 returns 'synced' (bookkeeping failure silenced)", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Deadlift", weight: 120, reps: 3, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "s3", name: "Pull Day", started_at: Date.now(), duration_seconds: 2700,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 99999 }),
+    });
+    db.markSyncSuccess.mockRejectedValueOnce(new Error("DB locked"));
+
+    const result = await strava.syncSessionToStrava("s3");
+
+    // Activity IS on Strava -- user must see success, not an error toast
+    expect(result.status).toBe("synced");
+    expect(db.markSyncSuccess).toHaveBeenCalledWith("s3", "99999");
+  });
+
+  it("(BLD-1204-b) upload throws transient network error \u2192 returns 'queued'", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Press", weight: 60, reps: 8, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "s4", name: "Push", started_at: Date.now(), duration_seconds: 1200,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+    mockFetch.mockRejectedValueOnce(
+      Object.assign(new TypeError("Network request failed"), { name: "TypeError" })
+    );
+
+    const result = await strava.syncSessionToStrava("s4");
+
+    expect(result.status).toBe("queued");
+    expect(db.markSyncFailed).toHaveBeenCalledWith("s4", expect.stringContaining("Network request failed"));
+  });
+
+  it("(BLD-1204-c) upload throws after token revoke (permanent auth failure) \u2192 returns 'failed'", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Row", weight: 70, reps: 10, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "s5", name: "Back", started_at: Date.now(), duration_seconds: 1800,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      text: async () => "Unauthorized",
+    });
+
+    const result = await strava.syncSessionToStrava("s5");
+
+    expect(result.status).toBe("failed");
+    expect(db.markSyncFailed).toHaveBeenCalledWith("s5", expect.stringContaining("revoked"));
   });
 
   it("reconcileStravaQueue retries failed entries and marks permanently failed after max retries", async () => {

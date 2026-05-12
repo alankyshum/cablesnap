@@ -44,7 +44,7 @@ import {
   getRecentStackHistory,
   updateSetRepsAndDuration,
 } from "../lib/db/session-sets";
-import { ADVANCED_SET_TYPES, insertSegment, deleteSegment, collapseAdvancedSetToNormal, getSegmentsForSets } from "../lib/db/sets";
+import { insertSegment, deleteSegment, collapseAdvancedSetToNormal, getSegmentsForSets } from "../lib/db/sets";
 import { getLastVariant, isCableExercise } from "../lib/cable-variant";
 import { resolveMarker } from "../lib/cable-stack";
 import {
