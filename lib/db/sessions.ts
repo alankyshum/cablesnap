@@ -485,8 +485,10 @@ export class EditCompletedSessionError extends Error {
  * transaction so the edit pill appears as soon as the next read happens.
  *
  * BLD-1186: cache recomputation (cached_volume_kg / cached_e1rm_kg) now happens
- * inline via updateSetForSessionEdit / recomputeSetCaches — there is no post-TX
- * recompute loop. The write path is fully owned by lib/db/sets.ts.
+ * inline — updates route through updateSetForSessionEdit (which calls
+ * recomputeSetCaches), and inserts call recomputeSetCaches directly in
+ * applyEditInsert. There is no post-TX recompute loop; lib/db/sets.ts owns the
+ * full write path.
  */
 export async function editCompletedSession(
   sessionId: string,
