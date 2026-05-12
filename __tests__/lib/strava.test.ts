@@ -391,6 +391,9 @@ describe("Strava Integration — Behavioral", () => {
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.type).toBe("WeightTraining");
     expect(body.external_id).toBe("cablesnap-s1");
+    // BLD-1205: description must include CableSnap footer
+    expect(body.description).toContain("Tracked with CableSnap");
+    expect(body.description).toContain("https://github.com/alankyshum/cablesnap");
   });
 
   it("syncSessionToStrava skips when not connected", async () => {

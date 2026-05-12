@@ -344,6 +344,7 @@ async function runAuthPrompt(
   }
 }
 
+// eslint-disable-next-line complexity
 export async function connectStrava(): Promise<{
   athleteId: number;
   athleteName: string;
@@ -546,7 +547,7 @@ function buildActivityDescription(
     lines.push(`${name}: ${setDescs.join(", ")}`);
   }
 
-  return lines.join("\n");
+  return lines.join("\n") + "\n\n\n—\nTracked with CableSnap · https://github.com/alankyshum/cablesnap";
 }
 
 async function uploadActivity(
