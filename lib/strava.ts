@@ -15,6 +15,7 @@
  */
 import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import { uuid } from "./uuid";
@@ -57,6 +58,9 @@ const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const KEY_ACCESS_TOKEN = "strava_access_token";
 const KEY_REFRESH_TOKEN = "strava_refresh_token";
 const KEY_TOKEN_EXPIRES_AT = "strava_token_expires_at";
+// Persisted before opening the OAuth browser so cold-start recovery can match
+// the deep-link state against the state from the prior process.
+const KEY_PENDING_OAUTH_STATE = "strava_pending_oauth_state";
 
 const MAX_RETRIES = 3;
 
@@ -76,6 +80,11 @@ function getProxyUrl(): string {
 const REDIRECT_URI_FOR_STRAVA = `${Constants.expoConfig?.extra?.stravaProxyUrl ?? "https://strava-proxy.alan200994.workers.dev"}/callback`;
 // Deep link that WebBrowser.openAuthSessionAsync watches for to close the browser.
 const APP_DEEP_LINK = "cablesnap://strava-callback";
+// On bare Android, Custom Tabs may dismiss and report `cancel`/`dismiss` one
+// macrotask before the OS delivers the `cablesnap://strava-callback` deep-link
+// event. This grace window keeps the Linking listener alive after a browser
+// cancel so a valid callback that arrives within this window still wins.
+const DEEP_LINK_GRACE_MS = 500;
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -224,9 +233,42 @@ async function exchangeCodeForTokens(
 // Cloudflare Worker proxy which holds the client_secret server-side.
 
 /**
+ * Parse a `cablesnap://strava-callback` URL, verify CSRF state, and extract the code.
+ *
+ * - Returns `null` if `rawUrl` is not a Strava callback URL (wrong prefix or malformed).
+ * - Throws `StravaError("unknown", "OAuth state mismatch")` if state doesn't match.
+ *
+ * Shared by the active Linking listener, the WebBrowser path, and the cold-start
+ * `getInitialURL()` path so all three apply identical validation logic.
+ */
+function parseCallbackUrl(rawUrl: string, expectedState: string): string | null {
+  if (!rawUrl.startsWith(APP_DEEP_LINK)) return null;
+  let params: URLSearchParams;
+  try {
+    params = new URL(rawUrl).searchParams;
+  } catch {
+    // Malformed URL — not our callback
+    return null;
+  }
+  if (params.get("state") !== expectedState) {
+    const wrapped = new StravaError("unknown", "OAuth state mismatch");
+    stravaLog("warn", "strava auth state mismatch", { flow: "strava_connect", step: "auth_prompt_error" });
+    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: "deep_link" });
+    throw wrapped;
+  }
+  return params.get("code");
+}
+
+/**
  * Open the Strava authorization browser session and parse the callback URL.
  * Wraps {@link WebBrowser.openAuthSessionAsync} + URL parsing in unified
  * error handling so {@link connectStrava} stays under the complexity budget.
+ *
+ * On bare Android builds (some OEM Custom Tabs implementations), the OS deep-
+ * link handler may intercept the `cablesnap://strava-callback` redirect before
+ * `openAuthSessionAsync` can. We register a one-shot `Linking` listener that
+ * races against the browser result. Whichever resolves first wins; the loser
+ * path is cleaned up. The listener is always removed in a `finally` block.
  *
  * Verifies the returned `state` matches `expectedState` (CSRF protection)
  * and returns the parsed `code` on success.
@@ -235,41 +277,71 @@ async function runAuthPrompt(
   authorizeUrl: string,
   expectedState: string,
 ): Promise<{ result: WebBrowser.WebBrowserAuthSessionResult; code: string | undefined }> {
-  let result: WebBrowser.WebBrowserAuthSessionResult;
+  // Settled once — prevents double token exchange if both paths fire.
+  let settled = false;
+
+  let subscription: { remove(): void } | null = null;
+  const deepLinkPromise = new Promise<{ result: WebBrowser.WebBrowserAuthSessionResult; code: string | undefined }>(
+    (resolve, reject) => {
+      subscription = Linking.addEventListener("url", ({ url }) => {
+        if (settled) return;
+        if (!url.startsWith(APP_DEEP_LINK)) return;
+        settled = true;
+        try {
+          const code = parseCallbackUrl(url, expectedState) ?? undefined;
+          // Dismiss the in-app browser so it doesn't linger
+          WebBrowser.dismissAuthSession?.();
+          resolve({ result: { type: "success", url } as WebBrowser.WebBrowserAuthSessionResult, code });
+        } catch (err) {
+          reject(err);
+        }
+      });
+    },
+  );
+
+  // browser promise: resolves when openAuthSessionAsync returns
+  const browserPromise = WebBrowser.openAuthSessionAsync(authorizeUrl, APP_DEEP_LINK)
+    .then(async (result): Promise<{ result: WebBrowser.WebBrowserAuthSessionResult; code: string | undefined }> => {
+      if (settled) {
+        // Deep link already won — return a neutral cancelled result so the
+        // caller's winner check sees the deep-link result, not this one.
+        return { result: { type: "cancel" } as WebBrowser.WebBrowserAuthSessionResult, code: undefined };
+      }
+      if (result.type !== "success") {
+        // Do NOT settle yet. On bare Android OEM Custom Tabs, the browser may
+        // report cancel/dismiss one macrotask before the OS delivers the
+        // cablesnap://strava-callback deep-link event to the Linking listener.
+        // Keep the listener alive for a bounded grace window so a valid callback
+        // that arrives during this window still wins the race.
+        await new Promise<void>((r) => setTimeout(r, DEEP_LINK_GRACE_MS));
+        if (settled) {
+          // Deep link arrived during the grace window — treat browser cancel as superseded.
+          return { result: { type: "cancel" } as WebBrowser.WebBrowserAuthSessionResult, code: undefined };
+        }
+        settled = true;
+        return { result, code: undefined };
+      }
+      // Success path — settle immediately
+      settled = true;
+      // parseCallbackUrl returns null for malformed URLs, throws on state mismatch
+      const code = parseCallbackUrl(result.url, expectedState) ?? undefined;
+      return { result, code };
+    })
+    .catch((err: unknown) => {
+      if (!settled) settled = true;
+      if (err instanceof StravaError) throw err;
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      const wrapped = new StravaError("unknown", errorMessage);
+      stravaLog("warn", "strava auth prompt errored", { flow: "strava_connect", step: "auth_prompt_error", errorMessage });
+      captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: "error" });
+      throw wrapped;
+    });
+
   try {
-    result = await WebBrowser.openAuthSessionAsync(authorizeUrl, APP_DEEP_LINK);
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    const wrapped = new StravaError("unknown", errorMessage);
-    stravaLog("warn", "strava auth prompt errored", { flow: "strava_connect", step: "auth_prompt_error", errorMessage });
-    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: "error" });
-    throw wrapped;
+    return await Promise.race([browserPromise, deepLinkPromise]);
+  } finally {
+    (subscription as { remove(): void } | null)?.remove();
   }
-
-  if (result.type !== "success") {
-    return { result, code: undefined };
-  }
-
-  let callbackParams: URLSearchParams;
-  try {
-    callbackParams = new URL(result.url).searchParams;
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    const wrapped = new StravaError("unknown", errorMessage);
-    stravaLog("warn", "strava auth prompt errored", { flow: "strava_connect", step: "auth_prompt_error", errorMessage });
-    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
-    throw wrapped;
-  }
-
-  // Verify CSRF state to prevent token injection attacks.
-  if (callbackParams.get("state") !== expectedState) {
-    const wrapped = new StravaError("unknown", "OAuth state mismatch");
-    stravaLog("warn", "strava auth state mismatch", { flow: "strava_connect", step: "auth_prompt_error" });
-    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
-    throw wrapped;
-  }
-
-  return { result, code: callbackParams.get("code") ?? undefined };
 }
 
 export async function connectStrava(): Promise<{
@@ -300,8 +372,42 @@ export async function connectStrava(): Promise<{
   stravaBreakcrumb("connectStrava started", { clientId, redirectUri: REDIRECT_URI_FOR_STRAVA, proxyUrl });
   stravaLog("info", "strava connect started", { flow: "strava_connect", step: "start" });
 
-  // Generate a random state value for CSRF protection
+  // Generate a random state value for CSRF protection (used by the normal auth path).
   const oauthState = uuid();
+
+  // Cold-start check: if the app was killed while the OAuth browser was open
+  // and the OS re-launched via a cablesnap://strava-callback deep link, the
+  // URL will be available via getInitialURL(). We match using the state that
+  // was persisted to SecureStore before the browser was opened in the prior
+  // process — a freshly-generated uuid() won't match the callback's state.
+  const initialUrl = await Linking.getInitialURL();
+  if (initialUrl?.startsWith(APP_DEEP_LINK)) {
+    stravaLog("info", "strava cold-start deep link detected", { flow: "strava_connect", step: "cold_start_check" });
+    const persistedState = await SecureStore.getItemAsync(KEY_PENDING_OAUTH_STATE);
+    if (persistedState) {
+      // parseCallbackUrl: returns null for malformed URL, throws StravaError on state mismatch
+      const coldCode = parseCallbackUrl(initialUrl, persistedState);
+      if (coldCode) {
+        await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
+        stravaLog("info", "strava cold-start deep link consumed", { flow: "strava_connect", step: "cold_start_consumed" });
+        // exchangeCodeForTokens / saveTokens / saveStravaConnection errors propagate to caller
+        const data = await exchangeCodeForTokens(coldCode, proxyUrl, clientId);
+        await saveTokens(
+          data.access_token as string,
+          data.refresh_token as string,
+          data.expires_at as number,
+        );
+        const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
+        const athleteName =
+          [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
+        await saveStravaConnection(athleteId, athleteName);
+        stravaBreakcrumb("connectStrava succeeded (cold-start)", { athleteId });
+        stravaLog("info", "strava connect succeeded", { flow: "strava_connect", step: "success", athleteId });
+        return { athleteId, athleteName };
+      }
+    }
+    // No persisted state (or URL didn't validate) — fall through to normal auth flow.
+  }
 
   const authorizeUrl = new URL(STRAVA_AUTH_URL);
   authorizeUrl.searchParams.set("client_id", clientId);
@@ -311,7 +417,17 @@ export async function connectStrava(): Promise<{
   authorizeUrl.searchParams.set("scope", "activity:write");
   authorizeUrl.searchParams.set("state", oauthState);
 
-  const { result, code } = await runAuthPrompt(authorizeUrl.toString(), oauthState);
+  // Persist state before opening the browser so cross-process cold-start
+  // recovery can match the deep-link URL from the relaunched session.
+  await SecureStore.setItemAsync(KEY_PENDING_OAUTH_STATE, oauthState);
+
+  let result: Awaited<ReturnType<typeof runAuthPrompt>>["result"];
+  let code: string | undefined;
+  try {
+    ({ result, code } = await runAuthPrompt(authorizeUrl.toString(), oauthState));
+  } finally {
+    await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
+  }
 
   const hasCode = !!(result.type === "success" && code);
   stravaBreakcrumb("auth prompt completed", { resultType: result.type, hasCode });

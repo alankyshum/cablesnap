@@ -331,10 +331,18 @@ describe("Strava Integration — Behavioral", () => {
   });
 
   it("connectStrava returns null when user cancels OAuth", async () => {
-    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
-    const result = await strava.connectStrava();
-    expect(result).toBeNull();
-    expect(mockFetch).not.toHaveBeenCalled();
+    jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
+    try {
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
+      const connectPromise = strava.connectStrava();
+      await new Promise((r) => setImmediate(r)); // flush until grace timer registered
+      jest.runAllTimers();
+      const result = await connectPromise;
+      expect(result).toBeNull();
+      expect(mockFetch).not.toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("disconnect clears tokens from SecureStore and DB", async () => {
@@ -498,16 +506,22 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
   });
 
   it("connectStrava logs user_cancelled when OAuth is cancelled (no tokens in logs)", async () => {
-    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
-
-    const result = await strava.connectStrava();
-
-    expect(result).toBeNull();
-    expect(Sentry.logger.info).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ flow: "strava_connect", step: "user_cancelled", resultType: "cancel" }),
-    );
-    scanLoggerCallsForSecrets();
+    jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
+    try {
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
+      const connectPromise = strava.connectStrava();
+      await new Promise((r) => setImmediate(r));
+      jest.runAllTimers();
+      const result = await connectPromise;
+      expect(result).toBeNull();
+      expect(Sentry.logger.info).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ flow: "strava_connect", step: "user_cancelled", resultType: "cancel" }),
+      );
+      scanLoggerCallsForSecrets();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it("disconnect emits start + success lifecycle logs", async () => {
@@ -561,10 +575,15 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
     // Simulate older SDK without logger export
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (Sentry as any).logger = undefined;
+    jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
     try {
       WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
-      await expect(strava.connectStrava()).resolves.toBeNull();
+      const connectPromise = strava.connectStrava();
+      await new Promise((r) => setImmediate(r));
+      jest.runAllTimers();
+      await expect(connectPromise).resolves.toBeNull();
     } finally {
+      jest.useRealTimers();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (Sentry as any).logger = original;
     }
@@ -762,12 +781,310 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
     });
 
     it("still returns null (no throw) when user dismisses or cancels the prompt", async () => {
-      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
-      await expect(strava.connectStrava()).resolves.toBeNull();
+      // Use fake timers so the 500ms DEEP_LINK_GRACE_MS window resolves instantly.
+      jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
+      try {
+        WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
+        const p1 = strava.connectStrava();
+        await new Promise((r) => setImmediate(r)); // flush until grace setTimeout registered
+        jest.runAllTimers(); // fire the grace window → settled=true, cancel
+        await expect(p1).resolves.toBeNull();
 
-      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "dismiss" });
-      await expect(strava.connectStrava()).resolves.toBeNull();
+        WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "dismiss" });
+        const p2 = strava.connectStrava();
+        await new Promise((r) => setImmediate(r));
+        jest.runAllTimers();
+        await expect(p2).resolves.toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
     });
+  });
+});
+
+describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Linking = require("expo-linking");
+  const mockFetch = jest.fn();
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = mockFetch;
+    Linking.__reset();
+  });
+
+  afterAll(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockTokenFetch(overrides: Record<string, unknown> = {}) {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: "at-dl",
+        refresh_token: "rt-dl",
+        expires_at: 9999999999,
+        athlete: { id: 77, firstname: "Android", lastname: "User" },
+        ...overrides,
+      }),
+    });
+  }
+
+  it("(source) imports expo-linking, uses addEventListener, getInitialURL, dismissAuthSession, Promise.race", () => {
+    expect(stravaClientSrc).toContain('from "expo-linking"');
+    expect(stravaClientSrc).toContain("Linking.addEventListener");
+    expect(stravaClientSrc).toContain("Linking.getInitialURL");
+    expect(stravaClientSrc).toContain("dismissAuthSession");
+    expect(stravaClientSrc).toContain("Promise.race");
+    expect(stravaClientSrc).toMatch(/subscription.*remove\(\)/);
+    expect(stravaClientSrc).toContain("finally");
+    expect(stravaClientSrc).toContain("DEEP_LINK_GRACE_MS");
+  });
+
+  it("(a) deep-link wins race: listener resolves when browser has not intercepted", async () => {
+    Linking.getInitialURL.mockResolvedValueOnce(null);
+    // Browser never resolves — simulates bare Android Custom Tabs not intercepting
+    WebBrowser.openAuthSessionAsync.mockReturnValueOnce(new Promise(() => {}));
+    mockTokenFetch();
+
+    const connectPromise = strava.connectStrava();
+    // Wait for getInitialURL to resolve and listener to be registered
+    await new Promise((r) => setImmediate(r));
+    // Simulate OS delivering the callback URL via deep link
+    Linking.__simulateUrl("cablesnap://strava-callback?code=dl-code&state=mock-state-uuid");
+
+    const result = await connectPromise;
+    expect(result).toEqual({ athleteId: 77, athleteName: "Android User" });
+    expect(WebBrowser.dismissAuthSession).toHaveBeenCalled();
+    const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(fetchBody.code).toBe("dl-code");
+  });
+
+  it("(b) WebBrowser wins race: existing behavior unchanged; listener registered and removed", async () => {
+    Linking.getInitialURL.mockResolvedValueOnce(null);
+    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({
+      type: "success",
+      url: "cablesnap://strava-callback?code=browser-code&state=mock-state-uuid",
+    });
+    mockTokenFetch({ athlete: { id: 88, firstname: "iOS", lastname: "User" } });
+
+    const result = await strava.connectStrava();
+    expect(result).toEqual({ athleteId: 88, athleteName: "iOS User" });
+    // Listener was registered and removed
+    expect(Linking.addEventListener).toHaveBeenCalledWith("url", expect.any(Function));
+    const sub = Linking.addEventListener.mock.results[0].value;
+    expect(sub.remove).toHaveBeenCalled();
+    // Browser path does not call dismissAuthSession
+    expect(WebBrowser.dismissAuthSession).not.toHaveBeenCalled();
+  });
+
+  it("(c) state mismatch on deep-link path throws StravaError(unknown, 'OAuth state mismatch')", async () => {
+    Linking.getInitialURL.mockResolvedValueOnce(null);
+    WebBrowser.openAuthSessionAsync.mockReturnValueOnce(new Promise(() => {}));
+
+    const connectPromise = strava.connectStrava();
+    await new Promise((r) => setImmediate(r));
+    // Deliver deep link with wrong state
+    Linking.__simulateUrl("cablesnap://strava-callback?code=bad-code&state=wrong-state");
+
+    await expect(connectPromise).rejects.toMatchObject({
+      name: "StravaError",
+      code: "unknown",
+      message: expect.stringContaining("state mismatch"),
+    });
+  });
+
+  it("(d) cold-start getInitialURL captures pending callback using persisted state", async () => {
+    // Simulate the state that was persisted to SecureStore before the browser was
+    // opened in the prior process (the "pending OAuth state" key).
+    const SecureStore = require("expo-secure-store");
+    SecureStore.getItemAsync.mockResolvedValueOnce("mock-state-uuid");
+    Linking.getInitialURL.mockResolvedValueOnce(
+      "cablesnap://strava-callback?code=cold-start-code&state=mock-state-uuid",
+    );
+    mockTokenFetch({ athlete: { id: 55, firstname: "Cold", lastname: "Start" } });
+
+    const result = await strava.connectStrava();
+    expect(result).toEqual({ athleteId: 55, athleteName: "Cold Start" });
+    // Browser should NOT have been opened — cold-start bypasses it
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+    expect(Linking.getInitialURL).toHaveBeenCalled();
+    // Persisted state was deleted after consumption
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith("strava_pending_oauth_state");
+    const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(fetchBody.code).toBe("cold-start-code");
+  });
+
+  it("(d2) cold-start getInitialURL with wrong state throws StravaError(unknown, 'OAuth state mismatch')", async () => {
+    // Persisted state from prior session doesn't match URL's state → mismatch
+    const SecureStore = require("expo-secure-store");
+    SecureStore.getItemAsync.mockResolvedValueOnce("persisted-state-abc");
+    Linking.getInitialURL.mockResolvedValueOnce(
+      "cablesnap://strava-callback?code=cold-code&state=different-state-xyz",
+    );
+
+    await expect(strava.connectStrava()).rejects.toMatchObject({
+      name: "StravaError",
+      code: "unknown",
+      message: expect.stringContaining("state mismatch"),
+    });
+    // Browser was not opened because we rejected before reaching that point
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+    // Token exchange was not attempted
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("(d3) cold-start token exchange failure propagates (not swallowed)", async () => {
+    const SecureStore = require("expo-secure-store");
+    SecureStore.getItemAsync.mockResolvedValueOnce("mock-state-uuid");
+    Linking.getInitialURL.mockResolvedValueOnce(
+      "cablesnap://strava-callback?code=cold-code&state=mock-state-uuid",
+    );
+    // Token exchange fails with network error
+    mockFetch.mockRejectedValueOnce(new TypeError("Network request failed"));
+
+    await expect(strava.connectStrava()).rejects.toMatchObject({
+      name: "StravaError",
+      code: "network",
+    });
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+  });
+
+  it("(d4) cross-process cold-start: persisted state differs from new uuid, callback URL carries persisted state → success", async () => {
+    // Regression: prior implementation used freshly-generated uuid() to validate
+    // the cold-start URL, which always mismatches a URL from a prior process.
+    // This test proves that the persisted state (not the new uuid) drives validation.
+    const SecureStore = require("expo-secure-store");
+    // The prior process persisted "prior-session-state-999" before killing.
+    SecureStore.getItemAsync.mockResolvedValueOnce("prior-session-state-999");
+    // OS re-launched with the callback from the prior browser session.
+    Linking.getInitialURL.mockResolvedValueOnce(
+      "cablesnap://strava-callback?code=cross-process-code&state=prior-session-state-999",
+    );
+    // uuid() will generate "mock-state-uuid" (a different value) for the new session.
+    mockTokenFetch({ athlete: { id: 99, firstname: "Cross", lastname: "Process" } });
+
+    const result = await strava.connectStrava();
+    // Despite uuid() returning a different value, cold-start succeeds using persisted state.
+    expect(result).toEqual({ athleteId: 99, athleteName: "Cross Process" });
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+    const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(fetchBody.code).toBe("cross-process-code");
+  });
+
+  it("(e) listener removed on success (browser path) and on error (state mismatch browser path)", async () => {
+    // Success case
+    Linking.getInitialURL.mockResolvedValueOnce(null);
+    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({
+      type: "success",
+      url: "cablesnap://strava-callback?code=ok-code&state=mock-state-uuid",
+    });
+    mockTokenFetch();
+    await strava.connectStrava();
+    const successSub = Linking.addEventListener.mock.results[0].value;
+    expect(successSub.remove).toHaveBeenCalled();
+
+    // Error case (state mismatch from browser path)
+    jest.clearAllMocks();
+    Linking.__reset();
+    Linking.getInitialURL.mockResolvedValueOnce(null);
+    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({
+      type: "success",
+      url: "cablesnap://strava-callback?code=valid-code&state=wrong-state-value",
+    });
+    await expect(strava.connectStrava()).rejects.toMatchObject({
+      name: "StravaError",
+      code: "unknown",
+    });
+    const errorSub = Linking.addEventListener.mock.results[0].value;
+    expect(errorSub.remove).toHaveBeenCalled();
+  });
+
+  it("non-strava deep links during auth are ignored", async () => {
+    Linking.getInitialURL.mockResolvedValueOnce(null);
+    // Browser never resolves
+    WebBrowser.openAuthSessionAsync.mockReturnValueOnce(new Promise(() => {}));
+    mockTokenFetch();
+
+    const connectPromise = strava.connectStrava();
+    await new Promise((r) => setImmediate(r));
+    // Non-strava URL should be ignored
+    Linking.__simulateUrl("cablesnap://some-other-route?foo=bar");
+    // Correct strava URL arrives after
+    Linking.__simulateUrl("cablesnap://strava-callback?code=real-code&state=mock-state-uuid");
+
+    const result = await connectPromise;
+    expect(result).toEqual({ athleteId: 77, athleteName: "Android User" });
+    const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(fetchBody.code).toBe("real-code");
+  });
+
+  it("duplicate deep-link arrival is idempotent (token exchange runs at most once)", async () => {
+    Linking.getInitialURL.mockResolvedValueOnce(null);
+    WebBrowser.openAuthSessionAsync.mockReturnValueOnce(new Promise(() => {}));
+    mockTokenFetch();
+
+    const connectPromise = strava.connectStrava();
+    await new Promise((r) => setImmediate(r));
+    // First deep link wins
+    Linking.__simulateUrl("cablesnap://strava-callback?code=first-code&state=mock-state-uuid");
+    // Second deep link arrives (duplicate) — should be ignored
+    Linking.__simulateUrl("cablesnap://strava-callback?code=second-code&state=mock-state-uuid");
+
+    await connectPromise;
+    // Token exchange called exactly once
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("(f) browser cancel/dismiss resolves before deep-link: link arrives within grace window → success", async () => {
+    // Simulates the primary bare-Android failure mode: Custom Tabs reports cancel
+    // one macrotask before the OS delivers the cablesnap://strava-callback event.
+    jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
+    try {
+      Linking.getInitialURL.mockResolvedValueOnce(null);
+      // Browser cancels immediately (Custom Tabs dismissed by OS deep-link redirect)
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
+      mockTokenFetch({ athlete: { id: 99, firstname: "Late", lastname: "Link" } });
+
+      const connectPromise = strava.connectStrava();
+      // Allow microtasks to run until browserPromise is suspended on DEEP_LINK_GRACE_MS timer
+      await new Promise((r) => setImmediate(r));
+      // OS deep-link event arrives while the grace window is open
+      Linking.__simulateUrl("cablesnap://strava-callback?code=late-code&state=mock-state-uuid");
+      // Advance past the grace window (timer fires → browserPromise.then checks settled → already true)
+      jest.runAllTimers();
+
+      const result = await connectPromise;
+      expect(result).toEqual({ athleteId: 99, athleteName: "Late Link" });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(fetchBody.code).toBe("late-code");
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("(g) browser cancel with no deep-link: returns null after grace window and cleans up listener", async () => {
+    jest.useFakeTimers({ doNotFake: ["setImmediate", "nextTick"] });
+    try {
+      Linking.getInitialURL.mockResolvedValueOnce(null);
+      WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({ type: "cancel" });
+      // No deep link arrives — real user cancellation
+
+      const connectPromise = strava.connectStrava();
+      await new Promise((r) => setImmediate(r)); // flush until grace timer registered
+      jest.runAllTimers(); // fire the grace window → settled=true, return cancel
+
+      const result = await connectPromise;
+      expect(result).toBeNull();
+      expect(mockFetch).not.toHaveBeenCalled();
+      // Listener was registered and removed
+      const sub = Linking.addEventListener.mock.results[0].value;
+      expect(sub.remove).toHaveBeenCalled();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 
