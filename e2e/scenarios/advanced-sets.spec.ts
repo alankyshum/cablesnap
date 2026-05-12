@@ -39,17 +39,6 @@ test.describe("@scenario advanced-sets", () => {
       !["mobile", "mobile-narrow"].includes(testInfo.project.name),
       "advanced-sets spec: mobile and mobile-narrow viewports only",
     );
-    // All tests in this spec require E2E_USE_STATIC=1 (pre-built bundle served with
-    // COOP/COEP/CORP headers).  Without it, `useAppInit` detects
-    // `crossOriginIsolated === false` via `webNeedsUnsupportedFallback()` and the
-    // root layout renders `<WebUnsupportedScreen>` instead of the normal app tree —
-    // no route (including /settings or /settings/advanced-sets) is reachable.
-    // Build:  npx expo export -p web --dev --no-minify
-    // Run:    E2E_USE_STATIC=1 npx playwright test e2e/scenarios/advanced-sets.spec.ts
-    test.skip(
-      !process.env.E2E_USE_STATIC,
-      "requires E2E_USE_STATIC=1 — dev server lacks COOP/COEP headers, rendering WebUnsupportedScreen instead of the app. See e2e/README.md.",
-    );
   });
 
   test("help screen renders all three advanced set type entries", async ({ page }) => {
@@ -102,7 +91,7 @@ test.describe("@scenario advanced-sets", () => {
 
     // First load
     await page.goto("/settings/advanced-sets");
-    await expect(page.getByText("Rest-pause", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Rest-pause")).toBeVisible({ timeout: 15_000 });
 
     // Simulate kill + relaunch: reload the page and navigate directly to the route
     await page.reload();
