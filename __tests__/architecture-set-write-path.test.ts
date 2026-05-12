@@ -272,7 +272,13 @@ describe("Architecture: sessions.ts — no volume-column writes via db.update(wo
     // Find every occurrence of `db.update(workoutSets)` in the file.
     // For each, extract the subsequent `.set({ ... })` argument text and
     // fail if it contains any volume-affecting column name.
-    const VOLUME_COLUMNS = /\b(?:weight|reps|set_type|setType)\s*:/;
+    //
+    // Match both explicit key-value syntax (`weight: expr`) and shorthand
+    // property syntax (`{ weight, reps }`) — the shorthand form is detected
+    // by requiring the identifier to be followed by a comma, closing brace,
+    // or end-of-line without a colon (the colon arm covers explicit values).
+    const VOLUME_COLUMNS =
+      /\b(?:weight|reps|set_type|setType)(?:\s*:|(?=\s*[,}\n\r]))/;
     const updatePattern = /db\.update\(workoutSets\)/g;
     const violations: string[] = [];
 
