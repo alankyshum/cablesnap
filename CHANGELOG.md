@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **e1RM accuracy**: high-rep sets (more than 12 reps) no longer inflate estimated 1-rep-max in analytics. The live write path now matches the reps ≤ 12 cap applied to historical data, keeping trend charts consistent for AMRAP and burnout sets.
 
 ## v0.26.33 — 2026-05-12
 <!-- versionCode: 103 -->
