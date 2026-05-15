@@ -122,6 +122,18 @@ test.describe("@scenario advanced-sets", () => {
     await expect(page.getByText("Cluster", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Myo-reps", { exact: true }).first()).toBeVisible();
 
+    // Expand the RN ScrollView to its full content height before capturing.
+    // On React Native Web, ScrollView renders as a fixed-height overflow:scroll div
+    // equal to the viewport height. Playwright's fullPage:true only expands the
+    // document scroll area — it does NOT expand nested scroll containers. Without this
+    // step, the Myo-reps card can be clipped mid-sentence on narrow viewports (BLD-1250).
+    await page.getByTestId("advanced-sets-scroll-view").evaluate((el) => {
+      const div = el as HTMLElement;
+      div.style.height = `${div.scrollHeight}px`;
+      div.style.overflow = "visible";
+    });
+    await page.waitForTimeout(200);
+
     // Capture screenshot
     const viewport = testInfo.project.name;
     const screenshotPath = path.join(OUT_DIR, `advanced-sets-help-${viewport}.png`);

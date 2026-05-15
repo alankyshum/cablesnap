@@ -50,6 +50,7 @@ export default function AdvancedSetsHelpScreen() {
 
   return (
     <ScrollView
+      testID="advanced-sets-scroll-view"
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
     >
