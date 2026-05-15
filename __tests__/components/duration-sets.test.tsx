@@ -1,6 +1,7 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { formatDurationDisplay, SetRow, type SetRowProps } from "../../components/session/SetRow";
+import { SetTimerContext, type SetTimerContextValue } from "../../components/session/SetTimerContext";
 import type { SetWithMeta } from "../../components/session/types";
 
 // ---- formatDurationDisplay ----
@@ -100,38 +101,56 @@ function makeProps(overrides: Partial<SetRowProps> = {}): SetRowProps {
   };
 }
 
+function makeTimerContext(overrides: Partial<SetTimerContextValue> = {}): SetTimerContextValue {
+  return {
+    isRunning: false,
+    displaySeconds: 0,
+    activeExerciseId: null,
+    activeSetIndex: null,
+    onTimerStart: jest.fn(),
+    onTimerStop: jest.fn(),
+    ...overrides,
+  };
+}
+
+function renderWithTimer(ui: React.ReactElement, ctx: SetTimerContextValue = makeTimerContext()) {
+  return render(
+    <SetTimerContext.Provider value={ctx}>{ui}</SetTimerContext.Provider>,
+  );
+}
+
 describe("SetRow — duration mode", () => {
   it("renders play button in duration mode when timer not running", () => {
-    const { getByLabelText } = render(
+    const { getByLabelText } = renderWithTimer(
       <SetRow {...makeProps({ trackingMode: "duration" })} />,
     );
     expect(getByLabelText("Start set timer")).toBeTruthy();
   });
 
   it("renders stop button when timer is running for this set", () => {
-    const { getByLabelText } = render(
+    const { getByLabelText } = renderWithTimer(
       <SetRow
         {...makeProps({
           trackingMode: "duration",
-          isTimerRunning: true,
-          isTimerActive: true,
-          timerDisplaySeconds: 30,
+          exerciseId: "ex-1",
+          setIndex: 0,
         })}
       />,
+      makeTimerContext({ isRunning: true, activeExerciseId: "ex-1", activeSetIndex: 0, displaySeconds: 30 }),
     );
     expect(getByLabelText("Stop set timer")).toBeTruthy();
   });
 
   it("shows timer display when running", () => {
-    const { getByText } = render(
+    const { getByText } = renderWithTimer(
       <SetRow
         {...makeProps({
           trackingMode: "duration",
-          isTimerRunning: true,
-          isTimerActive: true,
-          timerDisplaySeconds: 90,
+          exerciseId: "ex-1",
+          setIndex: 0,
         })}
       />,
+      makeTimerContext({ isRunning: true, activeExerciseId: "ex-1", activeSetIndex: 0, displaySeconds: 90 }),
     );
     expect(getByText("1:30")).toBeTruthy();
   });

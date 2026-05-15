@@ -61,13 +61,7 @@ export type GroupCardProps = {
   plateauHints?: Record<string, BreakThroughSuggestion | null>;
   /** BLD-1122: atomic apply callback */
   onApplyBreakThrough?: (exerciseId: string, updates: { id: string; weight: number | null; reps: number | null }[]) => Promise<void>;
-  // Timer
-  timerActiveExerciseId?: string | null;
-  timerActiveSetIndex?: number | null;
-  timerIsRunning?: boolean;
-  timerDisplaySeconds?: number;
-  onTimerStart?: (setId: string) => void;
-  onTimerStop?: (setId: string) => void;
+  // BLD-1235: timer props removed — timer state is now in SetTimerContext
   // BLD-1092: form-check video glyph
   hasClipMap?: Record<string, boolean>;
   onVideoGlyph?: (setId: string) => void;
@@ -102,8 +96,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   onShowDetail, onSwap, onDeleteExercise,
   onMoveUp, onMoveDown,
   onPrefill, plateauHints, onApplyBreakThrough,
-  timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
-  onTimerStart, onTimerStop,
   hasClipMap, onVideoGlyph,
   onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, setupPhotoUriMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
@@ -160,12 +152,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       onClearVariant={onClearVariant}
       onOpenBodyweightGripPicker={onOpenBodyweightGripPicker}
       onClearBodyweightGrip={onClearBodyweightGrip}
-      timerActiveExerciseId={timerActiveExerciseId}
-      timerActiveSetIndex={timerActiveSetIndex}
-      timerIsRunning={timerIsRunning}
-      timerDisplaySeconds={timerDisplaySeconds}
-      onTimerStart={onTimerStart}
-      onTimerStop={onTimerStop}
       hasClipMap={hasClipMap}
       onVideoGlyph={onVideoGlyph}
       onOpenPulleyPinPicker={onOpenPulleyPinPicker}
