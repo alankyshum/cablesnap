@@ -61,7 +61,7 @@ export async function createSyncLogEntry(sessionId: string): Promise<string> {
 
 export async function markSyncSuccess(
   sessionId: string,
-  stravaActivityId: string
+  stravaActivityId: string | null
 ): Promise<void> {
   const db = await getDrizzle();
   await db.update(stravaSyncLog)

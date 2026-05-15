@@ -550,11 +550,16 @@ function buildActivityDescription(
   return lines.join("\n") + "\n\n\n—\nTracked with CableSnap · https://github.com/alankyshum/cablesnap";
 }
 
+/**
+ * Returns the Strava activity ID on success, or null when the activity
+ * already exists on Strava (HTTP 409) but we cannot resolve its ID.
+ * Callers must treat null as an idempotent "already synced" result.
+ */
 async function uploadActivity(
   sessionId: string
-): Promise<string> {
-  const token = await getValidAccessToken();
-  if (!token) {
+): Promise<string | null> {
+  const accessToken = await getValidAccessToken();
+  if (!accessToken) {
     throw new Error("No valid Strava access token");
   }
 
@@ -580,7 +585,7 @@ async function uploadActivity(
   const response = await fetch(`${STRAVA_API_BASE}/activities`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -600,6 +605,20 @@ async function uploadActivity(
     throw new Error("Strava access revoked. Please reconnect.");
   }
 
+  // BLD-1240: 409 = activity with this external_id already exists on Strava.
+  // Treat as an idempotent re-sync: attempt to resolve the existing activity ID
+  // so the queue entry can be marked `synced`. If resolution fails, return null
+  // (caller marks synced with no activityId — still success, never an error).
+  if (response.status === 409) {
+    stravaLog("info", "strava upload duplicate (409) — resolving existing activity", {
+      flow: "strava_upload",
+      step: "duplicate_409",
+      sessionId,
+    });
+    const resolvedId = await resolveExistingActivityId(accessToken, sessionId);
+    return resolvedId;
+  }
+
   if (!response.ok) {
     const body = await response.text().catch(() => "");
     const err = new Error(`Strava API error ${response.status}: ${body}`);
@@ -611,10 +630,35 @@ async function uploadActivity(
   return String(activity.id);
 }
 
+/**
+ * Attempts to find the Strava activityId for a session that was already
+ * uploaded (caused a 409). Returns the activityId string if found, or null
+ * if the lookup returns no results or fails.
+ */
+async function resolveExistingActivityId(
+  token: string,
+  sessionId: string
+): Promise<string | null> {
+  try {
+    const url = `${STRAVA_API_BASE}/athlete/activities?external_id_eq=cablesnap-${encodeURIComponent(sessionId)}&per_page=1`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const activities: Array<{ id: number | string }> = await res.json();
+    if (Array.isArray(activities) && activities.length > 0) {
+      return String(activities[0].id);
+    }
+  } catch {
+    // Lookup failure is non-fatal — caller will treat null as "synced without ID"
+  }
+  return null;
+}
+
 // ---- Sync Orchestration ----
 
 export type SyncResult =
-  | { status: "synced"; activityId: string }
+  | { status: "synced"; activityId: string | null }
   | { status: "queued"; error: Error }
   | { status: "failed"; error: Error }
   | { status: "skipped" };
@@ -636,7 +680,7 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
 
   await createSyncLogEntry(sessionId);
 
-  let activityId: string;
+  let activityId: string | null;
   try {
     activityId = await uploadActivity(sessionId);
   } catch (err) {
@@ -686,6 +730,8 @@ export async function reconcileStravaQueue(): Promise<void> {
 
     try {
       const activityId = await uploadActivity(entry.session_id);
+      // activityId may be null when the activity already exists (409 duplicate).
+      // Either way this is a success — mark synced and stop retrying.
       await markSyncSuccess(entry.session_id, activityId);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
