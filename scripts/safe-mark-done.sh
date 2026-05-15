@@ -48,6 +48,8 @@ if ! gh pr checks "$PR_NUMBER" --repo "$REPO" --required >/dev/null 2>&1; then
 fi
 
 # Step 3 — Both pass; safe to mark done
+# Set CLIP_ALLOW_DONE=1 to bypass the HARD RULE #0 gate in clip.sh.
+# This is the ONLY authorized path for marking issues done.
 echo "✅ [safe-mark-done] PR merged + CI green. Marking ${ISSUE_ID} done..."
-bash /skills/scripts/clip.sh update-issue "$ISSUE_ID" --status done
+CLIP_ALLOW_DONE=1 bash /skills/scripts/clip.sh update-issue "$ISSUE_ID" --status done
 echo "✅ [safe-mark-done] ${ISSUE_ID} marked done."

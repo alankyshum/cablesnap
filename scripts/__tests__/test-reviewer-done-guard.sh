@@ -148,6 +148,35 @@ else
   ((FAIL++))
 fi
 
+# --- Test 4: clip.sh blocks direct --status done without CLIP_ALLOW_DONE ---
+# Use the dotfiles clip.sh (which has the guard built in) to test the gate.
+DOTFILES_CLIP="/tmp/dotfiles-work/config/paperclip-bld/scripts/clip.sh"
+if [[ -f "$DOTFILES_CLIP" ]]; then
+  # The guard should reject --status done when CLIP_ALLOW_DONE is unset
+  # Capture stderr+stdout separately since pipefail would mask grep's result
+  gate_out=$(CLIP_ALLOW_DONE="" PAPERCLIP_API_KEY="test" PAPERCLIP_COMPANY_ID="test" bash "$DOTFILES_CLIP" update-issue BLD-9999 --status done 2>&1 || true)
+  if echo "$gate_out" | grep -q "HARD RULE #0"; then
+    echo "PASS: clip.sh gate blocks direct --status done (outputs HARD RULE #0 error)"
+    ((PASS++))
+  else
+    echo "FAIL: clip.sh gate did not block direct --status done (got: $gate_out)"
+    ((FAIL++))
+  fi
+
+  # The guard should allow --status done when CLIP_ALLOW_DONE=1
+  # (It will fail at the API call since PAPERCLIP_API_KEY=test, but NOT at the guard)
+  gate_msg=$(CLIP_ALLOW_DONE=1 PAPERCLIP_API_KEY="test" PAPERCLIP_COMPANY_ID="test" PAPERCLIP_API_BASE="http://127.0.0.1:1" bash "$DOTFILES_CLIP" update-issue BLD-9999 --status done 2>&1 || true)
+  if echo "$gate_msg" | grep -q "HARD RULE #0"; then
+    echo "FAIL: clip.sh gate wrongly blocked when CLIP_ALLOW_DONE=1"
+    ((FAIL++))
+  else
+    echo "PASS: clip.sh gate allows --status done when CLIP_ALLOW_DONE=1"
+    ((PASS++))
+  fi
+else
+  echo "SKIP: dotfiles clip.sh not found at $DOTFILES_CLIP (tests 4/5 skipped)"
+fi
+
 # --- Results ---
 echo ""
 echo "=== Results ==="
