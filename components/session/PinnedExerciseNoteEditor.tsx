@@ -6,7 +6,7 @@
  *   - Immediate flush on onBlur (calls onSave).
  *   - AppState background/inactive flush is handled by useSessionActions.
  */
-import React, { memo } from "react";
+import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ type Props = {
   onSave: (exerciseId: string, text: string) => void;
 };
 
-export const PinnedExerciseNoteEditor = memo(function PinnedExerciseNoteEditor({
+export function PinnedExerciseNoteEditor({
   exerciseId,
   exerciseName,
   value,
@@ -55,7 +55,7 @@ export const PinnedExerciseNoteEditor = memo(function PinnedExerciseNoteEditor({
       </Text>
     </View>
   );
-});
+}
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 8, paddingBottom: 8, paddingTop: 4 },

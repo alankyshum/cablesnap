@@ -644,13 +644,32 @@ async function resolveExistingActivityId(
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      stravaLog("warn", "strava 409 duplicate — lookup returned non-OK, treating as synced-skipped", {
+        flow: "strava_upload",
+        step: "duplicate_409_lookup_failed",
+        sessionId,
+        lookupStatus: res.status,
+      });
+      return null;
+    }
     const activities: Array<{ id: number | string }> = await res.json();
     if (Array.isArray(activities) && activities.length > 0) {
       return String(activities[0].id);
     }
-  } catch {
-    // Lookup failure is non-fatal — caller will treat null as "synced without ID"
+    // API returned OK but no matching activity — treat as synced with no ID
+    stravaLog("warn", "strava 409 duplicate — lookup returned no matching activity, treating as synced-skipped", {
+      flow: "strava_upload",
+      step: "duplicate_409_lookup_empty",
+      sessionId,
+    });
+  } catch (lookupErr) {
+    stravaLog("warn", "strava 409 duplicate — lookup threw, treating as synced-skipped", {
+      flow: "strava_upload",
+      step: "duplicate_409_lookup_threw",
+      sessionId,
+      error: lookupErr instanceof Error ? lookupErr.message : String(lookupErr),
+    });
   }
   return null;
 }

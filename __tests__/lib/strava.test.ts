@@ -618,6 +618,7 @@ describe("Strava Integration — Behavioral", () => {
 
   it("(BLD-1240-e) 409 with unrecognized external_id logs warning, not error", async () => {
     // Same as BLD-1240-b but verifying no captureException is triggered
+    // and a distinct stravaLog("warn", ...) is emitted for the unresolved lookup
     const sessionId = "dup-unrecognized";
     const Sentry = require("@sentry/react-native");
     setupSyncMocks(sessionId);
@@ -628,6 +629,11 @@ describe("Strava Integration — Behavioral", () => {
 
     expect(result.status).toBe("synced");
     expect(Sentry.captureException).not.toHaveBeenCalled();
+    // A warn-level log must be emitted (not error) for the unresolved duplicate
+    expect(Sentry.logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("duplicate"),
+      expect.objectContaining({ flow: "strava_upload", sessionId })
+    );
   });
 
   it("(BLD-1240-f) non-409 4xx errors are still treated as transient failures", async () => {

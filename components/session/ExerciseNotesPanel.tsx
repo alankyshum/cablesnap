@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ type Props = {
   onSave: (exerciseId: string, text: string) => void;
 };
 
-export const ExerciseNotesPanel = memo(function ExerciseNotesPanel({ exerciseId, value, onDraftChange, onSave }: Props) {
+export function ExerciseNotesPanel({ exerciseId, value, onDraftChange, onSave }: Props) {
   const colors = useThemeColors();
   return (
     <View style={styles.container}>
@@ -35,7 +35,7 @@ export const ExerciseNotesPanel = memo(function ExerciseNotesPanel({ exerciseId,
       </Text>
     </View>
   );
-});
+}
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 8, paddingBottom: 8, paddingTop: 4 },
