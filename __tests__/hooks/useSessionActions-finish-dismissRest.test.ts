@@ -214,4 +214,79 @@ describe("useSessionActions — finish() dismisses rest timer (BLD-1137 AC7)", (
       expect(mockReplace).not.toHaveBeenCalled();
     });
   });
+
+  describe("BLD-1239 — finish() stable reference during rest-timer ticks", () => {
+    /**
+     * Regression: before the fix, `finish` and `cancel` were plain arrow functions
+     * (no useCallback). Every render produced a new function reference, including the
+     * 1-Hz render tick from useRestTimer. The memoised `listFooter` in
+     * app/session/[id].tsx depends on finish/cancel, so it re-created every second.
+     * FlatList on Android can unmount the Pressable between touchDown and touchUp when
+     * ListFooterComponent changes, silently dropping the tap.
+     *
+     * After the fix, finish and cancel are wrapped in useCallback. Their references
+     * must remain === stable across renders that only change the `elapsed` counter.
+     */
+    it("finish reference stays stable when the hook re-renders with a different dismissRest-stable prop", () => {
+      // Simulate the same dismissRest instance across renders (stable prop).
+      const dismissRest = jest.fn();
+      // Use a shared params object so all function references (showToast, showError, etc.)
+      // are identical across rerenders — mirrors the real-app scenario where the parent
+      // component's callbacks are memoised and don't change on rest-timer ticks.
+      const stableParams = createParams({ dismissRest });
+      const { result, rerender } = renderHook(
+        (props: Parameters<typeof useSessionActions>[0]) => useSessionActions(props),
+        { initialProps: stableParams }
+      );
+
+      const firstFinishRef = result.current.finish;
+
+      // Re-render with exactly the same props (simulates a rest tick re-render where only
+      // internal elapsed state changes — props are identical).
+      rerender(stableParams);
+
+      expect(result.current.finish).toBe(firstFinishRef);
+    });
+
+    it("cancel reference stays stable when the hook re-renders with identical props", () => {
+      const stableParams = createParams();
+      const { result, rerender } = renderHook(
+        (props: Parameters<typeof useSessionActions>[0]) => useSessionActions(props),
+        { initialProps: stableParams }
+      );
+
+      const firstCancelRef = result.current.cancel;
+      rerender(stableParams);
+
+      expect(result.current.cancel).toBe(firstCancelRef);
+    });
+
+    it("finish still triggers confirm dialog after a simulated rest tick re-render", async () => {
+      const { confirmAction } = jest.requireMock("../../lib/confirm");
+      mockGetSessionSets.mockResolvedValue([{ id: "s1", completed: true }]);
+
+      const dismissRest = jest.fn();
+      const { result, rerender } = renderHook(
+        (props: Parameters<typeof useSessionActions>[0]) => useSessionActions(props),
+        { initialProps: createParams({ dismissRest }) }
+      );
+
+      // Simulate a rest-timer re-render (props unchanged — mirrors 1-Hz elapsed tick).
+      rerender(createParams({ dismissRest }));
+
+      // Tap Finish Workout immediately after the re-render (the race condition scenario).
+      await act(async () => {
+        result.current.finish();
+        await flush();
+      });
+
+      expect(confirmAction).toHaveBeenCalledWith(
+        "Complete Workout?",
+        expect.any(String),
+        expect.any(Function),
+        false,
+        "Complete"
+      );
+    });
+  });
 });

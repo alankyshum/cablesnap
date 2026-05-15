@@ -87,7 +87,8 @@ export default function AdvancedSetsHelpScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingVertical: spacing.xs,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xxxl,
     gap: spacing.sm,
   },
   intro: {
