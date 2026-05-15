@@ -196,9 +196,20 @@ export function useSessionActions({
   suggestions,
 }: Params) {
   const router = useRouter();
+  // BLD-1239: ref so finish/cancel can access the router without including it in
+  // useCallback deps. In production, useRouter() returns a stable singleton — but
+  // keeping it as a ref removes any dependency on the reference identity of the
+  // router object and makes the hook easier to unit-test.
+  const routerRef = useRef(router);
+  routerRef.current = router;
 
   // --- local state ---
   const [elapsed, setElapsed] = useState(0);
+  // BLD-1239: keep a ref in sync so finish() can read the latest elapsed without
+  // capturing elapsed as a dependency (which would cause finish to get a new reference
+  // every second, re-mount the memoised listFooter, and drop Android tap events).
+  const elapsedRef = useRef(0);
+  elapsedRef.current = elapsed;
   // BLD-630: optimistic local mirror of `workout_sessions.clock_started_at`.
   // The DB write inside completeSet is authoritative for persistence/export,
   // but `useSessionDetail` fetches the session once on `[id]` and never
@@ -1084,10 +1095,15 @@ export function useSessionActions({
   // No more hydration-write-storm.
 
 
-  const finish = () => {
+  // BLD-1239: wrap in useCallback so finish's reference is stable across rest-timer ticks.
+  // Previously a plain arrow function → new ref every render → listFooter remounted every
+  // second → Android Pressable could be unmounted between touchDown and touchUp, dropping
+  // the tap. Uses elapsedRef.current and routerRef.current to read current values without
+  // adding them to deps (they are refs, always up-to-date).
+  const finish = useCallback(() => {
     confirmAction(
       "Complete Workout?",
-      `Duration: ${formatTime(elapsed)}`,
+      `Duration: ${formatTime(elapsedRef.current)}`,
       async () => {
 
         // BLD-1207 / GH#589: the critical "save the workout" steps must
@@ -1158,7 +1174,7 @@ export function useSessionActions({
             showToast("Strava sync queued — will retry");
           } else if (result.status === "failed") {
             showToast("Strava sync failed — check Settings", {
-              action: { label: "Settings", onPress: () => router.push("/settings/strava") },
+              action: { label: "Settings", onPress: () => routerRef.current.push("/settings/strava") },
               duration: 6000,
             });
           }
@@ -1193,7 +1209,7 @@ export function useSessionActions({
         const allSets = await getSessionSets(id!);
         const done = allSets.filter((s) => s.completed);
         if (done.length === 0) {
-          router.replace("/(tabs)");
+          routerRef.current.replace("/(tabs)");
         } else {
           // Fire-and-forget auto-backup — must never block navigation
           void (async () => {
@@ -1206,15 +1222,17 @@ export function useSessionActions({
               // Silent failure — backup should never block workout completion
             }
           })();
-          router.replace(`/session/summary/${id}`);
+          routerRef.current.replace(`/session/summary/${id}`);
         }
       },
       false,
       "Complete"
     );
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- elapsedRef/routerRef are refs (stable); id/dismissRest/flushAllPinnedNotes/showError/showToast are the real deps
+  }, [id, dismissRest, flushAllPinnedNotes, showError, showToast]);
 
-  const cancel = () => {
+  // BLD-1239: wrap in useCallback — cancel had the same re-mount issue as finish.
+  const cancel = useCallback(() => {
     confirmAction(
       "Discard Workout?",
       "All logged sets will be lost.",
@@ -1224,11 +1242,12 @@ export function useSessionActions({
         queryClient.removeQueries({ queryKey: ["home"] });
         // BLD-1122 AC17: cancelled session removes sets from plateau window
         queryClient.invalidateQueries({ queryKey: ["plateau"] });
-        router.back();
+        routerRef.current.back();
       },
       true
     );
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- routerRef is a ref (stable); cancelSession/bumpQueryVersion/queryClient are stable module imports
+  }, [id]);
 
   /** BLD-1122: Atomically apply break-through fill updates to a set of rows.
    * Writes via updateSetsBatch (single transaction), then invalidates plateau queries. */
