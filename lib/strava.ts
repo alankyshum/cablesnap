@@ -25,6 +25,7 @@ import {
   deleteStravaConnection,
   createSyncLogEntry,
   markSyncSuccess,
+  markSyncSkippedDuplicate,
   markSyncFailed,
   markSyncPermanentlyFailed,
   getPendingOrFailedSyncs,
@@ -712,7 +713,10 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
     return { status: "queued", error };
   }
 
-  // Upload succeeded -- activity is on Strava. Bookkeeping failure must not flip the toast.
+  // Upload succeeded (or 409 duplicate) -- activity exists on Strava.
+  // For unresolved 409 (activityId === null), mark the entry as a terminal synced state
+  // but return { status: "skipped" } so the UI suppresses the "Synced to Strava ✓" toast.
+  // For a resolved 409 or 200, proceed with normal success bookkeeping and toast.
   try {
     await markSyncSuccess(sessionId, activityId);
   } catch (bookkeepingErr) {
@@ -722,6 +726,17 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
       "db_write",
       { sessionId, activityId }
     );
+  }
+
+  if (activityId === null) {
+    // Unresolved duplicate — activity is on Strava but we couldn't look up its ID.
+    // Queue entry is now terminal (synced). Do NOT show a success toast.
+    stravaLog("info", "strava upload duplicate (409) — unresolved, skipping toast", {
+      flow: "strava_upload",
+      step: "duplicate_409_skipped",
+      sessionId,
+    });
+    return { status: "skipped" };
   }
 
   stravaLog("info", "strava upload succeeded", {
@@ -749,9 +764,13 @@ export async function reconcileStravaQueue(): Promise<void> {
 
     try {
       const activityId = await uploadActivity(entry.session_id);
-      // activityId may be null when the activity already exists (409 duplicate).
-      // Either way this is a success — mark synced and stop retrying.
-      await markSyncSuccess(entry.session_id, activityId);
+      if (activityId === null) {
+        // Unresolved 409 duplicate — activity exists on Strava but lookup failed.
+        // Mark as a terminal skipped-duplicate state so this entry is never retried.
+        await markSyncSkippedDuplicate(entry.session_id);
+      } else {
+        await markSyncSuccess(entry.session_id, activityId);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await markSyncFailed(entry.session_id, message);

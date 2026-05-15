@@ -69,6 +69,15 @@ export async function markSyncSuccess(
     .where(eq(stravaSyncLog.session_id, sessionId));
 }
 
+/**
+ * Marks a sync log entry as `synced` with null activityId when a 409 duplicate
+ * could not be resolved to an existing Strava activity. Sets the row to a terminal
+ * state so it is excluded from `getPendingOrFailedSyncs` and never retried.
+ */
+export async function markSyncSkippedDuplicate(sessionId: string): Promise<void> {
+  return markSyncSuccess(sessionId, null);
+}
+
 export async function markSyncFailed(
   sessionId: string,
   error: string

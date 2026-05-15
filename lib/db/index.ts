@@ -333,6 +333,7 @@ export {
   deleteStravaConnection,
   createSyncLogEntry,
   markSyncSuccess,
+  markSyncSkippedDuplicate,
   markSyncFailed,
   markSyncPermanentlyFailed,
   getPendingOrFailedSyncs,
