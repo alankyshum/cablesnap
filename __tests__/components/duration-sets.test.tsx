@@ -1,6 +1,7 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
 import { formatDurationDisplay, SetRow, type SetRowProps } from "../../components/session/SetRow";
+import { SetTimerContext, type SetTimerContextValue } from "../../components/session/SetTimerContext";
 import type { SetWithMeta } from "../../components/session/types";
 
 // ---- formatDurationDisplay ----
@@ -96,6 +97,20 @@ function makeProps(overrides: Partial<SetRowProps> = {}): SetRowProps {
     onDelete: jest.fn(),
     onCycleSetType: jest.fn(),
     onLongPressSetType: jest.fn(),
+    exerciseId: "ex-1",
+    setIndex: 0,
+    ...overrides,
+  };
+}
+
+function makeTimerContext(overrides: Partial<SetTimerContextValue> = {}): SetTimerContextValue {
+  return {
+    isRunning: false,
+    displaySeconds: 0,
+    activeExerciseId: null,
+    activeSetIndex: null,
+    onTimerStart: jest.fn(),
+    onTimerStop: jest.fn(),
     ...overrides,
   };
 }
@@ -103,35 +118,29 @@ function makeProps(overrides: Partial<SetRowProps> = {}): SetRowProps {
 describe("SetRow — duration mode", () => {
   it("renders play button in duration mode when timer not running", () => {
     const { getByLabelText } = render(
-      <SetRow {...makeProps({ trackingMode: "duration" })} />,
+      <SetTimerContext.Provider value={makeTimerContext()}>
+        <SetRow {...makeProps({ trackingMode: "duration" })} />
+      </SetTimerContext.Provider>,
     );
     expect(getByLabelText("Start set timer")).toBeTruthy();
   });
 
   it("renders stop button when timer is running for this set", () => {
+    const ctx = makeTimerContext({ isRunning: true, activeExerciseId: "ex-1", activeSetIndex: 0, displaySeconds: 30 });
     const { getByLabelText } = render(
-      <SetRow
-        {...makeProps({
-          trackingMode: "duration",
-          isTimerRunning: true,
-          isTimerActive: true,
-          timerDisplaySeconds: 30,
-        })}
-      />,
+      <SetTimerContext.Provider value={ctx}>
+        <SetRow {...makeProps({ trackingMode: "duration" })} />
+      </SetTimerContext.Provider>,
     );
     expect(getByLabelText("Stop set timer")).toBeTruthy();
   });
 
   it("shows timer display when running", () => {
+    const ctx = makeTimerContext({ isRunning: true, activeExerciseId: "ex-1", activeSetIndex: 0, displaySeconds: 90 });
     const { getByText } = render(
-      <SetRow
-        {...makeProps({
-          trackingMode: "duration",
-          isTimerRunning: true,
-          isTimerActive: true,
-          timerDisplaySeconds: 90,
-        })}
-      />,
+      <SetTimerContext.Provider value={ctx}>
+        <SetRow {...makeProps({ trackingMode: "duration" })} />
+      </SetTimerContext.Provider>,
     );
     expect(getByText("1:30")).toBeTruthy();
   });

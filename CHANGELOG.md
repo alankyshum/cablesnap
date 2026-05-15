@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Strava sync — duplicate upload fix**: Activities already uploaded to Strava no longer surface a "sync failed" toast or retry loop. Strava's 409 conflict response (same `external_id`) is now treated as a successful idempotent re-sync, clearing the queue entry silently.
 
 ## v0.26.34 — 2026-05-12
 <!-- versionCode: 104 -->

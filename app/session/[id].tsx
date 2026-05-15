@@ -46,6 +46,7 @@ import { getSetupPhotoForSet, deleteSetupPhoto } from "../../lib/media/setup-pho
 import { toAbsPath } from "../../lib/media/form-clips";
 import { useCompareFromPlayer } from "../../hooks/useCompareFromPlayer";
 import { CoachOverlay } from "../../components/session/CoachOverlay";
+import { SetTimerContext } from "../../components/session/SetTimerContext";
 import {
   startCoach,
   getTempoCoachEnabled,
@@ -448,6 +449,14 @@ export default function ActiveSession() {
     }
   }, [id, unit, suggestions, groups, load, showError]);
 
+  // BLD-1235: Extract onBackfillCopy inline arrow to a stable useCallback so
+  // ExerciseGroupCard.memo can bail out (inline lambdas create new references
+  // every render and break React.memo's shallow-equality check).
+  const handleBackfillCopy = useCallback((exId: string, text: string) => {
+    handleDismissBackfill(exId);
+    handleSavePinnedNote(exId, text);
+  }, [handleDismissBackfill, handleSavePinnedNote]);
+
   const renderExerciseGroup = useCallback(({ item: group }: { item: typeof groups[number]; index: number }) => {
     return (
       <ExerciseGroupCard
@@ -471,7 +480,7 @@ export default function ActiveSession() {
       onToggleExerciseNotes={toggleExerciseNotes}
       onPinnedNoteDraftChange={handlePinnedNoteDraftChange}
       onPinnedNoteSave={handleSavePinnedNote}
-      onBackfillCopy={(exId, text) => { handleDismissBackfill(exId); handleSavePinnedNote(exId, text); }}
+      onBackfillCopy={handleBackfillCopy}
       onBackfillDismiss={handleDismissBackfill}
       onLoadBackfill={handleLoadBackfill}
       onCycleSetType={handleCycleSetType}
@@ -487,12 +496,6 @@ export default function ActiveSession() {
       onMoveDown={handleMoveDown}
       onPrefill={handlePrefillFromPrevious}
       plateauHints={plateauHints} onApplyBreakThrough={handleApplyBreakThrough}
-      timerActiveExerciseId={timerExerciseId}
-      timerActiveSetIndex={timerSetIndex}
-      timerIsRunning={timerIsRunning}
-      timerDisplaySeconds={timerDisplaySeconds}
-      onTimerStart={handleTimerStart}
-      onTimerStop={handleTimerStop}
       hasClipMap={hasClipMap}
       onVideoGlyph={handleVideoGlyph}
       onOpenPulleyPinPicker={handleOpenPulleyPinPicker}
@@ -507,7 +510,9 @@ export default function ActiveSession() {
       onCollapseToNormal={handleCollapseToNormal}
     />
     );
-  }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal]);
+  // BLD-1235: timerIsRunning, timerDisplaySeconds, timerExerciseId, timerSetIndex,
+  // handleTimerStart, handleTimerStop removed — timer state is now in SetTimerContext.
+  }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleBackfillCopy, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />
@@ -561,6 +566,7 @@ export default function ActiveSession() {
       />
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={100}>
       <PRCelebration celebration={celebration} />
+      <SetTimerContext.Provider value={{ isRunning: timerIsRunning, displaySeconds: timerDisplaySeconds, activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex, onTimerStart: handleTimerStart, onTimerStop: handleTimerStop }}>
       <FlatList
         data={groups}
         renderItem={renderExerciseGroup}
@@ -571,6 +577,7 @@ export default function ActiveSession() {
         ListHeaderComponent={listHeader}
         ListFooterComponent={listFooter}
       />
+      </SetTimerContext.Provider>
       </KeyboardAvoidingView>
       {!!setOptionsSheetSetId && (
         <SetOptionsSheet
