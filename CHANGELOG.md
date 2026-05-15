@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Fix: "Finish Workout" button now responds during rest timer (Android)** — tapping Finish Workout while the rest countdown is active now reliably opens the Complete Workout confirm dialog. Previously the button was unresponsive on Android (especially foldables like Galaxy Z Fold 6) because the footer re-mounted every second during rest ticks. (#600, BLD-1239)
 
 ## v0.26.34 — 2026-05-12
 <!-- versionCode: 104 -->
