@@ -89,11 +89,31 @@ jest.mock("../../../components/session/RpeChipStrip", () => ({
 }));
 
 jest.mock("../../../components/session/SetWeightCell", () => {
-  const { Text } = require("react-native");
+  const React = require("react");
+  const { TextInput } = require("react-native");
   return {
-    SetWeightCell: ({ displayedWeight, accessibilityLabel }: { displayedWeight: number | null; accessibilityLabel: string }) => (
-      <Text accessibilityLabel={accessibilityLabel}>{displayedWeight}</Text>
-    ),
+    SetWeightCell: ({
+      displayedWeight,
+      accessibilityLabel,
+      onWeightChange,
+    }: {
+      displayedWeight: number | null;
+      accessibilityLabel: string;
+      onWeightChange?: (v: number) => void;
+    }) => {
+      // Local draft state mirrors what WeightPicker does inside the real component.
+      // If SetRow re-mounts, this state resets — which is exactly what BLD-1235
+      // should prevent.
+      const [draft, setDraft] = React.useState(String(displayedWeight ?? ""));
+      return (
+        <TextInput
+          accessibilityLabel={accessibilityLabel}
+          value={draft}
+          onChangeText={(t: string) => setDraft(t)}
+          onBlur={() => onWeightChange && onWeightChange(parseFloat(draft) || 0)}
+        />
+      );
+    },
   };
 });
 
@@ -271,6 +291,47 @@ describe("BLD-1235 — SetTimerContext isolation", () => {
     // Blur should commit "12" → call onUpdate
     fireEvent(repsInput, "blur");
     expect(onUpdate).toHaveBeenCalledWith("set-1", "reps", "12");
+  });
+
+  /**
+   * BLD-1235 nit: weight-cell draft must also survive timer context updates.
+   * Mirrors the reps test for the weight field path.
+   */
+  it("weight WeightPicker preserves typed draft through timer context updates", () => {
+    const onUpdate = jest.fn();
+
+    function Harness({ displaySeconds }: { displaySeconds: number }) {
+      const ctx = makeTimerCtx({
+        isRunning: true,
+        activeExerciseId: "ex-2", // different exercise — not the active timer set
+        activeSetIndex: 0,
+        displaySeconds,
+      });
+      return (
+        <SetTimerContext.Provider value={ctx}>
+          <SetRow {...makeProps({ onUpdate })} />
+        </SetTimerContext.Provider>
+      );
+    }
+
+    const { getByLabelText, rerender } = render(<Harness displaySeconds={10} />);
+
+    // Initial weight is 80 (from makeSet); find the weight input via a11y label
+    const weightInput = getByLabelText("Set 1 weight, 80 kilograms");
+    fireEvent(weightInput, "focus");
+    fireEvent.changeText(weightInput, "85");
+
+    // Simulate 3 timer ticks
+    act(() => { rerender(<Harness displaySeconds={11} />); });
+    act(() => { rerender(<Harness displaySeconds={12} />); });
+    act(() => { rerender(<Harness displaySeconds={13} />); });
+
+    // Draft must still be "85" — not rolled back to "80"
+    expect(getByLabelText("Set 1 weight, 80 kilograms").props.value).toBe("85");
+
+    // Blur must commit via onUpdate
+    fireEvent(weightInput, "blur");
+    expect(onUpdate).toHaveBeenCalledWith("set-1", "weight", "85");
   });
 
   it("timer context updates do NOT propagate onTimerStart when stopped", () => {

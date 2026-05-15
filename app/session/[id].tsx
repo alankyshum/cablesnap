@@ -197,6 +197,21 @@ export default function ActiveSession() {
     activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex,
     isRunning: timerIsRunning, displaySeconds: timerDisplaySeconds, handleTimerStart, handleTimerStop,
   } = useSessionTimer({ sessionId: id, groups, dismissRest, handleUpdate });
+
+  // BLD-1235 nit: memoize so context consumers only receive a new identity when
+  // the timer fields actually change, not on every parent render.
+  const setTimerContextValue = useMemo(
+    () => ({
+      isRunning: timerIsRunning,
+      displaySeconds: timerDisplaySeconds,
+      activeExerciseId: timerExerciseId,
+      activeSetIndex: timerSetIndex,
+      onTimerStart: handleTimerStart,
+      onTimerStop: handleTimerStop,
+    }),
+    [timerIsRunning, timerDisplaySeconds, timerExerciseId, timerSetIndex, handleTimerStart, handleTimerStop],
+  );
+
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
   const toolboxSheetRef = useRef<BottomSheet>(null);
   const {
@@ -558,7 +573,7 @@ export default function ActiveSession() {
       />
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={100}>
       <PRCelebration celebration={celebration} />
-      <SetTimerContext.Provider value={{ isRunning: timerIsRunning, displaySeconds: timerDisplaySeconds, activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex, onTimerStart: handleTimerStart, onTimerStop: handleTimerStop }}>
+      <SetTimerContext.Provider value={setTimerContextValue}>
       <FlatList
         data={groups}
         renderItem={renderExerciseGroup}

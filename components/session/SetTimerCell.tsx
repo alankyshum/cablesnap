@@ -13,7 +13,7 @@ import WeightPicker from "../WeightPicker";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { radii, fontSizes } from "@/constants/design-tokens";
 import { useSetTimerContext } from "./SetTimerContext";
-import { formatDurationDisplay } from "./SetRow";
+import { formatDurationDisplay } from "./timerUtils";
 
 type SetTimerCellProps = {
   setId: string;
