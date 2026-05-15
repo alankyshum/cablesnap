@@ -3,16 +3,16 @@
 #
 # Usage: safe-mark-done.sh <ISSUE_IDENTIFIER> <PR_NUMBER> <REPO>
 #
-# Verifies that the linked PR is merged (mergedAt != null) AND CI checks pass
-# before calling `clip.sh update-issue --status done`. Rejects if PR is still
-# OPEN or DRAFT, protecting against premature done marking (HARD RULE #0).
+# Verifies that the linked PR is merged (mergedAt != null), CI checks pass,
+# AND the PR is actually linked to the given issue (branch/title contains issue ID).
+# Rejects if PR is OPEN, DRAFT, CI failing, or not referencing the issue.
 #
 # Example:
 #   /projects/cablesnap/scripts/safe-mark-done.sh BLD-1235 607 alankyshum/cablesnap
 #
 # Exit codes:
-#   0 — PR verified merged, issue marked done
-#   1 — PR not merged or CI failing — done marking REJECTED
+#   0 — PR verified merged + linked, issue marked done
+#   1 — PR not merged, CI failing, or issue-PR mismatch — done marking REJECTED
 #   2 — Usage error
 
 set -euo pipefail
@@ -28,6 +28,19 @@ if [[ -z "$ISSUE_ID" || -z "$PR_NUMBER" ]]; then
 fi
 
 echo "🔍 [safe-mark-done] Verifying PR #${PR_NUMBER} on ${REPO} before marking ${ISSUE_ID} done..."
+
+# Step 0 — Confirm PR is linked to the issue being marked done.
+# The PR branch name or title must contain the issue identifier (e.g., "BLD-1251" or "1251").
+# This prevents marking an unrelated issue done by passing an arbitrary merged PR.
+ISSUE_NUM="${ISSUE_ID##*-}"  # "BLD-1251" → "1251"
+PR_META=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefName,title --jq '[.headRefName, .title] | join(" ")' 2>/dev/null || true)
+if ! echo "$PR_META" | grep -qiE "${ISSUE_ID}|${ISSUE_NUM}"; then
+  echo "❌ [safe-mark-done] REJECTED: PR #${PR_NUMBER} does not reference ${ISSUE_ID}." >&2
+  echo "   PR branch/title: ${PR_META}" >&2
+  echo "   Verify the correct PR number was supplied for ${ISSUE_ID}." >&2
+  exit 1
+fi
+echo "✅ [safe-mark-done] PR #${PR_NUMBER} is linked to ${ISSUE_ID} (found in: ${PR_META})."
 
 # Step 1 — Confirm PR merged
 MERGED=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json mergedAt -q .mergedAt 2>/dev/null || true)
@@ -47,9 +60,9 @@ if ! gh pr checks "$PR_NUMBER" --repo "$REPO" --required >/dev/null 2>&1; then
   exit 1
 fi
 
-# Step 3 — Both pass; safe to mark done
+# Step 3 — All checks pass; safe to mark done.
 # Set CLIP_ALLOW_DONE=1 to bypass the HARD RULE #0 gate in clip.sh.
 # This is the ONLY authorized path for marking issues done.
-echo "✅ [safe-mark-done] PR merged + CI green. Marking ${ISSUE_ID} done..."
+echo "✅ [safe-mark-done] PR merged + CI green + issue linked. Marking ${ISSUE_ID} done..."
 CLIP_ALLOW_DONE=1 bash /skills/scripts/clip.sh update-issue "$ISSUE_ID" --status done
 echo "✅ [safe-mark-done] ${ISSUE_ID} marked done."
