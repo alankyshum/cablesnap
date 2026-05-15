@@ -61,12 +61,21 @@ export async function createSyncLogEntry(sessionId: string): Promise<string> {
 
 export async function markSyncSuccess(
   sessionId: string,
-  stravaActivityId: string
+  stravaActivityId: string | null
 ): Promise<void> {
   const db = await getDrizzle();
   await db.update(stravaSyncLog)
     .set({ status: "synced", strava_activity_id: stravaActivityId, synced_at: Date.now(), error: null })
     .where(eq(stravaSyncLog.session_id, sessionId));
+}
+
+/**
+ * Marks a sync log entry as `synced` with null activityId when a 409 duplicate
+ * could not be resolved to an existing Strava activity. Sets the row to a terminal
+ * state so it is excluded from `getPendingOrFailedSyncs` and never retried.
+ */
+export async function markSyncSkippedDuplicate(sessionId: string): Promise<void> {
+  return markSyncSuccess(sessionId, null);
 }
 
 export async function markSyncFailed(

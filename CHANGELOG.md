@@ -24,6 +24,7 @@ marker) at release time.
 
 - **Fix: "Finish Workout" button now responds during rest timer (Android)** — tapping Finish Workout while the rest countdown is active now reliably opens the Complete Workout confirm dialog. Previously the button was unresponsive on Android (especially foldables like Galaxy Z Fold 6) because the footer re-mounted every second during rest ticks. (#600, BLD-1239)
 - **Advanced Set Types help sheet**: Fixed Myo-reps description being clipped mid-sentence on narrow viewports (390 px wide). The help sheet now has sufficient bottom padding so the last card and footer are fully visible with breathing room.
+- **Strava sync — duplicate upload fix**: Activities already uploaded to Strava no longer surface a "sync failed" toast or retry loop. Strava's 409 conflict response (same `external_id`) is now treated as a successful idempotent re-sync, clearing the queue entry silently.
 
 ## v0.26.34 — 2026-05-12
 <!-- versionCode: 104 -->

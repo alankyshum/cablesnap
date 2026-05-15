@@ -66,7 +66,7 @@ describe("Strava Integration — DB Schema (Phase 48)", () => {
 describe("Strava Integration — DB Operations", () => {
   it("exports all strava DB functions and types from index", () => {
     for (const fn of ["getStravaConnection", "saveStravaConnection", "deleteStravaConnection",
-      "createSyncLogEntry", "markSyncSuccess", "markSyncFailed",
+      "createSyncLogEntry", "markSyncSuccess", "markSyncSkippedDuplicate", "markSyncFailed",
       "markSyncPermanentlyFailed", "getPendingOrFailedSyncs", "getSyncLogForSession"]) {
       expect(indexSrc).toContain(fn);
     }
@@ -260,6 +260,7 @@ jest.mock("../../lib/db", () => ({
   deleteStravaConnection: jest.fn(),
   createSyncLogEntry: jest.fn(),
   markSyncSuccess: jest.fn(),
+  markSyncSkippedDuplicate: jest.fn(),
   markSyncFailed: jest.fn(),
   markSyncPermanentlyFailed: jest.fn(),
   getPendingOrFailedSyncs: jest.fn(),
@@ -516,6 +517,183 @@ describe("Strava Integration — Behavioral", () => {
     // retry_count >= MAX_RETRIES (3) → permanently failed without attempting upload
     expect(db.markSyncPermanentlyFailed).toHaveBeenCalledWith("s-old");
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  // BLD-1240: 409 duplicate handling
+  function setupSyncMocks(sessionId: string) {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: sessionId, name: "Test Session", started_at: Date.now(), duration_seconds: 3600,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+  }
+
+  it("(BLD-1240-a) 409 + resolved activityId → status=synced, no error toast, no Sentry error", async () => {
+    const sessionId = "dup-session-1";
+    setupSyncMocks(sessionId);
+    // First fetch: POST /activities returns 409
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 409, text: async () => '{"message":"Record Already Exists"}' });
+    // Second fetch: GET /athlete/activities?external_id_eq=... returns existing activity
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 99001 }],
+    });
+
+    const result = await strava.syncSessionToStrava(sessionId);
+
+    expect(result.status).toBe("synced");
+    expect((result as any).activityId).toBe("99001");
+    expect(db.markSyncSuccess).toHaveBeenCalledWith(sessionId, "99001");
+    expect(db.markSyncFailed).not.toHaveBeenCalled();
+  });
+
+  it("(BLD-1240-b) 409 + lookup returns empty → status=skipped (unresolved duplicate, no toast)", async () => {
+    const sessionId = "dup-session-2";
+    setupSyncMocks(sessionId);
+    // POST /activities returns 409
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 409, text: async () => '{"message":"Record Already Exists"}' });
+    // GET /athlete/activities returns empty array
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+
+    const result = await strava.syncSessionToStrava(sessionId);
+
+    expect(result.status).toBe("skipped");
+    expect(db.markSyncSuccess).toHaveBeenCalledWith(sessionId, null);
+    expect(db.markSyncFailed).not.toHaveBeenCalled();
+  });
+
+  it("(BLD-1240-c) 409 + lookup fails → status=skipped (unresolved duplicate, no toast, no Sentry error)", async () => {
+    const sessionId = "dup-session-3";
+    setupSyncMocks(sessionId);
+    // POST /activities returns 409
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 409, text: async () => '{"message":"Record Already Exists"}' });
+    // GET /athlete/activities throws network error
+    mockFetch.mockRejectedValueOnce(new TypeError("Network request failed"));
+
+    const result = await strava.syncSessionToStrava(sessionId);
+
+    expect(result.status).toBe("skipped");
+    expect(db.markSyncSuccess).toHaveBeenCalledWith(sessionId, null);
+    expect(db.markSyncFailed).not.toHaveBeenCalled();
+  });
+
+  it("(BLD-1240-d) reconcileQueue: resolved 409 marks entry synced; unresolved 409 calls markSyncSkippedDuplicate", async () => {
+    const sessionId = "dup-queue-session";
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getPendingOrFailedSyncs.mockResolvedValue([
+      { session_id: sessionId, retry_count: 1, status: "failed" },
+    ]);
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Bench", weight: 80, reps: 8, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: sessionId, name: "Push Day", started_at: Date.now(), duration_seconds: 2000,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+    // POST /activities → 409
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 409, text: async () => '{"message":"Record Already Exists"}' });
+    // GET /athlete/activities → found (resolved)
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [{ id: 77777 }] });
+
+    await strava.reconcileStravaQueue();
+
+    expect(db.markSyncSuccess).toHaveBeenCalledWith(sessionId, "77777");
+    expect(db.markSyncSkippedDuplicate).not.toHaveBeenCalled();
+    expect(db.markSyncFailed).not.toHaveBeenCalled();
+    expect(db.markSyncPermanentlyFailed).not.toHaveBeenCalled();
+  });
+
+  it("(BLD-1240-d2) reconcileQueue: unresolved 409 (lookup empty) calls markSyncSkippedDuplicate, not markSyncFailed", async () => {
+    const sessionId = "dup-queue-unresolved";
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getPendingOrFailedSyncs.mockResolvedValue([
+      { session_id: sessionId, retry_count: 0, status: "pending" },
+    ]);
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: sessionId, name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+    // POST /activities → 409
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 409, text: async () => '{"message":"Record Already Exists"}' });
+    // GET /athlete/activities → empty (unresolved)
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+
+    await strava.reconcileStravaQueue();
+
+    expect(db.markSyncSkippedDuplicate).toHaveBeenCalledWith(sessionId);
+    expect(db.markSyncSuccess).not.toHaveBeenCalled();
+    expect(db.markSyncFailed).not.toHaveBeenCalled();
+    expect(db.markSyncPermanentlyFailed).not.toHaveBeenCalled();
+  });
+
+  it("(BLD-1240-d3) skipped-duplicate is in terminal state — reconcileQueue does not retry it", async () => {
+    // After syncSessionToStrava returns { status: "skipped" }, the DB entry is terminal
+    // (synced status). getPendingOrFailedSyncs filters to pending/failed only, so the
+    // skipped entry must never appear in a subsequent reconcile run.
+    // Simulate: the second call to reconcileQueue sees an empty pending list.
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    // Empty pending list — terminal entries are excluded by getPendingOrFailedSyncs
+    db.getPendingOrFailedSyncs.mockResolvedValueOnce([]);
+
+    const uploadActivitySpy = mockFetch;
+    const callsBefore = uploadActivitySpy.mock.calls.length;
+
+    await strava.reconcileStravaQueue();
+
+    // No additional fetch calls — uploadActivity was never called for the terminal entry
+    expect(uploadActivitySpy.mock.calls.length).toBe(callsBefore);
+  });
+
+  it("(BLD-1240-e) 409 with unrecognized external_id: status=skipped, logs warning (not error), no captureException", async () => {
+    // Same as BLD-1240-b but verifying no captureException is triggered
+    // and a distinct stravaLog("warn", ...) is emitted for the unresolved lookup
+    const sessionId = "dup-unrecognized";
+    const Sentry = require("@sentry/react-native");
+    setupSyncMocks(sessionId);
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 409, text: async () => '{"message":"Record Already Exists"}' });
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+
+    const result = await strava.syncSessionToStrava(sessionId);
+
+    expect(result.status).toBe("skipped");
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+    // A warn-level log must be emitted (not error) for the unresolved duplicate
+    expect(Sentry.logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("duplicate"),
+      expect.objectContaining({ flow: "strava_upload", sessionId })
+    );
+  });
+
+  it("(BLD-1240-f) non-409 4xx errors are still treated as transient failures", async () => {
+    const sessionId = "err-4xx-session";
+    setupSyncMocks(sessionId);
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 422, text: async () => '{"message":"Unprocessable"}' });
+
+    const result = await strava.syncSessionToStrava(sessionId);
+
+    expect(result.status).toBe("queued");
+    expect(db.markSyncFailed).toHaveBeenCalledWith(sessionId, expect.stringContaining("422"));
   });
 });
 
