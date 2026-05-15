@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Fix: Workout input fields no longer reset while timer is running** — reps, weight, RPE, and duration values typed during an active set timer now persist through every second tick. Previously, the elapsed/countdown display caused the entire exercise list to re-render each second, overwriting in-progress edits with stale values. (#599, BLD-1235)
 - **Fix: "Finish Workout" button now responds during rest timer (Android)** — tapping Finish Workout while the rest countdown is active now reliably opens the Complete Workout confirm dialog. Previously the button was unresponsive on Android (especially foldables like Galaxy Z Fold 6) because the footer re-mounted every second during rest ticks. (#600, BLD-1239)
 
 ## v0.26.34 — 2026-05-12
