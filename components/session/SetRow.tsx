@@ -46,6 +46,7 @@ import { isCableExercise, formatAttachmentLabel, formatMountPositionLabel } from
 import { isBodyweightGripExercise, formatGripTypeLabel, formatGripWidthLabel } from "../../lib/bodyweight-grip-variant";
 import { RpeChipStrip } from "./RpeChipStrip";
 import { SetWeightCell } from "./SetWeightCell";
+import { SetTimerCell } from "./SetTimerCell";
 import type { StackWithCalibrations } from "@/hooks/useActiveCalibration";
 import { MiniSetEditor } from "./MiniSetEditor";
 
@@ -99,18 +100,9 @@ export function __resetSwipeCompleteHintClaimForTests(): void {
 }
 export const __claimSwipeCompleteHintOnceForTests = claimSwipeCompleteHintOnce;
 
-export function formatDurationDisplay(seconds: number | null): string {
-  if (seconds == null || seconds <= 0) return "0:00";
-  if (seconds >= 3600) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  }
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
+// Re-exported from timerUtils for backward compatibility with tests and other
+// importers that reference it here.
+export { formatDurationDisplay } from "./timerUtils";
 
 export type SetRowProps = {
   set: SetWithMeta;
@@ -160,12 +152,10 @@ export type SetRowProps = {
   exerciseName?: string;
   onOpenBodyweightGripPicker?: (setId: string, returnFocusHandle: number | null) => void;
   onClearBodyweightGrip?: (setId: string) => void;
-  // Timer controls (duration mode only)
-  isTimerRunning?: boolean;
-  isTimerActive?: boolean;
-  timerDisplaySeconds?: number;
-  onTimerStart?: (setId: string) => void;
-  onTimerStop?: (setId: string) => void;
+  // BLD-1235: exerciseId + setIndex replace the old timer props; timer state
+  // is now in SetTimerContext, consumed only by SetTimerCell.
+  exerciseId?: string;
+  setIndex?: number;
   // BLD-1092: Form Check Video glyph (video-outline / video-check).
   // Only rendered on completed sets. onVideoGlyph opens the capture sheet
   // (no clip) or the player sheet (clip exists).
@@ -207,8 +197,7 @@ export const SetRow = memo(function SetRow({
   set, step, unit, trackingMode, equipment,
   onUpdate, onCheck, onDelete,
   onCycleSetType, onLongPressSetType,
-  isTimerRunning, isTimerActive, timerDisplaySeconds,
-  onTimerStart, onTimerStop,
+  exerciseId, setIndex,
   isBodyweight, onOpenBodyweightModifier, onClearBodyweightModifier,
   onOpenVariantPicker, onClearVariant,
   exerciseName, onOpenBodyweightGripPicker, onClearBodyweightGrip,
@@ -487,52 +476,17 @@ export const SetRow = memo(function SetRow({
           </View>
           {isDurationMode ? (
             <View style={styles.durationCol}>
-              <View style={styles.durationRow}>
-                <Pressable
-                  onPress={() => {
-                    if (isTimerActive && isTimerRunning) {
-                      onTimerStop?.(set.id);
-                    } else {
-                      onTimerStart?.(set.id);
-                    }
-                  }}
-                  style={[
-                    styles.timerButton,
-                    { backgroundColor: isTimerActive && isTimerRunning ? colors.error : colors.primary },
-                  ]}
-                  accessibilityLabel={isTimerActive && isTimerRunning ? "Stop set timer" : "Start set timer"}
-                  accessibilityHint={isTimerActive && isTimerRunning
-                    ? "Double tap to stop and record duration"
-                    : "Double tap to start timing this set"}
-                  accessibilityRole="button"
-                >
-                  <MaterialCommunityIcons
-                    name={isTimerActive && isTimerRunning ? "stop" : "play"}
-                    size={22}
-                    color={isTimerActive && isTimerRunning ? colors.onError : colors.onPrimary}
-                  />
-                </Pressable>
-                {isTimerActive && isTimerRunning ? (
-                  <Text
-                    style={[styles.timerDisplay, { color: colors.primary }]}
-                    accessibilityRole="timer"
-                    accessibilityLiveRegion="polite"
-                    accessibilityLabel={`Timer: ${formatDurationDisplay(timerDisplaySeconds ?? 0)}`}
-                  >
-                    {formatDurationDisplay(timerDisplaySeconds ?? 0)}
-                  </Text>
-                ) : (
-                  <View style={{ flex: 1 }}>
-                    <WeightPicker
-                      value={displayedDuration}
-                      step={1}
-                      onValueChange={onDurationChange}
-                      accessibilityLabel={a11yDurationLabel}
-                      max={36000}
-                    />
-                  </View>
-                )}
-              </View>
+              {/* BLD-1235: SetTimerCell subscribes to SetTimerContext directly,
+                  so only it re-renders each second. SetRow.memo stays stable. */}
+              <SetTimerCell
+                setId={set.id}
+                exerciseId={exerciseId}
+                setIndex={setIndex}
+                displayedDuration={displayedDuration ?? 0}
+                step={1}
+                onDurationChange={onDurationChange}
+                accessibilityLabel={a11yDurationLabel}
+              />
             </View>
           ) : (
             <View style={styles.pickerCol}>
@@ -1029,26 +983,5 @@ const styles = StyleSheet.create({
   durationCol: {
     flex: 1,
     marginHorizontal: 12,
-  },
-  durationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  timerButton: {
-    width: 56,
-    height: 56,
-    borderRadius: radii.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 56,
-    minHeight: 56,
-  },
-  timerDisplay: {
-    fontSize: fontSizes.xl,
-    fontWeight: "700",
-    fontVariant: ["tabular-nums"],
-    flex: 1,
-    textAlign: "center",
   },
 });

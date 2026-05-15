@@ -33,12 +33,6 @@ export type ExerciseGroupSetTableProps = {
   onClearVariant?: (setId: string) => void;
   onOpenBodyweightGripPicker?: (setId: string, returnFocusHandle: number | null) => void;
   onClearBodyweightGrip?: (setId: string) => void;
-  timerActiveExerciseId?: string | null;
-  timerActiveSetIndex?: number | null;
-  timerIsRunning?: boolean;
-  timerDisplaySeconds?: number;
-  onTimerStart?: (setId: string) => void;
-  onTimerStop?: (setId: string) => void;
   // BLD-1092: form-check video glyph
   hasClipMap?: Record<string, boolean>;
   onVideoGlyph?: (setId: string) => void;
@@ -69,8 +63,6 @@ export function ExerciseGroupSetTable({
   onOpenBodyweightModifier, onClearBodyweightModifier,
   onOpenVariantPicker, onClearVariant,
   onOpenBodyweightGripPicker, onClearBodyweightGrip,
-  timerActiveExerciseId, timerActiveSetIndex, timerIsRunning, timerDisplaySeconds,
-  onTimerStart, onTimerStop,
   hasClipMap, onVideoGlyph,
   onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, setupPhotoUriMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
@@ -88,9 +80,7 @@ export function ExerciseGroupSetTable({
         <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>{isDurationMode ? "DURATION" : "REPS"}</Text>
         <View style={styles.colTrailing} />
       </View>
-      {group.sets.map((set, idx) => {
-        const isActiveSet = timerActiveExerciseId === group.exercise_id && timerActiveSetIndex === idx;
-        return (
+      {group.sets.map((set, idx) => (
           <SetRow
             key={set.id}
             set={set}
@@ -111,11 +101,8 @@ export function ExerciseGroupSetTable({
             exerciseName={group.name}
             onOpenBodyweightGripPicker={onOpenBodyweightGripPicker}
             onClearBodyweightGrip={onClearBodyweightGrip}
-            isTimerRunning={isActiveSet && (timerIsRunning ?? false)}
-            isTimerActive={isActiveSet}
-            timerDisplaySeconds={isActiveSet ? timerDisplaySeconds : undefined}
-            onTimerStart={onTimerStart}
-            onTimerStop={onTimerStop}
+            exerciseId={group.exercise_id}
+            setIndex={idx}
             hasClip={hasClipMap?.[set.id] ?? false}
             onVideoGlyph={onVideoGlyph}
             pulleyPin={set.pulley_pin ?? null}
@@ -134,8 +121,7 @@ export function ExerciseGroupSetTable({
             onDeleteSegment={onDeleteSegment}
             onCollapseToNormal={onCollapseToNormal}
           />
-        );
-      })}
+      ))}
       <View style={styles.actionRow}>
         <Button
           variant="ghost"

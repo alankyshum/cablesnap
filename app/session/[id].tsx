@@ -42,6 +42,8 @@ import { FormVideoSheet } from "../../components/session/FormVideoSheet";
 import { FormClipsPlayer } from "../../components/session/FormClipsPlayer";
 import { PulleyPinPickerSheet } from "../../components/session/PulleyPinPickerSheet";
 import { SetupPhotoSheet } from "../../components/session/SetupPhotoSheet";
+import { SetTimerContext } from "../../components/session/SetTimerContext";
+import { useSessionTimerContextValue } from "../../hooks/useSessionTimerContextValue";
 import { getSetupPhotoForSet, deleteSetupPhoto } from "../../lib/media/setup-photos";
 import { toAbsPath } from "../../lib/media/form-clips";
 import { useCompareFromPlayer } from "../../hooks/useCompareFromPlayer";
@@ -196,6 +198,7 @@ export default function ActiveSession() {
     activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex,
     isRunning: timerIsRunning, displaySeconds: timerDisplaySeconds, handleTimerStart, handleTimerStop,
   } = useSessionTimer({ sessionId: id, groups, dismissRest, handleUpdate });
+  const setTimerContextValue = useSessionTimerContextValue({ isRunning: timerIsRunning, displaySeconds: timerDisplaySeconds, activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex, onTimerStart: handleTimerStart, onTimerStop: handleTimerStop });
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
   const toolboxSheetRef = useRef<BottomSheet>(null);
   const {
@@ -487,12 +490,6 @@ export default function ActiveSession() {
       onMoveDown={handleMoveDown}
       onPrefill={handlePrefillFromPrevious}
       plateauHints={plateauHints} onApplyBreakThrough={handleApplyBreakThrough}
-      timerActiveExerciseId={timerExerciseId}
-      timerActiveSetIndex={timerSetIndex}
-      timerIsRunning={timerIsRunning}
-      timerDisplaySeconds={timerDisplaySeconds}
-      onTimerStart={handleTimerStart}
-      onTimerStop={handleTimerStop}
       hasClipMap={hasClipMap}
       onVideoGlyph={handleVideoGlyph}
       onOpenPulleyPinPicker={handleOpenPulleyPinPicker}
@@ -507,7 +504,7 @@ export default function ActiveSession() {
       onCollapseToNormal={handleCollapseToNormal}
     />
     );
-  }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds, handleTimerStart, handleTimerStop, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal]);
+  }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />
@@ -561,6 +558,7 @@ export default function ActiveSession() {
       />
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={100}>
       <PRCelebration celebration={celebration} />
+      <SetTimerContext.Provider value={setTimerContextValue}>
       <FlatList
         data={groups}
         renderItem={renderExerciseGroup}
@@ -571,6 +569,7 @@ export default function ActiveSession() {
         ListHeaderComponent={listHeader}
         ListFooterComponent={listFooter}
       />
+      </SetTimerContext.Provider>
       </KeyboardAvoidingView>
       {!!setOptionsSheetSetId && (
         <SetOptionsSheet
