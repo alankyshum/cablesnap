@@ -43,6 +43,7 @@ import { FormClipsPlayer } from "../../components/session/FormClipsPlayer";
 import { PulleyPinPickerSheet } from "../../components/session/PulleyPinPickerSheet";
 import { SetupPhotoSheet } from "../../components/session/SetupPhotoSheet";
 import { SetTimerContext } from "../../components/session/SetTimerContext";
+import { useSessionTimerContextValue } from "../../hooks/useSessionTimerContextValue";
 import { getSetupPhotoForSet, deleteSetupPhoto } from "../../lib/media/setup-photos";
 import { toAbsPath } from "../../lib/media/form-clips";
 import { useCompareFromPlayer } from "../../hooks/useCompareFromPlayer";
@@ -197,21 +198,7 @@ export default function ActiveSession() {
     activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex,
     isRunning: timerIsRunning, displaySeconds: timerDisplaySeconds, handleTimerStart, handleTimerStop,
   } = useSessionTimer({ sessionId: id, groups, dismissRest, handleUpdate });
-
-  // BLD-1235 nit: memoize so context consumers only receive a new identity when
-  // the timer fields actually change, not on every parent render.
-  const setTimerContextValue = useMemo(
-    () => ({
-      isRunning: timerIsRunning,
-      displaySeconds: timerDisplaySeconds,
-      activeExerciseId: timerExerciseId,
-      activeSetIndex: timerSetIndex,
-      onTimerStart: handleTimerStart,
-      onTimerStop: handleTimerStop,
-    }),
-    [timerIsRunning, timerDisplaySeconds, timerExerciseId, timerSetIndex, handleTimerStart, handleTimerStop],
-  );
-
+  const setTimerContextValue = useSessionTimerContextValue({ isRunning: timerIsRunning, displaySeconds: timerDisplaySeconds, activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex, onTimerStart: handleTimerStart, onTimerStop: handleTimerStop });
   const detailSnapPoints = useMemo(() => ["40%", "90%"], []);
   const toolboxSheetRef = useRef<BottomSheet>(null);
   const {
@@ -517,8 +504,6 @@ export default function ActiveSession() {
       onCollapseToNormal={handleCollapseToNormal}
     />
     );
-  // BLD-1235: timerExerciseId, timerSetIndex, timerIsRunning, timerDisplaySeconds,
-  // handleTimerStart, handleTimerStop removed — timer state is now in SetTimerContext.
   }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal]);
 
   const listHeader = useMemo(() => (
