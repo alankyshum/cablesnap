@@ -3,7 +3,8 @@
  * Copy is descriptive only — no aspirational language.
  * See `__tests__/help-copy-tone.test.ts` for tone enforcement.
  */
-import { ScrollView, StyleSheet, View } from "react-native";
+import { useEffect } from "react";
+import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import { Stack } from "expo-router";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,9 +49,27 @@ export default function AdvancedSetsHelpScreen() {
   const colors = useThemeColors();
   const layout = useLayout();
 
+  // Signal readiness for Playwright fullPage screenshots (dev/web only).
+  // Combined with the web flex guard below, this lets the e2e spec wait on
+  // `body[data-test-ready='true']` before capturing the production route.
+  useEffect(() => {
+    if (!__DEV__ || Platform.OS !== "web") return;
+    if (typeof document !== "undefined" && document.body) {
+      document.body.dataset.testReady = "true";
+    }
+  }, []);
+
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      // BLD-1261: on web, omit flex: 1 so the HTML document height equals
+      // content height — Playwright's fullPage screenshots then capture every
+      // entry at narrow viewports (390 px) where the Myo-reps description
+      // wraps to more lines and total content exceeds 844 px.
+      // On native: keep flex: 1 for the standard screen-filling scroll layout.
+      style={{
+        ...(Platform.OS !== "web" ? { flex: 1 } : {}),
+        backgroundColor: colors.background,
+      }}
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
     >
       <Stack.Screen options={{ title: "Advanced Set Types" }} />

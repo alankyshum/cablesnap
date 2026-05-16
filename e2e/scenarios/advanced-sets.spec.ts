@@ -122,13 +122,13 @@ test.describe("@scenario advanced-sets", () => {
     await expect(page.getByText("Cluster", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Myo-reps", { exact: true }).first()).toBeVisible();
 
-    // Capture screenshot via the /__test__/advanced-sets harness so that the
-    // flat View (no bounded ScrollView) lets fullPage capture all content at
-    // every viewport width — including mobile-narrow where text wraps more and
-    // the total height exceeds 844 px (BLD-1261).
+    // Capture screenshot from the production route — BLD-1261 flex guard
+    // (Platform.OS !== "web") removes the flex: 1 constraint on web so the
+    // HTML document height equals content height and fullPage captures every
+    // entry at narrow viewports (390 px) where Myo-reps text wraps past 844 px.
     const viewport = testInfo.project.name;
     const screenshotPath = path.join(OUT_DIR, `advanced-sets-help-${viewport}.png`);
-    await page.goto("/__test__/advanced-sets");
+    await page.goto("/settings/advanced-sets");
     await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 10_000 });
     await page.screenshot({ path: screenshotPath, fullPage: true });
     expect(screenshotPath).toBeTruthy();
