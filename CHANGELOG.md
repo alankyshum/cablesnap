@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Fix: App no longer floods crash reports when the workout database fails to open** — on the rare devices where the native SQLite layer can't open the database (one cluster: Galaxy Z Fold 6 on Android 16), the app now shows a recoverable "Workout data can't be opened" screen with a Retry button and an Export-diagnostics action instead of leaving you on a blank/broken screen. Behind the scenes a single diagnostic event is reported per session rather than the previous 12+/minute burst. (#609, BLD-1257)
+- **Fix: Bottom sheet drag handle is now clearly visible** — the small pill at the top of pull-up sheets (e.g. "Pacing by exercise") previously rendered near-invisible (~1.09:1 contrast) in light mode. It now uses a mid-gray meeting WCAG AA for non-text UI components (≥3:1). (#611, BLD-1260)
 
 ## v0.26.35 — 2026-05-16
 <!-- versionCode: 105 -->

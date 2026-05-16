@@ -34,7 +34,7 @@ type BottomSheetContentProps = {
   style?: ViewStyle;
   rBottomSheetStyle: any;
   cardColor: string;
-  mutedColor: string;
+  handleColor: string;
   onHandlePress?: () => void;
 };
 
@@ -46,7 +46,7 @@ const BottomSheetContent = ({
   style,
   rBottomSheetStyle,
   cardColor,
-  mutedColor,
+  handleColor,
   onHandlePress,
 }: BottomSheetContentProps) => {
   return (
@@ -78,7 +78,7 @@ const BottomSheetContent = ({
             style={{
               width: 64,
               height: 6,
-              backgroundColor: mutedColor,
+              backgroundColor: handleColor,
               borderRadius: 999,
             }}
           />
@@ -135,7 +135,8 @@ export function BottomSheet({
   disablePanGesture = false,
 }: BottomSheetProps) {
   const cardColor = useColor('card');
-  const mutedColor = useColor('muted');
+  // Use mutedForeground for handle pill — ensures ≥3:1 contrast against card background (WCAG AA for non-text UI)
+  const handleColor = useColor('mutedForeground');
   const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight();
 
   const translateY = useSharedValue(0);
@@ -309,7 +310,7 @@ export function BottomSheet({
               style={style}
               rBottomSheetStyle={rBottomSheetStyle}
               cardColor={cardColor}
-              mutedColor={mutedColor}
+              handleColor={handleColor}
               onHandlePress={() => runOnJS(handlePress)()}
             />
           ) : (
@@ -320,7 +321,7 @@ export function BottomSheet({
                 style={style}
                 rBottomSheetStyle={rBottomSheetStyle}
                 cardColor={cardColor}
-                mutedColor={mutedColor}
+                handleColor={handleColor}
                 onHandlePress={() => runOnJS(handlePress)()}
               />
             </GestureDetector>
