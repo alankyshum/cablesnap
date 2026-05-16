@@ -32,6 +32,8 @@ import { SCREEN_CONFIGS } from "../constants/screen-config";
 import { LayoutToastBridge } from "../components/LayoutToastBridge";
 import { LayoutBanners } from "../components/LayoutBanners";
 import { WebUnsupportedScreen } from "../components/WebUnsupportedScreen";
+import { DatabaseUnavailableScreen } from "../components/DatabaseUnavailableScreen";
+import { useDatabaseStatus } from "../hooks/useDatabaseStatus";
 import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
 import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
@@ -79,6 +81,12 @@ export default Sentry.wrap(function RootLayout() {
   const isDark = scheme === "dark";
   const themeColors = isDark ? Colors.dark : Colors.light;
   const { banner, setBanner, error, setError, ready, onboarded, setOnboarded, webUnsupported, backupExclusionOk } = useAppInit();
+  // BLD-1257: gate the entire app on DB availability, parallel to the
+  // existing webUnsupported gate. When init fails on native, render the
+  // DatabaseUnavailableScreen INSTEAD of mounting the rest of the tree so
+  // downstream callers cannot retrigger openDatabaseAsync/execAsync and
+  // produce the Sentry REACT-NATIVE-7 burst.
+  const dbStatus = useDatabaseStatus();
   const pathname = usePathname();
   const prev = useRef(pathname);
 
@@ -109,6 +117,24 @@ export default Sentry.wrap(function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <WebUnsupportedScreen message={WEB_UNSUPPORTED_MESSAGE} themeColors={themeColors} />
         <StatusBar style="auto" />
+      </GestureHandlerRootView>
+    );
+  }
+
+  // BLD-1257: native DB init failure — render the recovery surface in
+  // place of the normal tree. Web failures fall through to the existing
+  // LayoutBanners path (memory fallback or banner-only).
+  if (dbStatus.kind === "unavailable") {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <DatabaseUnavailableScreen
+            error={dbStatus.error}
+            sentryEventId={dbStatus.sentryEventId}
+            onRetry={dbStatus.retry}
+          />
+          <StatusBar style="auto" />
+        </SafeAreaProvider>
       </GestureHandlerRootView>
     );
   }

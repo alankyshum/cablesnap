@@ -6,6 +6,10 @@ import { migrate } from "./migrations";
 import { seed } from "./seed";
 import * as schema from "./schema";
 import * as Sentry from "@sentry/react-native";
+import {
+  DatabaseUnavailableError,
+  type DatabaseUnavailablePhase,
+} from "./errors";
 
 // Safe Sentry wrappers — swallow if SDK is not initialized (tests, web fallback).
 function dbBreadcrumb(message: string, data?: Record<string, unknown>): void {
@@ -14,10 +18,11 @@ function dbBreadcrumb(message: string, data?: Record<string, unknown>): void {
   } catch { /* Sentry not ready */ }
 }
 
-function dbCaptureException(err: unknown, context: Record<string, unknown>): void {
+function dbCaptureException(err: unknown, context: Record<string, unknown>): string | undefined {
   try {
-    Sentry.captureException(err, { extra: context });
-  } catch { /* Sentry not ready */ }
+    const id = Sentry.captureException(err, { extra: context });
+    return typeof id === "string" ? id : undefined;
+  } catch { /* Sentry not ready */ return undefined; }
 }
 
 // BLD-560: dev-only query counter — use dynamic require so Metro strips the
@@ -38,6 +43,15 @@ const g = globalThis as unknown as {
   __cablesnap_drizzle?: ExpoSQLiteDatabase<typeof schema>;
   __cablesnap_init?: Promise<SQLite.SQLiteDatabase>;
   __cablesnap_memfb?: boolean;
+  // BLD-1257: cached one-shot init failure for non-web platforms. When set,
+  // every subsequent getDatabase() call resolves with the SAME rejection
+  // without re-invoking openDatabaseAsync/execAsync. Only resetDatabaseInit()
+  // (called by the user-facing Retry CTA) clears this.
+  __cablesnap_db_failure?: { error: DatabaseUnavailableError; sentryEventId?: string };
+  // BLD-1257: per-session guard — true once captureException has fired for
+  // this run. Prevents the burst of identical Sentry events when many
+  // call sites independently invoke getDatabase().
+  __cablesnap_db_failure_captured?: boolean;
 };
 
 function getDb() { return g.__cablesnap_db ?? null; }
@@ -53,15 +67,70 @@ export function isMemoryFallback(): boolean {
   return memoryFallback;
 }
 
+// BLD-1257: surfaces to the UI (useDatabaseStatus) so the
+// DatabaseUnavailableScreen can display the captured Sentry event id.
+export function getDatabaseFailure(): { error: DatabaseUnavailableError; sentryEventId?: string } | null {
+  return g.__cablesnap_db_failure ?? null;
+}
+
+/**
+ * BLD-1257: clear the cached init failure so a fresh getDatabase() attempt
+ * can run. Called only by the user-initiated Retry CTA. The per-session
+ * Sentry guard is ALSO cleared so a fresh failure during the new attempt
+ * is treated as a separate "session attempt" and emits a new
+ * captureException (vs. the burst-suppression behavior during a single
+ * passive boot).
+ */
+export function resetDatabaseInit(): void {
+  g.__cablesnap_db_failure = undefined;
+  g.__cablesnap_db_failure_captured = undefined;
+  setInit(null);
+}
+
+function captureDatabaseFailureOnce(
+  error: DatabaseUnavailableError,
+  context: Record<string, unknown>,
+): string | undefined {
+  if (g.__cablesnap_db_failure_captured) {
+    dbBreadcrumb("init_failure_suppressed", {
+      phase: error.phase,
+      db_name: context.db_name,
+    });
+    return undefined;
+  }
+  g.__cablesnap_db_failure_captured = true;
+  return dbCaptureException(error, context);
+}
+
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   const cached = getDb();
   if (cached) return cached;
+
+  // BLD-1257: one-shot init failure semantics — surface the cached
+  // DatabaseUnavailableError to every subsequent caller without retrying
+  // the native open path. resetDatabaseInit() (user Retry) is the only way
+  // out. Web in-memory fallback short-circuits before reaching this branch
+  // (a successful fallback sets __cablesnap_db; a failed fallback throws
+  // through to the catch below and caches the failure too).
+  const failure = g.__cablesnap_db_failure;
+  if (failure) throw failure.error;
+
   let pending = getInit();
   if (!pending) {
     pending = (async () => {
       dbBreadcrumb("init_start", { db_name: DB_NAME });
+      let openedInstance: SQLite.SQLiteDatabase | null = null;
+      let currentPhase: DatabaseUnavailablePhase = "open";
       try {
-        const instance = await SQLite.openDatabaseAsync(DB_NAME);
+        openedInstance = await SQLite.openDatabaseAsync(DB_NAME);
+        const instance = openedInstance;
+        // BLD-1257: sanity probe BEFORE any pragma/migration so a null/broken
+        // native handle (Sentry REACT-NATIVE-7 NPE) is detected as
+        // phase=probe instead of leaking through as a confusing pragma
+        // failure later.
+        currentPhase = "probe";
+        await instance.execAsync("SELECT 1");
+        currentPhase = "pragma";
         await instance.execAsync("PRAGMA journal_mode = WAL");
         // BLD-1094: enable foreign-key enforcement on every connection so
         // the FK declarations in lib/db/tables.ts (strava_sync_log,
@@ -72,29 +141,19 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         // ON DELETE CASCADE on workout_sessions → workout_sets → set_media.
         await instance.execAsync("PRAGMA foreign_keys = ON");
         dbBreadcrumb("pre_migrate", { db_name: DB_NAME });
+        currentPhase = "migrate";
         try {
           await migrate(instance);
         } catch (migrateErr) {
           const error = migrateErr instanceof Error ? migrateErr : new Error(String(migrateErr));
-          dbCaptureException(error, {
-            phase: "migrate",
-            db_name: DB_NAME,
-            error_message: error.message,
-            error_stack: error.stack,
-          });
           throw error;
         }
         dbBreadcrumb("post_migrate", { db_name: DB_NAME });
+        currentPhase = "seed";
         try {
           await seed(instance);
         } catch (seedErr) {
           const error = seedErr instanceof Error ? seedErr : new Error(String(seedErr));
-          dbCaptureException(error, {
-            phase: "seed",
-            db_name: DB_NAME,
-            error_message: error.message,
-            error_stack: error.stack,
-          });
           throw error;
         }
         setDb(instance);
@@ -137,12 +196,29 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
             setDrizzleDb(drizzle(instance, { schema }));
             return instance;
           } catch (fallbackErr) {
+            // BLD-1257: web in-memory fallback failure — surface as a normal
+            // rejection (the existing LayoutBanners flow handles this on
+            // web). Clear the init promise but do NOT install the
+            // DatabaseUnavailableScreen gate (web has its own escape
+            // hatches: WebUnsupportedScreen + LayoutBanners).
             setInit(null);
             throw fallbackErr;
           }
         }
+        // BLD-1257: native (iOS / Android) path — cache the failure so
+        // every downstream caller short-circuits with the same error
+        // instead of retrying openDatabaseAsync and re-crashing.
+        const rawError = err instanceof Error ? err : new Error(String(err));
+        const dbError = new DatabaseUnavailableError(currentPhase, rawError);
+        const sentryEventId = captureDatabaseFailureOnce(dbError, {
+          phase: currentPhase,
+          db_name: DB_NAME,
+          error_message: rawError.message,
+          error_stack: rawError.stack,
+        });
+        g.__cablesnap_db_failure = { error: dbError, sentryEventId };
         setInit(null);
-        throw err;
+        throw dbError;
       }
     })();
     setInit(pending);
