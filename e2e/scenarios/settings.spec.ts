@@ -58,13 +58,17 @@ test.describe("@scenario settings", () => {
     });
 
     await page.goto("/settings");
-    // Wait for the settings scroll container to be present — this is a stronger
-    // signal than `body` visibility that the React Native tree has mounted and
-    // the settings cards have rendered (prevents blank captures, BLD-1249).
+    // Container mounted + first-card content painted (prevents blank captures, BLD-1249).
+    // ScrollView host visibility alone is insufficient: the RN tree can mount
+    // before its children paint. Anchor on the UnitsCard "Units" heading
+    // (components/settings/UnitsCard.tsx) to guarantee real content is on-screen.
     await expect(page.getByTestId("settings-scroll-view")).toBeVisible({
       timeout: 20_000,
     });
-    await page.waitForTimeout(500);
+    await expect(page.getByText("Units", { exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
+    await page.waitForTimeout(200);
 
     const viewport = testInfo.project.name;
     const screenshotPath = path.join(OUT_DIR, `settings-top-${viewport}.png`);
@@ -79,11 +83,7 @@ test.describe("@scenario settings", () => {
     });
 
     await page.goto("/settings");
-    // Wait for the settings scroll container (same gate as top-shot — prevents
-    // blank captures before the RN tree has mounted, BLD-1249).
-    await expect(page.getByTestId("settings-scroll-view")).toBeVisible({
-      timeout: 20_000,
-    });
+    await expect(page.locator("body")).toBeVisible({ timeout: 15_000 });
     await page.waitForTimeout(500);
 
     // Scroll the inner React Native ScrollView (not the document) to the bottom
