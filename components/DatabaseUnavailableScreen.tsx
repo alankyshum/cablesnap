@@ -5,12 +5,40 @@ import { RotateCcw, Share2 } from "lucide-react-native";
 import { Colors } from "@/theme/colors";
 import { fontSizes } from "@/constants/design-tokens";
 import type { DatabaseUnavailableError } from "@/lib/db";
+import {
+  getRecentConsoleLogs,
+  formatConsoleLogs,
+} from "@/lib/console-log-buffer";
 
 type Props = {
   error: DatabaseUnavailableError;
   sentryEventId?: string;
   onRetry: () => void;
 };
+
+// BLD-1257 (QD requirement #4): exposed as a pure helper so the breadcrumb
+// tail accompanying the Sentry event id is testable without invoking the
+// native Share dialog. Recent console-log buffer is the local proxy for the
+// Sentry breadcrumb stream (Sentry breadcrumbs are write-only from JS, so
+// we attach the buffered console output which captures the same db.* / nav
+// events that feed Sentry).
+export function buildDatabaseDiagnostics(
+  error: DatabaseUnavailableError,
+  sentryEventId: string | undefined,
+  now: Date = new Date(),
+): string {
+  const lines = [
+    "CableSnap diagnostics",
+    `phase: ${error.phase}`,
+    `error: ${error.message}`,
+    sentryEventId ? `sentry_event_id: ${sentryEventId}` : "sentry_event_id: (unavailable)",
+    `time: ${now.toISOString()}`,
+    "",
+    "--- breadcrumb tail (recent console logs) ---",
+    formatConsoleLogs(getRecentConsoleLogs()),
+  ];
+  return lines.join("\n");
+}
 
 /**
  * BLD-1257: Fullscreen recovery surface rendered when getDatabase() init has
@@ -36,14 +64,9 @@ export function DatabaseUnavailableScreen({ error, sentryEventId, onRetry }: Pro
 
   const handleExport = async () => {
     try {
-      const lines = [
-        "CableSnap diagnostics",
-        `phase: ${error.phase}`,
-        `error: ${error.message}`,
-        sentryEventId ? `sentry_event_id: ${sentryEventId}` : "sentry_event_id: (unavailable)",
-        `time: ${new Date().toISOString()}`,
-      ];
-      await Share.share({ message: lines.join("\n") });
+      await Share.share({
+        message: buildDatabaseDiagnostics(error, sentryEventId),
+      });
     } catch {
       // Share dismissed or failed — no recovery path required.
     }
