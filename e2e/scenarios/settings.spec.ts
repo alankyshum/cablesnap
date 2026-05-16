@@ -60,15 +60,27 @@ test.describe("@scenario settings", () => {
     await page.goto("/settings");
     // Container mounted + first-card content painted (prevents blank captures, BLD-1249).
     // ScrollView host visibility alone is insufficient: the RN tree can mount
-    // before its children paint. Anchor on the UnitsCard "Units" heading
-    // (components/settings/UnitsCard.tsx) to guarantee real content is on-screen.
+    // before its children paint, and Playwright's `toBeVisible` only checks
+    // DOM/bbox — not compositor paint commit. Anchor on the UnitsCard "Units"
+    // heading (components/settings/UnitsCard.tsx) being in the viewport, then
+    // force a layout flush + double rAF to guarantee the compositor has
+    // committed a frame before screenshot.
     await expect(page.getByTestId("settings-scroll-view")).toBeVisible({
       timeout: 20_000,
     });
-    await expect(page.getByText("Units", { exact: true })).toBeVisible({
-      timeout: 5_000,
-    });
-    await page.waitForTimeout(200);
+    const unitsHeading = page.getByText("Units", { exact: true });
+    await unitsHeading.scrollIntoViewIfNeeded({ timeout: 5_000 });
+    await expect(unitsHeading).toBeInViewport({ timeout: 5_000 });
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          // Force synchronous layout, then wait for two animation frames so the
+          // compositor commits before the screenshot fires.
+          void document.documentElement.offsetHeight;
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
+    await page.waitForTimeout(300);
 
     const viewport = testInfo.project.name;
     const screenshotPath = path.join(OUT_DIR, `settings-top-${viewport}.png`);
