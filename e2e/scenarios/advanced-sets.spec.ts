@@ -122,11 +122,38 @@ test.describe("@scenario advanced-sets", () => {
     await expect(page.getByText("Cluster", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Myo-reps", { exact: true }).first()).toBeVisible();
 
-    // Capture screenshot
+    // Capture screenshot from the production route — BLD-1261 flex guard
+    // (Platform.OS !== "web") removes the flex: 1 constraint on web so the
+    // HTML document height equals content height and fullPage captures every
+    // entry at narrow viewports (390 px) where Myo-reps text wraps past 844 px.
     const viewport = testInfo.project.name;
     const screenshotPath = path.join(OUT_DIR, `advanced-sets-help-${viewport}.png`);
+    await page.goto("/settings/advanced-sets");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 10_000 });
     await page.screenshot({ path: screenshotPath, fullPage: true });
     expect(screenshotPath).toBeTruthy();
+  });
+
+  // BLD-1261 — harness renders all content without truncation (no bounded ScrollView).
+  // Verifies the Myo-reps full description text is present so the narrow-viewport
+  // screenshot captures the complete sentence (previously clipped at "small clusters of 3–").
+  test("harness renders all help entries including full Myo-reps description (BLD-1261)", async ({
+    page,
+  }) => {
+    await page.goto("/__test__/advanced-sets");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 10_000 });
+
+    // All three section titles visible
+    await expect(page.getByText("Rest-pause", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Cluster", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Myo-reps", { exact: true }).first()).toBeVisible();
+
+    // Full Myo-reps description must be rendered (previously truncated at "3–")
+    await expect(
+      page
+        .getByText(/small clusters of 3.5 reps/, { exact: false })
+        .first(),
+    ).toBeVisible();
   });
 
   // AC #265 — advanced set data through production session-detail mount path.
