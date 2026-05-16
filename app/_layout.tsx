@@ -81,12 +81,13 @@ export default Sentry.wrap(function RootLayout() {
   const isDark = scheme === "dark";
   const themeColors = isDark ? Colors.dark : Colors.light;
   const { banner, setBanner, error, setError, ready, onboarded, setOnboarded, webUnsupported, backupExclusionOk } = useAppInit();
-  // BLD-1257: gate the entire app on DB availability, parallel to the
-  // existing webUnsupported gate. When init fails on native, render the
-  // DatabaseUnavailableScreen INSTEAD of mounting the rest of the tree so
-  // downstream callers cannot retrigger openDatabaseAsync/execAsync and
-  // produce the Sentry REACT-NATIVE-7 burst.
-  const dbStatus = useDatabaseStatus();
+  // BLD-1257 / BLD-1262: gate the entire app on DB availability, parallel
+  // to the existing webUnsupported gate. We pass `disabled: webUnsupported`
+  // so the hook is a no-op on web hosts that lack SharedArrayBuffer —
+  // otherwise its useEffect would still call getDatabase() after the
+  // WebUnsupportedScreen render, re-introducing the BLD-565
+  // `ReferenceError: SharedArrayBuffer is not defined` regression.
+  const dbStatus = useDatabaseStatus({ disabled: webUnsupported });
   const pathname = usePathname();
   const prev = useRef(pathname);
 
