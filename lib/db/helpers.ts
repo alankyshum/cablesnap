@@ -25,6 +25,75 @@ function dbCaptureException(err: unknown, context: Record<string, unknown>): str
   } catch { /* Sentry not ready */ return undefined; }
 }
 
+// BLD-1636: detect the cold-worker SQLite sync busy-wait timeout. The patched
+// expo-sqlite `invokeWorkerSync` (patches/expo-sqlite+55.0.15.patch) tags the
+// throw with `name === "SyncOperationTimeoutError"`; we also match the message
+// for resilience if the patch is ever dropped.
+function isSyncOperationTimeout(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  return err.name === "SyncOperationTimeoutError" || err.message === "Sync operation timeout";
+}
+
+// BLD-1636: number of warm-up attempts. Each failed attempt yields a macrotask
+// (setTimeout 0) so the WASM SQLite worker thread is scheduled and can drain
+// its init message queue. Empirically 1–2 yields suffice once the worker is
+// loaded; the bound keeps a genuinely dead worker from spinning forever — it
+// then throws through to getDatabase()'s existing catch (web in-memory fallback
+// / banner), so there is no new failure surface.
+const WARM_SYNC_MAX_ATTEMPTS = 25;
+
+function yieldMacrotask(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * BLD-1636: Warm the synchronous SQLite worker path on web.
+ *
+ * `drizzle-orm/expo-sqlite` is a synchronous driver: every `.get()` / `.all()`
+ * / `.run()` calls `getFirstSync` / `getAllSync` / `runSync`, which on web route
+ * through expo-sqlite's `invokeWorkerSync` busy-wait. When `Atomics.pause` is
+ * available (headless Chromium in the UX audit), that loop throws
+ * `Sync operation timeout` after only 1,000,000 iterations. On a cold worker —
+ * still initializing the WASM SQLite module — the first drizzle sync query fired
+ * by a screen (e.g. `useSummaryData` → `getSessionById`) can exhaust that budget
+ * before the worker becomes responsive, crashing the screen (BLD-1635).
+ *
+ * `getDatabase()`'s async init (`SELECT 1`, pragmas, migrate, seed) warms the
+ * worker for *async* messages but not for the first *sync* round-trip. This
+ * helper closes that gap: it issues a trivial `getFirstSync("SELECT 1")` — the
+ * exact sync path drizzle uses — inside a bounded async-retry loop. Because
+ * `getDrizzle()` awaits `getDatabase()` (which awaits this), the cold-sync
+ * penalty is paid ONCE, here, inside the splash-gated init — guaranteeing every
+ * later drizzle caller hits an already-hot worker. Solves the class, not just
+ * the summary instance.
+ *
+ * No-op on native (iOS/Android): the sync driver there is fine and must not be
+ * perturbed.
+ */
+async function warmSyncWorker(instance: SQLite.SQLiteDatabase): Promise<void> {
+  if (Platform.OS !== "web") return;
+  for (let attempt = 1; attempt <= WARM_SYNC_MAX_ATTEMPTS; attempt++) {
+    try {
+      // Same sync path as drizzle `.get()`: getFirstSync → executeSync →
+      // invokeWorkerSync. A successful return proves the worker can complete a
+      // sync round-trip.
+      instance.getFirstSync("SELECT 1");
+      if (attempt > 1) {
+        dbBreadcrumb("warm_sync_worker_recovered", { attempts: attempt });
+      }
+      return;
+    } catch (err) {
+      if (!isSyncOperationTimeout(err) || attempt === WARM_SYNC_MAX_ATTEMPTS) {
+        // Either a non-timeout error (real failure — let init handle it) or we
+        // exhausted the budget (worker genuinely unresponsive). Propagate.
+        throw err;
+      }
+      // Cold worker: give it a macrotask to get scheduled, then retry.
+      await yieldMacrotask();
+    }
+  }
+}
+
 // BLD-560: dev-only query counter — use dynamic require so Metro strips the
 // module reference in prod (matches the test-seed hook pattern; see
 // scripts/verify-scenario-hook-not-in-bundle.sh).
@@ -156,6 +225,21 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
           const error = seedErr instanceof Error ? seedErr : new Error(String(seedErr));
           throw error;
         }
+        // BLD-1636: on web, warm the sync worker BEFORE publishing the
+        // singletons so the first drizzle `.get()` from any screen never lands
+        // on a cold worker (no-op on native). Failure here propagates to the
+        // web fallback below.
+        //
+        // Ordering is load-bearing: `getDatabase()` early-returns the cached
+        // `__cablesnap_db` (see top of this function), so if we published before
+        // warming, a concurrent caller could observe the un-warmed singleton
+        // while this `await` is still yielding macrotasks between warm-up
+        // retries, fire a cold drizzle sync `.get()`, and re-trip
+        // `Sync operation timeout` — the exact class this fix removes. By
+        // setting `__cablesnap_db` / `__cablesnap_drizzle` only AFTER warm-up
+        // succeeds, concurrent callers await the same `__cablesnap_init` promise
+        // and are guaranteed a hot worker.
+        await warmSyncWorker(instance);
         setDb(instance);
         setDrizzleDb(drizzle(instance, { schema }));
         return instance;
@@ -191,6 +275,13 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
               });
               throw error;
             }
+            // BLD-1636: warm the sync worker for the web in-memory fallback
+            // too (this branch is web-only) BEFORE publishing the singletons,
+            // for the same concurrency reason as the primary path above — a
+            // concurrent caller must not observe an un-warmed cached singleton.
+            // If even the warm-up times out, fall through to the
+            // fallback-failure handler below.
+            await warmSyncWorker(instance);
             memoryFallback = true;
             setDb(instance);
             setDrizzleDb(drizzle(instance, { schema }));

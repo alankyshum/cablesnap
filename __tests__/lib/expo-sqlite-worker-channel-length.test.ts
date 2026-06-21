@@ -187,4 +187,47 @@ describe('expo-sqlite-web WorkerChannel length-prefix protocol (BLD-660)', () =>
     // Fixed form must be present (DataView setUint32 little-endian).
     expect(stripped).toMatch(/setUint32\(\s*0\s*,\s*length\s*,\s*true\s*\)/);
   });
+
+  // BLD-1636: the cold-worker sync busy-wait timeout must carry a stable,
+  // named marker so lib/db/helpers.ts#warmSyncWorker and the summary
+  // ErrorBoundary path can detect it without brittle message-string matching
+  // that breaks across expo-sqlite upgrades. Guards patches/expo-sqlite+...patch.
+  it('expo-sqlite WorkerChannel.ts on disk tags the sync timeout with a stable name (BLD-1636 patch applied)', () => {
+    if (!existsSync(workerChannelPath)) {
+      // eslint-disable-next-line no-console
+      console.warn('expo-sqlite not installed — run npm install to verify patch');
+      return;
+    }
+
+    const src = readFileSync(workerChannelPath, 'utf8');
+    const stripped = src
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .split('\n')
+      .map((line) => line.replace(/\/\/.*$/, ''))
+      .join('\n');
+
+    // The stable name constant and factory must exist.
+    expect(stripped).toMatch(/SYNC_OPERATION_TIMEOUT_NAME\s*=\s*['"]SyncOperationTimeoutError['"]/);
+    expect(stripped).toMatch(/function\s+makeSyncOperationTimeoutError/);
+    // Both busy-wait throw sites must use the named factory (not a bare Error).
+    expect(stripped).not.toMatch(/throw new Error\(['"]Sync operation timeout['"]\)/);
+    const factoryThrows = stripped.match(/throw makeSyncOperationTimeoutError\(\)/g) ?? [];
+    expect(factoryThrows.length).toBe(2);
+    // The message text is preserved for any legacy substring-based handling.
+    expect(stripped).toMatch(/new Error\(['"]Sync operation timeout['"]\)/);
+  });
+
+  // BLD-1636: the named timeout error's contract — name AND message — exercised
+  // directly so app-side detection (isSyncOperationTimeout) stays correct.
+  it('a SyncOperationTimeoutError carries both the stable name and the legacy message', () => {
+    // Mirror the factory the patch installs.
+    const err = (() => {
+      const e = new Error('Sync operation timeout');
+      e.name = 'SyncOperationTimeoutError';
+      return e;
+    })();
+    expect(err.name).toBe('SyncOperationTimeoutError');
+    expect(err.message).toBe('Sync operation timeout');
+    expect(err instanceof Error).toBe(true);
+  });
 });

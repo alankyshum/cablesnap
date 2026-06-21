@@ -1,8 +1,26 @@
 diff --git a/node_modules/expo-sqlite/web/WorkerChannel.ts b/node_modules/expo-sqlite/web/WorkerChannel.ts
-index 7fba380..6e6e2be 100644
+index 7fba380..9296eb6 100644
 --- a/node_modules/expo-sqlite/web/WorkerChannel.ts
 +++ b/node_modules/expo-sqlite/web/WorkerChannel.ts
-@@ -40,7 +40,14 @@ export function sendWorkerResult({
+@@ -16,6 +16,17 @@ const RESOLVED = 2;
+ 
+ let hasWarnedSync = false;
+ 
++// BLD-1636: stable name for the cold-worker sync busy-wait timeout. Callers
++// detect via `err.name === SYNC_OPERATION_TIMEOUT_NAME` (or message text for
++// backward-compat). The message is preserved verbatim so any existing
++// string-based handling keeps working.
++const SYNC_OPERATION_TIMEOUT_NAME = 'SyncOperationTimeoutError';
++function makeSyncOperationTimeoutError(): Error {
++  const err = new Error('Sync operation timeout');
++  err.name = SYNC_OPERATION_TIMEOUT_NAME;
++  return err;
++}
++
+ /**
+  * For worker to send result to the main thread.
+  */
+@@ -40,7 +51,14 @@ export function sendWorkerResult({
      const resultJson = error != null ? serialize({ error }) : serialize({ result });
      const resultBytes = new TextEncoder().encode(resultJson);
      const length = resultBytes.length;
@@ -18,3 +36,30 @@ index 7fba380..6e6e2be 100644
      resultArray.set(resultBytes, 4);
      Atomics.store(lock, 0, RESOLVED);
    } else {
+@@ -124,7 +142,15 @@ export function invokeWorkerSync<T extends SQLiteWorkerMessageType & keyof Resul
+ 
+     if (useAtomicsPause) {
+       if (i > 1_000_000) {
+-        throw new Error('Sync operation timeout');
++        // BLD-1636: tag the cold-worker busy-wait timeout with a stable
++        // `name` so callers (lib/db/helpers.ts warmSyncWorker, the summary
++        // ErrorBoundary path) can detect it without brittle message-string
++        // matching that breaks across expo-sqlite upgrades. With
++        // `Atomics.pause` the budget is only 1e6 iterations; on a cold WASM
++        // worker (still initializing under CPU pressure) the very first
++        // drizzle sync `.get()/.run()` can exhaust it before the worker
++        // flips the lock, surfacing as "Sync operation timeout".
++        throw makeSyncOperationTimeoutError();
+       }
+       // @ts-expect-error: Remove this when TypeScript supports Atomics.pause
+       Atomics.pause();
+@@ -132,7 +158,8 @@ export function invokeWorkerSync<T extends SQLiteWorkerMessageType & keyof Resul
+       // NOTE(kudo): Unfortunate for the busy loop,
+       // because we don't have a way for main thread to yield its execution to other callbacks.
+       if (i > 1000_000_000) {
+-        throw new Error('Sync operation timeout');
++        // BLD-1636: see comment above — same stable marker on the non-pause path.
++        throw makeSyncOperationTimeoutError();
+       }
+     }
+   }

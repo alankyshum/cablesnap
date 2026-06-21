@@ -39,6 +39,15 @@ export default function SummaryRoute() {
   );
 }
 
+// BLD-1636: re-throw a captured data-load error during render so the route
+// ErrorBoundary catches it (the original throw happens in useSummaryData's
+// async useEffect → unhandled rejection / Expo dev overlay otherwise). Kept as
+// a module-level helper so the branch does not inflate Summary's cyclomatic
+// complexity; called unconditionally after all hooks have run.
+function throwIfLoadError(error: Error | null): void {
+  if (error) throw error;
+}
+
 function Summary() {
   const colors = useThemeColors();
   const layout = useLayout();
@@ -111,6 +120,14 @@ function Summary() {
       return { name: g.name, sets: g.sets.length, reps: String(typicalReps), weight: maxWeight > 0 ? `${toDisplay(maxWeight, unit)} ${unit}` : undefined };
     });
   }, [grouped, unit]);
+
+  // BLD-1636: if the async data load threw (e.g. a cold-worker drizzle
+  // "Sync operation timeout"), re-throw it during render — AFTER all hooks
+  // above have run, to keep hook order stable — so the enclosing ErrorBoundary
+  // catches it and shows the retry/share-report UI. The async throw inside
+  // useSummaryData's useEffect would otherwise escape as an unhandled rejection
+  // / Expo dev overlay (the BLD-1635 white-screen crash).
+  throwIfLoadError(data.error);
 
   const share = async () => {
     const lines = [`🏋️ ${session?.name ?? "Workout"} Complete!`, `Duration: ${duration}`, `Sets: ${completedSetCount}`, `Volume: ${volumeDisplay.toLocaleString()} ${unit}`];

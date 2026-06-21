@@ -45,67 +45,96 @@ export function useSummaryData(id: string | undefined) {
   const [completedSetCount, setCompletedSetCount] = useState(0);
   const [primaryMuscles, setPrimaryMuscles] = useState<MuscleGroup[]>([]);
   const [secondaryMuscles, setSecondaryMuscles] = useState<MuscleGroup[]>([]);
+  // BLD-1636: defense-in-depth. The data load runs in an async IIFE inside
+  // useEffect, so a throw here (e.g. a cold-worker `Sync operation timeout`
+  // from a drizzle sync `.get()`) becomes an UNHANDLED promise rejection that
+  // React's render-phase ErrorBoundary cannot catch — on web's Expo dev build
+  // it surfaces as the full-screen error overlay (BLD-1635). Capture it in
+  // state and re-throw during render (see app/session/summary/[id].tsx) so the
+  // route ErrorBoundary's retry/share-report UI renders instead of a white
+  // screen / dev overlay. The primary fix is warming the worker at init
+  // (lib/db/helpers.ts#warmSyncWorker); this is the safety net.
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
     (async () => {
-      const [sess, settings] = await Promise.all([
-        getSessionById(id),
-        getBodySettings(),
-      ]);
-      if (!sess) return;
-      setSession(sess);
-      setUnit(settings.weight_unit);
-
-      const [setsData, prData, repPrData, durationPrData, incData, compData, setCount] = await Promise.all([
-        getSessionSets(id),
-        getSessionPRs(id),
-        getSessionRepPRs(id),
-        getSessionDurationPRs(id),
-        getSessionWeightIncreases(id),
-        getSessionComparison(id),
-        getSessionSetCount(id),
-      ]);
-      setSets(setsData);
-      setPrs(prData);
-      setCompletedSetCount(setCount);
-      setRepPrs(repPrData);
-      setDurationPrs(durationPrData);
-      setIncreases(incData.filter(
-        (inc) => !prData.some((pr) => pr.exercise_id === inc.exercise_id)
-      ));
-      setComparison(compData);
-
-      // Aggregate muscles from completed exercises
-      const completedSets = setsData.filter((s) => s.completed);
-      const exerciseIds = [...new Set(completedSets.map((s) => s.exercise_id))];
-      if (exerciseIds.length > 0) {
-        const exerciseMap = await getExercisesByIds(exerciseIds);
-        const exerciseList = Object.values(exerciseMap);
-        const { primary, secondary } = aggregateMuscles(exerciseList);
-        setPrimaryMuscles(primary);
-        setSecondaryMuscles(secondary);
-      }
-
       try {
-        const [ctx, alreadyEarnedIds] = await Promise.all([
-          buildAchievementContext(),
-          getEarnedAchievementIds(),
+        const [sess, settings] = await Promise.all([
+          getSessionById(id),
+          getBodySettings(),
         ]);
-        const earned = evaluateAchievements(ctx, alreadyEarnedIds);
-        if (earned.length > 0) {
-          await saveEarnedAchievements(earned.map((e) => e.achievement.id));
-          setNewAchievements(earned.map((e) => e.achievement));
-          if (Platform.OS !== "web") {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-          }
-        }
-      } catch (e) {
-        if (__DEV__) console.warn("Achievement evaluation failed:", e);
-      }
+        if (cancelled) return;
+        if (!sess) return;
+        setSession(sess);
+        setUnit(settings.weight_unit);
 
-      AccessibilityInfo.announceForAccessibility("Workout Complete!");
+        const [setsData, prData, repPrData, durationPrData, incData, compData, setCount] = await Promise.all([
+          getSessionSets(id),
+          getSessionPRs(id),
+          getSessionRepPRs(id),
+          getSessionDurationPRs(id),
+          getSessionWeightIncreases(id),
+          getSessionComparison(id),
+          getSessionSetCount(id),
+        ]);
+        if (cancelled) return;
+        setSets(setsData);
+        setPrs(prData);
+        setCompletedSetCount(setCount);
+        setRepPrs(repPrData);
+        setDurationPrs(durationPrData);
+        setIncreases(incData.filter(
+          (inc) => !prData.some((pr) => pr.exercise_id === inc.exercise_id)
+        ));
+        setComparison(compData);
+
+        // Aggregate muscles from completed exercises
+        const completedSets = setsData.filter((s) => s.completed);
+        const exerciseIds = [...new Set(completedSets.map((s) => s.exercise_id))];
+        if (exerciseIds.length > 0) {
+          const exerciseMap = await getExercisesByIds(exerciseIds);
+          if (cancelled) return;
+          const exerciseList = Object.values(exerciseMap);
+          const { primary, secondary } = aggregateMuscles(exerciseList);
+          setPrimaryMuscles(primary);
+          setSecondaryMuscles(secondary);
+        }
+
+        try {
+          const [ctx, alreadyEarnedIds] = await Promise.all([
+            buildAchievementContext(),
+            getEarnedAchievementIds(),
+          ]);
+          const earned = evaluateAchievements(ctx, alreadyEarnedIds);
+          if (cancelled) return;
+          if (earned.length > 0) {
+            await saveEarnedAchievements(earned.map((e) => e.achievement.id));
+            setNewAchievements(earned.map((e) => e.achievement));
+            if (Platform.OS !== "web") {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            }
+          }
+        } catch (e) {
+          if (__DEV__) console.warn("Achievement evaluation failed:", e);
+        }
+
+        AccessibilityInfo.announceForAccessibility("Workout Complete!");
+      } catch (e) {
+        // BLD-1636: surface load failures (e.g. a cold-worker drizzle
+        // "Sync operation timeout") via state so the route ErrorBoundary's
+        // retry UI renders, instead of letting it escape as an unhandled
+        // promise rejection / Expo dev overlay.
+        if (cancelled) return;
+        const err = e instanceof Error ? e : new Error(String(e));
+        if (__DEV__) console.warn("[useSummaryData] load failed:", err);
+        setError(err);
+      }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const completed = useMemo(
@@ -160,5 +189,6 @@ export function useSummaryData(id: string | undefined) {
     unit, volume, setsBreakdown,
     newAchievements, completedSetCount,
     primaryMuscles, secondaryMuscles,
+    error,
   };
 }
