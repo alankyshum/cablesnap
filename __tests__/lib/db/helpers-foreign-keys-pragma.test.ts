@@ -18,6 +18,8 @@ const mockDb: any = {
   execAsync: jest.fn(async (sql: string) => { execCalls.push(sql); }),
   getAllAsync: jest.fn().mockResolvedValue([]),
   getFirstAsync: jest.fn().mockResolvedValue(null),
+  // BLD-1636: warmSyncWorker() probes the sync path with getFirstSync on web.
+  getFirstSync: jest.fn(() => ({ "1": 1 })),
   runAsync: jest.fn().mockResolvedValue({ changes: 0 }),
   withTransactionAsync: jest.fn(async (cb: () => Promise<void>) => cb()),
   prepareAsync: jest.fn().mockResolvedValue({

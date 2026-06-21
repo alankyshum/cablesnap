@@ -88,6 +88,9 @@ export const mockDb = {
     finalizeAsync: jest.fn().mockResolvedValue(undefined),
   }),
   prepareSync: jest.fn(() => ({})),
+  // BLD-1636: warmSyncWorker() probes the sync path with getFirstSync("SELECT 1")
+  // on web. Provide a default so the web-fallback init path doesn't throw.
+  getFirstSync: jest.fn(() => ({ "1": 1 })),
   withTransactionAsync: jest.fn(async (cb: () => Promise<void>) => cb()),
 };
 
