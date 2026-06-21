@@ -150,4 +150,79 @@ describe("warmSyncWorker (BLD-1636)", () => {
     expect(calls).toBe(2); // 1 failed probe (primary) + 1 success (memory)
     expect(dbMod.isMemoryFallback()).toBe(true);
   });
+
+  // BLD-1636 (QD regression): the singletons must NOT be published until the
+  // sync worker is proven warm. Otherwise a concurrent getDatabase()/getDrizzle()
+  // caller could observe the cached __cablesnap_db early-return while the first
+  // call is still awaiting (yielding) inside warmSyncWorker, then fire a cold
+  // drizzle sync `.get()` and re-trip "Sync operation timeout" — the exact class
+  // this issue fixes. This test starts one getDatabase() whose warm-up is parked
+  // on timeouts, kicks off a concurrent getDrizzle(), and proves the concurrent
+  // caller waits on __cablesnap_init (does not resolve before the warm-up's
+  // getFirstSync succeeds).
+  it("on web: concurrent getDrizzle() waits on init while warm-up retries (no pre-warmed singleton)", async () => {
+    mockEnv("web");
+
+    const events: string[] = [];
+    // Gate the warm-up: keep throwing Sync-timeouts until the test releases it,
+    // then succeed. Each failed attempt yields a macrotask in warmSyncWorker, so
+    // the concurrent caller below gets scheduling opportunities mid-warm-up.
+    let warmReleased = false;
+    let warmProbeCount = 0;
+    mockDb.getFirstSync.mockImplementation(() => {
+      warmProbeCount++;
+      if (!warmReleased) {
+        throw makeSyncTimeoutError();
+      }
+      events.push("warm_succeeded");
+      return { "1": 1 };
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const dbMod = require("../../../lib/db");
+
+    // Call A: starts init + warm-up. Do NOT await yet — it parks on timeouts.
+    const aPromise = dbMod.getDatabase().then((inst: unknown) => {
+      events.push("A_resolved");
+      return inst;
+    });
+
+    // Let A run far enough to (a) open the db, (b) publish would-be singletons in
+    // the OLD buggy code, and (c) enter the warm-up retry loop. Several macrotask
+    // ticks ensure we are mid-warm-up with the worker still cold.
+    for (let i = 0; i < 5; i++) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    expect(warmProbeCount).toBeGreaterThan(0); // warm-up is actively retrying
+
+    // Call B (concurrent): the thing a screen does — getDrizzle() then a query.
+    // It must NOT resolve before the warm-up succeeds; if it did, it would be
+    // holding an un-warmed instance.
+    const bPromise = dbMod.getDrizzle().then((drz: unknown) => {
+      events.push("B_resolved");
+      return drz;
+    });
+
+    // Give B every chance to (incorrectly) resolve early off a published cache.
+    for (let i = 0; i < 5; i++) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    // Invariant: while the worker is cold, NEITHER caller has resolved.
+    expect(events).not.toContain("A_resolved");
+    expect(events).not.toContain("B_resolved");
+    expect(events).not.toContain("warm_succeeded");
+
+    // Release the worker → warm-up's next probe succeeds → both callers proceed.
+    warmReleased = true;
+    const [aInst, bDrizzle] = await Promise.all([aPromise, bPromise]);
+
+    expect(aInst).toBe(mockDb);
+    expect(bDrizzle).toBe(mockDrizzleDb);
+    expect(dbMod.isMemoryFallback()).toBe(false);
+    // The warm-up must complete BEFORE either caller resolves — proving the
+    // singleton is only observable post-warm-up.
+    expect(events[0]).toBe("warm_succeeded");
+    expect(events).toContain("A_resolved");
+    expect(events).toContain("B_resolved");
+  }, 15000);
 });

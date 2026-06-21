@@ -225,12 +225,23 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
           const error = seedErr instanceof Error ? seedErr : new Error(String(seedErr));
           throw error;
         }
+        // BLD-1636: on web, warm the sync worker BEFORE publishing the
+        // singletons so the first drizzle `.get()` from any screen never lands
+        // on a cold worker (no-op on native). Failure here propagates to the
+        // web fallback below.
+        //
+        // Ordering is load-bearing: `getDatabase()` early-returns the cached
+        // `__cablesnap_db` (see top of this function), so if we published before
+        // warming, a concurrent caller could observe the un-warmed singleton
+        // while this `await` is still yielding macrotasks between warm-up
+        // retries, fire a cold drizzle sync `.get()`, and re-trip
+        // `Sync operation timeout` — the exact class this fix removes. By
+        // setting `__cablesnap_db` / `__cablesnap_drizzle` only AFTER warm-up
+        // succeeds, concurrent callers await the same `__cablesnap_init` promise
+        // and are guaranteed a hot worker.
+        await warmSyncWorker(instance);
         setDb(instance);
         setDrizzleDb(drizzle(instance, { schema }));
-        // BLD-1636: on web, warm the sync worker before resolving init so the
-        // first drizzle `.get()` from any screen never lands on a cold worker
-        // (no-op on native). Failure here propagates to the web fallback below.
-        await warmSyncWorker(instance);
         return instance;
       } catch (err) {
         if (Platform.OS === "web") {
@@ -264,13 +275,16 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
               });
               throw error;
             }
+            // BLD-1636: warm the sync worker for the web in-memory fallback
+            // too (this branch is web-only) BEFORE publishing the singletons,
+            // for the same concurrency reason as the primary path above — a
+            // concurrent caller must not observe an un-warmed cached singleton.
+            // If even the warm-up times out, fall through to the
+            // fallback-failure handler below.
+            await warmSyncWorker(instance);
             memoryFallback = true;
             setDb(instance);
             setDrizzleDb(drizzle(instance, { schema }));
-            // BLD-1636: warm the sync worker for the web in-memory fallback too
-            // (this branch is web-only). If even the warm-up times out, fall
-            // through to the fallback-failure handler below.
-            await warmSyncWorker(instance);
             return instance;
           } catch (fallbackErr) {
             // BLD-1257: web in-memory fallback failure — surface as a normal
