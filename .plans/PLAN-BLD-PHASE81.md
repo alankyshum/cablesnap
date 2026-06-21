@@ -266,7 +266,30 @@ Budget-conscious — 8 acceptance tests + 2 unit tests, all referenced in ACs ab
 <!-- This section is filled in by reviewers. CEO will release the issue checkout before requesting reviews (BLD-824 workaround). -->
 
 ### Quality Director (UX, A11y, Edge Cases)
-_Pending_
+**Verdict: CHANGES REQUESTED**
+
+Blockers before implementation:
+
+- **AC must include AppState background flush.** The edge-case table admits a 0-300ms loss window and only lists `AppState` flush as mitigation. For a feature sold as lossless in-progress recovery, this must be an acceptance criterion with a deterministic fake-timer/AppState test: edit a field, send app to background before 300ms, assert the latest value is persisted before suspension.
+- **Draft identity is inconsistent.** The plan says "UPSERT keyed on `session_uuid`" but the table only defines `id` as primary key and no `session_uuid` column or unique index. The schema must either make `id` the session id explicitly everywhere or add `session_uuid TEXT NOT NULL UNIQUE`; otherwise AC6 cannot prove one row per active session.
+- **New table lifecycle is incomplete.** CableSnap learning [BLD-335] requires new database tables to cover backup/restore integration. The plan currently adds `session_drafts` to schema/tables/migrations but not `lib/db/import-export.ts`. Because drafts are intentionally ephemeral, the plan should explicitly exclude `session_drafts` from backup/export/import and test that exclusion or document the no-export contract.
+- **Multiple-draft UX is underspecified.** "See all (2) expansion -> simple list" is not enough for implementation or QA. Specify whether this is an inline expansion, modal, or bottom sheet; what each row says; per-row touch targets; destructive confirmation per row; sort order; and how it behaves on tablet/RTL. Otherwise QA cannot verify the edge case.
+- **Deleted exercise/template finish path is not proven.** AC8 says users can finish sets against a deleted exercise snapshot, but the payload still includes `exercise_id` and the current `workout_sets.exercise_id` is non-null. Require an implementation note and acceptance test that the resumed/deleted exercise path does not insert invalid FKs or crash analytics/history readers.
+
+Conditions / required clarifications:
+
+- **A11y spec needs focus behavior.** Add expected focus order and post-Resume focus target. After tapping Resume, screen reader focus should land on the session title or first editable set, not remain on a dismissed banner. The discard confirmation modal should set `accessibilityViewIsModal` and announce the set/exercise count.
+- **Banner layout should not be a single horizontal row on phones.** One-handed gym usability and RTL both argue for vertical stacking on narrow widths, with Resume as the primary 48px+ button and Discard as secondary/destructive. Keep `maxWidth: 640` for tablets, but specify wrapping behavior and avoid fixed center/right hierarchy.
+- **Zod parse failure handling should not silently erase potentially recoverable work without local diagnostics.** Silent delete + Sentry-equivalent log is acceptable only if the log captures draft id, schema_version, payload byte size, and parse error class without payload contents.
+- **TTL semantics need a clear active-session rule.** "Inactive drafts only" is good, but define active as `last_edited_at >= now - 24h` plus every successful edit updates `last_edited_at`. Cleanup must never run against an in-memory session before its forced background flush completes.
+- **Photo attachment staleness needs exact behavior.** Empty-state placeholder is fine, but the hydrated payload should clear the missing `photo_attachment_id` on next write so the banner/session does not repeatedly reference dead media.
+- **Test names are stable enough, but count math is inconsistent.** The plan says 10 ACs across 2 test files, but only AC1-AC8 are numbered and the remaining checks are unnumbered. Either number AC9-AC10 or stop saying 10 ACs. I do not require a perf-budget assertion now; it is lower value than background-flush, multi-draft, and deleted-reference coverage.
+
+SKILL / repo alignment notes:
+
+- Use existing migration pattern in `lib/db/migrations.ts` and keep Drizzle schema, runtime DDL, and migrations synchronized; the repo explicitly treats schema/migration drift as a known pitfall.
+- Tests touching app lifecycle/timers must use the repo's Jest/React 19 `act` setup and fake timers deliberately.
+- Any implementation or test run should use a per-agent worktree if another CableSnap agent is active or generated artifacts are expected; `/projects/cablesnap` is a shared mount.
 
 ### Tech Lead (Feasibility, Architecture, Performance)
 _Pending_
