@@ -3,9 +3,21 @@ appId: com.persoack.cablesnap
 - launchApp:
     clearState: true
 
-# Welcome screen
-- assertVisible: "Welcome to CableSnap"
-- assertVisible: "Your free workout & macro tracker"
+# Welcome screen.
+# `clearState: true` forces a full cold start, so the app holds a blank frame
+# (app/_layout.tsx returns null while !ready) through useAppInit's async DB
+# open + migrations + onboarded-state read before it can render and redirect to
+# /onboarding/welcome. A bare assertVisible races that cold-start on a CI
+# emulator under load (BLD-1742: it failed after the default retry window).
+# extendedWaitUntil with an explicit timeout absorbs the first-paint latency
+# without masking a genuinely-broken launch. `visible` + `timeout` (ms) is a
+# stable Maestro 1.39.0 command (ExtendedWaitUntilCommand). The subtitle copy
+# below must match app/onboarding/welcome.tsx exactly (text is regex-matched by
+# default in 1.39.0, and the prior "& macro tracker" string did not match).
+- extendedWaitUntil:
+    visible: "Welcome to CableSnap"
+    timeout: 30000
+- assertVisible: "Your free workout tracker, optimized for cable machines"
 - tapOn: "Get Started"
 
 # Setup screen — preferences
