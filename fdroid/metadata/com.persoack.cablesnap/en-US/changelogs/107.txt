@@ -1,0 +1,2 @@
+- **Fix: Post-workout summary no longer crashes on the web build** — opening the workout summary in a browser could occasionally fail with a "Sync operation timeout" error that replaced the whole screen, when the database's web worker hadn't finished starting up. The app now warms the worker during startup so the summary (and every other database-backed screen) loads reliably, and if a database read ever does fail it now shows the recoverable retry screen instead
+…see in-app release notes

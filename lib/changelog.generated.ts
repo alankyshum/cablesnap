@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.37",
+    "date": "2026-06-22",
+    "versionCode": 107,
+    "body": "- **Fix: Post-workout summary no longer crashes on the web build** — opening the workout summary in a browser could occasionally fail with a \"Sync operation timeout\" error that replaced the whole screen, when the database's web worker hadn't finished starting up. The app now warms the worker during startup so the summary (and every other database-backed screen) loads reliably, and if a database read ever does fail it now shows the recoverable retry screen instead of a blank crash. Native (iOS/Android) behaviour is unchanged. (BLD-1636, BLD-1635)"
+  },
+  {
     "version": "0.26.36",
     "date": "2026-05-16",
     "versionCode": 106,
