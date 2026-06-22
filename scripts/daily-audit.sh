@@ -59,6 +59,21 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# BLD-1631: ensure the Playwright Chromium binary is present before any
+# scenarios run. The Paperclip execution workspace stores the browser
+# cache under `/paperclip/.cache/ms-playwright`, which is an ephemeral
+# overlayfs — so recycled workspaces wake up with no chromium binary,
+# OR with a half-populated `chrome-linux/` containing only
+# `libvk_swiftshader.so` from a prior partial download (the exact state
+# observed in BLD-1630). `install-playwright-browsers.sh` is the local
+# alternative to `npx playwright install`: idempotent (no-op when the
+# `INSTALLATION_COMPLETE` marker and the executable are both present),
+# falls back across the three Playwright CDN mirrors when one returns
+# a transient HTTP 400, and wipes any partial-extract dir before
+# re-downloading. Running it here means the audit can be re-driven on
+# a freshly recreated workspace with no manual intervention.
+scripts/install-playwright-browsers.sh
+
 # Path to the dev-only fixture spec. Used both to exclude it from the HEAD
 # run and to invoke it as the BLD-480 pre-fix capture pass.
 PREFIX_SPEC="e2e/scenarios/completed-workout-prefix.spec.ts"

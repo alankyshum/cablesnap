@@ -90,6 +90,16 @@ function buildSandbox(opts: {
   );
   fs.chmodSync(path.join(dir, "scripts", "daily-audit.sh"), 0o755);
 
+  // Stub install-playwright-browsers.sh — daily-audit.sh invokes it before
+  // build_static_bundle (BLD-1631). The real installer downloads ~100 MiB
+  // of Chromium and is irrelevant to the set-e ordering this test exercises.
+  // A no-op stub keeps the rest of daily-audit's control flow intact.
+  fs.writeFileSync(
+    path.join(dir, "scripts", "install-playwright-browsers.sh"),
+    "#!/usr/bin/env bash\necho '[install-playwright-stub] noop' >&2\nexit 0\n",
+  );
+  fs.chmodSync(path.join(dir, "scripts", "install-playwright-browsers.sh"), 0o755);
+
   // Stub regression-smoke.sh — honors SMOKE_EXIT_CODE; writes to FINDINGS_OUT
   const smokeStub = `#!/usr/bin/env bash
 set -u
