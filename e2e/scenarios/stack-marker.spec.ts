@@ -48,7 +48,7 @@ test.describe("@scenario stack-marker", () => {
 
   test("pristine pill renders 'Pick marker', tap commits marker-logged state", async ({
     page,
-  }) => {
+  }, testInfo) => {
     await page.addInitScript((seed) => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
@@ -67,7 +67,7 @@ test.describe("@scenario stack-marker", () => {
     // AC1 — pristine state: label is "Pick marker"
     await expect(pill).toHaveText("Pick marker");
 
-    const viewport = page.viewportSize()?.width === 375 ? "mobile" : "mobile-narrow";
+    const viewport = testInfo.project.name;
     await captureWithCvd({
       page,
       outDir: OUT_DIR,
