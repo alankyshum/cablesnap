@@ -13,10 +13,13 @@ appId: com.persoack.cablesnap
 # Switch to Body segment
 - tapOn: "Body"
 
-# Verify body tracking section loads (empty or with data)
+# Verify body tracking section loads (empty or with data).
+# `text` is regex-matched by default in Maestro 1.39.0 (YamlElementSelector has no
+# `regex` field; the YAML `text:` maps to ElementSelector.textRegex), so the
+# alternation below works as-is. A `regex: true` toggle does not exist in 1.39.0
+# and made `maestro test` abort at parse time before any flow ran (BLD-1742).
 - assertVisible:
     text: "Log body weight|Current Weight"
-    regex: true
 
 # Switch to Muscles segment
 - tapOn: "Muscles"
