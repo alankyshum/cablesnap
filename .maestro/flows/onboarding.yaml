@@ -14,9 +14,15 @@ appId: com.persoack.cablesnap
 # stable Maestro 1.39.0 command (ExtendedWaitUntilCommand). The subtitle copy
 # below must match app/onboarding/welcome.tsx exactly (text is regex-matched by
 # default in 1.39.0, and the prior "& macro tracker" string did not match).
+# Timeout raised to 60000ms (BLD-1748): the prior 30s was not enough for the
+# CI emulator under load after a native Gradle build — the run took 34s and
+# extendedWaitUntil reported a timeout. 60s is a safe margin for DB cold-start
+# (open + migrations) on a swiftshader-GPU emulator on a loaded ubuntu-latest
+# runner without masking a genuinely-broken launch (the step itself has a
+# 45-min hard cap).
 - extendedWaitUntil:
     visible: "Welcome to CableSnap"
-    timeout: 30000
+    timeout: 60000
 - assertVisible: "Your free workout tracker, optimized for cable machines"
 - tapOn: "Get Started"
 
