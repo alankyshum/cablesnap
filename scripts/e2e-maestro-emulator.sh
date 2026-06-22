@@ -80,14 +80,22 @@ adb install -r -g "$APK_PATH"
 mkdir -p "$MAESTRO_RESULTS_DIR"
 echo "--- Running maestro test .maestro/ ---"
 # `.maestro/` resolves flows via .maestro/config.yaml (flows: flows/*), so all
-# five flows run. JUnit + screenshots + maestro.log are written under
-# $MAESTRO_RESULTS_DIR for artifact upload. Any failing flow makes `maestro
-# test` exit non-zero, which (set -e) fails this script and the CI job — that
-# is the gate. We intentionally do NOT swallow the exit code.
+# five flows run. Any failing flow makes `maestro test` exit non-zero, which
+# (set -e) fails this script and the CI job — that is the gate. We intentionally
+# do NOT swallow the exit code.
+#
+# Flags are pinned to what Maestro 1.39.0 actually supports (verified against
+# TestCommand.kt @ tag cli-1.39.0). NOTE: `--test-output-dir` does NOT exist in
+# 1.39.0 — it was added in a later release — so passing it makes the CLI abort
+# with "Unknown option: '--test-output-dir'" before any flow runs (BLD-1735).
+# In 1.39.0 the JUnit report goes to --output, and screenshots + maestro.log go
+# under --debug-output. --flatten-debug-output writes them straight into
+# $MAESTRO_RESULTS_DIR (no per-run timestamped subfolder), giving the workflow a
+# single stable path to upload as the failure artifact.
 maestro test .maestro/ \
   --format junit \
   --output "$MAESTRO_RESULTS_DIR/report.xml" \
-  --test-output-dir "$MAESTRO_RESULTS_DIR" \
-  --debug-output "$MAESTRO_RESULTS_DIR"
+  --debug-output "$MAESTRO_RESULTS_DIR" \
+  --flatten-debug-output
 
 echo "All Maestro flows passed — e2e regression gate green."
