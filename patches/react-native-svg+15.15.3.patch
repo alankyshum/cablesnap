@@ -1,0 +1,60 @@
+diff --git a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
+index d57e7c8..493aab7 100644
+--- a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
++++ b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
+@@ -32,6 +32,25 @@ const prepare = (self, props = self.props) => {
+     gradientTransform,
+     patternTransform,
+     onPress,
++    // BLD-1670: strip RN-specific touch handler props that are not valid DOM
++    // attributes. `hasTouchableProperty` checks onPressIn/onPressOut/onLongPress
++    // but only `onPress` was previously destructured out — the rest fell into
++    // `...rest` and were spread onto native SVG DOM elements, causing React's
++    // "Unknown event handler property" warning (7 occurrences per Body render).
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    onPressIn,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    onPressOut,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    onLongPress,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    delayPressIn,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    delayPressOut,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    delayLongPress,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    disabled,
+     ...rest
+   } = props;
+   const clean = {
+diff --git a/node_modules/react-native-svg/lib/module/web/utils/prepare.js b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
+index 113eb2b..0703e34 100644
+--- a/node_modules/react-native-svg/lib/module/web/utils/prepare.js
++++ b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
+@@ -26,6 +26,25 @@ export const prepare = (self, props = self.props) => {
+     gradientTransform,
+     patternTransform,
+     onPress,
++    // BLD-1670: strip RN-specific touch handler props that are not valid DOM
++    // attributes. `hasTouchableProperty` checks onPressIn/onPressOut/onLongPress
++    // but only `onPress` was previously destructured out — the rest fell into
++    // `...rest` and were spread onto native SVG DOM elements, causing React's
++    // "Unknown event handler property" warning (7 occurrences per Body render).
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    onPressIn,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    onPressOut,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    onLongPress,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    delayPressIn,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    delayPressOut,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    delayLongPress,
++    // eslint-disable-next-line @typescript-eslint/no-unused-vars
++    disabled,
+     ...rest
+   } = props;
+   const clean = {
