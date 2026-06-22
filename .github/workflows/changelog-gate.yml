@@ -48,13 +48,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Honor `skip-changelog` label
+      - name: Honor `skip-changelog` label or Dependabot author
         id: skip_label
         run: |
           set -euo pipefail
           LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+          AUTHOR='${{ github.event.pull_request.user.login }}'
           if printf '%s' "$LABELS" | grep -q '"skip-changelog"'; then
             echo "::notice::PR is labeled \`skip-changelog\` — bypassing CHANGELOG gate."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif [ "$AUTHOR" = 'dependabot[bot]' ]; then
+            echo "::notice::PR authored by dependabot[bot] — bypassing CHANGELOG gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
