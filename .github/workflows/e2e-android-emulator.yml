@@ -1,0 +1,184 @@
+name: E2E Android Emulator
+
+# Maestro-on-emulator e2e regression gate (BLD-1735 / BLD-1252 Part A).
+#
+# CableSnap ships five Maestro flows under .maestro/flows/ (onboarding,
+# log-set, start-workout, add-food, view-progress) but until now nothing ran
+# them. The only emulator job in CI (scheduled-release.yml) just checks "APK
+# launches without crashing" — it never exercises the scenario flows, so
+# device-sensitive regressions (timers, modals, navigation, gesture flows —
+# the BLD-1239 class) had no automated headless gate.
+#
+# This workflow boots an x86_64 API-34 emulator, builds + installs the DEBUG
+# APK, and runs `maestro test .maestro/` as a blocking regression gate.
+#
+# Board-approved scope (approval 030a5552, parent BLD-1252):
+#   - Option A only: Android-emulator-in-CI + Maestro. Cost = CI minutes only.
+#   - NO Firebase Test Lab, NO device farm, NO paid service, NO secrets.
+#   - Debug-variant build only (no release keystore).
+#
+# Reuse anchors (proven in this repo — see the linked workflows):
+#   - Emulator runner config: scheduled-release.yml "Android emulator smoke
+#     test" step (reactivecircus/android-emulator-runner, SHA-pinned).
+#   - /dev/kvm probe + graceful skip: wear-tests.yml "KVM availability spike".
+#   - Build env (JDK17 + setup-android + Node + npm ci + expo prebuild):
+#     wear-tests.yml / ci.yml android-lint job.
+#   - Maestro driver lives in scripts/e2e-maestro-emulator.sh because the
+#     emulator-runner action runs each `script:` line as a separate
+#     `/bin/sh -c` (BLD-981 lesson; mirrors scripts/smoke-test-emulator.sh).
+
+on:
+  pull_request: {}
+  workflow_dispatch: {}
+
+# Cancel superseded runs on the same ref to save CI minutes. Mirrors ci.yml.
+concurrency:
+  group: e2e-android-emulator-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Pinned Maestro CLI version — never float `latest`. Bump deliberately.
+env:
+  MAESTRO_VERSION: 1.39.0
+
+jobs:
+  e2e-android-emulator:
+    name: Maestro e2e (Android emulator)
+    runs-on: ubuntu-latest
+    # Hard cap so a hung emulator can't burn the runner. Emulator boot is
+    # budgeted at 600s; the native build + 5 Maestro flows fit comfortably
+    # under 45 min on the GitHub-hosted runner.
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        # expo prebuild + the Android native build + the AVD system image need
+        # ~20GB; the ubuntu-latest runner ships near-full. Reuse the same
+        # free-space action scheduled-release.yml uses before its native build.
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        # --legacy-peer-deps matches every other CI workflow on this repo
+        # (known Expo / React Native peer-dep conflicts). Postinstall scripts
+        # MUST run (e.g. @shopify/react-native-skia downloads libskia.a), so we
+        # do NOT pass --ignore-scripts.
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate native project
+        # SENTRY_DISABLE_AUTO_UPLOAD=true: the Sentry RN gradle task fails
+        # without SENTRY_AUTH_TOKEN, which we deliberately do NOT provide (this
+        # gate is secret-free, debug-only). The env var is the canonical CI
+        # escape hatch honored at node_modules/@sentry/react-native/sentry.gradle.
+        env:
+          EXPO_NO_TELEMETRY: '1'
+          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+        run: npx expo prebuild --clean --platform android
+
+      - name: Build debug APK
+        # Debug variant needs no signing secrets (Gradle auto-signs debug with
+        # the standard debug keystore). Output lands at the standard path
+        # android/app/build/outputs/apk/debug/app-debug.apk, which
+        # scripts/e2e-maestro-emulator.sh installs.
+        env:
+          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew :app:assembleDebug
+          cd ..
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          if [ ! -f "$APK" ]; then
+            echo "::error::Expected debug APK at $APK after assembleDebug."
+            ls -la android/app/build/outputs/apk/ 2>/dev/null || true
+            exit 1
+          fi
+          echo "Built debug APK:"
+          ls -lh "$APK"
+
+      - name: KVM availability probe
+        id: kvm
+        # Probe for /dev/kvm. Standard ubuntu-latest runners have shipped
+        # hardware-accelerated nested virtualization (/dev/kvm) since 2023-04.
+        # If it is absent on this runner image the emulator cannot start, so we
+        # SKIP the emulator step with an explicit notice rather than hang or
+        # false-pass. Mirrors wear-tests.yml "KVM availability spike".
+        run: |
+          if [ -e /dev/kvm ]; then
+            echo "kvm_present=true" >> "$GITHUB_OUTPUT"
+            echo "/dev/kvm present — Maestro-on-emulator e2e gate can run on this runner."
+          else
+            echo "kvm_present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::/dev/kvm absent on this runner — Maestro e2e gate skipped (no hang, no false-pass). See job summary."
+          fi
+
+      - name: Run Maestro flows on emulator
+        if: steps.kvm.outputs.kvm_present == 'true'
+        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          # 600s boot timeout matches scheduled-release.yml — the runner is
+          # under load after the native build and 300s is not always enough.
+          emulator-boot-timeout: 600
+          # Headless boot tuning copied verbatim from scheduled-release.yml:
+          # no window, software GPU, no audio/boot-anim/snapshot. Reduces boot
+          # time and avoids GPU init hangs.
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
+          disable-animations: true
+          # Single-line invocation: the action runs each `script:` line as its
+          # own `/bin/sh -c`, so all logic lives in the bash script (BLD-981).
+          script: |
+            MAESTRO_RESULTS_DIR=maestro-results bash scripts/e2e-maestro-emulator.sh
+
+      - name: Upload Maestro artifacts (on failure)
+        # Screenshots, videos, maestro.log and the JUnit report — uploaded only
+        # when the gate fails so a human/agent can triage the broken flow.
+        if: failure() && steps.kvm.outputs.kvm_present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-results
+          path: maestro-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: KVM-unavailable fallback notice
+        if: steps.kvm.outputs.kvm_present == 'false'
+        run: |
+          {
+            echo "## Maestro e2e gate — skipped (no /dev/kvm)"
+            echo ""
+            echo "This runner does not expose \`/dev/kvm\`, so the Android"
+            echo "emulator cannot start and the Maestro flows did not run."
+            echo "The job did NOT false-pass the gate — it skipped explicitly."
+            echo ""
+            echo "Standard \`ubuntu-latest\` runners expose /dev/kvm as of"
+            echo "2023-04. If this recurs, move this job to a larger hosted"
+            echo "runner image that guarantees nested virtualization."
+          } >> "$GITHUB_STEP_SUMMARY"
