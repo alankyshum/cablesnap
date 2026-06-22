@@ -1,0 +1,1 @@
+- **Fix: "Other" legend dot in the Estimated Pacing card is now visible** — the dot was near-white against a white card background, making it nearly invisible. It now uses a mid-grey colour with a subtle border so all three legend indicators (Working, Rest, Other) are clearly distinguishable. (BLD-1669)

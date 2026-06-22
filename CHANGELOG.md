@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.38 — 2026-06-22
+<!-- versionCode: 108 -->
+
 - **Fix: "Other" legend dot in the Estimated Pacing card is now visible** — the dot was near-white against a white card background, making it nearly invisible. It now uses a mid-grey colour with a subtle border so all three legend indicators (Working, Rest, Other) are clearly distinguishable. (BLD-1669)
 
 ## v0.26.37 — 2026-06-22
