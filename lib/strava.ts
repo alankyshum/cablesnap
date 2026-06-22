@@ -172,8 +172,19 @@ async function refreshAccessToken(): Promise<string | null> {
     stravaLog("info", "strava refresh succeeded", { flow: "strava_refresh", step: "success" });
     return data.access_token;
   } catch (err) {
-    console.error("Strava token refresh failed:", err);
-    captureStravaError(err, "strava_refresh", "token_refresh", { proxyUrl });
+    if (isNetworkError(err)) {
+      // Network outage during token refresh is a benign transient (device offline /
+      // proxy unreachable). Do NOT report to Sentry — it is expected in an offline-
+      // first app and was causing false-positive noise (Sentry REACT-NATIVE-B /
+      // BLD-1652). Just log at warn level so the lifecycle is still observable.
+      stravaLog("warn", "Strava token refresh skipped (network offline)", {
+        flow: "strava_refresh",
+        step: "token_refresh",
+      });
+    } else {
+      console.error("Strava token refresh failed:", err);
+      captureStravaError(err, "strava_refresh", "token_refresh", { proxyUrl });
+    }
     return null;
   }
 }

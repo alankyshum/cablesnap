@@ -695,6 +695,68 @@ describe("Strava Integration — Behavioral", () => {
     expect(result.status).toBe("queued");
     expect(db.markSyncFailed).toHaveBeenCalledWith(sessionId, expect.stringContaining("422"));
   });
+
+  // BLD-1652: Sentry REACT-NATIVE-B — network error during Strava token refresh
+  // must NOT be reported to Sentry (benign transient in an offline-first app).
+  describe("(BLD-1652) refreshAccessToken — network error Sentry noise", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sentry = require("@sentry/react-native");
+
+    it("network TypeError during token refresh → captureException NOT called, warn log emitted", async () => {
+      db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+      db.getSessionSets.mockResolvedValue([
+        { exercise_name: "Bench", weight: 80, reps: 8, completed: true, set_type: "working" },
+      ]);
+      // strava_token_expires_at=0 forces the refresh path in getValidAccessToken
+      SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+        if (key === "strava_token_expires_at") return "0";
+        if (key === "strava_refresh_token") return "some-refresh-token";
+        return null;
+      });
+      // Refresh POST throws a network error (device offline / proxy unreachable)
+      mockFetch.mockRejectedValueOnce(
+        Object.assign(new TypeError("Network request failed"), { name: "TypeError" }),
+      );
+
+      const result = await strava.syncSessionToStrava("bld-1652-net-test");
+
+      // Sync degrades gracefully — upload is queued for later retry
+      expect(result.status).toBe("queued");
+
+      // Core assertion: network error must NOT pollute Sentry
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+
+      // A warn-level log IS emitted so the lifecycle remains observable
+      expect(Sentry.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("network offline"),
+        expect.objectContaining({ flow: "strava_refresh", step: "token_refresh" }),
+      );
+    });
+
+    it("non-network error during token refresh → captureException IS called (real bugs still surface)", async () => {
+      db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+      db.getSessionSets.mockResolvedValue([
+        { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+      ]);
+      // Token expired — forces refresh
+      SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+        if (key === "strava_token_expires_at") return "0";
+        if (key === "strava_refresh_token") return "some-refresh-token";
+        return null;
+      });
+      // Refresh POST returns 500 — throws a plain Error (not a network TypeError)
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        text: async () => "Internal Server Error",
+      });
+
+      await strava.syncSessionToStrava("bld-1652-server-err-test");
+
+      // A real server-side error MUST still reach Sentry
+      expect(Sentry.captureException).toHaveBeenCalled();
+    });
+  });
 });
 
 describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
