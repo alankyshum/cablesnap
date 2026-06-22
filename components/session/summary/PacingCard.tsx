@@ -35,7 +35,7 @@ function useSegmentColors() {
   return {
     working: colors.primary,          // Electric Coral
     rest: colors.heatmapLow,          // Blue (#1E88E5 / dark variant)
-    other: colors.surfaceVariant,     // Muted grey — legible on card background
+    other: colors.onSurfaceVariant,   // Mid grey — legible on card background
   };
 }
 
@@ -202,5 +202,5 @@ const styles = StyleSheet.create({
   barSegment: { height: "100%" },
   labelsRow: { flexDirection: "row", justifyContent: "space-around", flexWrap: "wrap", gap: 4 },
   labelChip: { flexDirection: "row", alignItems: "center", gap: 3 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendDot: { width: 8, height: 8, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(0,0,0,0.18)" },
 });
