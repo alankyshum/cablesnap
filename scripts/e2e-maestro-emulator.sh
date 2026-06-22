@@ -63,6 +63,29 @@ fi
 echo "Emulator booted. Devices:"
 adb devices -l || true
 
+# --- Precondition: package manager is ready ----------------------------------
+# sys.boot_completed=1 fires before the PackageManager has finished coming up.
+# Running `adb install` against a not-yet-ready PM is what dragged the install
+# to ~5.5 min in BLD-1742 (run 27981782936) and left the emulator thrashing so
+# Maestro's driver then timed out. Poll `pm path android` (a trivially-present
+# package) until the PM answers, so install + Maestro start against a settled
+# device. Best-effort gate: ~120s budget, then proceed and let install surface
+# any real failure.
+echo "--- Waiting for package manager to be ready ---"
+PM_READY=""
+for _ in $(seq 1 60); do
+  if adb shell pm path android >/dev/null 2>&1; then
+    PM_READY=1
+    break
+  fi
+  sleep 2
+done
+if [ -z "$PM_READY" ]; then
+  echo "::warning::PackageManager not confirmed ready within ~120s; proceeding with install anyway."
+else
+  echo "Package manager is ready."
+fi
+
 # --- Install Maestro CLI (pinned) --------------------------------------------
 echo "--- Installing Maestro CLI v$MAESTRO_VERSION ---"
 export MAESTRO_VERSION
@@ -78,6 +101,16 @@ adb install -r -g "$APK_PATH"
 
 # --- Run the Maestro flows as the regression gate ----------------------------
 mkdir -p "$MAESTRO_RESULTS_DIR"
+# Give Maestro's Android driver more time to push and start its instrumentation
+# server on a CI emulator that may still be warming up after boot. The default
+# is 15000ms (AndroidDriver.kt:1051-1053 @ cli-1.39.0, env var
+# MAESTRO_DRIVER_STARTUP_TIMEOUT), which was too tight in BLD-1742 (run
+# 27981782936) when the emulator was under load — the driver timed out with
+# AndroidDriverTimeoutException before any flow ran. 120000ms (2 min) absorbs
+# that warm-up without masking a genuinely-dead driver (the action's overall
+# step still bounds total time).
+export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-120000}"
+echo "Maestro driver startup timeout: ${MAESTRO_DRIVER_STARTUP_TIMEOUT}ms"
 echo "--- Running maestro test .maestro/ ---"
 # `.maestro/` resolves flows via .maestro/config.yaml (flows: flows/*), so all
 # five flows run. Any failing flow makes `maestro test` exit non-zero, which

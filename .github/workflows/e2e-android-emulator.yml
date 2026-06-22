@@ -76,6 +76,22 @@ jobs:
           if [ -e /dev/kvm ]; then
             echo "kvm_present=true" >> "$GITHUB_OUTPUT"
             echo "/dev/kvm present — Maestro-on-emulator e2e gate can run on this runner."
+            # /dev/kvm existing is necessary but NOT sufficient: the emulator
+            # process must also be able to OPEN it. If the device node is not
+            # group/world read-writable the emulator silently falls back to
+            # software CPU emulation, which is ~5-10x slower — boot drags to
+            # ~7 min and `adb install` to ~5 min, and Maestro's Android driver
+            # then times out attaching its instrumentation (BLD-1742, run
+            # 27981782936). Apply the reactivecircus/android-emulator-runner
+            # README's mandated udev rule so /dev/kvm is world-rw and real KVM
+            # acceleration actually engages. Best-effort: never fail the gate on
+            # the perms step itself — the emulator step still runs and would fail
+            # loudly if acceleration is genuinely unavailable.
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+              | sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null || true
+            sudo udevadm control --reload-rules || true
+            sudo udevadm trigger --name-match=kvm || true
+            ls -l /dev/kvm || true
           else
             echo "kvm_present=false" >> "$GITHUB_OUTPUT"
             echo "::warning::/dev/kvm absent on this runner — Maestro e2e gate skipped before any build work (no hang, no false-pass). See job summary."
@@ -165,9 +181,26 @@ jobs:
           # 600s boot timeout matches scheduled-release.yml — the runner is
           # under load after the native build and 300s is not always enough.
           emulator-boot-timeout: 600
+          # Force real KVM/HW acceleration. The action's default is `auto`, which
+          # can misdetect and silently disable acceleration → software CPU
+          # emulation (the BLD-1742 failure: 7-min boot, 5-min install, Maestro
+          # driver timeout). With the 99-kvm4all.rules perms applied in the KVM
+          # step above, `false` makes the emulator hard-require acceleration; if
+          # it genuinely can't accelerate the step fails loudly instead of
+          # crawling in software mode.
+          disable-linux-hw-accel: false
+          # Give the emulator real headroom. Maestro pushes an instrumentation
+          # driver onto the device (heavier than scheduled-release.yml's
+          # launch-only smoke), so the default 2 cores / image-default RAM leave
+          # the driver startup starved on a loaded post-build runner. 4 cores +
+          # 4 GB RAM + 512 MB heap is comfortably within the ubuntu-latest spec.
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
           # Headless boot tuning copied verbatim from scheduled-release.yml:
           # no window, software GPU, no audio/boot-anim/snapshot. Reduces boot
-          # time and avoids GPU init hangs.
+          # time and avoids GPU init hangs. (GPU is software via swiftshader; CPU
+          # virtualization is the KVM accel forced above — independent concerns.)
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
           disable-animations: true
           # Single-line invocation: the action runs each `script:` line as its
