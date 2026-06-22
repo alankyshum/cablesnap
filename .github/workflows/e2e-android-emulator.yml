@@ -20,7 +20,9 @@ name: E2E Android Emulator
 # Reuse anchors (proven in this repo — see the linked workflows):
 #   - Emulator runner config: scheduled-release.yml "Android emulator smoke
 #     test" step (reactivecircus/android-emulator-runner, SHA-pinned).
-#   - /dev/kvm probe + graceful skip: wear-tests.yml "KVM availability spike".
+#   - /dev/kvm probe + graceful skip pattern: wear-tests.yml "KVM availability
+#     spike". We run the probe FIRST here (top-of-job) and gate the build on it,
+#     so an unaccelerated runner skips before burning native-build minutes.
 #   - Build env (JDK17 + setup-android + Node + npm ci + expo prebuild):
 #     wear-tests.yml / ci.yml android-lint job.
 #   - Maestro driver lives in scripts/e2e-maestro-emulator.sh because the
@@ -55,10 +57,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: KVM availability probe
+        id: kvm
+        # FIRST real step (BLD-1735 QD review): probe /dev/kvm at the TOP of the
+        # job, before any expensive install / prebuild / Gradle work. The
+        # emulator is the ONLY consumer of the debug APK, so if this runner has
+        # no /dev/kvm the emulator cannot start and building the APK would be
+        # ~15-30 min of wasted CI minutes. Detecting KVM absence here lets every
+        # heavyweight step below short-circuit via `kvm_present == 'true'`, so an
+        # unaccelerated runner skips in seconds with an explicit notice — no
+        # hang, no false-pass. Standard ubuntu-latest runners have shipped
+        # hardware-accelerated nested virtualization (/dev/kvm) since 2023-04,
+        # so the normal path is kvm_present=true. Mirrors wear-tests.yml
+        # "KVM availability spike" (which probes late only because there the
+        # Gradle assemble IS the deliverable; here the build only feeds the
+        # emulator, so we gate it).
+        run: |
+          if [ -e /dev/kvm ]; then
+            echo "kvm_present=true" >> "$GITHUB_OUTPUT"
+            echo "/dev/kvm present — Maestro-on-emulator e2e gate can run on this runner."
+          else
+            echo "kvm_present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::/dev/kvm absent on this runner — Maestro e2e gate skipped before any build work (no hang, no false-pass). See job summary."
+          fi
+
       - name: Free disk space
-        # expo prebuild + the Android native build + the AVD system image need
-        # ~20GB; the ubuntu-latest runner ships near-full. Reuse the same
+        # Gated on KVM: only worth freeing ~20GB if the emulator can actually
+        # run. expo prebuild + the Android native build + the AVD system image
+        # need ~20GB; the ubuntu-latest runner ships near-full. Reuse the same
         # free-space action scheduled-release.yml uses before its native build.
+        if: steps.kvm.outputs.kvm_present == 'true'
         uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: false
@@ -69,15 +97,18 @@ jobs:
           swap-storage: true
 
       - name: Set up JDK 17
+        if: steps.kvm.outputs.kvm_present == 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Set up Android SDK
+        if: steps.kvm.outputs.kvm_present == 'true'
         uses: android-actions/setup-android@v3
 
       - name: Set up Node.js
+        if: steps.kvm.outputs.kvm_present == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -88,6 +119,7 @@ jobs:
         # (known Expo / React Native peer-dep conflicts). Postinstall scripts
         # MUST run (e.g. @shopify/react-native-skia downloads libskia.a), so we
         # do NOT pass --ignore-scripts.
+        if: steps.kvm.outputs.kvm_present == 'true'
         run: npm ci --legacy-peer-deps
 
       - name: Generate native project
@@ -95,6 +127,7 @@ jobs:
         # without SENTRY_AUTH_TOKEN, which we deliberately do NOT provide (this
         # gate is secret-free, debug-only). The env var is the canonical CI
         # escape hatch honored at node_modules/@sentry/react-native/sentry.gradle.
+        if: steps.kvm.outputs.kvm_present == 'true'
         env:
           EXPO_NO_TELEMETRY: '1'
           SENTRY_DISABLE_AUTO_UPLOAD: 'true'
@@ -105,6 +138,7 @@ jobs:
         # the standard debug keystore). Output lands at the standard path
         # android/app/build/outputs/apk/debug/app-debug.apk, which
         # scripts/e2e-maestro-emulator.sh installs.
+        if: steps.kvm.outputs.kvm_present == 'true'
         env:
           SENTRY_DISABLE_AUTO_UPLOAD: 'true'
         run: |
@@ -120,22 +154,6 @@ jobs:
           fi
           echo "Built debug APK:"
           ls -lh "$APK"
-
-      - name: KVM availability probe
-        id: kvm
-        # Probe for /dev/kvm. Standard ubuntu-latest runners have shipped
-        # hardware-accelerated nested virtualization (/dev/kvm) since 2023-04.
-        # If it is absent on this runner image the emulator cannot start, so we
-        # SKIP the emulator step with an explicit notice rather than hang or
-        # false-pass. Mirrors wear-tests.yml "KVM availability spike".
-        run: |
-          if [ -e /dev/kvm ]; then
-            echo "kvm_present=true" >> "$GITHUB_OUTPUT"
-            echo "/dev/kvm present — Maestro-on-emulator e2e gate can run on this runner."
-          else
-            echo "kvm_present=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::/dev/kvm absent on this runner — Maestro e2e gate skipped (no hang, no false-pass). See job summary."
-          fi
 
       - name: Run Maestro flows on emulator
         if: steps.kvm.outputs.kvm_present == 'true'
