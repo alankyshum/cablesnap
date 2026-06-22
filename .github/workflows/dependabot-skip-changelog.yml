@@ -1,0 +1,42 @@
+name: Dependabot — Auto-apply skip-changelog label
+
+# Automatically applies the `skip-changelog` label to Dependabot PRs so that
+# changelog-gate.yml passes without requiring a human to label each bump.
+#
+# Security: uses `pull_request_target` so the GITHUB_TOKEN has write scope to
+# add labels on Dependabot PRs (a plain `pull_request` event from a bot has a
+# read-only token). The job NEVER checks out or executes any PR-supplied code —
+# it only calls the GitHub Labels API. This keeps the write-token confined to
+# label operations only and is safe per GitHub's security guidance for
+# `pull_request_target`.
+#
+# Idempotent: `gh pr edit --add-label` is a no-op if the label is already present.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label-dependabot:
+    name: Apply skip-changelog to Dependabot PRs
+    runs-on: ubuntu-latest
+    # Only act on PRs authored by Dependabot — exact login match.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    timeout-minutes: 3
+    steps:
+      - name: Apply skip-changelog label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "Dependabot PR #${PR_NUMBER} — applying skip-changelog label."
+          gh pr edit "$PR_NUMBER" \
+            --repo "$REPO" \
+            --add-label "skip-changelog"
+          echo "Label applied successfully."
