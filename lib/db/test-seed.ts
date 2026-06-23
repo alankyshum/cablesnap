@@ -53,6 +53,104 @@ export function guardsAllow(): boolean {
   return true;
 }
 
+// BLD-1796: bounded retry around the scenario-seed step.
+//
+// Under high Playwright worker counts (BLD-1791 gives each worker its OWN cold
+// WASM-SQLite DB on a SHARED `npx serve` static origin), the scenario seed that
+// `hooks/useAppInit.ts` runs after DB init flakes in two transient ways while N
+// workers cold-boot at once:
+//   1. "Failed to fetch (localhost:8081)" — the lazy `import("./test-seed")`
+//      chunk (or a WASM/asset request) is dropped by the static server under
+//      concurrent request pressure.
+//   2. "Sync operation timeout" — `seedScenario()`'s drizzle writes
+//      (`seedAdvancedSets` → `bulkInsertSegments`, the table-clear DELETEs) hit
+//      the BLD-1636 synchronous busy-wait budget on a still-contended worker.
+// Either leaves `data-test-ready` unset, timing out every seed-dependent spec.
+//
+// `seedScenario()` is idempotent (it DELETEs the scenario-mutable tables then
+// re-inserts fixed-id rows), so re-running the whole import+seed is safe. We
+// retry ONLY on these transient signatures with a short backoff; a genuine
+// programming error (unknown scenario, schema bug) is NOT transient and surfaces
+// immediately on the first attempt.
+const SCENARIO_SEED_MAX_ATTEMPTS = 5;
+const SCENARIO_SEED_RETRY_BACKOFF_MS = 150;
+
+/**
+ * BLD-1796: true only when the bounded scenario-seed retry should be active —
+ * i.e. running under a WebDriver-controlled browser (Playwright sets
+ * `navigator.webdriver === true`). Mirrors the `resolveDbName()` /
+ * `asyncOpen*` test-gate convention: outside WebDriver (manual dev-web, and —
+ * belt-and-suspenders — production, where this whole module is Metro-stripped)
+ * the retry is inert, so behavior is unchanged. Exported for unit tests.
+ */
+export function scenarioSeedRetryEnabled(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const nav = navigator as Navigator & { webdriver?: boolean };
+  return nav.webdriver === true;
+}
+
+/**
+ * BLD-1796: classify an error as a transient, retry-worthy scenario-seed
+ * failure. Matches the two signatures observed under high-worker-count
+ * contention (see {@link SCENARIO_SEED_MAX_ATTEMPTS} comment). Exported for
+ * unit tests.
+ */
+export function isTransientScenarioSeedError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  // BLD-1636 sync busy-wait timeout (the patched expo-sqlite tags the throw with
+  // this name; we also match the message if the patch is ever dropped).
+  if (err.name === "SyncOperationTimeoutError") return true;
+  const msg = err.message;
+  return (
+    msg.includes("Sync operation timeout") ||
+    // Lazy-chunk / WASM / asset fetch dropped by the static server under load.
+    msg.includes("Failed to fetch") ||
+    msg.includes("Load failed") || // Safari/WebKit wording for a failed fetch
+    msg.includes("NetworkError")
+  );
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * BLD-1796: run the scenario-seed thunk (`import + seedScenario`) with a bounded
+ * retry on transient errors. Used by `hooks/useAppInit.ts`. The thunk owns the
+ * dynamic import so a "Failed to fetch" on the lazy chunk itself is retried too.
+ *
+ * - Outside WebDriver: exactly ONE attempt (no behavior change).
+ * - Under WebDriver: up to {@link SCENARIO_SEED_MAX_ATTEMPTS} attempts, retrying
+ *   only when {@link isTransientScenarioSeedError} holds, with a short backoff
+ *   that yields the macrotask so a contended worker / saturated static server
+ *   can recover. A non-transient error, or budget exhaustion, throws so the
+ *   caller still records `data-test-ready`'s absence / `testSeedError` (no new
+ *   permanent hang, no swallowed real bug).
+ *
+ * Exported for unit tests.
+ */
+export async function runScenarioSeedWithRetry(
+  seedThunk: () => Promise<void>,
+): Promise<void> {
+  const maxAttempts = scenarioSeedRetryEnabled() ? SCENARIO_SEED_MAX_ATTEMPTS : 1;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await seedThunk();
+      return;
+    } catch (err) {
+      if (attempt === maxAttempts || !isTransientScenarioSeedError(err)) {
+        throw err;
+      }
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[test-seed] transient scenario-seed failure (attempt ${attempt}/${maxAttempts}), retrying:`,
+        err instanceof Error ? err.message : String(err),
+      );
+      await delay(SCENARIO_SEED_RETRY_BACKOFF_MS);
+    }
+  }
+}
+
 export async function seedScenario(): Promise<void> {
   if (!guardsAllow()) return;
 
