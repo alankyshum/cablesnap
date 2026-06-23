@@ -43,10 +43,32 @@ const SPRING_CONFIG = { damping: 20, stiffness: 200, mass: 0.8 };
 const ITEM_HEIGHT = 64;
 const COMPACT_ITEM_HEIGHT = 48;
 
+// Measured height of the sheet chrome that sits ABOVE the exercise FlatList:
+// handleZone (paddingVertical 10*2 + handle 4 = 24) + header (~28) +
+// SearchBar (~48) + chips row (chip ~32 + paddingBottom 8 = 40) ≈ 140px.
+// Used to bound the FlatList frame to the visible sheet area so it has genuine
+// scrollable overflow on-screen instead of extending below the physical fold.
+// (BLD-1841 — same root cause + fix shape as the BLD-1819 BottomSheet ScrollView.)
+const CHROME_ABOVE_LIST = 140;
+// Floor for the list height so it never collapses to nothing if the sheet is
+// dragged almost off-screen mid-interaction.
+const MIN_LIST_HEIGHT = 120;
+
 export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Props) {
   const colors = useThemeColors();
   const { error: showError } = useToast();
   const { height: SCREEN_H } = useWindowDimensions();
+  // SNAP_OPEN is where the sheet lands when it opens. It is intentionally tall
+  // (sheet covers ~88% of the screen) so the exercise FlatList spans the vertical
+  // centre of the screen. Maestro's scrollUntilVisible swipes "from center"
+  // (y≈50%→10%, see maestro.log "swipeFromCenter"); at the previous 0.45 open
+  // position the list sat entirely BELOW screen-centre (its top was under the
+  // search/chips chrome at ~65% down), so every swipe originated on non-scrolling
+  // chrome and the list never moved — the log-set e2e gate failed here for every
+  // selector variant (BLD-1841). Opening tall puts the list under the swipe origin
+  // for both Maestro and a human flicking the list. SNAP_MID/SNAP_TOP remain as
+  // drag detents so the manual drag UX is unchanged.
+  const SNAP_OPEN = SCREEN_H * 0.12;
   const SNAP_MID = SCREEN_H * 0.45;
   const SNAP_TOP = SCREEN_H * 0.06;
   const DISMISS_THRESHOLD = SCREEN_H * 0.75;
@@ -87,7 +109,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
         })
         .finally(() => setLoading(false));
 
-      translateY.value = withSpring(SNAP_MID, SPRING_CONFIG);
+      translateY.value = withSpring(SNAP_OPEN, SPRING_CONFIG);
       backdropOpacity.value = withTiming(1, { duration: durationTokens.normal });
     } else if (mounted) {
       translateY.value = withTiming(SCREEN_H, { duration: durationTokens.fast });
@@ -95,7 +117,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
         runOnJS(setMounted)(false);
       });
     }
-  }, [visible, mounted, translateY, backdropOpacity, SCREEN_H, SNAP_MID, showError]);
+  }, [visible, mounted, translateY, backdropOpacity, SCREEN_H, SNAP_OPEN, showError]);
 
   const dismiss = useCallback(() => {
     translateY.value = withTiming(SCREEN_H, { duration: durationTokens.fast });
@@ -131,6 +153,23 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
 
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: backdropOpacity.value * 0.5,
+  }));
+
+  // Bound the FlatList wrapper to the visible sheet area at the current snap.
+  // The sheet's frame is SCREEN_H tall but it is translated down by translateY,
+  // so only (SCREEN_H - translateY) is on-screen. A `flex: 1` list therefore
+  // measures far taller than the viewport and its lower rows render below the
+  // physical fold, where Maestro's scrollUntilVisible (visibilityPercentage 100)
+  // can never bring them fully on-screen — the log-set e2e gate failed here for
+  // every selector variant (BLD-1841). Capping the wrapper height to the visible
+  // region gives the list genuine on-screen scrollable overflow. Tracking the
+  // live translateY keeps it correct whether the sheet is at SNAP_MID or dragged
+  // to SNAP_TOP. (Same fix shape as the BLD-1819 BottomSheet ScrollView maxHeight.)
+  const listContainerStyle = useAnimatedStyle(() => ({
+    height: Math.max(
+      MIN_LIST_HEIGHT,
+      SCREEN_H - translateY.value - CHROME_ABOVE_LIST,
+    ),
   }));
 
   const filtered = useMemo(() => {
@@ -354,26 +393,28 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
           />
         </View>
 
-        <FlatList
-          data={filtered}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          style={styles.list}
-          testID="exercise-list"
-          ListHeaderComponent={listHeader}
-          ListEmptyComponent={
-            loading ? null : (
-              <View style={styles.empty}>
-                <Text
-                  variant="subtitle"
-                  style={{ color: colors.onSurfaceVariant }}
-                >
-                  No exercises found
-                </Text>
-              </View>
-            )
-          }
-        />
+        <Animated.View style={listContainerStyle}>
+          <FlatList
+            data={filtered}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            style={styles.list}
+            testID="exercise-list"
+            ListHeaderComponent={listHeader}
+            ListEmptyComponent={
+              loading ? null : (
+                <View style={styles.empty}>
+                  <Text
+                    variant="subtitle"
+                    style={{ color: colors.onSurfaceVariant }}
+                  >
+                    No exercises found
+                  </Text>
+                </View>
+              )
+            }
+          />
+        </Animated.View>
       </Animated.View>
     </>
   );
