@@ -79,7 +79,7 @@ appId: com.persoack.cablesnap
 # ManualFoodEntry.tsx:37) sits at the bottom of the expanded form, below
 # the macro row + serving size input + "Save as favorite" chip.
 #
-# Why swipe(UP) + text tap, NOT scrollUntilVisible+id (BLD-1793 runs 28016615825,
+# Why swipe(UP) + tapOn id, NOT scrollUntilVisible+id (BLD-1793 runs 28016615825,
 # 28018864248): The BottomSheet wraps its content in a react-native-reanimated
 # Animated.View → ScrollView (components/ui/bottom-sheet.tsx:104). Maestro's
 # scrollUntilVisible walks the UIAutomator2 accessibility tree to find a
@@ -93,15 +93,24 @@ appId: com.persoack.cablesnap
 # command in Maestro (run 28018864248 aborted at parse time:
 # 'Invalid command: "swipeUp"'). Two swipes guarantee the button clears the soft
 # keyboard / serving-size + favorite-chip rows below the macro inputs.
-# We tap the rendered text "Log Food" (not the testID) because a text tapOn
-# matches the visible label in the Button's Text child, which is in the a11y
-# tree once the form is expanded, independent of testID/disabled edge cases
-# (disabled={saving || !name.trim()} is false here — we filled "Chicken Breast").
+#
+# Tap by testID "log-food-button", NOT by the visible text "Log Food"
+# (BLD-1793 run 28020728191: "Element not found: Text matching regex: Log Food").
+# The Button is rendered with accessibilityLabel="Log manual entry"
+# (ManualFoodEntry.tsx) and Button spreads {...props} onto its Pressable
+# (components/ui/button.tsx), so React Native exposes the Pressable's a11y
+# content-desc as "Log manual entry" and COLLAPSES the child <Text>Log Food</Text>
+# out of the UIAutomator2 tree Maestro reads. The visible "Log Food" label is
+# therefore not matchable by text — only the testID lands. A tapOn by id needs
+# the element on-screen (the two swipes above bring it into view) but does NOT
+# rely on scroll-container detection, which the BottomSheet Animated.View wrapper
+# breaks (the reason scrollUntilVisible+id timed out in run 28016615825).
 - swipe:
     direction: UP
 - swipe:
     direction: UP
-- tapOn: "Log Food"
+- tapOn:
+    id: "log-food-button"
 
 # Should return to the nutrition screen
 - assertVisible: "Nutrition"
