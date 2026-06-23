@@ -111,9 +111,26 @@ test.describe("@scenario session-pacing", () => {
     const cardBody = page.getByRole("button", { name: /Estimated pacing/i });
     await cardBody.click();
 
-    // Sheet should open with exercise names
-    await expect(page.getByText("Cable Row")).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText("Lat Pulldown")).toBeVisible();
+    // Sheet should open — wait for the title to confirm the BottomSheet is mounted.
+    await expect(page.getByText("Pacing by exercise")).toBeVisible({ timeout: 5000 });
+
+    // The BottomSheet opens at snap-point 0 (50% height). Tap the drag handle
+    // once to advance to snap-point 1 (90% height) so the per-exercise rows
+    // are in the viewport (BLD-1767 root cause: only header/columns visible at 50%).
+    const handle = page.getByTestId("bottom-sheet-handle");
+    await handle.click();
+    // Allow the spring animation (damping=50, stiffness=400) to settle.
+    await page.waitForTimeout(400);
+
+    // Scroll the inner exercise-row ScrollView so the last seeded exercise
+    // is in frame, mirroring the settings.spec.ts:112 pattern.
+    const lastExercise = page.getByText("Bodyweight Dips");
+    await lastExercise.scrollIntoViewIfNeeded({ timeout: 5000 });
+
+    // Assert a known per-exercise row is in the viewport BEFORE capturing,
+    // so a genuine future cutoff regression still fails the test.
+    await expect(lastExercise).toBeInViewport({ timeout: 5000 });
+    await expect(page.getByText("Cable Row")).toBeVisible();
 
     // Let the BottomSheet open animation settle (withSpring translateY + withTiming
     // opacity, ~300ms) before capturing — otherwise the sheet is screenshotted
