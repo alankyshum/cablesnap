@@ -6,36 +6,101 @@ appId: com.persoack.cablesnap
 - tapOn: "Nutrition"
 - assertVisible: "Today"
 
-# Tap FAB to add food
-- tapOn:
-    id: "add-food-fab"
+# Open the Add Food sheet. The affordance is the Nutrition header button
+# (accessibilityLabel "Add food", app/(tabs)/_layout.tsx) — there is no
+# "add-food-fab" testID on the header button.
+- tapOn: "Add food"
+- assertVisible: "Add Food"
 
-# Add Food screen
-- assertVisible: "New Food"
-- assertVisible: "Favorites"
-- assertVisible: "Database"
-
-# Fill in food details
-- tapOn: "Food name"
-- inputText: "Chicken Breast"
-
-- tapOn: "Calories"
-- inputText: "165"
-
-- tapOn: "Protein (g)"
-- inputText: "31"
-
-- tapOn: "Carbs (g)"
-- inputText: "0"
-
-- tapOn: "Fat (g)"
-- inputText: "3.6"
-
-# Select meal type
+# Select meal type FIRST while the MealFavoritesBar chips are at the top of
+# the sheet and fully visible (before expanding the manual form scrolls the
+# view down). "Lunch" is the chip label (MealFavoritesBar / MEAL_LABELS.lunch).
 - tapOn: "Lunch"
 
-# Log the food
-- tapOn: "Log Food"
+# Reveal the manual-entry form. InlineFoodSearch shows search + meal chips by
+# default; the Food name / macro inputs live inside ManualFoodEntry, which is
+# collapsed until "Manual Entry" is tapped (ManualFoodEntry.tsx).
+- tapOn: "Manual Entry"
+- assertVisible: "Manual Food Entry"
 
-# Should return to nutrition screen with the entry visible
-- assertVisible: "Nutrition"
+# --- Fill the form by testID, NOT by visible label text. ---
+#
+# Why id-based selectors (BLD-1793): the macro inputs (Protein/Carbs/Fat)
+# render in a flexDirection:row at flex:1 each, so on the 320px CI emulator each
+# is ~100px wide and the floating label wraps onto two lines ("Prot\nein (g)").
+# Tapping the wrapped LABEL text landed on the label geometry, not the input's
+# editable region — values bled into adjacent fields. testIDs land directly on
+# the <TextInput> nodes (Input spreads {...props}) and a tap on a TextInput
+# natively focuses it — deterministic regardless of label wrapping or viewport.
+# hideKeyboard between fields keeps lower fields/the submit button reachable.
+
+- tapOn:
+    id: "food-name-input"
+- inputText: "Chicken Breast"
+- hideKeyboard
+
+- scrollUntilVisible:
+    element:
+      id: "food-calories-input"
+    direction: DOWN
+    timeout: 20
+- tapOn:
+    id: "food-calories-input"
+- inputText: "165"
+- hideKeyboard
+
+- scrollUntilVisible:
+    element:
+      id: "macro-protein-input"
+    direction: DOWN
+    timeout: 20
+- tapOn:
+    id: "macro-protein-input"
+- inputText: "31"
+- hideKeyboard
+
+- tapOn:
+    id: "macro-carbs-input"
+- inputText: "0"
+- hideKeyboard
+
+- tapOn:
+    id: "macro-fat-input"
+- inputText: "3.6"
+- hideKeyboard
+
+# Log the food. The "Log Food" Button (testID "log-food-button",
+# ManualFoodEntry.tsx) sits at the bottom of the expanded form.
+#
+# Selector: tap by testID "log-food-button", NOT by the visible text "Log Food"
+# (BLD-1793 run 28020728191: "Element not found: Text matching regex: Log Food").
+# The Button is rendered with accessibilityLabel="Log manual entry"
+# (ManualFoodEntry.tsx) and Button spreads {...props} onto its Pressable
+# (components/ui/button.tsx), so React Native exposes the Pressable's a11y
+# content-desc as "Log manual entry" and COLLAPSES the child <Text>Log Food</Text>
+# out of the UIAutomator2 tree Maestro reads — the visible "Log Food" label is
+# not matchable by text, only the testID lands.
+#
+# Scrolling: use scrollUntilVisible. BLD-1819 fixed the root cause — the
+# BottomSheet ScrollView frame is now bounded to the visible sheet height
+# (SCREEN_HEIGHT * snapPoints[0] - header), so there IS genuine scrollable
+# overflow when form content extends below the fold. scrollUntilVisible drives
+# the REAL native android.widget.ScrollView and stops the moment the button
+# enters the tree. direction: DOWN scrolls content upward to reveal elements
+# below the fold. timeout: 30000 (30s) — generous but finite.
+- scrollUntilVisible:
+    element:
+      id: "log-food-button"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "log-food-button"
+
+# Confirm the log succeeded. We do NOT assert "Nutrition" here: the Add Food
+# sheet is a React Native <Modal> that stays OPEN after a manual log, and a
+# Modal occludes the screen beneath it in the UIAutomator2 tree — "Nutrition"
+# would not be visible. Instead assert the form collapsed: useManualFoodForm
+# calls setExpanded(false) ONLY when onSave resolves true, which flips the
+# toggle button's label from "Cancel" back to "Manual Entry". Seeing
+# "Manual Entry" is a deterministic, in-sheet signal that the food was logged.
+- assertVisible: "Manual Entry"
