@@ -79,20 +79,28 @@ appId: com.persoack.cablesnap
 # ManualFoodEntry.tsx:37) sits at the bottom of the expanded form, below
 # the macro row + serving size input + "Save as favorite" chip.
 #
-# Why swipeUp + text tap, NOT scrollUntilVisible+id (BLD-1793 run 28016615825):
-# The BottomSheet uses a custom Animated.View wrapping a plain React Native
-# ScrollView (components/ui/bottom-sheet.tsx:104). Maestro's scrollUntilVisible
-# walks the UIAutomator2 accessibility tree to find a scrollable parent; the
-# Animated.View wrapper breaks this detection, so the scroll never reaches the
-# button and the 20s timeout is exhausted every run.
-# swipeUp is a physical gesture that scrolls whatever is currently receiving
-# touch input — it works regardless of scroll container type.
-# We use the rendered text "Log Food" (not the testID) because text-based
-# tapOn matches the visible label in the Button's Text child, which is always
-# present in the accessibility tree once the form is expanded, independent of
-# the disabled state (disabled={saving || !name.trim()}, which is false here
-# since we filled "Chicken Breast").
-- swipeUp
+# Why swipe(UP) + text tap, NOT scrollUntilVisible+id (BLD-1793 runs 28016615825,
+# 28018864248): The BottomSheet wraps its content in a react-native-reanimated
+# Animated.View → ScrollView (components/ui/bottom-sheet.tsx:104). Maestro's
+# scrollUntilVisible walks the UIAutomator2 accessibility tree to find a
+# scrollable parent; the Animated.View wrapper breaks that detection, so the
+# scroll never reaches the button and the 20s timeout is exhausted every run
+# (run 28016615825: "No visible element found: id: log-food-button" after 1m 5s).
+# `swipe` with a direction is a coordinate-based gesture — it physically drags
+# the screen and does NOT rely on scroll-container detection, so it moves the
+# below-the-fold Log Food button into view regardless of wrapper type.
+# NOTE: the command is `swipe: { direction: UP }` — there is NO `swipeUp`
+# command in Maestro (run 28018864248 aborted at parse time:
+# 'Invalid command: "swipeUp"'). Two swipes guarantee the button clears the soft
+# keyboard / serving-size + favorite-chip rows below the macro inputs.
+# We tap the rendered text "Log Food" (not the testID) because a text tapOn
+# matches the visible label in the Button's Text child, which is in the a11y
+# tree once the form is expanded, independent of testID/disabled edge cases
+# (disabled={saving || !name.trim()} is false here — we filled "Chicken Breast").
+- swipe:
+    direction: UP
+- swipe:
+    direction: UP
 - tapOn: "Log Food"
 
 # Should return to the nutrition screen
