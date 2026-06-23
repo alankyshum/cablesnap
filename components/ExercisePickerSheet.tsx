@@ -358,6 +358,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
           style={styles.list}
+          testID="exercise-list"
           ListHeaderComponent={listHeader}
           ListEmptyComponent={
             loading ? null : (

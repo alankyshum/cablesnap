@@ -16,41 +16,50 @@ appId: com.persoack.cablesnap
 - tapOn: "Add Exercise"
 - assertVisible: "Search exercises"
 
-# Search for a seeded exercise and select it. "Barbell Bench Press" is not a
-# seeded exercise (only in test fixtures). "Bench Fly" is a real seed
-# (lib/seed.ts:278), exact and unambiguous.
-- tapOn: "Search exercises"
-- inputText: "Bench Fly"
-
-# Wait for the result row to render BEFORE tapping it (BLD-1793, run
-# 28038846883: "Element not found: Text matching regex: Bench Fly"). The
-# ExercisePickerSheet loads its rows via an async getAllExercises() DB read
-# (components/ExercisePickerSheet.tsx:71) that fires while the sheet springs
-# open from SCREEN_H*0.45. The filter is synchronous (onChangeText={setQuery},
-# no debounce), but `exercises` is empty until that query resolves, so the
-# default tap-retry window can elapse with the list still showing
-# "No exercises found". extendedWaitUntil absorbs the DB-load + open-animation
-# latency without masking a genuinely-empty result. `visible` + `timeout` (ms)
-# is a stable Maestro 1.39.0 command; 30s mirrors the cold-start margins used
-# in onboarding.yaml. The picker renders item.name as a plain <Text> node
-# (ExercisePickerSheet.tsx:194), so this matches the same text the tap targets.
+# Wait for exercises to load and scroll to "Bench Fly", then tap it.
+#
+# WHY no tapOn/inputText for "Search exercises" (BLD-1793):
+# The ExercisePickerSheet sits at SNAP_MID = SCREEN_H * 0.45. When Maestro
+# tapped the search field (bounds [52,446][284,490] on this emulator), the soft
+# keyboard opened. Android's adjustResize mode shrinks useWindowDimensions()
+# height from 640 → ~380 px. The sheet's height: SCREEN_H shrinks too, so the
+# exercise FlatList area (which starts below the search + chip bars at ~y=490)
+# falls entirely outside the new, smaller layout frame — items are never
+# rendered to the accessibility tree. extendedWaitUntil polled for 30s without
+# ever finding "Bench Fly". Two CI runs confirmed this (28040824464 and
+# 28042682496). The fix: avoid the keyboard entirely.
+#
+# Without any search query the picker shows the full alphabetical list
+# (56 exercises). "Bench Fly" is the 3rd entry alphabetically (after
+# "Abdominal Crunches" and "Anti-rotational Supine Bicycle"). It sits near
+# the visible top of the list at SNAP_MID when there is NO keyboard.
+#
+# scrollUntilVisible + the testID "exercise-list" (added to the FlatList in
+# ExercisePickerSheet.tsx in the same commit) ensures Bench Fly is in view
+# even if virtual-list windowing hasn't yet rendered it. 20s (the default
+# scrollUntilVisible timeout, in SECONDS not ms) is ample for a 3-item scroll.
+# The extendedWaitUntil absorbs the initial async getAllExercises() DB read
+# (fires when the sheet opens) before we attempt any scroll. 30s matches the
+# cold-start headroom used throughout these flows.
 - extendedWaitUntil:
     visible: "Bench Fly"
     timeout: 30000
+- scrollUntilVisible:
+    element: "Bench Fly"
+    direction: DOWN
+    timeout: 20
 - tapOn: "Bench Fly"
 
 # Back on session screen with the exercise added.
 # The weight column header is "KG" for kg users (ExerciseGroupSetTable.tsx:78),
 # not "WEIGHT" (which was never a real header).
 #
-# Wait for the session screen to settle after the picker dismisses (BLD-1793,
-# run 28040824464: "Assertion is false: 'Bench Fly' is visible"). After tapOn
+# Wait for the session screen to settle after the picker dismisses. After tapOn
 # the picker row, ExercisePickerSheet animates closed (withTiming 200ms) and
 # the session screen re-renders with the new exercise group. A bare assertVisible
-# races this dismiss + render cycle and can fail before Bench Fly is in the
-# layout tree. extendedWaitUntil absorbs the dismiss animation latency without
-# masking a genuinely-broken pick. 5s is generous relative to the 200ms
-# animation but tight enough to catch a real failure.
+# races this dismiss + render cycle. extendedWaitUntil absorbs the dismiss
+# animation latency without masking a genuinely-broken pick. 5s is generous
+# relative to the 200ms animation but tight enough to catch a real failure.
 - extendedWaitUntil:
     visible: "Bench Fly"
     timeout: 5000
