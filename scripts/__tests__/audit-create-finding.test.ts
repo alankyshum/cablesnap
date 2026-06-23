@@ -81,6 +81,7 @@ function makeMock(state: MockState): Handler {
   return (req, res) => {
     let body = '';
     req.on('data', (c) => (body += c));
+    // eslint-disable-next-line complexity -- mock handler routes multiple HTTP paths; splitting would obscure intent
     req.on('end', () => {
       const url = req.url || '';
       const method = req.method || 'GET';

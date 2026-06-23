@@ -143,11 +143,23 @@ scripts/audit-create-finding.sh \
   --description-file <path-to-finding-md> \
   --audit-tag audit-YYYY-MM-DD-<commit-short> \
   --run-id "$PAPERCLIP_RUN_ID" \
-  --priority medium
+  --priority medium \
+  --scenario <scenario-name>
 ```
+
+Always pass `--scenario <scenario-name>` (e.g. `--scenario stack-marker`).
+The wrapper uses this to suppress false-positive "near-empty / content missing"
+findings from isolation-harness scenarios listed in
+`scripts/audit-isolation-harness-allowlist.json` (BLD-1773). When suppressed,
+the wrapper prints `SUPPRESSED <scenario>` and exits 0 — no issue is created.
+Non-allowlisted scenarios that genuinely render near-empty are still flagged.
 
 The wrapper computes the dedup deterministically:
 
+0. **Isolation-harness suppression (BLD-1773)**: if `--scenario` matches an
+   entry in `scripts/audit-isolation-harness-allowlist.json` AND the finding
+   title or description contains near-empty/content-missing keywords, the
+   wrapper prints `SUPPRESSED <scenario>` and exits 0. Nothing is filed.
 1. **Compute fingerprint** (deterministic — same formula as before):
    ```
    fingerprint = sha256(normalize(description) + "|" + scenario + "|" + label + "|" + cvd_mode).slice(0,12)
