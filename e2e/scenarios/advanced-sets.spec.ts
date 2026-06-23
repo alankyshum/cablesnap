@@ -131,13 +131,27 @@ test.describe("@scenario advanced-sets", () => {
     await expect(page.getByText("Cluster", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Myo-reps", { exact: true }).first()).toBeVisible();
 
-    // Capture screenshot from the production route — BLD-1261 flex guard
-    // (Platform.OS !== "web") removes the flex: 1 constraint on web so the
-    // HTML document height equals content height and fullPage captures every
-    // entry at narrow viewports (390 px) where Myo-reps text wraps past 844 px.
+    // Capture screenshot via the PRODUCTION navigation push flow (/settings →
+    // tap "Advanced Set Types"), NOT a deep-link goto. A deep link leaves
+    // expo-router's Stack with no back-history, so @react-navigation gates the
+    // back chevron off (NativeStackView: canGoBack === headerBack != null) and
+    // the audit captures a chevron-less header — the BLD-1668 → BLD-1769
+    // recurring false positive. Pushing from /settings gives the Stack a
+    // previous route, so the back chevron renders exactly as real users see it.
+    //
+    // BLD-1261 flex guard (Platform.OS !== "web") removes the flex: 1
+    // constraint on web so the HTML document height equals content height and
+    // fullPage captures every entry at narrow viewports (390 px) where the
+    // Myo-reps text wraps past 844 px.
     const viewport = testInfo.project.name;
     const screenshotPath = path.join(OUT_DIR, `advanced-sets-help-${viewport}.png`);
-    await page.goto("/settings/advanced-sets");
+    await page.goto("/settings");
+    await expect(page.locator("body")).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(600);
+    const helpLinkForShot = page.getByText("Advanced Set Types").first();
+    await helpLinkForShot.scrollIntoViewIfNeeded();
+    await expect(helpLinkForShot).toBeVisible({ timeout: 5_000 });
+    await helpLinkForShot.click();
     await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 10_000 });
     await page.screenshot({ path: screenshotPath, fullPage: true });
     expect(screenshotPath).toBeTruthy();
@@ -163,6 +177,85 @@ test.describe("@scenario advanced-sets", () => {
         .getByText(/small clusters of 3.5 reps/, { exact: false })
         .first(),
     ).toBeVisible();
+  });
+
+  // BLD-1769 — DOM-level navigation-header regression guard (web).
+  //
+  // Reaches the help screen via the PRODUCTION push flow (/settings → tap
+  // "Advanced Set Types") and asserts, in the live web DOM, that the header
+  // renders BOTH:
+  //   1. a visible page title — <h1 role="heading" aria-level="1">  (HeaderTitle)
+  //   2. a visible, working back control — on web @react-navigation's
+  //      HeaderBackButton renders as <a role="link" aria-label="…, back">
+  //      (react-native-web makes it an anchor because the button gets an href).
+  //      The accessible name is derived from the previous route, so in this flow
+  //      it is "(tabs), back".
+  //
+  // Why this test exists and why it is shaped this way:
+  //   - The BLD-1668 guard (__tests__/navigation-headers.test.ts) only asserts
+  //     the SCREEN_CONFIGS *object* has the entry — it never renders the screen,
+  //     so it passed while the audit kept flagging a "missing header". A
+  //     config-only assertion is NOT an acceptable sole guard (it is exactly
+  //     what let this recur). This is a real DOM assertion that mounts the route.
+  //   - It MUST use the push flow, not page.goto("/settings/advanced-sets"):
+  //     a deep link leaves the Stack with no back-history, so canGoBack === false
+  //     and the back control is (correctly) not rendered. The push flow is the
+  //     real user path and is the only way the back control exists — so this
+  //     test would FAIL on a deep-link-only capture, which is the proof that it
+  //     guards the actual production affordance.
+  //   - It also confirms the back control FUNCTIONS (navigates away from the
+  //     help screen), not merely that it paints.
+  test("web header renders visible title + working back control via push flow (BLD-1769)", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+    });
+
+    // Production push path: /settings → tap the "Advanced Set Types" row.
+    await page.goto("/settings");
+    await expect(page.locator("body")).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(600);
+
+    const helpRow = page.getByRole("button", {
+      name: "Open advanced set types help",
+    });
+    await helpRow.scrollIntoViewIfNeeded();
+    await expect(helpRow).toBeVisible({ timeout: 5_000 });
+    await helpRow.click();
+
+    // Content mounted (confirms we landed on the help sub-screen).
+    await expect(page.getByText("Rest-pause", { exact: true }).first()).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // (1) Header title is a real, visible DOM heading on web.
+    const headerTitle = page.getByRole("heading", {
+      level: 1,
+      name: "Advanced Set Types",
+    });
+    await expect(headerTitle).toBeVisible({ timeout: 5_000 });
+
+    // (2) Back control is present and visible. On web the HeaderBackButton
+    // renders as <a role="link"> (react-native-web makes it an anchor because
+    // @react-navigation gives it an href). Its accessible name is computed from
+    // the PREVIOUS route, so here it is "(tabs), back" rather than the generic
+    // "Go back" default — match by role=link with an aria-label ending in
+    // "back" (case-insensitive) so the assertion is robust to that computed
+    // label while still being scoped to the header back affordance.
+    const backControl = page
+      .getByRole("link")
+      .and(page.locator('[aria-label$="back" i]'));
+    await expect(backControl.first()).toBeVisible({ timeout: 5_000 });
+
+    // (3) The back control actually works: clicking it leaves the advanced-sets
+    // help screen (the header title is no longer shown). We assert navigation
+    // happened rather than a specific destination — goBack() pops the Stack to
+    // whatever the previous route was, which is enough to prove the affordance
+    // functions, not just paints.
+    await backControl.first().click();
+    await expect(headerTitle).toBeHidden({ timeout: 10_000 });
   });
 
   // AC #265 — advanced set data through production session-detail mount path.
