@@ -166,6 +166,16 @@ appId: com.persoack.cablesnap
 # scrollUntilVisible first: Cancel Workout is the ListFooterComponent of the
 # session FlatList. After filling weight/reps + hiding keyboard, the scroll
 # position may leave the footer below the fold on the 320x640 emulator.
+#
+# NOTE (BLD-1841): run 28059103882 then failed here with
+# "No visible element found: id: cancel-workout-btn" — scrollUntilVisible could
+# not reach it. Root cause was a LAYOUT defect, not the selector: Bench Fly is a
+# cable exercise, and on an uncalibrated gym the StackMarkerHint banner rendered
+# inside the narrow flex:1 weight column, wrapping its full sentence one char per
+# line into a multi-hundred-px vertical strip (see that run's failure screenshot).
+# That pushed the footer arbitrarily far down and broke the scroll. Fixed by
+# moving StackMarkerHint to a full-width SetRow footer (SetRow.tsx) so the row
+# height is normal again and the footer is reachable in a few swipes.
 - scrollUntilVisible:
     element:
       id: "cancel-workout-btn"

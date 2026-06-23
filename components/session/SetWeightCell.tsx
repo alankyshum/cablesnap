@@ -18,7 +18,6 @@ import React, { useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import WeightPicker from "@/components/WeightPicker";
 import { StackMarkerPill } from "./StackMarkerPill";
-import { StackMarkerHint } from "./StackMarkerHint";
 import { MarkerPickerSheet } from "./MarkerPickerSheet";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -184,7 +183,6 @@ export function SetWeightCell({
           />
         )}
       </View>
-      {isCable && !hasCalibration && <StackMarkerHint />}
     </View>
   );
 }

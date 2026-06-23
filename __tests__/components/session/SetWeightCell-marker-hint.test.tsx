@@ -1,13 +1,23 @@
 /**
  * BLD-1130 G1 follow-up — production-call-chain coverage for AC4.
  *
- * Verifies that StackMarkerHint is mounted inside the real SetWeightCell
- * uncalibrated cable path (the surface a user actually sees while logging),
- * NOT in non-cable rows, and NOT when the session gym already has
- * calibrations. Also verifies the hint disappears once dismissed.
+ * BLD-1841: the StackMarkerHint was moved OUT of SetWeightCell. It used to be
+ * rendered inside SetWeightCell's body, which sits inside SetRow's narrow
+ * flex:1 weight column (pickerCol ≈ 25px on a 320px emulator). The hint's
+ * full-sentence label therefore wrapped one character per line into a tall
+ * vertical strip — a real layout defect on cable rows at uncalibrated gyms,
+ * caught by the log-set e2e gate (run 28059103882 failure screenshot). The
+ * hint now renders as a full-width row footer in SetRow instead.
+ *
+ * This test pins the contract that SetWeightCell NO LONGER mounts the hint on
+ * any of its three rendering branches (uncalibrated cable / non-cable /
+ * calibrated cable), so a future refactor cannot silently re-introduce the
+ * trapped-in-a-narrow-column regression. The hint's own visibility/dismissal
+ * behavior is covered by StackMarkerHint.test.tsx; the SetRow-level mounting
+ * gate (isCable && !hasCalibration) is covered by SetRow's render path.
  */
 import React from "react";
-import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { render, waitFor } from "@testing-library/react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 jest.mock("@/lib/db/settings", () => ({
@@ -86,7 +96,7 @@ const calibratedStack: StackWithCalibrations = {
   calibrations: [{ id: "c1", marker: 1, true_weight: 5 }],
 };
 
-describe("SetWeightCell — StackMarkerHint mounting (BLD-1130 AC4)", () => {
+describe("SetWeightCell — StackMarkerHint moved to SetRow footer (BLD-1130 AC4 / BLD-1841)", () => {
   beforeEach(() => {
     (getAppSetting as jest.Mock).mockReset();
     (setAppSetting as jest.Mock).mockReset();
@@ -94,18 +104,21 @@ describe("SetWeightCell — StackMarkerHint mounting (BLD-1130 AC4)", () => {
     (getAppSetting as jest.Mock).mockResolvedValue(null);
   });
 
-  it("renders the hint on cable rows when the gym has zero calibrations", async () => {
-    const { findByTestId } = render(
+  it("does NOT render the hint inside the weight cell on uncalibrated cable rows (moved to SetRow footer, BLD-1841)", async () => {
+    const { queryByTestId, findByTestId } = render(
       withClient(<SetWeightCell {...baseProps} isCable stacks={[]} />),
     );
-    await findByTestId("stack-marker-hint");
+    // Wait for the cell to mount so a missing hint is conclusive.
+    await findByTestId("weight-picker");
+    await waitFor(() => {
+      expect(queryByTestId("stack-marker-hint")).toBeNull();
+    });
   });
 
   it("does NOT render the hint on non-cable rows", async () => {
     const { queryByTestId, findByTestId } = render(
       withClient(<SetWeightCell {...baseProps} isCable={false} stacks={[]} />),
     );
-    // Wait for query to settle so a missing hint is conclusive, not just unrendered.
     await findByTestId("weight-picker");
     await waitFor(() => {
       expect(queryByTestId("stack-marker-hint")).toBeNull();
@@ -118,24 +131,6 @@ describe("SetWeightCell — StackMarkerHint mounting (BLD-1130 AC4)", () => {
     );
     // Pristine + calibrated cable renders the pill, not the keypad.
     await findByTestId("stack-marker-pill");
-    await waitFor(() => {
-      expect(queryByTestId("stack-marker-hint")).toBeNull();
-    });
-  });
-
-  it("hides the hint after dismissal and persists the timestamp", async () => {
-    const { findByTestId, queryByTestId } = render(
-      withClient(<SetWeightCell {...baseProps} isCable stacks={[]} />),
-    );
-    const dismiss = await findByTestId("stack-marker-hint-dismiss");
-
-    // Subsequent refetch returns the dismissal timestamp.
-    (getAppSetting as jest.Mock).mockResolvedValue("2026-05-10T06:30:00.000Z");
-    fireEvent.press(dismiss);
-
-    await waitFor(() => {
-      expect(setAppSetting).toHaveBeenCalled();
-    });
     await waitFor(() => {
       expect(queryByTestId("stack-marker-hint")).toBeNull();
     });
