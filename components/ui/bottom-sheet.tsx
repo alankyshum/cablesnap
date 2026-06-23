@@ -68,6 +68,7 @@ const BottomSheetContent = ({
       {/* Handle */}
       <TouchableWithoutFeedback onPress={onHandlePress}>
         <View
+          testID="bottom-sheet-handle"
           style={{
             width: '100%',
             paddingVertical: 12,

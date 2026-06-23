@@ -62,19 +62,20 @@ test.describe("@scenario completed-workout", () => {
     // so below-fold content (Estimated pacing card, Sets card, action buttons)
     // is captured. window.scrollTo() does not move RN's scroll container —
     // scroll the testID element directly (same fix as settings.spec.ts BLD-1124).
+    // BLD-1768 root cause: FlatList never scrolled, pacing-card clipped at bottom.
     const scrollEl = page.getByTestId("summary-scroll-view");
     await scrollEl.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
     await page.waitForTimeout(300);
 
-    // scrollIntoViewIfNeeded() as a surgical follow-up handles stale scrollHeight
-    // when content renders after the initial scroll (same pattern as settings spec).
-    const viewDetailsButton = page.getByText("View Details", { exact: true });
-    await viewDetailsButton.scrollIntoViewIfNeeded();
+    // scrollIntoViewIfNeeded as a surgical follow-up to guarantee pacing-card
+    // is actually visible regardless of content height variation.
+    const pacingCard = page.getByTestId("pacing-card");
+    await pacingCard.scrollIntoViewIfNeeded({ timeout: 5000 });
     await page.waitForTimeout(200);
 
-    // Assert the terminal element is visible before capturing so the spec detects
-    // any future below-fold regression.
-    await expect(viewDetailsButton).toBeInViewport({ timeout: 5_000 });
+    // Assert the Working/Rest/Other legend (pacing-card) is in the viewport
+    // BEFORE capturing, so a genuine future cutoff regression still fails the test.
+    await expect(pacingCard).toBeInViewport({ timeout: 5000 });
 
     const viewport = "mobile";
     await captureWithCvd({
