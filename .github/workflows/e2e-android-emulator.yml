@@ -149,26 +149,58 @@ jobs:
           SENTRY_DISABLE_AUTO_UPLOAD: 'true'
         run: npx expo prebuild --clean --platform android
 
-      - name: Build debug APK
-        # Debug variant needs no signing secrets (Gradle auto-signs debug with
-        # the standard debug keystore). Output lands at the standard path
-        # android/app/build/outputs/apk/debug/app-debug.apk, which
-        # scripts/e2e-maestro-emulator.sh installs.
+      - name: Boost Gradle JVM heap
+        # expo prebuild --clean regenerates android/gradle.properties with
+        # org.gradle.jvmargs=-Xmx2048m, which is borderline for assembleRelease:
+        # :app:mergeReleaseNativeDebugMetadata can OOM on a loaded ubuntu-latest
+        # runner. Mirrors the same step in scheduled-release.yml.
+        if: steps.kvm.outputs.kvm_present == 'true'
+        run: |
+          set -euo pipefail
+          PROPS=android/gradle.properties
+          if grep -q '^org.gradle.jvmargs=' "$PROPS"; then
+            sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m|' "$PROPS"
+          else
+            echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
+          fi
+          grep 'org.gradle.jvmargs' "$PROPS"
+
+      - name: Build release APK (CI e2e variant)
+        # BLD-1748 root cause: assembleDebug with expo-dev-client in the config
+        # produces an Expo development launcher APK — it shows a "Development
+        # Servers" connect screen rather than launching the app, because the
+        # debug build expects a live Metro bundler and does not embed the JS
+        # bundle. Maestro then waited the full 60 s and never saw any React
+        # Native UI.
+        #
+        # Fix: use assembleRelease instead of assembleDebug. Release builds
+        # ALWAYS embed the Hermes JS bundle (no Metro dependency), so the APK
+        # launches directly into the app. app.config.ts also gates
+        # expo-dev-client on !CI so prebuild generates a standard RN activity
+        # rather than the DevLauncherActivity.
+        #
+        # Signing: with-release-signing.js falls back to signingConfigs.debug
+        # when android/keystore.properties is absent (which it is in this
+        # secret-free workflow). The resulting APK is debug-keystore signed,
+        # which is sufficient for adb install + Maestro e2e.
+        #
+        # APK path: android/app/build/outputs/apk/release/app-release.apk,
+        # passed to scripts/e2e-maestro-emulator.sh via APK_PATH.
         if: steps.kvm.outputs.kvm_present == 'true'
         env:
           SENTRY_DISABLE_AUTO_UPLOAD: 'true'
         run: |
           set -euo pipefail
           cd android
-          ./gradlew :app:assembleDebug
+          ./gradlew :app:assembleRelease
           cd ..
-          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          APK=android/app/build/outputs/apk/release/app-release.apk
           if [ ! -f "$APK" ]; then
-            echo "::error::Expected debug APK at $APK after assembleDebug."
+            echo "::error::Expected release APK at $APK after assembleRelease."
             ls -la android/app/build/outputs/apk/ 2>/dev/null || true
             exit 1
           fi
-          echo "Built debug APK:"
+          echo "Built release APK (debug-keystore signed, CI variant):"
           ls -lh "$APK"
 
       - name: Run Maestro flows on emulator
@@ -206,7 +238,7 @@ jobs:
           # Single-line invocation: the action runs each `script:` line as its
           # own `/bin/sh -c`, so all logic lives in the bash script (BLD-981).
           script: |
-            MAESTRO_RESULTS_DIR=maestro-results bash scripts/e2e-maestro-emulator.sh
+            APK_PATH=android/app/build/outputs/apk/release/app-release.apk MAESTRO_RESULTS_DIR=maestro-results bash scripts/e2e-maestro-emulator.sh
 
       - name: Upload Maestro artifacts (on failure)
         # Screenshots, videos, maestro.log and the JUnit report — uploaded only

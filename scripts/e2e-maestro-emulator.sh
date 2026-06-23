@@ -24,7 +24,7 @@
 set -euo pipefail
 
 PACKAGE="com.persoack.cablesnap"
-APK_PATH="${APK_PATH:-android/app/build/outputs/apk/debug/app-debug.apk}"
+APK_PATH="${APK_PATH:-android/app/build/outputs/apk/release/app-release.apk}"
 MAESTRO_RESULTS_DIR="${MAESTRO_RESULTS_DIR:-maestro-results}"
 # Pin Maestro — never float `latest`. Overridable from the workflow env so the
 # version lives in one place (the workflow) but has a safe default here too.

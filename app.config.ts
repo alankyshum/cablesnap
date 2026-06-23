@@ -1,5 +1,14 @@
 import { ExpoConfig, ConfigContext } from "expo/config";
 
+// CI=true is set automatically by GitHub Actions (and most CI systems).
+// expo-dev-client makes the APK an Expo development launcher that shows a
+// "Development Servers" connect screen instead of launching the app — it
+// requires a live Metro bundler. For CI e2e builds (assembleDebug) we exclude
+// it so the debug APK embeds the Hermes JS bundle and launches as a standalone
+// app, which is what Maestro flows expect. Local dev builds (CI unset) keep
+// the dev client for the normal Expo Go / dev-client workflow.
+const isCI = process.env.CI === "true";
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "CableSnap",
@@ -31,7 +40,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: "cablesnap",
   plugins: [
     "expo-router",
-    "expo-dev-client",
+    // expo-dev-client is excluded in CI (CI=true) so that assembleDebug
+    // produces a self-contained APK with a bundled Hermes JS payload.
+    // Without this exclusion the debug APK is an Expo development launcher
+    // that shows "Development Servers" instead of launching the app.
+    ...(isCI ? [] : ["expo-dev-client" as const]),
     "expo-notifications",
     "expo-sqlite",
     "expo-audio",
