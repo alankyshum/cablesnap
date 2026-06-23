@@ -6,36 +6,35 @@ appId: com.persoack.cablesnap
 - tapOn: "Nutrition"
 - assertVisible: "Today"
 
-# Tap FAB to add food
-- tapOn:
-    id: "add-food-fab"
+# Open the Add Food sheet. The affordance is the Nutrition header button
+# (accessibilityLabel "Add food", app/(tabs)/_layout.tsx:63) — there is no
+# "add-food-fab" testID. It opens a BottomSheet titled "Add Food" whose body
+# is <InlineFoodSearch>.
+- tapOn: "Add food"
+- assertVisible: "Add Food"
 
-# Add Food screen
-- assertVisible: "New Food"
-- assertVisible: "Favorites"
-- assertVisible: "Database"
+# Reveal the manual-entry form. InlineFoodSearch shows search + meal chips by
+# default; the Food name / macro inputs live inside ManualFoodEntry, which is
+# collapsed until "Manual Entry" is tapped (ManualFoodEntry.tsx:25).
+- tapOn: "Manual Entry"
 
-# Fill in food details
+# Fill in food details (labels from ManualFoodEntry/MacroInputRow)
 - tapOn: "Food name"
 - inputText: "Chicken Breast"
-
 - tapOn: "Calories"
 - inputText: "165"
-
 - tapOn: "Protein (g)"
 - inputText: "31"
-
 - tapOn: "Carbs (g)"
 - inputText: "0"
-
 - tapOn: "Fat (g)"
 - inputText: "3.6"
 
-# Select meal type
+# Select meal type (chip label "Lunch", MealFavoritesBar / MEAL_LABELS.lunch)
 - tapOn: "Lunch"
 
-# Log the food
+# Log the food (button text "Log Food", ManualFoodEntry.tsx:37)
 - tapOn: "Log Food"
 
-# Should return to nutrition screen with the entry visible
+# Should return to the nutrition screen
 - assertVisible: "Nutrition"

@@ -10,27 +10,37 @@ appId: com.persoack.cablesnap
 - tapOn: "Add Exercise"
 - assertVisible: "Search exercises"
 
-# Search for an exercise and select it
+# Search for a seeded exercise and select it. "Barbell Bench Press" is not a
+# seeded exercise (only in test fixtures). "Bench Fly" is a real seed
+# (lib/seed.ts:278), exact and unambiguous.
 - tapOn: "Search exercises"
-- inputText: "Bench Press"
-- tapOn: "Barbell Bench Press"
+- inputText: "Bench Fly"
+- tapOn: "Bench Fly"
 
-# Back on session screen with the exercise added
-- assertVisible: "Barbell Bench Press"
+# Back on session screen with the exercise added.
+# The weight column header is "KG" for kg users (ExerciseGroupSetTable.tsx:78),
+# not "WEIGHT" (which was never a real header).
+- assertVisible: "Bench Fly"
 - assertVisible: "SET"
-- assertVisible: "WEIGHT"
+- assertVisible: "KG"
 - assertVisible: "REPS"
 
-# Fill in set 1 weight
+# Fill in set 1 weight. No "set-1-weight" testID exists. Inputs are identified
+# by accessibilityLabel (SetRow.tsx:271-272): "Set 1 weight, <value> kilograms"
+# and "Set 1 reps, <value>". Maestro text: is regex-matched so the prefix
+# "Set 1 weight" matches the full runtime label.
 - tapOn:
-    id: "set-1-weight"
+    text: "Set 1 weight"
 - inputText: "60"
 
 # Fill in set 1 reps
 - tapOn:
-    id: "set-1-reps"
+    text: "Set 1 reps"
 - inputText: "10"
 
-# Cancel the workout to clean up
+# Cancel the workout to clean up. The "Discard Workout?" dialog's confirm button
+# is "Delete" — confirmAction with destructive=true defaults to "Delete"
+# (lib/confirm.ts:25), not "Discard" (hooks/useSessionActions.ts:1242-1252).
 - tapOn: "Cancel Workout"
-- tapOn: "Discard"
+- assertVisible: "Discard Workout?"
+- tapOn: "Delete"
