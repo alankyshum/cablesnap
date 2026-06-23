@@ -118,6 +118,14 @@ export function SearchBar({
         placeholderTextColor={muted}
         value={displayValue}
         onChangeText={handleTextChange}
+        // Search fields must not autocorrect/autocapitalize: the soft keyboard's
+        // autocorrect rewrites multi-word queries (e.g. "Bench Fly" -> a composing
+        // "Fly" suggestion) which corrupts filter-as-you-type results and made the
+        // log-set e2e flow non-deterministic on the CI emulator (BLD-1793). Defaults
+        // sit before {...props} so an explicit caller override still wins.
+        autoCorrect={false}
+        autoCapitalize="none"
+        spellCheck={false}
         {...props}
       />
 
