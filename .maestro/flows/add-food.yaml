@@ -17,18 +17,39 @@ appId: com.persoack.cablesnap
 # default; the Food name / macro inputs live inside ManualFoodEntry, which is
 # collapsed until "Manual Entry" is tapped (ManualFoodEntry.tsx:25).
 - tapOn: "Manual Entry"
+- assertVisible: "Manual Food Entry"
 
-# Fill in food details (labels from ManualFoodEntry/MacroInputRow)
+# Fill in food details (labels from ManualFoodEntry/MacroInputRow).
+# After each inputText the soft keyboard stays open and covers the lower
+# portion of the BottomSheet (confirmed by a11y hierarchy in run 28003172449:
+# keyboard at [0,394][320,640] — the Calories field was below the fold /
+# outside the a11y tree). hideKeyboard dismisses the keyboard between fields
+# so subsequent tapOn/assertVisible targets are reachable.
 - tapOn: "Food name"
 - inputText: "Chicken Breast"
+- hideKeyboard
+
+# Scroll Calories into view in case the BottomSheet needs to reflow after
+# keyboard dismissal, then tap it.
+- scrollUntilVisible:
+    element: "Calories"
+    direction: DOWN
+    timeout: 20
 - tapOn: "Calories"
 - inputText: "165"
+- hideKeyboard
+
 - tapOn: "Protein (g)"
 - inputText: "31"
+- hideKeyboard
+
 - tapOn: "Carbs (g)"
 - inputText: "0"
+- hideKeyboard
+
 - tapOn: "Fat (g)"
 - inputText: "3.6"
+- hideKeyboard
 
 # Select meal type (chip label "Lunch", MealFavoritesBar / MEAL_LABELS.lunch)
 - tapOn: "Lunch"

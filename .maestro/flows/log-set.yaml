@@ -29,14 +29,19 @@ appId: com.persoack.cablesnap
 # by accessibilityLabel (SetRow.tsx:271-272): "Set 1 weight, <value> kilograms"
 # and "Set 1 reps, <value>". Maestro text: is regex-matched so the prefix
 # "Set 1 weight" matches the full runtime label.
+# hideKeyboard after inputText: soft keyboard stays open on the emulator and
+# can obscure the "Set 1 reps" field (same below-fold pattern as add-food,
+# confirmed by run 28003172449 hierarchy).
 - tapOn:
     text: "Set 1 weight"
 - inputText: "60"
+- hideKeyboard
 
 # Fill in set 1 reps
 - tapOn:
     text: "Set 1 reps"
 - inputText: "10"
+- hideKeyboard
 
 # Cancel the workout to clean up. The "Discard Workout?" dialog's confirm button
 # is "Delete" — confirmAction with destructive=true defaults to "Delete"
