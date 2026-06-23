@@ -99,6 +99,27 @@ export async function enablePerWorkerDb(page: Page, parallelIndex: number) {
 }
 
 /**
+ * Inject a backup-JSON string that `pickImportBackup`
+ * (app/(tabs)/_settings-handlers.ts) will return in place of the OS file
+ * picker (BLD-1769), so the production "Import data" → category sheet →
+ * router.push("/settings/import-backup") flow runs headless and gives
+ * expo-router's Stack the back-history the nav-header guard requires. The
+ * app-side check is guarded by `navigator.webdriver === true` (Playwright sets
+ * it automatically) so a console-injected flag in a real user's browser can
+ * never bypass their picker.
+ *
+ * Call once per page context, BEFORE the first `goto()` (addInitScript only
+ * applies to subsequent navigations).
+ */
+export async function enableImportBackupFixture(page: Page, backupJson: string) {
+  await page.addInitScript((raw) => {
+    (
+      window as unknown as Record<string, unknown>
+    ).__E2E_IMPORT_BACKUP_FIXTURE__ = raw;
+  }, backupJson);
+}
+
+/**
  * Run axe-core and assert zero critical accessibility violations.
  * Serious violations are attached as annotations (warnings) to the test.
  * Critical violations cause a hard failure.
