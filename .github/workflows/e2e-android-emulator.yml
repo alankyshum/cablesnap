@@ -252,21 +252,35 @@ jobs:
           cores: 4
           ram-size: 4096M
           heap-size: 512M
-          # Headless boot tuning copied verbatim from scheduled-release.yml:
-          # no window, software GPU, no audio/boot-anim/snapshot. Reduces boot
-          # time and avoids GPU init hangs. (GPU is software via swiftshader; CPU
-          # virtualization is the KVM accel forced above — independent concerns.)
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
+          # Headless boot tuning: no window, software GPU, no audio/boot-anim/
+          # snapshot. GPU mode is `-gpu swiftshader` (pure Swiftshader, no
+          # gfxstream indirect path). swiftshader_indirect routes rendering
+          # through the gfxstream host-side ColorBuffer allocator; on a loaded
+          # post-build runner that allocator loses a buffer handle after ~1-2
+          # rendered frames and the emulator hangs indefinitely on the next
+          # draw call ("Failed to find ColorBuffer: 124" — run 28029970348
+          # timed out at 45 min after onboarding passed but add-food never
+          # started). The pure `swiftshader` mode bypasses gfxstream entirely
+          # and renders all GL calls in-process; it is ~5-10% slower for
+          # frame-heavy scenarios but is stable across long multi-flow runs.
+          # CPU virtualization is the KVM accel forced above — independent
+          # from the GPU rendering path.
+          emulator-options: -no-window -gpu swiftshader -noaudio -no-boot-anim -no-snapshot-save -camera-back none
           disable-animations: true
           # Single-line invocation: the action runs each `script:` line as its
           # own `/bin/sh -c`, so all logic lives in the bash script (BLD-981).
           script: |
             APK_PATH=android/app/build/outputs/apk/release/app-release.apk MAESTRO_RESULTS_DIR=maestro-results bash scripts/e2e-maestro-emulator.sh
 
-      - name: Upload Maestro artifacts (on failure)
-        # Screenshots, videos, maestro.log and the JUnit report — uploaded only
-        # when the gate fails so a human/agent can triage the broken flow.
-        if: failure() && steps.kvm.outputs.kvm_present == 'true'
+      - name: Upload Maestro artifacts (on failure or timeout)
+        # Screenshots, videos, maestro.log and the JUnit report — uploaded when
+        # the gate fails OR is cancelled (timeout). `failure()` covers flow
+        # assertion failures; `cancelled()` covers the workflow timeout-minutes
+        # cap firing mid-run (e.g. run 28029970348 timed out at 45 min with no
+        # Maestro artifact because the old `failure()`-only condition skipped
+        # upload on cancel). Including cancelled() ensures triage artifacts are
+        # available for both failure modes.
+        if: (failure() || cancelled()) && steps.kvm.outputs.kvm_present == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: maestro-results
