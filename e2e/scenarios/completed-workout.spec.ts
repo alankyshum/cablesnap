@@ -58,6 +58,24 @@ test.describe("@scenario completed-workout", () => {
     });
     await page.waitForTimeout(500);
 
+    // Scroll the inner React Native FlatList (not the document) to the bottom
+    // so below-fold content (Estimated pacing card, Sets card, action buttons)
+    // is captured. window.scrollTo() does not move RN's scroll container —
+    // scroll the testID element directly (same fix as settings.spec.ts BLD-1124).
+    const scrollEl = page.getByTestId("summary-scroll-view");
+    await scrollEl.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await page.waitForTimeout(300);
+
+    // scrollIntoViewIfNeeded() as a surgical follow-up handles stale scrollHeight
+    // when content renders after the initial scroll (same pattern as settings spec).
+    const viewDetailsButton = page.getByText("View Details", { exact: true });
+    await viewDetailsButton.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(200);
+
+    // Assert the terminal element is visible before capturing so the spec detects
+    // any future below-fold regression.
+    await expect(viewDetailsButton).toBeInViewport({ timeout: 5_000 });
+
     const viewport = "mobile";
     await captureWithCvd({
       page,
