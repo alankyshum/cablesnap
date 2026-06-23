@@ -33,10 +33,10 @@ appId: com.persoack.cablesnap
 # Tapping the wrapped LABEL text (tapOn: "Protein (g)") landed on the label
 # geometry, not the input's editable region — focus never moved, so the macro
 # inputText values bled into the still-focused Calories field
-# (run 28012401877: Calories read "1653103.6" = 165+31+0+3.6 concatenated, and
-# scrollUntilVisible "Log Food" then timed out). testIDs land directly on the
-# <TextInput> nodes (Input/Button spread {...props}) and a tap on a TextInput
-# natively focuses it — deterministic regardless of label wrapping or viewport.
+# (run 28012401877: Calories read "1653103.6" = 165+31+0+3.6 concatenated).
+# testIDs land directly on the <TextInput> nodes (Input spreads {...props})
+# and a tap on a TextInput natively focuses it — deterministic regardless of
+# label wrapping or viewport.
 # hideKeyboard between fields keeps lower fields/the submit button reachable
 # (the soft keyboard otherwise covers the bottom half of the BottomSheet).
 
@@ -75,17 +75,25 @@ appId: com.persoack.cablesnap
 - inputText: "3.6"
 - hideKeyboard
 
-# Log the food. The button (testID "log-food-button", text "Log Food") sits at
-# the bottom of the expanded form, below the macro row + serving size + the
-# "Save as favorite" chip — scroll it into view before tapping. It is enabled
-# once a food name is present (disabled={saving || !name.trim()}).
-- scrollUntilVisible:
-    element:
-      id: "log-food-button"
-    direction: DOWN
-    timeout: 20
-- tapOn:
-    id: "log-food-button"
+# Log the food. The "Log Food" Button (testID "log-food-button",
+# ManualFoodEntry.tsx:37) sits at the bottom of the expanded form, below
+# the macro row + serving size input + "Save as favorite" chip.
+#
+# Why swipeUp + text tap, NOT scrollUntilVisible+id (BLD-1793 run 28016615825):
+# The BottomSheet uses a custom Animated.View wrapping a plain React Native
+# ScrollView (components/ui/bottom-sheet.tsx:104). Maestro's scrollUntilVisible
+# walks the UIAutomator2 accessibility tree to find a scrollable parent; the
+# Animated.View wrapper breaks this detection, so the scroll never reaches the
+# button and the 20s timeout is exhausted every run.
+# swipeUp is a physical gesture that scrolls whatever is currently receiving
+# touch input — it works regardless of scroll container type.
+# We use the rendered text "Log Food" (not the testID) because text-based
+# tapOn matches the visible label in the Button's Text child, which is always
+# present in the accessibility tree once the form is expanded, independent of
+# the disabled state (disabled={saving || !name.trim()}, which is false here
+# since we filled "Chicken Breast").
+- swipeUp
+- tapOn: "Log Food"
 
 # Should return to the nutrition screen
 - assertVisible: "Nutrition"
