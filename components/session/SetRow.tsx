@@ -468,6 +468,7 @@ export const SetRow = memo(function SetRow({
                 isCable={isCable}
                 stacks={stacksProp}
                 accessibilityLabel={a11yWeightLabel}
+                testID={`set-${set.set_number}-weight`}
                 onWeightChange={onWeightChange}
                 onManualWeightSave={handleManualWeightSave}
                 onMarkerConfirm={handleMarkerConfirm}
@@ -495,6 +496,7 @@ export const SetRow = memo(function SetRow({
                 step={1}
                 onValueChange={onRepsChange}
                 accessibilityLabel={a11yRepsLabel}
+                testID={`set-${set.set_number}-reps`}
                 max={999}
               />
             </View>

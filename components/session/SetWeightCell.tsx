@@ -46,6 +46,7 @@ export type SetWeightCellProps = {
   isCable: boolean;
   stacks: StackWithCalibrations[];
   accessibilityLabel: string;
+  testID?: string;
   /** Normal numeric weight change (no stack context). */
   onWeightChange: (val: number) => void;
   /** AC5: weight save after long-pressing a marker-logged pill. Must clear stack cols. */
@@ -65,6 +66,7 @@ export function SetWeightCell({
   isCable,
   stacks,
   accessibilityLabel,
+  testID,
   onWeightChange,
   onManualWeightSave,
   onMarkerConfirm,
@@ -159,6 +161,7 @@ export function SetWeightCell({
           unit={unit}
           onValueChange={keypadOverride ? handleKeypadWeightChange : onWeightChange}
           accessibilityLabel={accessibilityLabel}
+          testID={testID}
         />
         {showUpsellAffordance && (
           <Pressable

@@ -32,7 +32,7 @@ appId: com.persoack.cablesnap
 # Without any search query the picker shows the full alphabetical list
 # (56 exercises). "Bench Fly" is the 3rd entry alphabetically (after
 # "Abdominal Crunches" and "Anti-rotational Supine Bicycle"). It sits near
-# the visible top of the list at SNAP_MID when there is NO keyboard.
+# the visible top of the list at SNAP_OPEN (covers ~88% of screen, BLD-1841).
 #
 # scrollUntilVisible + the testID "exercise-list" (added to the FlatList in
 # ExercisePickerSheet.tsx in the same commit) ensures Bench Fly is in view
@@ -113,21 +113,40 @@ appId: com.persoack.cablesnap
 - assertVisible: "KG"
 - assertVisible: "REPS"
 
-# Fill in set 1 weight. No "set-1-weight" testID exists. Inputs are identified
-# by accessibilityLabel (SetRow.tsx:271-272): "Set 1 weight, <value> kilograms"
-# and "Set 1 reps, <value>". Maestro text: is regex-matched so the prefix
-# "Set 1 weight" matches the full runtime label.
-# hideKeyboard after inputText: soft keyboard stays open on the emulator and
-# can obscure the "Set 1 reps" field (same below-fold pattern as add-food,
-# confirmed by run 28003172449 hierarchy).
+# Fill in set 1 weight. The WeightPicker TextInput has
+#   testID="set-1-weight"  (SetRow.tsx → SetWeightCell.tsx → WeightPicker.tsx)
+# and accessibilityLabel="Set 1 weight, 0 kilograms".
+#
+# WHY id: not text: (run 28055938518 failure: "Element not found: Text matching
+# regex: Set 1 weight"): On Android, UIAutomator2 reports a TextInput's *value*
+# ("0") as its text, not the accessibilityLabel. Maestro's text: selector
+# matches against view text, so "Set 1 weight" never matched the "0" text node.
+# tapOn id: resolves against the native view tag (testID), which is never
+# shadowed by text or accessibilityLabel — the same fix shape as every other
+# input in this flow family.
+#
+# scrollUntilVisible first: the session FlatList may not have fully settled
+# after the exercise picker dismisses. The Set 1 row is near the top on this
+# 320x640 emulator, but a defensive scroll costs nothing if already visible.
+- scrollUntilVisible:
+    element:
+      id: "set-1-weight"
+    direction: DOWN
+    timeout: 10
 - tapOn:
-    text: "Set 1 weight"
+    id: "set-1-weight"
 - inputText: "60"
 - hideKeyboard
 
-# Fill in set 1 reps
+# Fill in set 1 reps. Same testID pattern: set-1-reps
+# (SetRow.tsx → WeightPicker.tsx testID="set-1-reps").
+- scrollUntilVisible:
+    element:
+      id: "set-1-reps"
+    direction: DOWN
+    timeout: 10
 - tapOn:
-    text: "Set 1 reps"
+    id: "set-1-reps"
 - inputText: "10"
 - hideKeyboard
 
