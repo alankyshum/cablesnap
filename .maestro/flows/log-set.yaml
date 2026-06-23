@@ -42,7 +42,18 @@ appId: com.persoack.cablesnap
 # Back on session screen with the exercise added.
 # The weight column header is "KG" for kg users (ExerciseGroupSetTable.tsx:78),
 # not "WEIGHT" (which was never a real header).
-- assertVisible: "Bench Fly"
+#
+# Wait for the session screen to settle after the picker dismisses (BLD-1793,
+# run 28040824464: "Assertion is false: 'Bench Fly' is visible"). After tapOn
+# the picker row, ExercisePickerSheet animates closed (withTiming 200ms) and
+# the session screen re-renders with the new exercise group. A bare assertVisible
+# races this dismiss + render cycle and can fail before Bench Fly is in the
+# layout tree. extendedWaitUntil absorbs the dismiss animation latency without
+# masking a genuinely-broken pick. 5s is generous relative to the 200ms
+# animation but tight enough to catch a real failure.
+- extendedWaitUntil:
+    visible: "Bench Fly"
+    timeout: 5000
 - assertVisible: "SET"
 - assertVisible: "KG"
 - assertVisible: "REPS"
