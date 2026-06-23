@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Fix: Add Food sheet now scrolls to the "Log Food" button** — when adding a food via Manual Entry, the bottom sheet's drag-to-dismiss gesture was intercepting vertical swipes, so the form couldn't be scrolled and the "Log Food" button at the bottom was unreachable (especially with the keyboard open). The Add Food sheet's pan-to-dismiss is now disabled, so its content scrolls normally; the sheet is still dismissable via the backdrop or the in-form Cancel button. (BLD-1793)
 
 ## v0.26.38 — 2026-06-22
 <!-- versionCode: 108 -->
