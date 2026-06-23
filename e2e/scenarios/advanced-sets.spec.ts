@@ -16,6 +16,7 @@
  */
 import { test, expect } from "@playwright/test";
 import * as path from "path";
+import { enablePerWorkerDb } from "../helpers";
 
 const SCENARIO = "advanced-sets";
 const OUT_DIR = path.resolve(
@@ -50,6 +51,14 @@ test.describe("@scenario advanced-sets", () => {
       !process.env.E2E_USE_STATIC,
       "requires E2E_USE_STATIC=1 — dev server lacks COOP/COEP headers, rendering WebUnsupportedScreen instead of the app. See e2e/README.md.",
     );
+  });
+
+  // BLD-1791: isolate each parallel worker's IndexedDB SQLite DB so the AC #265
+  // kill+relaunch persistence test (which seeds rows then reloads expecting them
+  // to survive) is not raced by a sibling spec's seedScenario() clearing the
+  // shared `cablesnap.db` tables. Registers BEFORE any goto in every test.
+  test.beforeEach(async ({ page }, testInfo) => {
+    await enablePerWorkerDb(page, testInfo.parallelIndex);
   });
 
   test("help screen renders all three advanced set type entries", async ({ page }) => {
@@ -184,9 +193,12 @@ test.describe("@scenario advanced-sets", () => {
 
   // AC #265 — kill+relaunch simulation using real page.reload().
   //
-  // The web DB primary path is `openDatabaseAsync("cablesnap.db")` (lib/db/helpers.ts:64)
-  // which uses IndexedDB-backed SQLite on Chromium — data SURVIVES page.reload() within
-  // the same browser context.
+  // The web DB primary path opens an IndexedDB-backed SQLite database via
+  // `openDatabaseAsync(resolveDbName())` (lib/db/helpers.ts) — data SURVIVES
+  // page.reload() within the same browser context. Under Playwright the name is
+  // this worker's isolated `cablesnap-e2e-w<idx>.db` (BLD-1791, via the
+  // beforeEach above), so a concurrent worker's seedScenario() table-clear can't
+  // wipe these rows between the seed and the post-reload assertion.
   //
   // Seed strategy: use page.evaluate() to inject __TEST_SCENARIO__ into the LIVE page
   // BEFORE useAppInit fires (via addInitScript for first load only), then on reload
@@ -246,8 +258,23 @@ test.describe("@scenario advanced-sets", () => {
     // - net result: no __TEST_SCENARIO__ → guardsAllow()=false → seedScenario() no-op
     // - IndexedDB rows from first load persist → useSessionDetail renders them
     await page.reload();
-    // No data-test-ready signal (seedScenario didn't run); wait on actual content.
-    await expect(page.getByText("RP")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("100 × 8+3+2 (13)")).toBeVisible();
+
+    // After reload there is NO data-test-ready signal (seedScenario is a no-op
+    // by design), so we must wait on real content. BLD-1791: on reload the
+    // expo-sqlite WASM worker is COLD — useSessionDetail's drizzle sync reads
+    // race the worker warm-up (BLD-1636), and under multi-worker CPU contention
+    // that warm-up + first read can exceed a tight timeout. The failure mode is
+    // NOT data loss (the persisted `workout_sessions` row renders the screen
+    // header immediately); it is the rest_pause set chip rendering a few seconds
+    // later once the cold worker drains the sets query. So we anchor on the
+    // session header first (proves persistence + screen mount), THEN assert the
+    // chip and decomposition with a cold-worker-tolerant timeout.
+    await expect(
+      page.getByRole("heading", { name: "Advanced Sets E2E Session" }),
+    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("RP")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("100 × 8+3+2 (13)")).toBeVisible({
+      timeout: 20_000,
+    });
   });
 });

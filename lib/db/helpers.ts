@@ -106,6 +106,38 @@ function devCountQuery(kind: string): void {
 
 const DB_NAME = "cablesnap.db";
 
+/**
+ * BLD-1791: resolve the IndexedDB database name. In production this is always
+ * the fixed {@link DB_NAME} constant. Under Playwright the web origin (and thus
+ * the IndexedDB store) is shared across all parallel workers, so a fixed name
+ * means every worker hammers ONE persistent SQLite DB. The scenario seed
+ * (`lib/db/test-seed.ts`) clears `workout_sessions`/`workout_sets` at the start
+ * of every load, so a concurrent worker can wipe another worker's seeded rows
+ * mid-test — flaking the AC #265 kill+relaunch persistence assertion.
+ *
+ * To give each worker an isolated origin-local DB we let the test harness inject
+ * a per-worker name via `window.__E2E_DB_NAME__`. The override is honored ONLY
+ * when `navigator.webdriver === true` — the same hardening used by the
+ * `__E2E_EXERCISE_FIXTURE__` escape hatch (lib/db/exercises.ts). A real user
+ * never has `navigator.webdriver`, and a console-injected flag is ignored, so
+ * production data routing is unaffected. `:memory:` is intentionally NOT
+ * overridable here — that fallback path is for crossOriginIsolated failures and
+ * must stay deterministic.
+ *
+ * Exported for unit tests (mirrors the `guardsAllow()` convention in
+ * lib/db/test-seed.ts).
+ */
+export function resolveDbName(): string {
+  if (typeof navigator === "undefined") return DB_NAME;
+  const nav = navigator as Navigator & { webdriver?: boolean };
+  if (!nav.webdriver) return DB_NAME;
+  if (typeof window === "undefined") return DB_NAME;
+  const override = (window as unknown as { __E2E_DB_NAME__?: unknown })
+    .__E2E_DB_NAME__;
+  if (typeof override === "string" && override.length > 0) return override;
+  return DB_NAME;
+}
+
 // Store singleton on globalThis so hot-reload doesn't orphan connections
 const g = globalThis as unknown as {
   __cablesnap_db?: SQLite.SQLiteDatabase;
@@ -187,11 +219,14 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   let pending = getInit();
   if (!pending) {
     pending = (async () => {
-      dbBreadcrumb("init_start", { db_name: DB_NAME });
+      // BLD-1791: resolve once so the open call and every breadcrumb agree on
+      // the effective name (prod == DB_NAME; under Playwright == per-worker name).
+      const dbName = resolveDbName();
+      dbBreadcrumb("init_start", { db_name: dbName });
       let openedInstance: SQLite.SQLiteDatabase | null = null;
       let currentPhase: DatabaseUnavailablePhase = "open";
       try {
-        openedInstance = await SQLite.openDatabaseAsync(DB_NAME);
+        openedInstance = await SQLite.openDatabaseAsync(dbName);
         const instance = openedInstance;
         // BLD-1257: sanity probe BEFORE any pragma/migration so a null/broken
         // native handle (Sentry REACT-NATIVE-7 NPE) is detected as
@@ -209,7 +244,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         // undoCsvImport prevent dangling rows. Prerequisite for BLD-1092
         // ON DELETE CASCADE on workout_sessions → workout_sets → set_media.
         await instance.execAsync("PRAGMA foreign_keys = ON");
-        dbBreadcrumb("pre_migrate", { db_name: DB_NAME });
+        dbBreadcrumb("pre_migrate", { db_name: dbName });
         currentPhase = "migrate";
         try {
           await migrate(instance);
@@ -217,7 +252,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
           const error = migrateErr instanceof Error ? migrateErr : new Error(String(migrateErr));
           throw error;
         }
-        dbBreadcrumb("post_migrate", { db_name: DB_NAME });
+        dbBreadcrumb("post_migrate", { db_name: dbName });
         currentPhase = "seed";
         try {
           await seed(instance);
@@ -303,7 +338,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         const dbError = new DatabaseUnavailableError(currentPhase, rawError);
         const sentryEventId = captureDatabaseFailureOnce(dbError, {
           phase: currentPhase,
-          db_name: DB_NAME,
+          db_name: dbName,
           error_message: rawError.message,
           error_stack: rawError.stack,
         });
