@@ -15,18 +15,21 @@ export function MacroInputRow({ protein, carbs, fat, onProteinChange, onCarbsCha
   return (
     <View style={styles.row}>
       <Input
+        testID="macro-protein-input"
         label="Protein (g)" value={protein} onChangeText={onProteinChange}
         keyboardType="numeric" variant="outline"
         containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
       />
       <View style={{ width: 8 }} />
       <Input
+        testID="macro-carbs-input"
         label="Carbs (g)" value={carbs} onChangeText={onCarbsChange}
         keyboardType="numeric" variant="outline"
         containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
       />
       <View style={{ width: 8 }} />
       <Input
+        testID="macro-fat-input"
         label="Fat (g)" value={fat} onChangeText={onFatChange}
         keyboardType="numeric" variant="outline"
         containerStyle={StyleSheet.flatten([styles.input, styles.flex])}

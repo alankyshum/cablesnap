@@ -27,14 +27,14 @@ export default function ManualFoodEntry({ saving, onSave, onFavoritesChanged }: 
       {expanded && (
         <View style={styles.formContent}>
           <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>Manual Food Entry</Text>
-          <Input label="Food name" value={name} onChangeText={setName} variant="outline" containerStyle={styles.formInput} />
-          <Input label="Calories" value={calories} onChangeText={setCalories} keyboardType="numeric" variant="outline" containerStyle={styles.formInput} />
+          <Input testID="food-name-input" label="Food name" value={name} onChangeText={setName} variant="outline" containerStyle={styles.formInput} />
+          <Input testID="food-calories-input" label="Calories" value={calories} onChangeText={setCalories} keyboardType="numeric" variant="outline" containerStyle={styles.formInput} />
           <MacroInputRow protein={protein} carbs={carbs} fat={fat} onProteinChange={setProtein} onCarbsChange={setCarbs} onFatChange={setFat} />
-          <Input label="Serving size" value={serving} onChangeText={setServing} variant="outline" containerStyle={styles.formInput} />
+          <Input testID="food-serving-input" label="Serving size" value={serving} onChangeText={setServing} variant="outline" containerStyle={styles.formInput} />
           <Chip selected={favorite} onPress={() => setFavorite(!favorite)} style={styles.favChip} accessibilityLabel={favorite ? "Remove manual entry from favorites" : "Save manual entry as favorite"} role="button" accessibilityState={{ selected: favorite }}>
             Save as favorite
           </Chip>
-          <Button variant="default" onPress={handleSave} loading={saving} disabled={saving || !name.trim()} accessibilityLabel="Log manual entry">Log Food</Button>
+          <Button testID="log-food-button" variant="default" onPress={handleSave} loading={saving} disabled={saving || !name.trim()} accessibilityLabel="Log manual entry">Log Food</Button>
         </View>
       )}
     </View>
