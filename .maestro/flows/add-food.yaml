@@ -39,15 +39,18 @@ appId: com.persoack.cablesnap
 - inputText: "165"
 - hideKeyboard
 
-- tapOn: "Protein (g)"
+- tapOn:
+    text: "Protein \\(g\\)"
 - inputText: "31"
 - hideKeyboard
 
-- tapOn: "Carbs (g)"
+- tapOn:
+    text: "Carbs \\(g\\)"
 - inputText: "0"
 - hideKeyboard
 
-- tapOn: "Fat (g)"
+- tapOn:
+    text: "Fat \\(g\\)"
 - inputText: "3.6"
 - hideKeyboard
 
