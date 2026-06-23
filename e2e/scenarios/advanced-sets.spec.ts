@@ -14,7 +14,7 @@
  *
  * Refs: BLD-1168, BLD-1176.
  */
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page, type Locator } from "@playwright/test";
 import * as path from "path";
 import { enablePerWorkerDb } from "../helpers";
 
@@ -179,33 +179,234 @@ test.describe("@scenario advanced-sets", () => {
     ).toBeVisible();
   });
 
-  // BLD-1769 — DOM-level navigation-header regression guard (web).
+  // BLD-1769 — DOM-level navigation-header regression guard (web), parameterized
+  // over every settings sub-screen the audit covers.
   //
-  // Reaches the help screen via the PRODUCTION push flow (/settings → tap
-  // "Advanced Set Types") and asserts, in the live web DOM, that the header
-  // renders BOTH:
+  // The guard asserts, in the live web DOM, that each affected settings
+  // sub-screen renders BOTH:
   //   1. a visible page title — <h1 role="heading" aria-level="1">  (HeaderTitle)
   //   2. a visible, working back control — on web @react-navigation's
   //      HeaderBackButton renders as <a role="link" aria-label="…, back">
   //      (react-native-web makes it an anchor because the button gets an href).
-  //      The accessible name is derived from the previous route, so in this flow
-  //      it is "(tabs), back".
+  //      The accessible name is computed from the PREVIOUS route, so in the
+  //      /settings push flow it is "(tabs), back".
   //
   // Why this test exists and why it is shaped this way:
   //   - The BLD-1668 guard (__tests__/navigation-headers.test.ts) only asserts
   //     the SCREEN_CONFIGS *object* has the entry — it never renders the screen,
   //     so it passed while the audit kept flagging a "missing header". A
   //     config-only assertion is NOT an acceptable sole guard (it is exactly
-  //     what let this recur). This is a real DOM assertion that mounts the route.
-  //   - It MUST use the push flow, not page.goto("/settings/advanced-sets"):
-  //     a deep link leaves the Stack with no back-history, so canGoBack === false
-  //     and the back control is (correctly) not rendered. The push flow is the
-  //     real user path and is the only way the back control exists — so this
-  //     test would FAIL on a deep-link-only capture, which is the proof that it
-  //     guards the actual production affordance.
+  //     what let this recur — BLD-1668 → BLD-1769). These are real DOM
+  //     assertions that mount each production route.
+  //   - The back-control assertion REQUIRES the push flow, not
+  //     page.goto("/settings/<route>"): a deep link leaves the Stack with no
+  //     back-history, so canGoBack === false and the back control is (correctly)
+  //     not rendered. The push flow is the real user path and the only way the
+  //     back control exists — so each case would FAIL on a deep-link-only
+  //     capture, which is the proof that it guards the actual production
+  //     affordance (see the dedicated pre-fix-path negative test below).
   //   - It also confirms the back control FUNCTIONS (navigates away from the
-  //     help screen), not merely that it paints.
-  test("web header renders visible title + working back control via push flow (BLD-1769)", async ({
+  //     sub-screen), not merely that it paints.
+  //
+  // Coverage of all five affected settings sub-screens (BLD-1769 AC):
+  //   advanced-sets, gym-profiles, macro-coach, backups  → full push-flow guard
+  //     below (title + working back control), reached via their real production
+  //     entry control on /settings.
+  //   import-backup → covered by the separate render guard further down. Its
+  //     only production entry is the file-import sheet ("Import data" →
+  //     pickImportBackup → router.push), which opens an OS file picker that
+  //     cannot be driven headless; the back-control mechanism it would use is
+  //     the SAME shared app/_layout.tsx Stack + SCREEN_CONFIGS chrome that the
+  //     four routes above DOM-verify, so it is guarded at the route+title level
+  //     plus that shared mechanism. See the comment on that test.
+
+  type SettingsHeaderCase = {
+    /** Expo Router route name (matches SCREEN_CONFIGS / the URL path tail). */
+    route: string;
+    /** Accessible name of the control on /settings that pushes this route. */
+    entryControlName: string;
+    /** The exact title @react-navigation renders as the <h1> header heading. */
+    headerTitle: string;
+    /**
+     * Locator for a body element that proves we mounted the right sub-screen
+     * (not a header-only shell). Provided as a factory so each case can pick the
+     * most reliably-visible element — react-native-web wraps text in nested
+     * spans where outer wrappers can compute as hidden, so role-based locators
+     * (e.g. a button) are preferred over raw getByText for async/empty bodies.
+     */
+    bodyMarker: (page: Page) => Locator;
+    /**
+     * How to activate the entry control. "press" = normal Playwright click.
+     * "dispatch" = synthetic DOM click event, needed for the "View all backups"
+     * button which sits at the bottom of the settings list behind the tab-bar
+     * overlay, so Playwright's actionability check can never land a real click
+     * even after scrollIntoViewIfNeeded. dispatchEvent still triggers the real
+     * onPress → router.push, so the navigation (and resulting back-history) is
+     * identical to a user tap.
+     */
+    clickStrategy: "press" | "dispatch";
+  };
+
+  const SETTINGS_HEADER_CASES: SettingsHeaderCase[] = [
+    {
+      route: "settings/advanced-sets",
+      entryControlName: "Open advanced set types help",
+      headerTitle: "Advanced Set Types",
+      // The "Rest-pause" section title on the help screen.
+      bodyMarker: (page) =>
+        page.getByText("Rest-pause", { exact: true }).first(),
+      clickStrategy: "press",
+    },
+    {
+      route: "settings/gym-profiles",
+      entryControlName: "Open gym profiles settings",
+      headerTitle: "Gym Profiles",
+      // Body copy unique to the gym-profiles screen (not the header heading).
+      bodyMarker: (page) =>
+        page
+          .getByText(/Add gyms here if you train across multiple locations/i)
+          .first(),
+      clickStrategy: "press",
+    },
+    {
+      route: "settings/macro-coach",
+      entryControlName: "Open Adaptive Macro Coach settings",
+      // macro-coach overrides the SCREEN_CONFIGS "Macro Coach" title per
+      // internal flow state; a fresh session lands on the "main" screen whose
+      // <Stack.Screen> sets this title (app/settings/macro-coach.tsx).
+      headerTitle: "Adaptive Macro Coach",
+      // The enable toggle on the main macro-coach screen — a reliably-visible
+      // interactive element distinct from the header.
+      bodyMarker: (page) =>
+        page.getByRole("switch", { name: "Enable Adaptive Macro Coach" }),
+      clickStrategy: "press",
+    },
+    {
+      route: "settings/backups",
+      entryControlName: "View all backups",
+      headerTitle: "Backups",
+      // The backups list loads async and, with no seeded backups, settles on an
+      // empty state whose text wrapper can compute as hidden under
+      // react-native-web. The "Backup Now" action is a reliably-visible button
+      // on that screen, so use it as the mount marker.
+      bodyMarker: (page) =>
+        page.getByRole("button", { name: "Create a backup now" }),
+      clickStrategy: "dispatch",
+    },
+  ];
+
+  for (const c of SETTINGS_HEADER_CASES) {
+    test(`web header renders visible title + working back control via push flow — ${c.route} (BLD-1769)`, async ({
+      page,
+    }) => {
+      await page.addInitScript(() => {
+        const w = window as unknown as Record<string, unknown>;
+        w.__SKIP_ONBOARDING__ = true;
+      });
+
+      // Production push path: /settings → activate the row that pushes the route.
+      // The static web bundle cold-boots the whole app on this first navigation;
+      // give it a generous window to render the settings list container.
+      await page.goto("/settings");
+      await expect(page.getByTestId("settings-scroll-view")).toBeVisible({
+        timeout: 30_000,
+      });
+
+      const entry = page.getByRole("button", { name: c.entryControlName });
+      await entry.scrollIntoViewIfNeeded();
+      await expect(entry).toBeVisible({ timeout: 10_000 });
+      if (c.clickStrategy === "dispatch") {
+        // Nudge the RN ScrollView up so the row clears the tab-bar overlay, then
+        // fire a synthetic click — see SettingsHeaderCase.clickStrategy docs.
+        await page.evaluate(() => {
+          const sv = document.querySelector(
+            '[data-testid="settings-scroll-view"]',
+          ) as HTMLElement | null;
+          if (sv) sv.scrollTop = Math.max(0, sv.scrollTop - 120);
+        });
+        await page.waitForTimeout(500);
+        await entry.dispatchEvent("click");
+      } else {
+        await entry.click();
+      }
+
+      // Landed on the sub-screen URL (push, not a hard deep-link).
+      await expect(page).toHaveURL(new RegExp(`/${c.route}(\\?|$|/)`), {
+        timeout: 15_000,
+      });
+
+      // (1) Header title is a real, visible DOM heading on web.
+      const headerTitle = page.getByRole("heading", {
+        level: 1,
+        name: c.headerTitle,
+      });
+      await expect(headerTitle).toBeVisible({ timeout: 10_000 });
+
+      // Sub-screen body actually mounted (not a blank/error shell). Each case
+      // supplies the most reliably-visible body element via its bodyMarker
+      // factory (see SettingsHeaderCase.bodyMarker).
+      await expect(c.bodyMarker(page).first()).toBeVisible({ timeout: 10_000 });
+
+      // (2) Back control is present and visible. On web the HeaderBackButton
+      // renders as <a role="link"> (react-native-web makes it an anchor because
+      // @react-navigation gives it an href). Its accessible name is computed
+      // from the PREVIOUS route ("(tabs), back" here) rather than the generic
+      // "Go back" default — match by role=link with an aria-label ending in
+      // "back" (case-insensitive) so the assertion survives that computed label.
+      //
+      // Scoping per reviewer note: these sub-screens render exactly one link in
+      // the DOM (the header back affordance — verified empirically), so this
+      // aria-label-filtered link locator cannot collide with a content link. We
+      // assert that uniqueness explicitly so a future content link ending in
+      // "back" can't silently satisfy the guard.
+      const backControl = page
+        .getByRole("link")
+        .and(page.locator('[aria-label$="back" i]'));
+      await expect(backControl).toHaveCount(1, { timeout: 10_000 });
+      await expect(backControl).toBeVisible({ timeout: 5_000 });
+
+      // (3) The back control actually works: activating it leaves the sub-screen
+      // (its header title is no longer shown). We assert navigation happened
+      // rather than a specific destination — goBack() pops the Stack to whatever
+      // the previous route was, which is enough to prove the affordance
+      // functions, not just paints.
+      //
+      // Reuse the case's clickStrategy: the backups screen surfaces stacked
+      // "Failed to load backups" toasts in the headless static build (no real
+      // filesystem), which overlay the top-of-screen back chevron and block a
+      // real click — dispatchEvent fires the anchor's click handler directly,
+      // exercising the same navigation a user tap would.
+      if (c.clickStrategy === "dispatch") {
+        await backControl.dispatchEvent("click");
+      } else {
+        await backControl.click();
+      }
+      await expect(headerTitle).toBeHidden({ timeout: 10_000 });
+    });
+  }
+
+  // BLD-1769 — import-backup header render guard (web).
+  //
+  // Unlike the four routes above, /settings/import-backup has no standalone
+  // navigable row: its only production entry is the file-import sheet
+  // ("Import data" on /settings → pickImportBackup → router.push), which opens
+  // an OS file picker that Playwright cannot drive headless. Its navigation
+  // header is produced by the SAME app/_layout.tsx Stack + SCREEN_CONFIGS
+  // (headerShown: true, title: "Import Backup") whose back affordance the four
+  // push-flow guards above already DOM-verify.
+  //
+  // So here we mount the production route and assert its header TITLE paints in
+  // the live web DOM (the config-vs-render gap that let BLD-1668 recur). The
+  // back control is intentionally NOT asserted here — reaching the route by URL
+  // gives the Stack no back-history, so @react-navigation correctly omits the
+  // chevron; asserting it would be wrong. Back-affordance coverage for the
+  // shared settings header mechanism is provided by the four sibling routes
+  // above.
+  //
+  // The static web bundle renders a blank tree on a *cold* deep-link to a
+  // sub-route (the app must boot first), so we boot via /settings, then
+  // navigate to the import-backup route with a minimal valid payload.
+  test("web header renders visible title — settings/import-backup (BLD-1769)", async ({
     page,
   }) => {
     await page.addInitScript(() => {
@@ -213,49 +414,34 @@ test.describe("@scenario advanced-sets", () => {
       w.__SKIP_ONBOARDING__ = true;
     });
 
-    // Production push path: /settings → tap the "Advanced Set Types" row.
+    // Boot the app first (cold deep-link to a sub-route renders blank).
     await page.goto("/settings");
-    await expect(page.locator("body")).toBeVisible({ timeout: 15_000 });
-    await page.waitForTimeout(600);
-
-    const helpRow = page.getByRole("button", {
-      name: "Open advanced set types help",
+    await expect(page.getByTestId("settings-scroll-view")).toBeVisible({
+      timeout: 30_000,
     });
-    await helpRow.scrollIntoViewIfNeeded();
-    await expect(helpRow).toBeVisible({ timeout: 5_000 });
-    await helpRow.click();
 
-    // Content mounted (confirms we landed on the help sub-screen).
-    await expect(page.getByText("Rest-pause", { exact: true }).first()).toBeVisible({
+    // Navigate to the production route. A minimal valid backup payload is
+    // supplied so the screen renders its Import Preview shell rather than only
+    // the "No backup data provided." fallback — either way the Stack header
+    // (title) is what we assert.
+    const backupJson = encodeURIComponent(
+      JSON.stringify({
+        version: 1,
+        exported_at: new Date().toISOString(),
+        app_version: "test",
+        exercises: [],
+      }),
+    );
+    await page.goto(`/settings/import-backup?backupJson=${backupJson}`);
+    await expect(page).toHaveURL(/\/settings\/import-backup/, {
       timeout: 15_000,
     });
 
-    // (1) Header title is a real, visible DOM heading on web.
     const headerTitle = page.getByRole("heading", {
       level: 1,
-      name: "Advanced Set Types",
+      name: "Import Backup",
     });
-    await expect(headerTitle).toBeVisible({ timeout: 5_000 });
-
-    // (2) Back control is present and visible. On web the HeaderBackButton
-    // renders as <a role="link"> (react-native-web makes it an anchor because
-    // @react-navigation gives it an href). Its accessible name is computed from
-    // the PREVIOUS route, so here it is "(tabs), back" rather than the generic
-    // "Go back" default — match by role=link with an aria-label ending in
-    // "back" (case-insensitive) so the assertion is robust to that computed
-    // label while still being scoped to the header back affordance.
-    const backControl = page
-      .getByRole("link")
-      .and(page.locator('[aria-label$="back" i]'));
-    await expect(backControl.first()).toBeVisible({ timeout: 5_000 });
-
-    // (3) The back control actually works: clicking it leaves the advanced-sets
-    // help screen (the header title is no longer shown). We assert navigation
-    // happened rather than a specific destination — goBack() pops the Stack to
-    // whatever the previous route was, which is enough to prove the affordance
-    // functions, not just paints.
-    await backControl.first().click();
-    await expect(headerTitle).toBeHidden({ timeout: 10_000 });
+    await expect(headerTitle).toBeVisible({ timeout: 10_000 });
   });
 
   // AC #265 — advanced set data through production session-detail mount path.
