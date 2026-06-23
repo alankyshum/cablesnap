@@ -54,15 +54,18 @@ appId: com.persoack.cablesnap
 # The weight column header is "KG" for kg users (ExerciseGroupSetTable.tsx:78),
 # not "WEIGHT" (which was never a real header).
 #
-# Wait for the session screen to settle after the picker dismisses. After tapOn
-# the picker row, ExercisePickerSheet animates closed (withTiming 200ms) and
-# the session screen re-renders with the new exercise group. A bare assertVisible
-# races this dismiss + render cycle. extendedWaitUntil absorbs the dismiss
-# animation latency without masking a genuinely-broken pick. 5s is generous
-# relative to the 200ms animation but tight enough to catch a real failure.
+# Wait for the session screen to settle after the picker dismisses (BLD-1793).
+# After tapOn the picker row, ExercisePickerSheet animates closed (withTiming
+# 200ms) and the session screen re-renders with the new exercise group. However
+# on the CI emulator under load the full sequence — sheet dismiss, React
+# Navigation screen re-focus, ExerciseGroupSetTable render — can take well over
+# 5s (runs 28044552663 and 28040824464 both timed out at 5s). 30s matches the
+# cold-start headroom used throughout these flows (onboarding.yaml: 90s;
+# pre-pick extendedWaitUntil: 30s) and is tight enough to catch a genuinely
+# broken exercise-add path.
 - extendedWaitUntil:
     visible: "Bench Fly"
-    timeout: 5000
+    timeout: 30000
 - assertVisible: "SET"
 - assertVisible: "KG"
 - assertVisible: "REPS"
