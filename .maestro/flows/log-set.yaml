@@ -56,11 +56,20 @@ appId: com.persoack.cablesnap
     visible:
       id: "exercise-list"
     timeout: 30000
+# scrollUntilVisible + tapOn must target "Select Bench Fly", NOT "Bench Fly"
+# (BLD-1793, run 28049074075: "No visible element found: Bench Fly"). Each
+# picker row is <Pressable accessibilityLabel="Select Bench Fly, Chest,
+# handle"><Text>Bench Fly</Text></Pressable> (ExercisePickerSheet.tsx:189) —
+# Maestro on Android resolves the Pressable's accessibilityLabel and never
+# exposes the inner <Text>, so a text-match on "Bench Fly" finds nothing to
+# scroll to or tap. The label starts with "Select Bench Fly" (both the full
+# renderItem at line 189 and the compact Recent/Frequent row at line 237), so
+# the regex prefix "Select Bench Fly" matches either rendering.
 - scrollUntilVisible:
-    element: "Bench Fly"
+    element: "Select Bench Fly"
     direction: DOWN
     timeout: 20
-- tapOn: "Bench Fly"
+- tapOn: "Select Bench Fly"
 
 # Back on session screen with the exercise added.
 # The weight column header is "KG" for kg users (ExerciseGroupSetTable.tsx:78).
