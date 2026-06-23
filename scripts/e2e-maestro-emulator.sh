@@ -111,7 +111,30 @@ mkdir -p "$MAESTRO_RESULTS_DIR"
 # step still bounds total time).
 export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-120000}"
 echo "Maestro driver startup timeout: ${MAESTRO_DRIVER_STARTUP_TIMEOUT}ms"
-echo "--- Running maestro test .maestro/ ---"
+
+# Hard wall-clock cap on the whole `maestro test` invocation. This is a
+# gate-design safety net, independent of any per-command timeout.
+#
+# Why this exists (BLD-1793): a single flow can hang far longer than its own
+# configured timeout. Run 28033115531 showed `scrollUntilVisible` for the
+# add-food "log-food-button" swiping the emulator for ~26 MINUTES despite a
+# `timeout: 30000` (30s) on the command — Maestro 1.39.0 did NOT honor that
+# per-command timeout, so the loop only stopped when the job-level
+# `timeout-minutes: 45` killed the entire runner. The docs promise the command
+# fails at its timeout (docs.maestro.dev/.../scrolluntilvisible: "If the timeout
+# is reached before the element is found, the test fails."), but the 1.39.0
+# Android driver did not enforce it in that run. We therefore refuse to rely on
+# per-command timeouts for liveness.
+#
+# `timeout` (coreutils) sends SIGTERM after MAESTRO_TEST_TIMEOUT, then SIGKILL
+# 30s later (--kill-after) if Maestro ignores the term. 25m is generous: a
+# healthy 5-flow run completes in ~5-8 min, so 25m only ever trips on a genuine
+# hang, while still leaving ~15 min of the 45-min job budget for artifact upload
+# and teardown. A 124 exit code from `timeout` means "the gate hung" — we
+# surface it explicitly and exit non-zero so the job (and PR) fail fast instead
+# of burning the full runner allocation.
+MAESTRO_TEST_TIMEOUT="${MAESTRO_TEST_TIMEOUT:-25m}"
+echo "--- Running maestro test .maestro/ (hard cap: $MAESTRO_TEST_TIMEOUT) ---"
 # `.maestro/` resolves flows via .maestro/config.yaml (flows: flows/*), so all
 # five flows run. Any failing flow makes `maestro test` exit non-zero, which
 # (set -e) fails this script and the CI job — that is the gate. We intentionally
@@ -125,10 +148,25 @@ echo "--- Running maestro test .maestro/ ---"
 # under --debug-output. --flatten-debug-output writes them straight into
 # $MAESTRO_RESULTS_DIR (no per-run timestamped subfolder), giving the workflow a
 # single stable path to upload as the failure artifact.
-maestro test .maestro/ \
-  --format junit \
-  --output "$MAESTRO_RESULTS_DIR/report.xml" \
-  --debug-output "$MAESTRO_RESULTS_DIR" \
-  --flatten-debug-output
+#
+# Capture the exit code without tripping `set -e` on the `timeout` wrapper so we
+# can distinguish a hang (124) from a normal flow failure (non-zero, non-124).
+set +e
+timeout --kill-after=30s "$MAESTRO_TEST_TIMEOUT" \
+  maestro test .maestro/ \
+    --format junit \
+    --output "$MAESTRO_RESULTS_DIR/report.xml" \
+    --debug-output "$MAESTRO_RESULTS_DIR" \
+    --flatten-debug-output
+MAESTRO_EXIT=$?
+set -e
+
+if [ "$MAESTRO_EXIT" -eq 124 ] || [ "$MAESTRO_EXIT" -eq 137 ]; then
+  echo "::error::Maestro test run exceeded the ${MAESTRO_TEST_TIMEOUT} hard cap and was killed (exit ${MAESTRO_EXIT}). A flow is hanging — see uploaded maestro-results artifacts for the last command before the stall."
+  exit 1
+elif [ "$MAESTRO_EXIT" -ne 0 ]; then
+  echo "::error::Maestro e2e gate failed (exit ${MAESTRO_EXIT}) — one or more flows did not pass. See uploaded maestro-results artifacts."
+  exit "$MAESTRO_EXIT"
+fi
 
 echo "All Maestro flows passed — e2e regression gate green."
