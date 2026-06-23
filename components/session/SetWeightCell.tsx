@@ -18,7 +18,6 @@ import React, { useCallback, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import WeightPicker from "@/components/WeightPicker";
 import { StackMarkerPill } from "./StackMarkerPill";
-import { StackMarkerHint } from "./StackMarkerHint";
 import { MarkerPickerSheet } from "./MarkerPickerSheet";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -46,6 +45,7 @@ export type SetWeightCellProps = {
   isCable: boolean;
   stacks: StackWithCalibrations[];
   accessibilityLabel: string;
+  testID?: string;
   /** Normal numeric weight change (no stack context). */
   onWeightChange: (val: number) => void;
   /** AC5: weight save after long-pressing a marker-logged pill. Must clear stack cols. */
@@ -65,6 +65,7 @@ export function SetWeightCell({
   isCable,
   stacks,
   accessibilityLabel,
+  testID,
   onWeightChange,
   onManualWeightSave,
   onMarkerConfirm,
@@ -159,6 +160,7 @@ export function SetWeightCell({
           unit={unit}
           onValueChange={keypadOverride ? handleKeypadWeightChange : onWeightChange}
           accessibilityLabel={accessibilityLabel}
+          testID={testID}
         />
         {showUpsellAffordance && (
           <Pressable
@@ -181,7 +183,6 @@ export function SetWeightCell({
           />
         )}
       </View>
-      {isCable && !hasCalibration && <StackMarkerHint />}
     </View>
   );
 }

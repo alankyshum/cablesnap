@@ -1,0 +1,304 @@
+name: E2E Android Emulator
+
+# Maestro-on-emulator e2e regression gate (BLD-1735 / BLD-1252 Part A).
+#
+# CableSnap ships five Maestro flows under .maestro/flows/ (onboarding,
+# log-set, start-workout, add-food, view-progress) but until now nothing ran
+# them. The only emulator job in CI (scheduled-release.yml) just checks "APK
+# launches without crashing" — it never exercises the scenario flows, so
+# device-sensitive regressions (timers, modals, navigation, gesture flows —
+# the BLD-1239 class) had no automated headless gate.
+#
+# This workflow boots an x86_64 API-34 emulator, builds + installs the DEBUG
+# APK, and runs `maestro test .maestro/` as a blocking regression gate.
+#
+# Board-approved scope (approval 030a5552, parent BLD-1252):
+#   - Option A only: Android-emulator-in-CI + Maestro. Cost = CI minutes only.
+#   - NO Firebase Test Lab, NO device farm, NO paid service, NO secrets.
+#   - Debug-variant build only (no release keystore).
+#
+# Reuse anchors (proven in this repo — see the linked workflows):
+#   - Emulator runner config: scheduled-release.yml "Android emulator smoke
+#     test" step (reactivecircus/android-emulator-runner, SHA-pinned).
+#   - /dev/kvm probe + graceful skip pattern: wear-tests.yml "KVM availability
+#     spike". We run the probe FIRST here (top-of-job) and gate the build on it,
+#     so an unaccelerated runner skips before burning native-build minutes.
+#   - Build env (JDK17 + setup-android + Node + npm ci + expo prebuild):
+#     wear-tests.yml / ci.yml android-lint job.
+#   - Maestro driver lives in scripts/e2e-maestro-emulator.sh because the
+#     emulator-runner action runs each `script:` line as a separate
+#     `/bin/sh -c` (BLD-981 lesson; mirrors scripts/smoke-test-emulator.sh).
+
+on:
+  pull_request: {}
+  workflow_dispatch: {}
+
+# Cancel superseded runs on the same ref to save CI minutes. Mirrors ci.yml.
+concurrency:
+  group: e2e-android-emulator-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Pinned Maestro CLI version — never float `latest`. Bump deliberately.
+env:
+  MAESTRO_VERSION: 1.39.0
+
+jobs:
+  e2e-android-emulator:
+    name: Maestro e2e (Android emulator)
+    runs-on: ubuntu-latest
+    # Hard cap so a hung emulator can't burn the runner. Emulator boot is
+    # budgeted at 600s; the native build + 5 Maestro flows fit comfortably
+    # under 45 min on the GitHub-hosted runner.
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: KVM availability probe
+        id: kvm
+        # FIRST real step (BLD-1735 QD review): probe /dev/kvm at the TOP of the
+        # job, before any expensive install / prebuild / Gradle work. The
+        # emulator is the ONLY consumer of the debug APK, so if this runner has
+        # no /dev/kvm the emulator cannot start and building the APK would be
+        # ~15-30 min of wasted CI minutes. Detecting KVM absence here lets every
+        # heavyweight step below short-circuit via `kvm_present == 'true'`, so an
+        # unaccelerated runner skips in seconds with an explicit notice — no
+        # hang, no false-pass. Standard ubuntu-latest runners have shipped
+        # hardware-accelerated nested virtualization (/dev/kvm) since 2023-04,
+        # so the normal path is kvm_present=true. Mirrors wear-tests.yml
+        # "KVM availability spike" (which probes late only because there the
+        # Gradle assemble IS the deliverable; here the build only feeds the
+        # emulator, so we gate it).
+        run: |
+          if [ -e /dev/kvm ]; then
+            echo "kvm_present=true" >> "$GITHUB_OUTPUT"
+            echo "/dev/kvm present — Maestro-on-emulator e2e gate can run on this runner."
+            # /dev/kvm existing is necessary but NOT sufficient: the emulator
+            # process must also be able to OPEN it. If the device node is not
+            # group/world read-writable the emulator silently falls back to
+            # software CPU emulation, which is ~5-10x slower — boot drags to
+            # ~7 min and `adb install` to ~5 min, and Maestro's Android driver
+            # then times out attaching its instrumentation (BLD-1742, run
+            # 27981782936). Apply the reactivecircus/android-emulator-runner
+            # README's mandated udev rule so /dev/kvm is world-rw and real KVM
+            # acceleration actually engages. Best-effort: never fail the gate on
+            # the perms step itself — the emulator step still runs and would fail
+            # loudly if acceleration is genuinely unavailable.
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+              | sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null || true
+            sudo udevadm control --reload-rules || true
+            sudo udevadm trigger --name-match=kvm || true
+            ls -l /dev/kvm || true
+          else
+            echo "kvm_present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::/dev/kvm absent on this runner — Maestro e2e gate skipped before any build work (no hang, no false-pass). See job summary."
+          fi
+
+      - name: Free disk space
+        # Gated on KVM: only worth freeing ~20GB if the emulator can actually
+        # run. expo prebuild + the Android native build + the AVD system image
+        # need ~20GB; the ubuntu-latest runner ships near-full. Reuse the same
+        # free-space action scheduled-release.yml uses before its native build.
+        if: steps.kvm.outputs.kvm_present == 'true'
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
+      - name: Set up JDK 17
+        if: steps.kvm.outputs.kvm_present == 'true'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        if: steps.kvm.outputs.kvm_present == 'true'
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Node.js
+        if: steps.kvm.outputs.kvm_present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        # --legacy-peer-deps matches every other CI workflow on this repo
+        # (known Expo / React Native peer-dep conflicts). Postinstall scripts
+        # MUST run (e.g. @shopify/react-native-skia downloads libskia.a), so we
+        # do NOT pass --ignore-scripts.
+        if: steps.kvm.outputs.kvm_present == 'true'
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate native project
+        # SENTRY_DISABLE_AUTO_UPLOAD=true: the Sentry RN gradle task fails
+        # without SENTRY_AUTH_TOKEN, which we deliberately do NOT provide (this
+        # gate is secret-free, debug-only). The env var is the canonical CI
+        # escape hatch honored at node_modules/@sentry/react-native/sentry.gradle.
+        if: steps.kvm.outputs.kvm_present == 'true'
+        env:
+          EXPO_NO_TELEMETRY: '1'
+          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+        run: npx expo prebuild --clean --platform android
+
+      - name: Boost Gradle JVM heap
+        # expo prebuild --clean regenerates android/gradle.properties with
+        # org.gradle.jvmargs=-Xmx2048m, which is borderline for assembleRelease:
+        # :app:mergeReleaseNativeDebugMetadata can OOM on a loaded ubuntu-latest
+        # runner. Mirrors the same step in scheduled-release.yml.
+        if: steps.kvm.outputs.kvm_present == 'true'
+        run: |
+          set -euo pipefail
+          PROPS=android/gradle.properties
+          if grep -q '^org.gradle.jvmargs=' "$PROPS"; then
+            sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m|' "$PROPS"
+          else
+            echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
+          fi
+          grep 'org.gradle.jvmargs' "$PROPS"
+
+      - name: Build release APK (CI e2e variant)
+        # BLD-1748 root cause: assembleDebug with expo-dev-client in the config
+        # produces an Expo development launcher APK — it shows a "Development
+        # Servers" connect screen rather than launching the app, because the
+        # debug build expects a live Metro bundler and does not embed the JS
+        # bundle. Maestro then waited the full 60 s and never saw any React
+        # Native UI.
+        #
+        # Fix: use assembleRelease instead of assembleDebug. Release builds
+        # ALWAYS embed the Hermes JS bundle (no Metro dependency), so the APK
+        # launches directly into the app. app.config.ts also gates
+        # expo-dev-client on !CI so prebuild generates a standard RN activity
+        # rather than the DevLauncherActivity.
+        #
+        # Signing: with-release-signing.js falls back to signingConfigs.debug
+        # when android/keystore.properties is absent (which it is in this
+        # secret-free workflow). The resulting APK is debug-keystore signed,
+        # which is sufficient for adb install + Maestro e2e.
+        #
+        # APK path: android/app/build/outputs/apk/release/app-release.apk,
+        # passed to scripts/e2e-maestro-emulator.sh via APK_PATH.
+        if: steps.kvm.outputs.kvm_present == 'true'
+        env:
+          SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+        run: |
+          set -euo pipefail
+          cd android
+          # -PreactNativeArchitectures=x86_64 (BLD-1793): build native libs for
+          # ONLY the x86_64 ABI, the single architecture this emulator runs
+          # (arch: x86_64 in the Run-Maestro step). Without this, assembleRelease
+          # cross-compiles every C++ native module — react-native (Hermes),
+          # react-native-screens, react-native-worklets and @shopify/react-native-skia —
+          # for ALL FOUR ABIs (arm64-v8a, armeabi-v7a, x86, x86_64) via
+          # buildCMakeRelWithDebInfo. That CMake/NDK step is the real cost of the
+          # release build: it dragged "Build release APK" to ~29 min on
+          # ubuntu-latest (run 28026806440, 12:41:15→13:10:00). With timeout-minutes:45
+          # that left only ~15 min for emulator boot (600s budget) + Maestro driver
+          # startup (120s) + the 5 flows, so the "Run Maestro flows" step was
+          # CANCELLED at the 45-min job cap MID-FLOW (not a flow assertion failure —
+          # the add-food fix in this same PR is correct; the gate was starved of time).
+          # The arm/x86 outputs are dead weight for an x86_64 emulator. The RN Gradle
+          # plugin reads this property into ndk.abiFilters
+          # (react-native/ReactAndroid/build.gradle.kts:584 + hermes-engine:296), and
+          # it is the same flag Expo's own CLI passes for single-arch dev builds
+          # (@expo/cli .../android/gradle.js:62). Building one ABI instead of four
+          # cuts native compilation ~75% (~29 min → ~10-12 min), so the emulator +
+          # flows now fit comfortably inside the 45-min budget without raising the cap
+          # (the parent BLD-1735 AC mandates timeout-minutes ≤ 45) and without
+          # switching back to assembleDebug (which would risk the BLD-1748 dev-launcher
+          # regression). The APK still runs natively on the x86_64 AVD.
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64
+          cd ..
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$APK" ]; then
+            echo "::error::Expected release APK at $APK after assembleRelease."
+            ls -la android/app/build/outputs/apk/ 2>/dev/null || true
+            exit 1
+          fi
+          echo "Built release APK (debug-keystore signed, CI variant):"
+          ls -lh "$APK"
+
+      - name: Run Maestro flows on emulator
+        if: steps.kvm.outputs.kvm_present == 'true'
+        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          # 600s boot timeout matches scheduled-release.yml — the runner is
+          # under load after the native build and 300s is not always enough.
+          emulator-boot-timeout: 600
+          # Force real KVM/HW acceleration. The action's default is `auto`, which
+          # can misdetect and silently disable acceleration → software CPU
+          # emulation (the BLD-1742 failure: 7-min boot, 5-min install, Maestro
+          # driver timeout). With the 99-kvm4all.rules perms applied in the KVM
+          # step above, `false` makes the emulator hard-require acceleration; if
+          # it genuinely can't accelerate the step fails loudly instead of
+          # crawling in software mode.
+          disable-linux-hw-accel: false
+          # Give the emulator real headroom. Maestro pushes an instrumentation
+          # driver onto the device (heavier than scheduled-release.yml's
+          # launch-only smoke), so the default 2 cores / image-default RAM leave
+          # the driver startup starved on a loaded post-build runner. 4 cores +
+          # 4 GB RAM + 512 MB heap is comfortably within the ubuntu-latest spec.
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          # Headless boot tuning: no window, software GPU, no audio/boot-anim/
+          # snapshot. GPU mode is `-gpu swiftshader` (pure Swiftshader, no
+          # gfxstream indirect path). swiftshader_indirect routes rendering
+          # through the gfxstream host-side ColorBuffer allocator; on a loaded
+          # post-build runner that allocator loses a buffer handle after ~1-2
+          # rendered frames and the emulator hangs indefinitely on the next
+          # draw call ("Failed to find ColorBuffer: 124" — run 28029970348
+          # timed out at 45 min after onboarding passed but add-food never
+          # started). The pure `swiftshader` mode bypasses gfxstream entirely
+          # and renders all GL calls in-process; it is ~5-10% slower for
+          # frame-heavy scenarios but is stable across long multi-flow runs.
+          # CPU virtualization is the KVM accel forced above — independent
+          # from the GPU rendering path.
+          emulator-options: -no-window -gpu swiftshader -noaudio -no-boot-anim -no-snapshot-save -camera-back none
+          disable-animations: true
+          # Single-line invocation: the action runs each `script:` line as its
+          # own `/bin/sh -c`, so all logic lives in the bash script (BLD-981).
+          script: |
+            APK_PATH=android/app/build/outputs/apk/release/app-release.apk MAESTRO_RESULTS_DIR=maestro-results bash scripts/e2e-maestro-emulator.sh
+
+      - name: Upload Maestro artifacts (on failure or timeout)
+        # Screenshots, videos, maestro.log and the JUnit report — uploaded when
+        # the gate fails OR is cancelled (timeout). `failure()` covers flow
+        # assertion failures; `cancelled()` covers the workflow timeout-minutes
+        # cap firing mid-run (e.g. run 28029970348 timed out at 45 min with no
+        # Maestro artifact because the old `failure()`-only condition skipped
+        # upload on cancel). Including cancelled() ensures triage artifacts are
+        # available for both failure modes.
+        if: (failure() || cancelled()) && steps.kvm.outputs.kvm_present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-results
+          path: maestro-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: KVM-unavailable fallback notice
+        if: steps.kvm.outputs.kvm_present == 'false'
+        run: |
+          {
+            echo "## Maestro e2e gate — skipped (no /dev/kvm)"
+            echo ""
+            echo "This runner does not expose \`/dev/kvm\`, so the Android"
+            echo "emulator cannot start and the Maestro flows did not run."
+            echo "The job did NOT false-pass the gate — it skipped explicitly."
+            echo ""
+            echo "Standard \`ubuntu-latest\` runners expose /dev/kvm as of"
+            echo "2023-04. If this recurs, move this job to a larger hosted"
+            echo "runner image that guarantees nested virtualization."
+          } >> "$GITHUB_STEP_SUMMARY"

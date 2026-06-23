@@ -10,11 +10,12 @@ type Props = {
   unit?: "kg" | "lb" | string;
   onValueChange: (val: number) => void;
   accessibilityLabel?: string;
+  testID?: string;
   min?: number;
   max?: number;
 };
 
-function WeightPicker({ value, unit, onValueChange, accessibilityLabel, min = 0, max = 500 }: Props) {
+function WeightPicker({ value, unit, onValueChange, accessibilityLabel, testID, min = 0, max = 500 }: Props) {
   const colors = useThemeColors();
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState(value != null ? String(value) : "0");
@@ -49,6 +50,7 @@ function WeightPicker({ value, unit, onValueChange, accessibilityLabel, min = 0,
         selectTextOnFocus
         style={[styles.input, { color: colors.onSurface }]}
         accessibilityLabel={accessibilityLabel}
+        testID={testID}
       />
       {unit ? (
         <Text style={[styles.unitText, { color: colors.onSurfaceVariant }]}>

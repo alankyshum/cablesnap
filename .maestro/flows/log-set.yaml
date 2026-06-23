@@ -2,35 +2,186 @@ appId: com.persoack.cablesnap
 ---
 - launchApp
 
-# Start a quick workout
+# Start a quick workout. "Quick Workout" is the session name but it renders ONLY
+# as the React Navigation native header title (app/session/[id].tsx:537), which
+# Maestro cannot match on Android (native toolbar text is outside the matchable
+# view hierarchy — run 28036326519 failed here: "Assertion is false: 'Quick
+# Workout' is visible"). Assert on "Add Exercise" instead: it is a real RN
+# <Text>/Button node in the session footer (SessionListFooter.tsx:26) and proves
+# the active-session screen loaded before we interact with it.
 - tapOn: "Quick Start"
-- assertVisible: "Quick Workout"
+- assertVisible: "Add Exercise"
 
 # Add an exercise to the session
 - tapOn: "Add Exercise"
 - assertVisible: "Search exercises"
 
-# Search for an exercise and select it
-- tapOn: "Search exercises"
-- inputText: "Bench Press"
-- tapOn: "Barbell Bench Press"
+# Wait for exercises to load, then scroll to "Bench Fly" and tap it.
+#
+# WHY no tapOn/inputText for "Search exercises" (BLD-1793):
+# The ExercisePickerSheet sits at SNAP_MID = SCREEN_H * 0.45. When Maestro
+# tapped the search field (bounds [52,446][284,490] on this emulator), the soft
+# keyboard opened. Android's adjustResize mode shrinks useWindowDimensions()
+# height from 640 → ~380 px. The sheet's height: SCREEN_H shrinks too, so the
+# exercise FlatList area (which starts below the search + chip bars at ~y=490)
+# falls entirely outside the new, smaller layout frame — items are never
+# rendered to the accessibility tree. extendedWaitUntil polled for 30s without
+# ever finding "Bench Fly". Two CI runs confirmed this (28040824464 and
+# 28042682496). The fix: avoid the keyboard entirely.
+#
+# Without any search query the picker shows the full alphabetical list
+# (56 exercises). "Bench Fly" is the 3rd entry alphabetically (after
+# "Abdominal Crunches" and "Anti-rotational Supine Bicycle"). It sits near
+# the visible top of the list at SNAP_OPEN (covers ~88% of screen, BLD-1841).
+#
+# scrollUntilVisible + the testID "exercise-list" (added to the FlatList in
+# ExercisePickerSheet.tsx in the same commit) ensures Bench Fly is in view
+# even if virtual-list windowing hasn't yet rendered it. 20s (the default
+# scrollUntilVisible timeout, in SECONDS not ms) is ample for a 3-item scroll.
+#
+# WHY wait for id:"exercise-list" not visible:"Bench Fly" (BLD-1793):
+# The picker renders each exercise row as:
+#   <Pressable accessibilityLabel="Select Bench Fly, Chest, handle">
+#     <Text>{item.name}</Text>
+#   </Pressable>
+# Maestro on Android resolves the Pressable's accessibilityLabel, NOT the
+# inner <Text> content. So extendedWaitUntil(visible: "Bench Fly") always
+# times out — it's polling for a text-match that's shadowed by the label.
+# (Confirmed: runs 28047273237, 28045918461, 28044552663.)
+# The FlatList has testID="exercise-list" (ExercisePickerSheet.tsx) — an id-
+# based wait is resolved against the view's testID/accessibilityIdentifier,
+# not shadowed by any label, and fires as soon as the list mounts (i.e. when
+# getAllExercises() has resolved and React rendered the FlatList).
+- extendedWaitUntil:
+    visible:
+      id: "exercise-list"
+    timeout: 30000
+# Scroll the "Bench Fly" row into view, then tap it by testID (BLD-1841).
+#
+# WHY a scroll is required (the regression `c6bc3eed`/`b881ef28` missed):
+# The maestro-results artifact for run 28051493038 (failure screenshot +
+# commands-(log-set).json) proves the picker opens at SNAP_MID and the
+# FlatList mounts (assert id:"exercise-list" COMPLETED), but only the FIRST
+# TWO rows are inside the visible sheet frame ("Abdominal Crunches" and
+# "Anti-rotational Supine Bicycle"). "Bench Fly" is the 3rd row alphabetically
+# and sits just BELOW the fold. Maestro's `tapOn` does not auto-scroll and will
+# not hit an element whose bounds are outside the visible frame (FlatList
+# virtualization may not even mount it), so every prior bare-tap attempt —
+# whether by text, by accessibilityLabel, or by testID — failed.
+#
+# WHY testID (not text/label): each row is
+#   <Pressable testID="exercise-${item.name}"
+#              accessibilityLabel="Select Bench Fly, Chest, handle">
+#     <Text>{item.name}</Text>   (ExercisePickerSheet.tsx:181-200)
+# Maestro on Android resolves the Pressable's accessibilityLabel, shadowing the
+# inner <Text>, so "Bench Fly"/"Select Bench Fly" text-matches are unreliable.
+# The testID is backed by the native view tag and is never shadowed.
+#
+# scrollUntilVisible(element: id:) IS the proven pattern in this repo+emulator —
+# add-food.yaml uses the identical construct against testID inputs and is rock-
+# solid (BLD-1819). `direction: DOWN`, `timeout` in SECONDS (Maestro convention
+# for scrollUntilVisible, matching add-food). Bench Fly is one row down, so a
+# single short scroll brings it into frame; if it is already visible the command
+# is a no-op and returns immediately.
+- scrollUntilVisible:
+    element:
+      id: "exercise-Bench Fly"
+    direction: DOWN
+    timeout: 20
+- tapOn:
+    id: "exercise-Bench Fly"
 
-# Back on session screen with the exercise added
-- assertVisible: "Barbell Bench Press"
-- assertVisible: "SET"
-- assertVisible: "WEIGHT"
+# Back on session screen with the exercise added.
+# The weight column header is "KG" for kg users (ExerciseGroupSetTable.tsx:78).
+#
+# Wait for the session screen to settle after the picker dismisses (BLD-1793).
+# The exercise name "Bench Fly" is rendered inside a <Pressable> in
+# GroupCardHeader.tsx (line 157-161) — Maestro on Android resolves the
+# accessibilityLabel of the Pressable ("Remove Bench Fly") rather than the
+# inner <Text> content, so extendedWaitUntil(visible: "Bench Fly") never
+# matches the text node (confirmed by repeated 30s timeouts on runs
+# 28044552663, 28045918461, 28045920177).
+#
+# Instead gate on "SET" — a bare <Text variant="caption"> in
+# ExerciseGroupSetTable.tsx:81 that has no Pressable wrapper and IS
+# immediately accessible to Maestro. "SET" only appears once an exercise group
+# has been added to the session, so it is a reliable proxy for a successful
+# pick. 30s matches the other cold-start waits in this file.
+- extendedWaitUntil:
+    visible: "SET"
+    timeout: 30000
+- assertVisible: "KG"
 - assertVisible: "REPS"
 
-# Fill in set 1 weight
+# Fill in set 1 weight. The WeightPicker TextInput has
+#   testID="set-1-weight"  (SetRow.tsx → SetWeightCell.tsx → WeightPicker.tsx)
+# and accessibilityLabel="Set 1 weight, 0 kilograms".
+#
+# WHY id: not text: (run 28055938518 failure: "Element not found: Text matching
+# regex: Set 1 weight"): On Android, UIAutomator2 reports a TextInput's *value*
+# ("0") as its text, not the accessibilityLabel. Maestro's text: selector
+# matches against view text, so "Set 1 weight" never matched the "0" text node.
+# tapOn id: resolves against the native view tag (testID), which is never
+# shadowed by text or accessibilityLabel — the same fix shape as every other
+# input in this flow family.
+#
+# scrollUntilVisible first: the session FlatList may not have fully settled
+# after the exercise picker dismisses. The Set 1 row is near the top on this
+# 320x640 emulator, but a defensive scroll costs nothing if already visible.
+- scrollUntilVisible:
+    element:
+      id: "set-1-weight"
+    direction: DOWN
+    timeout: 10
 - tapOn:
     id: "set-1-weight"
 - inputText: "60"
+- hideKeyboard
 
-# Fill in set 1 reps
+# Fill in set 1 reps. Same testID pattern: set-1-reps
+# (SetRow.tsx → WeightPicker.tsx testID="set-1-reps").
+- scrollUntilVisible:
+    element:
+      id: "set-1-reps"
+    direction: DOWN
+    timeout: 10
 - tapOn:
     id: "set-1-reps"
 - inputText: "10"
+- hideKeyboard
 
-# Cancel the workout to clean up
-- tapOn: "Cancel Workout"
-- tapOn: "Discard"
+# Cancel the workout to clean up. The "Discard Workout?" dialog's confirm button
+# is "Delete" — confirmAction with destructive=true defaults to "Delete"
+# (lib/confirm.ts:25), not "Discard" (hooks/useSessionActions.ts:1242-1252).
+#
+# WHY id: not text: "Cancel Workout" (run 28057755031 failure: "Element not found:
+# Text matching regex: Cancel Workout"): The Button component passes
+# accessibilityLabel="Cancel workout" (lowercase 'w') as a prop that spreads
+# onto the Pressable — Android's UIAutomator2 exposes this as the view's
+# contentDescription and shadows the inner Text node "Cancel Workout" (capital W).
+# Maestro's text: selector matched against the shadowed text and failed. The
+# Button already has testID="cancel-workout-btn" (SessionListFooter.tsx:43) —
+# tapOn id: resolves against the native view tag, never shadowed.
+#
+# scrollUntilVisible first: Cancel Workout is the ListFooterComponent of the
+# session FlatList. After filling weight/reps + hiding keyboard, the scroll
+# position may leave the footer below the fold on the 320x640 emulator.
+#
+# NOTE (BLD-1841): run 28059103882 then failed here with
+# "No visible element found: id: cancel-workout-btn" — scrollUntilVisible could
+# not reach it. Root cause was a LAYOUT defect, not the selector: Bench Fly is a
+# cable exercise, and on an uncalibrated gym the StackMarkerHint banner rendered
+# inside the narrow flex:1 weight column, wrapping its full sentence one char per
+# line into a multi-hundred-px vertical strip (see that run's failure screenshot).
+# That pushed the footer arbitrarily far down and broke the scroll. Fixed by
+# moving StackMarkerHint to a full-width SetRow footer (SetRow.tsx) so the row
+# height is normal again and the footer is reachable in a few swipes.
+- scrollUntilVisible:
+    element:
+      id: "cancel-workout-btn"
+    direction: DOWN
+    timeout: 15
+- tapOn:
+    id: "cancel-workout-btn"
+- assertVisible: "Discard Workout?"
+- tapOn: "Delete"

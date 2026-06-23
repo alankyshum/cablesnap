@@ -47,6 +47,7 @@ import { isBodyweightGripExercise, formatGripTypeLabel, formatGripWidthLabel } f
 import { RpeChipStrip } from "./RpeChipStrip";
 import { SetWeightCell } from "./SetWeightCell";
 import { SetTimerCell } from "./SetTimerCell";
+import { StackMarkerHint } from "./StackMarkerHint";
 import type { StackWithCalibrations } from "@/hooks/useActiveCalibration";
 import { MiniSetEditor } from "./MiniSetEditor";
 
@@ -316,6 +317,11 @@ export const SetRow = memo(function SetRow({
   // array so React.memo bailouts hold.
   const stacksProp = stacks ?? EMPTY_STACKS;
   const isCable = isCableExercise({ equipment });
+  // BLD-1841: the uncalibrated-cable hint must render full-width as a row
+  // footer (see the JSX footer below), NOT inside the narrow weight column.
+  // Mirrors SetWeightCell's gate (isCable && no calibrations on any stack).
+  const hasCalibration = stacksProp.some((s) => s.calibrations.length > 0);
+  const showStackMarkerHint = isCable && !hasCalibration;
 
   const handleMarkerConfirm = useCallback(
     (result: { stackId: string; stackName: string; marker: number; trueWeight: number; unit: string }) => {
@@ -468,6 +474,7 @@ export const SetRow = memo(function SetRow({
                 isCable={isCable}
                 stacks={stacksProp}
                 accessibilityLabel={a11yWeightLabel}
+                testID={`set-${set.set_number}-weight`}
                 onWeightChange={onWeightChange}
                 onManualWeightSave={handleManualWeightSave}
                 onMarkerConfirm={handleMarkerConfirm}
@@ -495,6 +502,7 @@ export const SetRow = memo(function SetRow({
                 step={1}
                 onValueChange={onRepsChange}
                 accessibilityLabel={a11yRepsLabel}
+                testID={`set-${set.set_number}-reps`}
                 max={999}
               />
             </View>
@@ -601,6 +609,20 @@ export const SetRow = memo(function SetRow({
           </Pressable>
         </View>
       </SwipeRowAction>
+
+      {/*
+        BLD-1841: uncalibrated-cable stack-marker hint. Previously rendered
+        inside SetWeightCell, i.e. inside the narrow flex:1 weight column
+        (pickerCol ≈ 25px on a 320px emulator), so its full-sentence label
+        wrapped one character per line into a tall vertical strip — a real
+        layout defect on cable exercises at uncalibrated gyms, caught by the
+        log-set e2e gate (run 28059103882 failure screenshot). Rendering it
+        here as a full-width row footer (sibling of the main set row, like the
+        cable-variant footer below) gives the banner the full row width.
+        The component self-suppresses once dismissed and while the dismissal
+        query is loading.
+      */}
+      {showStackMarkerHint && <StackMarkerHint />}
 
       {/*
         BLD-771: Cable variant chips. Rendered as a footer row below the main
