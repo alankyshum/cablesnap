@@ -56,14 +56,38 @@ appId: com.persoack.cablesnap
     visible:
       id: "exercise-list"
     timeout: 30000
-# Tap the exercise row by testID (BLD-1793, runs 28049074075, 28050322908,
-# 28051493038). Text-based matching ('Bench Fly', 'Select Bench Fly') all
-# failed — Maestro 1.39.0 on Android 14 neither exposes the inner <Text>
-# content nor matches the accessibilityLabel as visible text for tapOn/
-# scrollUntilVisible in this Pressable configuration. The only reliable
-# selector is testID, which is directly backed by the Android view's
-# tag and is never shadowed. testID="exercise-${item.name}" was added to
-# the renderItem Pressable in ExercisePickerSheet.tsx in this commit.
+# Scroll the "Bench Fly" row into view, then tap it by testID (BLD-1841).
+#
+# WHY a scroll is required (the regression `c6bc3eed`/`b881ef28` missed):
+# The maestro-results artifact for run 28051493038 (failure screenshot +
+# commands-(log-set).json) proves the picker opens at SNAP_MID and the
+# FlatList mounts (assert id:"exercise-list" COMPLETED), but only the FIRST
+# TWO rows are inside the visible sheet frame ("Abdominal Crunches" and
+# "Anti-rotational Supine Bicycle"). "Bench Fly" is the 3rd row alphabetically
+# and sits just BELOW the fold. Maestro's `tapOn` does not auto-scroll and will
+# not hit an element whose bounds are outside the visible frame (FlatList
+# virtualization may not even mount it), so every prior bare-tap attempt —
+# whether by text, by accessibilityLabel, or by testID — failed.
+#
+# WHY testID (not text/label): each row is
+#   <Pressable testID="exercise-${item.name}"
+#              accessibilityLabel="Select Bench Fly, Chest, handle">
+#     <Text>{item.name}</Text>   (ExercisePickerSheet.tsx:181-200)
+# Maestro on Android resolves the Pressable's accessibilityLabel, shadowing the
+# inner <Text>, so "Bench Fly"/"Select Bench Fly" text-matches are unreliable.
+# The testID is backed by the native view tag and is never shadowed.
+#
+# scrollUntilVisible(element: id:) IS the proven pattern in this repo+emulator —
+# add-food.yaml uses the identical construct against testID inputs and is rock-
+# solid (BLD-1819). `direction: DOWN`, `timeout` in SECONDS (Maestro convention
+# for scrollUntilVisible, matching add-food). Bench Fly is one row down, so a
+# single short scroll brings it into frame; if it is already visible the command
+# is a no-op and returns immediately.
+- scrollUntilVisible:
+    element:
+      id: "exercise-Bench Fly"
+    direction: DOWN
+    timeout: 20
 - tapOn:
     id: "exercise-Bench Fly"
 
