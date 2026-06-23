@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Fix: "Log Food" submit button is now always reachable in the Add Food sheet** — the manual-entry form submit was laid out below the visible screen fold when the sheet was at its default snap point, making it unreachable by scrolling. The sheet's scroll container is now bounded to the visible on-screen height so the form scrolls correctly and the submit button is always accessible. (BLD-1819)
 
 ## v0.26.38 — 2026-06-22
 <!-- versionCode: 108 -->

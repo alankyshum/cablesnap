@@ -28,6 +28,11 @@ import Animated, {
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
 
+// Height of the drag-handle area (paddingVertical: 12 top + 12 bottom + pill height 6 = 30px).
+const HANDLE_HEIGHT = 30;
+// Height of the title block when present (marginTop: 16, paddingBottom: 8, approx text height 24 = ~48px).
+const TITLE_HEIGHT = 48;
+
 type BottomSheetContentProps = {
   children: React.ReactNode;
   title?: string;
@@ -36,6 +41,14 @@ type BottomSheetContentProps = {
   cardColor: string;
   handleColor: string;
   onHandlePress?: () => void;
+  /** On-screen height of the sheet at the default (first) snap point in pixels.
+   *  Used to constrain the inner ScrollView frame so the content has genuine
+   *  scrollable overflow instead of being dwarfed inside a SCREEN_HEIGHT container.
+   *  BLD-1819: Without this, the ScrollView frame equals SCREEN_HEIGHT even when
+   *  the sheet is only at 0.7 snap, so content shorter than SCREEN_HEIGHT has no
+   *  overflow and Maestro's scrollUntilVisible finds nothing to scroll.
+   */
+  onScreenHeight: number;
 };
 
 // Component for the bottom sheet content
@@ -48,7 +61,15 @@ const BottomSheetContent = ({
   cardColor,
   handleColor,
   onHandlePress,
+  onScreenHeight,
 }: BottomSheetContentProps) => {
+  // The ScrollView must not exceed the visible sheet area minus the chrome above it.
+  // This gives it genuine overflow so the user (and Maestro) can scroll to content
+  // below the visible fold. Without this cap the frame equals SCREEN_HEIGHT and
+  // short-form content has no scrollable range. (BLD-1819)
+  const headerHeight = HANDLE_HEIGHT + (title ? TITLE_HEIGHT : 0);
+  const maxScrollHeight = onScreenHeight - headerHeight;
+
   return (
     <Animated.View
       style={[
@@ -101,9 +122,11 @@ const BottomSheetContent = ({
         </View>
       )}
 
-      {/* Content now wrapped in a ScrollView */}
+      {/* Content wrapped in a ScrollView whose height is bounded to the visible
+          sheet area. This ensures content taller than the visible region creates
+          genuine scrollable overflow. (BLD-1819) */}
       <ScrollView
-        style={{ flex: 1 }}
+        style={{ flex: 1, maxHeight: maxScrollHeight }}
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         keyboardShouldPersistTaps='handled'
         showsVerticalScrollIndicator={false}
@@ -152,6 +175,10 @@ export function BottomSheet({
     snapPointsHeights.push(-SCREEN_HEIGHT * snapPoints[i]);
   }
   const defaultHeight = snapPointsHeights[0];
+
+  // On-screen height at the default (first) snap point — passed to BottomSheetContent
+  // so it can cap the ScrollView frame. (BLD-1819)
+  const defaultOnScreenHeight = SCREEN_HEIGHT * snapPoints[0];
 
   const [modalVisible, setModalVisible] = React.useState(false);
 
@@ -313,6 +340,7 @@ export function BottomSheet({
               cardColor={cardColor}
               handleColor={handleColor}
               onHandlePress={() => runOnJS(handlePress)()}
+              onScreenHeight={defaultOnScreenHeight}
             />
           ) : (
             <GestureDetector gesture={gesture}>
@@ -324,6 +352,7 @@ export function BottomSheet({
                 cardColor={cardColor}
                 handleColor={handleColor}
                 onHandlePress={() => runOnJS(handlePress)()}
+                onScreenHeight={defaultOnScreenHeight}
               />
             </GestureDetector>
           )}

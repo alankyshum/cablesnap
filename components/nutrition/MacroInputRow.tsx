@@ -18,18 +18,21 @@ export function MacroInputRow({ protein, carbs, fat, onProteinChange, onCarbsCha
         label="Protein (g)" value={protein} onChangeText={onProteinChange}
         keyboardType="numeric" variant="outline"
         containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
+        testID="macro-protein-input"
       />
       <View style={{ width: 8 }} />
       <Input
         label="Carbs (g)" value={carbs} onChangeText={onCarbsChange}
         keyboardType="numeric" variant="outline"
         containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
+        testID="macro-carbs-input"
       />
       <View style={{ width: 8 }} />
       <Input
         label="Fat (g)" value={fat} onChangeText={onFatChange}
         keyboardType="numeric" variant="outline"
         containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
+        testID="macro-fat-input"
       />
     </View>
   );
