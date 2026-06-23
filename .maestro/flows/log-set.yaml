@@ -16,7 +16,7 @@ appId: com.persoack.cablesnap
 - tapOn: "Add Exercise"
 - assertVisible: "Search exercises"
 
-# Wait for exercises to load and scroll to "Bench Fly", then tap it.
+# Wait for exercises to load, then scroll to "Bench Fly" and tap it.
 #
 # WHY no tapOn/inputText for "Search exercises" (BLD-1793):
 # The ExercisePickerSheet sits at SNAP_MID = SCREEN_H * 0.45. When Maestro
@@ -38,11 +38,23 @@ appId: com.persoack.cablesnap
 # ExercisePickerSheet.tsx in the same commit) ensures Bench Fly is in view
 # even if virtual-list windowing hasn't yet rendered it. 20s (the default
 # scrollUntilVisible timeout, in SECONDS not ms) is ample for a 3-item scroll.
-# The extendedWaitUntil absorbs the initial async getAllExercises() DB read
-# (fires when the sheet opens) before we attempt any scroll. 30s matches the
-# cold-start headroom used throughout these flows.
+#
+# WHY wait for id:"exercise-list" not visible:"Bench Fly" (BLD-1793):
+# The picker renders each exercise row as:
+#   <Pressable accessibilityLabel="Select Bench Fly, Chest, handle">
+#     <Text>{item.name}</Text>
+#   </Pressable>
+# Maestro on Android resolves the Pressable's accessibilityLabel, NOT the
+# inner <Text> content. So extendedWaitUntil(visible: "Bench Fly") always
+# times out — it's polling for a text-match that's shadowed by the label.
+# (Confirmed: runs 28047273237, 28045918461, 28044552663.)
+# The FlatList has testID="exercise-list" (ExercisePickerSheet.tsx) — an id-
+# based wait is resolved against the view's testID/accessibilityIdentifier,
+# not shadowed by any label, and fires as soon as the list mounts (i.e. when
+# getAllExercises() has resolved and React rendered the FlatList).
 - extendedWaitUntil:
-    visible: "Bench Fly"
+    visible:
+      id: "exercise-list"
     timeout: 30000
 - scrollUntilVisible:
     element: "Bench Fly"
