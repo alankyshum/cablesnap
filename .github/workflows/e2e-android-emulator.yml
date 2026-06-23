@@ -192,7 +192,30 @@ jobs:
         run: |
           set -euo pipefail
           cd android
-          ./gradlew :app:assembleRelease
+          # -PreactNativeArchitectures=x86_64 (BLD-1793): build native libs for
+          # ONLY the x86_64 ABI, the single architecture this emulator runs
+          # (arch: x86_64 in the Run-Maestro step). Without this, assembleRelease
+          # cross-compiles every C++ native module — react-native (Hermes),
+          # react-native-screens, react-native-worklets and @shopify/react-native-skia —
+          # for ALL FOUR ABIs (arm64-v8a, armeabi-v7a, x86, x86_64) via
+          # buildCMakeRelWithDebInfo. That CMake/NDK step is the real cost of the
+          # release build: it dragged "Build release APK" to ~29 min on
+          # ubuntu-latest (run 28026806440, 12:41:15→13:10:00). With timeout-minutes:45
+          # that left only ~15 min for emulator boot (600s budget) + Maestro driver
+          # startup (120s) + the 5 flows, so the "Run Maestro flows" step was
+          # CANCELLED at the 45-min job cap MID-FLOW (not a flow assertion failure —
+          # the add-food fix in this same PR is correct; the gate was starved of time).
+          # The arm/x86 outputs are dead weight for an x86_64 emulator. The RN Gradle
+          # plugin reads this property into ndk.abiFilters
+          # (react-native/ReactAndroid/build.gradle.kts:584 + hermes-engine:296), and
+          # it is the same flag Expo's own CLI passes for single-arch dev builds
+          # (@expo/cli .../android/gradle.js:62). Building one ABI instead of four
+          # cuts native compilation ~75% (~29 min → ~10-12 min), so the emulator +
+          # flows now fit comfortably inside the 45-min budget without raising the cap
+          # (the parent BLD-1735 AC mandates timeout-minutes ≤ 45) and without
+          # switching back to assembleDebug (which would risk the BLD-1748 dev-launcher
+          # regression). The APK still runs natively on the x86_64 AVD.
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64
           cd ..
           APK=android/app/build/outputs/apk/release/app-release.apk
           if [ ! -f "$APK" ]; then
