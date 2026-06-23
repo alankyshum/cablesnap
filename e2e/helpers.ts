@@ -69,6 +69,36 @@ export async function enableExerciseFixture(
 }
 
 /**
+ * Give the current Playwright worker its own origin-local IndexedDB SQLite
+ * database so DB-touching scenario specs don't contend on the shared
+ * `cablesnap.db` (BLD-1791).
+ *
+ * Background: every Playwright project/worker hits the same web origin
+ * (http://localhost:8081), and IndexedDB is keyed by origin — so by default all
+ * workers share ONE persistent SQLite DB. `lib/db/test-seed.ts` clears
+ * `workout_sessions`/`workout_sets` at the start of every scenario load, so a
+ * concurrent worker can wipe another worker's seeded rows mid-test. That flakes
+ * the AC #265 kill+relaunch persistence assertion, which seeds rows and then
+ * reloads expecting them to survive.
+ *
+ * The app honors `window.__E2E_DB_NAME__` ONLY when `navigator.webdriver` is
+ * true (see `resolveDbName()` in lib/db/helpers.ts), the same hardening as the
+ * exercises fixture — production users are never affected.
+ *
+ * Call once per page context, BEFORE the first `goto()` (addInitScript only
+ * applies to subsequent navigations). Pass `testInfo.parallelIndex` so each
+ * worker gets a stable, unique name (it persists across `page.reload()` because
+ * the origin/IndexedDB key is unchanged — only the DB *name* differs per
+ * worker, which is exactly what isolates them).
+ */
+export async function enablePerWorkerDb(page: Page, parallelIndex: number) {
+  const dbName = `cablesnap-e2e-w${parallelIndex}.db`;
+  await page.addInitScript((name) => {
+    (window as unknown as Record<string, unknown>).__E2E_DB_NAME__ = name;
+  }, dbName);
+}
+
+/**
  * Run axe-core and assert zero critical accessibility violations.
  * Serious violations are attached as annotations (warnings) to the test.
  * Critical violations cause a hard failure.

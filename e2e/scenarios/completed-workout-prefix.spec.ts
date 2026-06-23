@@ -24,6 +24,7 @@
 import { test, expect } from "@playwright/test";
 import * as path from "path";
 import { captureWithCvd } from "./capture-with-cvd";
+import { enablePerWorkerDb } from "../helpers";
 
 const SCENARIO = "bld-480-prefix";
 // Reuse the existing `completed-workout` seed so the fixture route
@@ -44,6 +45,13 @@ test.describe("@scenario bld-480-prefix", () => {
       testInfo.project.name !== "mobile",
       "v1: mobile viewport only (TL#4)",
     );
+  });
+
+  // BLD-1791: per-worker DB isolation so this spec's seedScenario() table-clear
+  // (reuses the `completed-workout` seed) can't race a sibling DB-touching spec
+  // on the shared `cablesnap.db`.
+  test.beforeEach(async ({ page }, testInfo) => {
+    await enablePerWorkerDb(page, testInfo.parallelIndex);
   });
 
   test("captures BLD-480 pre-fix MusclesWorkedCard reproducer", async ({ page }) => {
