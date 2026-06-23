@@ -32,11 +32,35 @@ appId: com.persoack.cablesnap
 - assertVisible: "Measurement Unit"
 - tapOn: "cm"
 
-# Select experience level
+# Select experience level.
+# The level cards and the Continue button live in a scrollable FlatList
+# (app/onboarding/setup.tsx): the cards are `data`, the Continue button is the
+# `ListFooterComponent`. On the CI emulator viewport only the Beginner +
+# Intermediate cards fit above the fold, so the footer button is NOT in the
+# rendered/virtualized hierarchy at this point — a bare `tapOn: "Continue"`
+# reported "Element not found: Text matching regex: Continue" even though the
+# Beginner radio WAS selected (BLD-1757: the failure-point screenshot + a11y
+# hierarchy from run 27999879078 confirmed Beginner checked, Continue off-screen).
 - assertVisible: "Experience Level"
 - tapOn: "Beginner"
 - assertVisible: "I'm just getting started with gym workouts"
-- tapOn: "Continue"
+# Scroll the footer into view before tapping. We target the button's ENABLED
+# accessible name ("Continue to recommendations" — its accessibilityLabel is
+# `level ? "Continue to recommendations" : "Select an experience level to
+# continue"`), which only exists once a level is selected. This both brings the
+# below-the-fold footer on-screen AND implicitly re-asserts the radio registered;
+# if selection had silently failed, the enabled name would never appear and this
+# step fails fast with a clear message instead of a generic "Continue" miss.
+# `scrollUntilVisible` (element/direction/timeout) is a stable Maestro 1.39.0
+# command (YamlScrollUntilVisible). NOTE: unlike extendedWaitUntil (whose timeout
+# is milliseconds), scrollUntilVisible's `timeout` is in SECONDS — the orchestra
+# multiplies it by 1000 (ScrollUntilVisibleCommand.timeoutToMillis). 20s (the
+# command default) is ample to scroll a 3-item list to its footer.
+- scrollUntilVisible:
+    element: "Continue to recommendations"
+    direction: DOWN
+    timeout: 20
+- tapOn: "Continue to recommendations"
 
 # Recommend screen
 - assertVisible: "We Recommend"
