@@ -7,38 +7,32 @@ appId: com.persoack.cablesnap
 - assertVisible: "Today"
 
 # Open the Add Food sheet. The affordance is the Nutrition header button
-# (accessibilityLabel "Add food", app/(tabs)/_layout.tsx:63) — there is no
-# "add-food-fab" testID. It opens a BottomSheet titled "Add Food" whose body
-# is <InlineFoodSearch>.
+# (accessibilityLabel "Add food", app/(tabs)/_layout.tsx) — there is no
+# "add-food-fab" testID on the header button.
 - tapOn: "Add food"
 - assertVisible: "Add Food"
 
 # Select meal type FIRST while the MealFavoritesBar chips are at the top of
 # the sheet and fully visible (before expanding the manual form scrolls the
 # view down). "Lunch" is the chip label (MealFavoritesBar / MEAL_LABELS.lunch).
-# The chip has accessibilityLabel "Meal: Lunch" but tapOn matches rendered text.
 - tapOn: "Lunch"
 
 # Reveal the manual-entry form. InlineFoodSearch shows search + meal chips by
 # default; the Food name / macro inputs live inside ManualFoodEntry, which is
-# collapsed until "Manual Entry" is tapped (ManualFoodEntry.tsx:25).
+# collapsed until "Manual Entry" is tapped (ManualFoodEntry.tsx).
 - tapOn: "Manual Entry"
 - assertVisible: "Manual Food Entry"
 
 # --- Fill the form by testID, NOT by visible label text. ---
 #
-# Why id-based selectors here (BLD-1793): the macro inputs (Protein/Carbs/Fat)
+# Why id-based selectors (BLD-1793): the macro inputs (Protein/Carbs/Fat)
 # render in a flexDirection:row at flex:1 each, so on the 320px CI emulator each
 # is ~100px wide and the floating label wraps onto two lines ("Prot\nein (g)").
-# Tapping the wrapped LABEL text (tapOn: "Protein (g)") landed on the label
-# geometry, not the input's editable region — focus never moved, so the macro
-# inputText values bled into the still-focused Calories field
-# (run 28012401877: Calories read "1653103.6" = 165+31+0+3.6 concatenated).
-# testIDs land directly on the <TextInput> nodes (Input spreads {...props})
-# and a tap on a TextInput natively focuses it — deterministic regardless of
-# label wrapping or viewport.
-# hideKeyboard between fields keeps lower fields/the submit button reachable
-# (the soft keyboard otherwise covers the bottom half of the BottomSheet).
+# Tapping the wrapped LABEL text landed on the label geometry, not the input's
+# editable region — values bled into adjacent fields. testIDs land directly on
+# the <TextInput> nodes (Input spreads {...props}) and a tap on a TextInput
+# natively focuses it — deterministic regardless of label wrapping or viewport.
+# hideKeyboard between fields keeps lower fields/the submit button reachable.
 
 - tapOn:
     id: "food-name-input"
@@ -75,41 +69,38 @@ appId: com.persoack.cablesnap
 - inputText: "3.6"
 - hideKeyboard
 
-# --- Submit (quarantined — see BLD-1819) -------------------------------------
+# Log the food. The "Log Food" Button (testID "log-food-button",
+# ManualFoodEntry.tsx) sits at the bottom of the expanded form.
 #
-# The final "Log Food" submit + the scroll needed to reach it are intentionally
-# NOT exercised here. They are blocked by a real component-layer defect, not a
-# selector problem, and chasing it has burned 17+ full 45-min CI runs.
+# Selector: tap by testID "log-food-button", NOT by the visible text "Log Food"
+# (BLD-1793 run 28020728191: "Element not found: Text matching regex: Log Food").
+# The Button is rendered with accessibilityLabel="Log manual entry"
+# (ManualFoodEntry.tsx) and Button spreads {...props} onto its Pressable
+# (components/ui/button.tsx), so React Native exposes the Pressable's a11y
+# content-desc as "Log manual entry" and COLLAPSES the child <Text>Log Food</Text>
+# out of the UIAutomator2 tree Maestro reads — the visible "Log Food" label is
+# not matchable by text, only the testID lands.
 #
-# Root cause (BLD-1793, run 28033115531): the Add Food BottomSheet
-# (app/(tabs)/nutrition.tsx — snapPoints [0.7, 0.9], disablePanGesture) renders
-# its body in a plain RN <ScrollView> whose FRAME is SCREEN_HEIGHT tall
-# (components/ui/bottom-sheet.tsx:53-112), while the manual-entry form content is
-# much shorter. The "Log Food" button is the last child, laid out below the
-# physical screen fold when the sheet sits at its 0.7 snap. Because the
-# ScrollView frame is taller than its content, there is little/no scrollable
-# overflow AND `scrollUntilVisible`'s swipe-from-center (y≈50%→10%) starts on the
-# MealFavoritesBar / search Input at the TOP of the sheet, which consume the
-# vertical gesture instead of scrolling the form. Result: Maestro swiped for
-# ~26 MINUTES without the button ever entering the view hierarchy, and the
-# command's own `timeout: 30000` was NOT honored by the 1.39.0 Android driver —
-# the loop only stopped when the 45-min job cap killed the runner. (A hard
-# `timeout` wrapper now caps the whole run in scripts/e2e-maestro-emulator.sh so
-# this can never again consume the full budget.)
-#
-# What this flow STILL guarantees as a regression gate: launching the app,
-# navigating to Nutrition, opening the Add Food sheet, selecting a meal,
-# expanding the manual-entry form, and entering ALL FIVE fields (name, calories,
-# protein, carbs, fat) by testID without value-bleed. Run 28033115531 proved
-# every one of these steps passes on the CI emulator. The remaining "tap Log
-# Food + confirm save" leg is tracked in BLD-1819 (needs a component fix:
-# bound the BottomSheet ScrollView frame to the visible sheet height, or give
-# the submit button a stable on-screen position, so it is reachable headlessly).
-#
-# We assert the manual-entry form is rendered and expanded as the flow's
-# terminal checkpoint. This heading is a plain <Text> (ManualFoodEntry.tsx:29)
-# and run 28033115531 proved `assertVisible: "Manual Food Entry"` matches on the
-# CI emulator (it COMPLETED right after the form expanded). Reaching this line
-# means every preceding step — navigation, sheet open, meal select, form expand,
-# and all five testID-targeted field inputs — succeeded end-to-end.
-- assertVisible: "Manual Food Entry"
+# Scrolling: use scrollUntilVisible. BLD-1819 fixed the root cause — the
+# BottomSheet ScrollView frame is now bounded to the visible sheet height
+# (SCREEN_HEIGHT * snapPoints[0] - header), so there IS genuine scrollable
+# overflow when form content extends below the fold. scrollUntilVisible drives
+# the REAL native android.widget.ScrollView and stops the moment the button
+# enters the tree. direction: DOWN scrolls content upward to reveal elements
+# below the fold. timeout: 30000 (30s) — generous but finite.
+- scrollUntilVisible:
+    element:
+      id: "log-food-button"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "log-food-button"
+
+# Confirm the log succeeded. We do NOT assert "Nutrition" here: the Add Food
+# sheet is a React Native <Modal> that stays OPEN after a manual log, and a
+# Modal occludes the screen beneath it in the UIAutomator2 tree — "Nutrition"
+# would not be visible. Instead assert the form collapsed: useManualFoodForm
+# calls setExpanded(false) ONLY when onSave resolves true, which flips the
+# toggle button's label from "Cancel" back to "Manual Entry". Seeing
+# "Manual Entry" is a deterministic, in-sheet signal that the food was logged.
+- assertVisible: "Manual Entry"

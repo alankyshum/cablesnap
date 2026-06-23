@@ -16,6 +16,39 @@ function dateStamp(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// ---- E2E deterministic import fixture (BLD-1769) ----
+//
+// The static `expo export -p web` bundle used for Playwright visual regression
+// cannot drive the OS file picker (`DocumentPicker.getDocumentAsync`), so the
+// production "Import data" → router.push("/settings/import-backup") flow could
+// not be exercised headless. The BLD-1769 nav-header guard needs that REAL push
+// (not a deep-link `page.goto`) so expo-router's Stack has back-history and the
+// header back affordance renders — the recurrence class this issue closes.
+//
+// Mirroring the BLD-526 exercises fixture (lib/db/exercises.ts `readE2EFixture`):
+// when Playwright (`navigator.webdriver === true`) has injected a backup JSON
+// string onto `window.__E2E_IMPORT_BACKUP_FIXTURE__`, `pickImportBackup` returns
+// it INSTEAD of opening the picker. The webdriver guard means a console-injected
+// flag in a real user's browser can never bypass their file picker, and the rest
+// of the import flow (category sheet → confirm → router.push) runs unchanged.
+function readE2EImportFixture(): { raw: string; data: Record<string, unknown> } | null {
+  if (typeof window === 'undefined') return null;
+  const nav =
+    typeof navigator !== 'undefined'
+      ? (navigator as Navigator & { webdriver?: boolean })
+      : null;
+  if (!nav?.webdriver) return null;
+  const raw = (window as unknown as { __E2E_IMPORT_BACKUP_FIXTURE__?: unknown })
+    .__E2E_IMPORT_BACKUP_FIXTURE__;
+  if (typeof raw !== 'string') return null;
+  try {
+    const data = JSON.parse(raw) as Record<string, unknown>;
+    return { raw, data };
+  } catch {
+    return null;
+  }
+}
+
 type Deps = {
   toast: ReturnType<typeof useToast>;
   setLoading: (v: boolean) => void;
@@ -61,6 +94,11 @@ export async function handleExport(
 }
 
 export async function pickImportBackup({ toast, setLoading }: Pick<Deps, 'toast' | 'setLoading'>) {
+  // E2E seam (BLD-1769): under Playwright (navigator.webdriver), a pre-injected
+  // fixture replaces the undriveable OS file picker so the real import →
+  // router.push flow runs headless. No-op for real users. See readE2EImportFixture.
+  const fixture = readE2EImportFixture();
+  if (fixture) return fixture;
   try {
     const result = await DocumentPicker.getDocumentAsync({
       type: 'application/json',

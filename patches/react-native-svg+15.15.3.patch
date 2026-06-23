@@ -1,5 +1,5 @@
 diff --git a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
-index d57e7c8..493aab7 100644
+index d57e7c8..0b215d3 100644
 --- a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
 +++ b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
 @@ -32,6 +32,25 @@ const prepare = (self, props = self.props) => {
@@ -28,8 +28,27 @@ index d57e7c8..493aab7 100644
      ...rest
    } = props;
    const clean = {
+@@ -93,7 +112,16 @@ const prepare = (self, props = self.props) => {
+     var _resolveAssetUri;
+     clean.href = (_resolveAssetUri = (0, _resolveAssetUri2.resolveAssetUri)(props.href)) === null || _resolveAssetUri === void 0 ? void 0 : _resolveAssetUri.uri;
+   }
+-  return clean;
++  // BLD-1770: strip RN responder-system props that are not valid DOM event
++  // handlers. When hasTouchableProperty is true (e.g. onPress is any truthy
++  // function), these 6 props are conditionally spread into clean{} above.
++  // They then pass through createDOMProps's domProps spread onto SVG <path>
++  // DOM elements, causing React's "Unknown event handler property" warning.
++  // SVG touch handling on web works via onClick (mapped from onPress above),
++  // not through the RN responder system — so discarding these is safe.
++  // eslint-disable-next-line @typescript-eslint/no-unused-vars
++  const { onStartShouldSetResponder: _ossr, onResponderTerminationRequest: _ortr, onResponderGrant: _org, onResponderMove: _orm, onResponderRelease: _orl, onResponderTerminate: _ort, ...cleanStripped } = clean;
++  return cleanStripped;
+ };
+ exports.prepare = prepare;
+ //# sourceMappingURL=prepare.js.map
+\ No newline at end of file
 diff --git a/node_modules/react-native-svg/lib/module/web/utils/prepare.js b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
-index 113eb2b..0703e34 100644
+index 113eb2b..50428ec 100644
 --- a/node_modules/react-native-svg/lib/module/web/utils/prepare.js
 +++ b/node_modules/react-native-svg/lib/module/web/utils/prepare.js
 @@ -26,6 +26,25 @@ export const prepare = (self, props = self.props) => {
@@ -58,3 +77,21 @@ index 113eb2b..0703e34 100644
      ...rest
    } = props;
    const clean = {
+@@ -87,6 +106,15 @@ export const prepare = (self, props = self.props) => {
+     var _resolveAssetUri;
+     clean.href = (_resolveAssetUri = resolveAssetUri(props.href)) === null || _resolveAssetUri === void 0 ? void 0 : _resolveAssetUri.uri;
+   }
+-  return clean;
++  // BLD-1770: strip RN responder-system props that are not valid DOM event
++  // handlers. When hasTouchableProperty is true (e.g. onPress is any truthy
++  // function), these 6 props are conditionally spread into clean{} above.
++  // They then pass through createDOMProps's domProps spread onto SVG <path>
++  // DOM elements, causing React's "Unknown event handler property" warning.
++  // SVG touch handling on web works via onClick (mapped from onPress above),
++  // not through the RN responder system — so discarding these is safe.
++  // eslint-disable-next-line @typescript-eslint/no-unused-vars
++  const { onStartShouldSetResponder: _ossr, onResponderTerminationRequest: _ortr, onResponderGrant: _org, onResponderMove: _orm, onResponderRelease: _orl, onResponderTerminate: _ort, ...cleanStripped } = clean;
++  return cleanStripped;
+ };
+ //# sourceMappingURL=prepare.js.map
+\ No newline at end of file

@@ -162,6 +162,7 @@ function Summary() {
     <>
       <Stack.Screen options={{ title: "Summary" }} />
       <FlatList
+        testID="summary-scroll-view"
         data={listData}
         keyExtractor={(s) => s.key}
         style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}

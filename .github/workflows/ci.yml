@@ -107,7 +107,7 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Install xmllint
-        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libxml2-utils
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libxml2-utils
 
       - name: Expo prebuild (Android)
         run: npx expo prebuild --clean --platform android

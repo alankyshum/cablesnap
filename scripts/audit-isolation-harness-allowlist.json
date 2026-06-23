@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_comment": "Isolation-harness allowlist for the daily visual UX audit (BLD-1773).",
+  "_purpose": [
+    "Scenarios listed here are DEV-ONLY isolation harnesses that intentionally",
+    "render a single compact component on an otherwise-blank padded <View>.",
+    "The automated ux-designer frames every capture as a full 390×844 viewport,",
+    "so a legitimately-tiny harness reads as a '~90% blank / broken empty state'.",
+    "Because the QD#3 dedup fingerprint changes per-commit (the description",
+    "includes the commit SHA and audit label), the same benign finding evades",
+    "dedup and re-files every audit run.",
+    "",
+    "audit-create-finding.sh uses this list to SUPPRESS 'near-empty / content",
+    "missing' findings when the finding's scenario matches an entry here.",
+    "All other finding types for these scenarios are still audited normally.",
+    "",
+    "To add a new isolation harness: append one entry below and explain WHY",
+    "the scenario is intentionally sparse. Include the BLD ticket that introduced",
+    "the harness and a pointer back to BLD-1773 (where this mechanism lives).",
+    "",
+    "NON-allowlisted scenarios that genuinely render near-empty are NOT suppressed.",
+    "The suppression is scoped to the allowlist, not a blanket mute.",
+    "",
+    "Refs: BLD-1773, BLD-1767, BLD-1666, BLD-1126."
+  ],
+  "isolationHarnesses": [
+    {
+      "scenario": "stack-marker",
+      "reason": "Dev-only harness (app/__test__/stack-marker.tsx) renders a single StackMarkerPill (~44px) on a blank padded <View>. The harness intentionally renders sparse to test the pill in isolation without the live MarkerPickerSheet. Its e2e spec (e2e/scenarios/stack-marker.spec.ts) asserts pill visibility and exact text — those assertions are the real regression safety net. Introduced by BLD-1126. False-positive audit findings: BLD-1667, BLD-1766. Suppression introduced by BLD-1773.",
+      "introducedBy": "BLD-1126",
+      "suppressionTicket": "BLD-1773"
+    }
+  ]
+}

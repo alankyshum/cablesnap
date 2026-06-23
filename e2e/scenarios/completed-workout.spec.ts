@@ -16,6 +16,7 @@
 import { test, expect } from "@playwright/test";
 import * as path from "path";
 import { captureWithCvd } from "./capture-with-cvd";
+import { enablePerWorkerDb } from "../helpers";
 
 const SCENARIO = "completed-workout";
 const SESSION_ID = "scenario-session-1";
@@ -35,6 +36,12 @@ test.describe("@scenario completed-workout", () => {
     );
   });
 
+  // BLD-1791: per-worker DB isolation so this spec's seedScenario() table-clear
+  // can't race a sibling DB-touching spec on the shared `cablesnap.db`.
+  test.beforeEach(async ({ page }, testInfo) => {
+    await enablePerWorkerDb(page, testInfo.parallelIndex);
+  });
+
   test("captures post-workout summary screen", async ({ page }) => {
     await page.addInitScript((scenario) => {
       const w = window as unknown as Record<string, unknown>;
@@ -50,6 +57,25 @@ test.describe("@scenario completed-workout", () => {
       timeout: 15_000,
     });
     await page.waitForTimeout(500);
+
+    // Scroll the inner React Native FlatList (not the document) to the bottom
+    // so below-fold content (Estimated pacing card, Sets card, action buttons)
+    // is captured. window.scrollTo() does not move RN's scroll container —
+    // scroll the testID element directly (same fix as settings.spec.ts BLD-1124).
+    // BLD-1768 root cause: FlatList never scrolled, pacing-card clipped at bottom.
+    const scrollEl = page.getByTestId("summary-scroll-view");
+    await scrollEl.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await page.waitForTimeout(300);
+
+    // scrollIntoViewIfNeeded as a surgical follow-up to guarantee pacing-card
+    // is actually visible regardless of content height variation.
+    const pacingCard = page.getByTestId("pacing-card");
+    await pacingCard.scrollIntoViewIfNeeded({ timeout: 5000 });
+    await page.waitForTimeout(200);
+
+    // Assert the Working/Rest/Other legend (pacing-card) is in the viewport
+    // BEFORE capturing, so a genuine future cutoff regression still fails the test.
+    await expect(pacingCard).toBeInViewport({ timeout: 5000 });
 
     const viewport = "mobile";
     await captureWithCvd({

@@ -18,6 +18,55 @@ function webNeedsUnsupportedFallback(): boolean {
   return !detectWebSharedMemorySupport().supported;
 }
 
+// BLD-1796: dev/test-only. Load the lazy `test-seed` chunk and run the scenario
+// seed, retrying the DYNAMIC IMPORT on a transient "Failed to fetch" (the chunk
+// dropped by the shared `npx serve` static origin under N concurrently
+// cold-booting Playwright workers). A rejected dynamic import is not cached, so
+// re-`import()`ing genuinely re-fetches the chunk. Once the module is loaded,
+// `runScenarioSeedWithRetry` owns the (also-bounded) retry of `seedScenario()`
+// itself — that covers the "Sync operation timeout" class on the seed's drizzle
+// writes. Both retries are inert outside WebDriver (single attempt), and this
+// whole helper is only reached from an `if (__DEV__)` block, so production is
+// untouched. Kept thin and self-contained: its loop must NOT depend on the lazy
+// module it is trying to load.
+const SEED_IMPORT_MAX_ATTEMPTS = 5;
+const SEED_IMPORT_RETRY_BACKOFF_MS = 150;
+
+function seedImportRetryEnabled(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const nav = navigator as Navigator & { webdriver?: boolean };
+  return nav.webdriver === true;
+}
+
+async function runScenarioSeedWithImportRetry(): Promise<void> {
+  const maxAttempts = seedImportRetryEnabled() ? SEED_IMPORT_MAX_ATTEMPTS : 1;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const mod = await import("../lib/db/test-seed");
+      // Module loaded — delegate to its bounded seedScenario retry (handles the
+      // "Sync operation timeout" class). A non-transient seed error throws out.
+      await mod.runScenarioSeedWithRetry(() => mod.seedScenario());
+      return;
+    } catch (err) {
+      const isFetchFailure =
+        err instanceof Error &&
+        (err.message.includes("Failed to fetch") ||
+          err.message.includes("Load failed") ||
+          err.message.includes("NetworkError"));
+      // Only the IMPORT failure is handled here; once `mod` loaded,
+      // runScenarioSeedWithRetry has already classified/rethrown seed errors, so
+      // any error reaching here after a successful import is non-transient.
+      if (attempt === maxAttempts || !isFetchFailure) throw err;
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[test-seed] transient test-seed import failure (attempt ${attempt}/${maxAttempts}), retrying:`,
+        err.message,
+      );
+      await new Promise((resolve) => setTimeout(resolve, SEED_IMPORT_RETRY_BACKOFF_MS));
+    }
+  }
+}
+
 export function useAppInit() {
   // Capability is a property of the JS runtime + document isolation
   // state; it does not change across re-renders for a given session,
@@ -55,9 +104,21 @@ export function useAppInit() {
         // `__TEST_SCENARIO__` string from production bundles — enforced by
         // `scripts/verify-scenario-hook-not-in-bundle.sh`.
         if (__DEV__) {
+          // BLD-1796: under Playwright (navigator.webdriver) the lazy import +
+          // seed is retried on transient failures — "Failed to fetch" (the lazy
+          // `test-seed` chunk dropped by the shared `npx serve` static origin
+          // under N concurrently cold-booting workers) and "Sync operation
+          // timeout" (the seed's drizzle writes hitting the BLD-1636 sync
+          // busy-wait budget on a still-contended worker). Both otherwise leave
+          // `data-test-ready` unset and flake every seed-dependent scenario spec
+          // at high worker counts. The retry loop wraps the dynamic import
+          // itself, because a REJECTED dynamic import is not cached — a retry
+          // genuinely re-fetches the chunk. Outside WebDriver this is a single
+          // attempt (no behavior change); the whole block is dev-only, so
+          // production is untouched. `seedScenario()` is idempotent
+          // (DELETE-then-reinsert fixed-id rows), so re-running it is safe.
           try {
-            const { seedScenario } = await import("../lib/db/test-seed");
-            await seedScenario();
+            await runScenarioSeedWithImportRetry();
           } catch (err) {
             console.warn("[test-seed] scenario seed failed:", err);
             // Surface seed errors in E2E test runs so error-context snapshots capture the cause.
