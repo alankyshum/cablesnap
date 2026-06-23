@@ -56,16 +56,16 @@ appId: com.persoack.cablesnap
     visible:
       id: "exercise-list"
     timeout: 30000
-# tapOn targets "Select Bench Fly" — the REGEX PREFIX of the Pressable label
-# (BLD-1793, run 28050322908). The full label is "Select Bench Fly, Chest,
-# handle" (ExercisePickerSheet.tsx:189); Maestro 1.39.0 tapOn default-matches
-# by regex, so "Select Bench Fly" prefix-matches the full label.
-#
-# scrollUntilVisible is NOT used: (1) it does not support prefix-regex on
-# element: — it requires an exact or testID match; (2) Bench Fly is the 3rd
-# exercise alphabetically so it is visible at SNAP_MID without scrolling.
+# Tap the exercise row by testID (BLD-1793, runs 28049074075, 28050322908,
+# 28051493038). Text-based matching ('Bench Fly', 'Select Bench Fly') all
+# failed — Maestro 1.39.0 on Android 14 neither exposes the inner <Text>
+# content nor matches the accessibilityLabel as visible text for tapOn/
+# scrollUntilVisible in this Pressable configuration. The only reliable
+# selector is testID, which is directly backed by the Android view's
+# tag and is never shadowed. testID="exercise-${item.name}" was added to
+# the renderItem Pressable in ExercisePickerSheet.tsx in this commit.
 - tapOn:
-    text: "Select Bench Fly"
+    id: "exercise-Bench Fly"
 
 # Back on session screen with the exercise added.
 # The weight column header is "KG" for kg users (ExerciseGroupSetTable.tsx:78).

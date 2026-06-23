@@ -178,6 +178,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
     ({ item }: { item: Exercise }) => (
       <Pressable
         onPress={() => handlePick(item)}
+        testID={`exercise-${item.name}`}
         style={({ pressed }) => [
           styles.item,
           {
