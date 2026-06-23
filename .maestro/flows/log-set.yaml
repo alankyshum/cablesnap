@@ -153,6 +153,25 @@ appId: com.persoack.cablesnap
 # Cancel the workout to clean up. The "Discard Workout?" dialog's confirm button
 # is "Delete" — confirmAction with destructive=true defaults to "Delete"
 # (lib/confirm.ts:25), not "Discard" (hooks/useSessionActions.ts:1242-1252).
-- tapOn: "Cancel Workout"
+#
+# WHY id: not text: "Cancel Workout" (run 28057755031 failure: "Element not found:
+# Text matching regex: Cancel Workout"): The Button component passes
+# accessibilityLabel="Cancel workout" (lowercase 'w') as a prop that spreads
+# onto the Pressable — Android's UIAutomator2 exposes this as the view's
+# contentDescription and shadows the inner Text node "Cancel Workout" (capital W).
+# Maestro's text: selector matched against the shadowed text and failed. The
+# Button already has testID="cancel-workout-btn" (SessionListFooter.tsx:43) —
+# tapOn id: resolves against the native view tag, never shadowed.
+#
+# scrollUntilVisible first: Cancel Workout is the ListFooterComponent of the
+# session FlatList. After filling weight/reps + hiding keyboard, the scroll
+# position may leave the footer below the fold on the 320x640 emulator.
+- scrollUntilVisible:
+    element:
+      id: "cancel-workout-btn"
+    direction: DOWN
+    timeout: 15
+- tapOn:
+    id: "cancel-workout-btn"
 - assertVisible: "Discard Workout?"
 - tapOn: "Delete"
