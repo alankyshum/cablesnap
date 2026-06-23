@@ -2,9 +2,15 @@ appId: com.persoack.cablesnap
 ---
 - launchApp
 
-# Start a quick workout
+# Start a quick workout. "Quick Workout" is the session name but it renders ONLY
+# as the React Navigation native header title (app/session/[id].tsx:537), which
+# Maestro cannot match on Android (native toolbar text is outside the matchable
+# view hierarchy — run 28036326519 failed here: "Assertion is false: 'Quick
+# Workout' is visible"). Assert on "Add Exercise" instead: it is a real RN
+# <Text>/Button node in the session footer (SessionListFooter.tsx:26) and proves
+# the active-session screen loaded before we interact with it.
 - tapOn: "Quick Start"
-- assertVisible: "Quick Workout"
+- assertVisible: "Add Exercise"
 
 # Add an exercise to the session
 - tapOn: "Add Exercise"

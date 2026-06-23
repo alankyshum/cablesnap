@@ -8,8 +8,12 @@ appId: com.persoack.cablesnap
 # Start a quick workout
 - tapOn: "Quick Start"
 
-# Active session screen
-- assertVisible: "Quick Workout"
+# Active session screen. Do NOT assert the session name "Quick Workout": it
+# renders ONLY as the React Navigation native header title
+# (app/session/[id].tsx:537), which Maestro cannot match on Android (native
+# toolbar text is outside the matchable view hierarchy). The three buttons below
+# are real RN nodes in the session footer (SessionListFooter.tsx) and fully
+# prove the active-session screen rendered.
 - assertVisible: "Add Exercise"
 - assertVisible: "Finish Workout"
 - assertVisible: "Cancel Workout"
