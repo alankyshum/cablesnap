@@ -21,6 +21,22 @@ appId: com.persoack.cablesnap
 # (lib/seed.ts:278), exact and unambiguous.
 - tapOn: "Search exercises"
 - inputText: "Bench Fly"
+
+# Wait for the result row to render BEFORE tapping it (BLD-1793, run
+# 28038846883: "Element not found: Text matching regex: Bench Fly"). The
+# ExercisePickerSheet loads its rows via an async getAllExercises() DB read
+# (components/ExercisePickerSheet.tsx:71) that fires while the sheet springs
+# open from SCREEN_H*0.45. The filter is synchronous (onChangeText={setQuery},
+# no debounce), but `exercises` is empty until that query resolves, so the
+# default tap-retry window can elapse with the list still showing
+# "No exercises found". extendedWaitUntil absorbs the DB-load + open-animation
+# latency without masking a genuinely-empty result. `visible` + `timeout` (ms)
+# is a stable Maestro 1.39.0 command; 30s mirrors the cold-start margins used
+# in onboarding.yaml. The picker renders item.name as a plain <Text> node
+# (ExercisePickerSheet.tsx:194), so this matches the same text the tap targets.
+- extendedWaitUntil:
+    visible: "Bench Fly"
+    timeout: 30000
 - tapOn: "Bench Fly"
 
 # Back on session screen with the exercise added.
