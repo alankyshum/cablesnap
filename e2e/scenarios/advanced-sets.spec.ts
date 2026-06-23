@@ -122,13 +122,20 @@ test.describe("@scenario advanced-sets", () => {
     await expect(page.getByText("Cluster", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Myo-reps", { exact: true }).first()).toBeVisible();
 
-    // Capture screenshot from the production route — BLD-1261 flex guard
-    // (Platform.OS !== "web") removes the flex: 1 constraint on web so the
-    // HTML document height equals content height and fullPage captures every
-    // entry at narrow viewports (390 px) where Myo-reps text wraps past 844 px.
+    // Capture screenshot via the production navigation push flow so expo-router's Stack
+    // has back-history — the back chevron renders exactly as real users see it.
+    // BLD-1769: direct goto("/settings/advanced-sets") omits back-history, causing the
+    // chevron to be absent in the audit screenshot (false positive). BLD-1261 flex guard
+    // (Platform.OS !== "web") removes flex: 1 on web so fullPage captures all content.
     const viewport = testInfo.project.name;
     const screenshotPath = path.join(OUT_DIR, `advanced-sets-help-${viewport}.png`);
-    await page.goto("/settings/advanced-sets");
+    await page.goto("/settings");
+    await expect(page.locator("body")).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(600);
+    const helpLinkForShot = page.getByText("Advanced Set Types").first();
+    await helpLinkForShot.scrollIntoViewIfNeeded();
+    await expect(helpLinkForShot).toBeVisible({ timeout: 5_000 });
+    await helpLinkForShot.click();
     await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 10_000 });
     await page.screenshot({ path: screenshotPath, fullPage: true });
     expect(screenshotPath).toBeTruthy();
