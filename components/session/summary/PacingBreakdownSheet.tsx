@@ -108,7 +108,7 @@ export default function PacingBreakdownSheet({ pacing, exerciseNames, onClose }:
         </View>
 
         {/* Table rows */}
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView showsVerticalScrollIndicator={false} testID="pacing-breakdown-row-scroll">
           {sorted.map((row) => (
             <ExerciseRow
               key={row.exercise_id}
