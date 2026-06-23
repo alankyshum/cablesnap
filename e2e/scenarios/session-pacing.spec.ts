@@ -115,6 +115,13 @@ test.describe("@scenario session-pacing", () => {
     await expect(page.getByText("Cable Row")).toBeVisible({ timeout: 5000 });
     await expect(page.getByText("Lat Pulldown")).toBeVisible();
 
+    // Let the BottomSheet open animation settle (withSpring translateY + withTiming
+    // opacity, ~300ms) before capturing — otherwise the sheet is screenshotted
+    // mid-travel and appears as a thin sliver peeking from the bottom (BLD-1767).
+    // Consistent with the 500ms pattern in completed-workout.spec.ts:52,
+    // with extra headroom for the spring settling time.
+    await page.waitForTimeout(600);
+
     await page.screenshot({
       path: path.join(OUT_DIR, "pacing-breakdown-sheet.png"),
       fullPage: true,
