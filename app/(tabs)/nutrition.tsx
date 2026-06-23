@@ -139,6 +139,16 @@ export default function Nutrition() {
         onClose={() => setAddSheetVisible(false)}
         snapPoints={[0.7, 0.9]}
         title="Add Food"
+        // disablePanGesture: the Add Food sheet hosts a long, keyboard-heavy
+        // manual-entry form (ManualFoodEntry). The default drag-to-dismiss
+        // Gesture.Pan() wraps the body and intercepts every vertical drag,
+        // moving the sheet instead of scrolling its inner ScrollView — which
+        // made the macro inputs / "Log Food" button unreachable for both users
+        // mid-typing and the e2e flow (BLD-1793: add-food never scrolled to the
+        // submit button across 20 runs). Disabling the pan gesture renders a
+        // plain, scrollable ScrollView; the sheet is still dismissable via the
+        // backdrop tap and the in-form Cancel button.
+        disablePanGesture
       >
         <InlineFoodSearch dateKey={dateKey} onFoodLogged={handleFoodLogged} onSnack={handleSnack} />
       </BottomSheet>

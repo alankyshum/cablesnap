@@ -76,41 +76,53 @@ appId: com.persoack.cablesnap
 - hideKeyboard
 
 # Log the food. The "Log Food" Button (testID "log-food-button",
-# ManualFoodEntry.tsx:37) sits at the bottom of the expanded form, below
+# ManualFoodEntry.tsx) sits at the bottom of the expanded form, below
 # the macro row + serving size input + "Save as favorite" chip.
 #
-# Why swipe(UP) + tapOn id, NOT scrollUntilVisible+id (BLD-1793 runs 28016615825,
-# 28018864248): The BottomSheet wraps its content in a react-native-reanimated
-# Animated.View → ScrollView (components/ui/bottom-sheet.tsx:104). Maestro's
-# scrollUntilVisible walks the UIAutomator2 accessibility tree to find a
-# scrollable parent; the Animated.View wrapper breaks that detection, so the
-# scroll never reaches the button and the 20s timeout is exhausted every run
-# (run 28016615825: "No visible element found: id: log-food-button" after 1m 5s).
-# `swipe` with a direction is a coordinate-based gesture — it physically drags
-# the screen and does NOT rely on scroll-container detection, so it moves the
-# below-the-fold Log Food button into view regardless of wrapper type.
-# NOTE: the command is `swipe: { direction: UP }` — there is NO `swipeUp`
-# command in Maestro (run 28018864248 aborted at parse time:
-# 'Invalid command: "swipeUp"'). Two swipes guarantee the button clears the soft
-# keyboard / serving-size + favorite-chip rows below the macro inputs.
-#
-# Tap by testID "log-food-button", NOT by the visible text "Log Food"
+# Selector: tap by testID "log-food-button", NOT by the visible text "Log Food"
 # (BLD-1793 run 28020728191: "Element not found: Text matching regex: Log Food").
 # The Button is rendered with accessibilityLabel="Log manual entry"
 # (ManualFoodEntry.tsx) and Button spreads {...props} onto its Pressable
 # (components/ui/button.tsx), so React Native exposes the Pressable's a11y
 # content-desc as "Log manual entry" and COLLAPSES the child <Text>Log Food</Text>
-# out of the UIAutomator2 tree Maestro reads. The visible "Log Food" label is
-# therefore not matchable by text — only the testID lands. A tapOn by id needs
-# the element on-screen (the two swipes above bring it into view) but does NOT
-# rely on scroll-container detection, which the BottomSheet Animated.View wrapper
-# breaks (the reason scrollUntilVisible+id timed out in run 28016615825).
-- swipe:
-    direction: UP
-- swipe:
-    direction: UP
+# out of the UIAutomator2 tree Maestro reads — the visible "Log Food" label is
+# not matchable by text, only the testID lands.
+#
+# Scrolling: use scrollUntilVisible, NOT a fixed number of `swipe` gestures
+# (BLD-1793 run 28024333368: "Element not found: Id matching regex: log-food-button").
+# The captured view hierarchy at that failure showed two swipe(UP) gestures left
+# the Serving-size input at bounds [34,601][286,640] — i.e. exactly at the 640px
+# screen bottom — so the Log Food button (one Button-height lower, ~y=648+) was
+# still below the fold and not rendered into the tree (RN only materialises the
+# ScrollView's visible window). A hardcoded swipe count is fragile to row heights.
+# scrollUntilVisible drives the BottomSheet's REAL native android.widget.ScrollView
+# (components/ui/bottom-sheet.tsx:99 — a plain RN <ScrollView>, confirmed present
+# and scrollable:true in that same hierarchy dump at bounds [0,146][320,640]) and
+# stops the moment the button enters the tree, regardless of exact row geometry.
+# direction: DOWN scrolls content upward to reveal elements below the fold (same
+# convention already used for the calories/protein inputs above). We do NOT pass
+# centerElement (default false): Log Food is the LAST element in the form, so once
+# it is on-screen there is nothing below it to scroll further — asking Maestro to
+# center it could exhaust the scroll and report not-found. Default behaviour stops
+# the instant the button is visible, which is all `tapOn` by id needs. NOTE:
+# scrollUntilVisible `timeout` is in MILLISECONDS (Maestro 1.39.0) — 30000 = 30s.
+- scrollUntilVisible:
+    element:
+      id: "log-food-button"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
     id: "log-food-button"
 
-# Should return to the nutrition screen
-- assertVisible: "Nutrition"
+# Confirm the log succeeded. We do NOT assert "Nutrition" here: the Add Food sheet
+# is a React Native <Modal> (components/ui/bottom-sheet.tsx) that stays OPEN after
+# a manual log (nutrition.tsx only closes it on a user gesture), and a Modal
+# occludes the screen beneath it in the UIAutomator2 tree — the captured hierarchy
+# from run 28024333368 contained NO "Nutrition" node while the sheet was open, so
+# that assertion would fail even on a successful save. Instead assert the form
+# collapsed: useManualFoodForm.handleSave calls setExpanded(false) ONLY when
+# onSave resolves true, which flips the toggle button's label from "Cancel" back
+# to "Manual Entry" (ManualFoodEntry.tsx). Seeing "Manual Entry" again is a
+# deterministic, in-sheet signal that the food was logged. assertVisible polls
+# with its default wait, covering the async save round-trip.
+- assertVisible: "Manual Entry"
