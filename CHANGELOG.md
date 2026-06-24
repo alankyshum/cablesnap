@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.40 — 2026-06-24
+<!-- versionCode: 110 -->
+
 - **Fix: Sets stat tile caption no longer wraps to two lines on the summary screen** — on a 390px mobile viewport the "Sets (9 working)" caption wrapped to two lines, while Duration and Volume stayed on one line. All three stat tile captions now auto-shrink the font to fit on a single line (down to 80% of the baseline size), so the three-tile row stays visually consistent regardless of how many set types are present. Screen-reader accessibility labels are unchanged. (BLD-1873)
 - **Fix: Error toasts now show full message** — error toasts that contained long messages (e.g. React runtime warnings) were truncated mid-word due to a single-line limit. Toasts now wrap to two lines so the full message is readable. Also fixed a React web rendering warning ("non-boolean attribute") caused by React Native accessibility props being passed to DOM elements on web, which was the root-cause message appearing in the toast. (BLD-1872)
 
