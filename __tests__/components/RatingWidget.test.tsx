@@ -100,4 +100,39 @@ describe('RatingWidget', () => {
     fireEvent(widget, 'accessibilityAction', { nativeEvent: { actionName: 'increment' } });
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('BLD-1872: star Pressables have accessibilityElementsHidden gated by Platform (false on web, true on native)', () => {
+    // On native (jest runs with Platform.OS = 'ios' or 'android' in tests),
+    // accessibilityElementsHidden should be true. On web it should be false
+    // to avoid the React DOM "Received `true` for a non-boolean attribute" warning.
+    const { Platform } = require('react-native')
+
+    // Read the source tree via toJSON and walk nodes to find views
+    // that carry the accessibilityElementsHidden prop
+    function collectProps(node: Record<string, unknown> | null): Record<string, unknown>[] {
+      if (!node) return []
+      const acc: Record<string, unknown>[] = []
+      if (node.props && typeof (node.props as Record<string, unknown>).accessibilityElementsHidden !== 'undefined') {
+        acc.push(node.props as Record<string, unknown>)
+      }
+      for (const child of ((node.children as unknown[]) ?? [])) {
+        if (child && typeof child === 'object') {
+          acc.push(...collectProps(child as Record<string, unknown>))
+        }
+      }
+      return acc
+    }
+
+    const { toJSON } = renderWidget({ value: 3 })
+    const nodes = collectProps(toJSON() as unknown as Record<string, unknown>)
+    // There should be at least one node with the prop (each star has it)
+    expect(nodes.length).toBeGreaterThan(0)
+    for (const props of nodes) {
+      if (Platform.OS === 'web') {
+        expect(props.accessibilityElementsHidden).not.toBe(true)
+      } else {
+        expect(props.accessibilityElementsHidden).toBe(true)
+      }
+    }
+  })
 });

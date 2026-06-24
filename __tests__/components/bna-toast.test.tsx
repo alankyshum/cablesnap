@@ -250,6 +250,52 @@ describe('ToastProvider + useToast', () => {
   })
 })
 
+describe('BLD-1872: toast title wrapping', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('title Text has numberOfLines=2 so long error messages are not truncated at one line', () => {
+    const longTitle = 'Received `true` for a non-boolean attribute `accessibilityelementshidden`.'
+    const { getByTestId, UNSAFE_getAllByType } = renderWithToast(
+      <ToastTrigger title={longTitle} variant="error" />
+    )
+    fireEvent.press(getByTestId('show-toast'))
+
+    // Import the RN Text component to query via UNSAFE_getAllByType
+    const { Text: RNText } = require('react-native')
+    const textNodes = UNSAFE_getAllByType(RNText)
+    // Find the title node (it has fontWeight 600 and contains our long text)
+    const titleNode = textNodes.find(
+      (n: { props: { children?: unknown; numberOfLines?: number } }) =>
+        n.props.children === longTitle
+    )
+    expect(titleNode).toBeTruthy()
+    // Contract: numberOfLines must be >= 2 so the message is not cut off mid-word
+    expect(titleNode!.props.numberOfLines).toBeGreaterThanOrEqual(2)
+  })
+
+  it('description Text retains numberOfLines=2', () => {
+    const { getByTestId, UNSAFE_getAllByType } = renderWithToast(
+      <ToastTrigger title="Error" description="Something went wrong with a very long description that should wrap" />
+    )
+    fireEvent.press(getByTestId('show-toast'))
+
+    const { Text: RNText } = require('react-native')
+    const textNodes = UNSAFE_getAllByType(RNText)
+    const descNode = textNodes.find(
+      (n: { props: { children?: unknown; numberOfLines?: number } }) =>
+        n.props.children === 'Something went wrong with a very long description that should wrap'
+    )
+    expect(descNode).toBeTruthy()
+    expect(descNode!.props.numberOfLines).toBeGreaterThanOrEqual(2)
+  })
+})
+
 describe('useToast outside provider', () => {
   it('throws when used outside ToastProvider', () => {
     function BadComponent() {

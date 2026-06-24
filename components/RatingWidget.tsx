@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -96,7 +96,7 @@ export default function RatingWidget({ value, onChange, readOnly = false, size =
               alignItems: "center",
               justifyContent: "center",
             }}
-            accessibilityElementsHidden
+            accessibilityElementsHidden={Platform.OS !== 'web'}
             importantForAccessibility="no"
           >
             <MaterialCommunityIcons

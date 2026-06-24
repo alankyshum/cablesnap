@@ -1,4 +1,4 @@
-import { ActivityIndicator, Dimensions, Modal, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, Modal, Platform, StyleSheet, TextInput, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import ShareCard from "@/components/ShareCard";
@@ -102,7 +102,7 @@ export default function SummaryFooter({
         transparent
         animationType="fade"
         onRequestClose={() => { setPreviewVisible(false); setImageLoading(false); }}
-        accessibilityViewIsModal
+        {...(Platform.OS !== 'web' ? { accessibilityViewIsModal: true } : {})}
       >
         <View style={styles.previewOverlay} testID="summary-preview-overlay">
           <View style={styles.previewContainer} testID="summary-preview-container">
