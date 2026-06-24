@@ -14,6 +14,7 @@
 
 import { useState } from "react";
 import {
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -118,7 +119,7 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
               {/* Stacked bar */}
               <View
                 style={styles.barContainer}
-                accessibilityElementsHidden
+                accessibilityElementsHidden={Platform.OS !== 'web'}
               >
                 <View
                   style={[

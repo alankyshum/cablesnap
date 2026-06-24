@@ -13,7 +13,9 @@ import { fontSizes } from "@/constants/design-tokens";
 
 interface ToastProps extends ToastData { onDismiss: (id: string) => void; index: number; }
 
-const TOAST_HEIGHT = 52;
+// BLD-1872: increased from 52 to 68 to accommodate 2-line titles without
+// adjacent toasts overlapping when text wraps.
+const TOAST_HEIGHT = 68;
 const TOAST_MARGIN = 8;
 // BLD-569: keep toast above primary-action / FAB zone at bottom of screen
 // without overlapping the tab bar or the set-complete button.
@@ -47,7 +49,7 @@ export function Toast({ id, title, description, variant = 'default', onDismiss, 
         <View style={styles.island}>
           {IconComponent && <View style={{ marginRight: 10 }}><IconComponent size={16} color={variantColor} /></View>}
           <View style={{ flex: 1, minWidth: 0 }}>
-            {title && <Text variant='subtitle' style={{ color: Colors.light.onToast, fontSize: fontSizes.sm, fontWeight: '600', marginBottom: description ? 2 : 0 }} numberOfLines={1} ellipsizeMode='tail'>{title}</Text>}
+            {title && <Text variant='subtitle' style={{ color: Colors.light.onToast, fontSize: fontSizes.sm, fontWeight: '600', marginBottom: description ? 2 : 0 }} numberOfLines={2} ellipsizeMode='tail'>{title}</Text>}
             {description && <Text variant='caption' style={{ color: MUTED, fontSize: fontSizes.sm }} numberOfLines={2} ellipsizeMode='tail'>{description}</Text>}
             {action && (
               <TouchableOpacity
