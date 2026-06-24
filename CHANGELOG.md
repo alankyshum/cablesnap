@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Fix: Sets stat tile caption no longer wraps to two lines on the summary screen** — on a 390px mobile viewport the "Sets (9 working)" caption wrapped to two lines, while Duration and Volume stayed on one line. All three stat tile captions now auto-shrink the font to fit on a single line (down to 80% of the baseline size), so the three-tile row stays visually consistent regardless of how many set types are present. Screen-reader accessibility labels are unchanged. (BLD-1873)
 
 ## v0.26.39 — 2026-06-24
 <!-- versionCode: 109 -->
