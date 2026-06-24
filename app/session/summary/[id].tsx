@@ -273,19 +273,19 @@ function SummaryHeader({ colors, session, duration, durationSpokenText, complete
         <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={`Duration: ${durationSpokenText}`}>
           <CardContent style={styles.statInner}>
             <Text variant="heading" style={{ color: colors.primary }}>{duration}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Duration</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Duration</Text>
           </CardContent>
         </Card>
         <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={setsBreakdown ? `${completedCount} sets: ${setsBreakdown}` : `${completedCount} sets completed`}>
           <CardContent style={styles.statInner}>
             <Text variant="heading" style={{ color: colors.primary }}>{completedCount}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{setsBreakdown ? `Sets (${setsBreakdown})` : "Sets"}</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{setsBreakdown ? `Sets (${setsBreakdown})` : "Sets"}</Text>
           </CardContent>
         </Card>
         <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={`Total volume: ${volumeDisplay.toLocaleString()} ${unit}`}>
           <CardContent style={styles.statInner}>
             <Text variant="heading" style={{ color: colors.primary }}>{volumeDisplay.toLocaleString()}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Volume ({unit})</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>Volume ({unit})</Text>
           </CardContent>
         </Card>
       </View>
