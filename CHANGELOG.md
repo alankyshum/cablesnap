@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.39 — 2026-06-24
+<!-- versionCode: 109 -->
+
 - **Fix: Add Food sheet now scrolls to the "Log Food" button** — when adding a food via Manual Entry, the bottom sheet's drag-to-dismiss gesture was intercepting vertical swipes, so the form couldn't be scrolled and the "Log Food" button at the bottom was unreachable (especially with the keyboard open). The Add Food sheet's pan-to-dismiss is now disabled, so its content scrolls normally; the sheet is still dismissable via the backdrop or the in-form Cancel button. (BLD-1793)
 - **Fix: "Log Food" submit button is now always reachable in the Add Food sheet** — the manual-entry form submit was laid out below the visible screen fold when the sheet was at its default snap point, making it unreachable by scrolling. The sheet's scroll container is now bounded to the visible on-screen height so the form scrolls correctly and the submit button is always accessible. (BLD-1819)
 
