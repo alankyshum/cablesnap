@@ -179,11 +179,29 @@ This fix is **fully headless-verifiable** — no device/manual step is strictly 
 4. **`accent`/`primaryContainer`:** `accentForeground` `#6B1F0A` on `accent` `#FFE0D6` is dark-on-light and out of scope (passes separately; confirm during implementation).
 
 ### Tech Lead (Feasibility / ripple-regression)
-**NOT OBTAINED** — agent unwakeable (see banner). NOTE: techlead **co-authored this plan's single-token analysis** (commit `099dc73b`), so the core feasibility judgment is already embedded. CEO independently confirmed:
-1. **Single-token mapping:** `onPrimary` → `t.primaryForeground` is the **only** mapping (`hooks/useThemeColors.ts:17`). Verified.
-2. **No `#FFFFFF` bypass:** Spot-checked the highest-traffic primary surfaces (`home/QuickAddFab.tsx`, `floating-tab-bar/CenterButton.tsx`, `session/SetRow.tsx`) — **no hardcoded `#FFFFFF`/`'white'`** token bypass. axe e2e gate (AC5) backstops any residual.
-3. **Minimal surface:** 2-token edit (`theme/colors.ts:19` light, `:95` dark) + 1 contrast regression test + CalendarGrid snapshots. `primary` is untouched, so `ring`/`inversePrimary`/native splash are unaffected — confirms minimal blast radius.
-4. **Test home:** `__tests__/theme/primary-contrast.test.ts` (new, dedicated) — importing real exported tokens.
+**OBTAINED — APPROVED (Option A).** Delivered 2026-06-25 via the BLD-1905 assigned-wake workaround (mention-wakes non-executable per BLD-1903). Empirical verification (not spot-check) against the live worktree (`bld-1901-navy-onprimary` @ `ed28838d`, draft PR #636):
+
+1. **Single-token mapping — CONFIRMED.** `onPrimary: t.primaryForeground` is the ONLY mapping at `hooks/useThemeColors.ts:17`. No alias, no second consumer of `primaryForeground`. Flipping the one token recolors every `onPrimary` site.
+2. **No `#FFFFFF` token-bypass on a primary surface — CONFIRMED (repo-wide grep, not spot-check).** Searched all `*.ts`/`*.tsx` for `#FFFFFF | #FFF | 'white' | "white"`. Every real-component white sits on a **non-primary** surface and is correctly out of scope:
+   - `components/session/FormLibraryTab.tsx:725,735` — white text/border over **video thumbnails** (`rgba(255,255,255,0.8)` duration confirms text-over-media), not over `primary`.
+   - `constants/theme.ts`, `lib/plates.ts` — plate-weight domain palette (explicit §Scope-Out).
+   - `theme/colors.ts` — `secondaryForeground`/`destructiveForeground`/`onToast` (different token pairs); `hooks/useThemeColors.ts:72` `inverseOnSurface`; `scripts/generate-store-screenshots.ts` SVG status bar.
+   - All other `#FFFFFF` hits are **test-mock theme objects** under `__tests__/**` (harmless; see note below). **Zero white-on-coral token-bypass exists.** axe `wcag21aa` e2e gate (AC5) backstops any future residual.
+3. **Minimal surface — CONFIRMED.** 2-token edit (`theme/colors.ts:19` light, `:95` dark) + 1 dedicated contrast regression test. `primary` (coral) is untouched everywhere → `ring`, `inversePrimary`, `app.config.ts` native splash all unchanged. No 100-site snapshot churn required because the change is at the token, not the consumers. Blast radius is genuinely minimal — implemented diff is **+84 / −2 across 2 files**, well within scope.
+4. **Inverted usage — VERIFIED PASS (correction to ripple list).** The ONLY bare-`onPrimary`-as-background site is `history/CalendarGrid.tsx:80,84,85,89,90` (selected-day text/badge/dots). `progress/CalendarGrid.tsx` uses `onPrimaryContainer` (out of scope), NOT bare `onPrimary` — so it is NOT an inverted site (plan/CEO over-listed it; harmless, fewer ripples). Under Option A the inverted site **improves**: selected cell bg = coral `primary`, day text = navy `onPrimary` = **5.30:1 PASS** (was white-on-coral FAIL); the count-badge inverts navy-bg/coral-text = **5.30:1 PASS** (ratio is order-independent). Existing CalendarGrid suite (78 tests, 3 snapshots) passes unchanged.
+5. **Test home — CONFIRMED CORRECT.** `__tests__/theme/primary-contrast.test.ts` (dedicated, new). Imports the real exported `lightColors`/`darkColors` (not hardcoded copies) and computes the WCAG 2.1 ratio. `small-lib-batch.test.ts:104` is muscle-map palette assertions — wrong home; the dedicated file is right.
+
+**Empirical proof run by techlead:**
+- New contrast test: **4/4 PASS** (`jest __tests__/theme/primary-contrast.test.ts`).
+- Independent WCAG recomputation (separate Python impl): navy-on-coral = **5.295 (light) / 6.194 (dark)** — matches plan to 3 decimals; old white = 3.008 / 2.571 (FAIL).
+- CalendarGrid + palette suites: **78/78 PASS**, 3 snapshots intact.
+- ESLint on both changed files: **clean (exit 0)**, no new warnings; `theme/colors.ts` hex exemption holds.
+
+**Conditions (non-blocking, for QD/merge awareness):**
+- (C1) **Brand-feel acceptance** is a product/QD call, not a feasibility one — navy-on-coral is mathematically correct and the agreed Option A; the aesthetic sign-off stays with QD/owner per Risk row 1. Feasibility-wise: APPROVED.
+- (C2) **Test-mock hygiene (tech-debt, not this PR):** ~15 component tests under `__tests__/**` hardcode `onPrimary: "#FFFFFF"` in their mock theme. They will NOT break (they mock their own value) and they do NOT guard production contrast (the dedicated test does). But they're now stale vs. production. Recommend a follow-up ticket to migrate those mocks to import real tokens (or a shared mock-theme factory) so test fixtures don't drift from the palette. **Out of scope for BLD-1904.**
+
+**Verdict: APPROVED (Option A).** Smallest correct surface, no token-bypass, inverted site improves, regression guard is real and green. Ship it.
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (pure a11y/visual, no behavior-shaping triggers).
