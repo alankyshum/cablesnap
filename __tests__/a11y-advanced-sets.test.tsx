@@ -14,6 +14,7 @@ import { render } from "@testing-library/react-native";
 import { ExerciseGroupRow } from "@/components/session/detail/ExerciseGroupRow";
 import type { ExerciseGroup } from "@/hooks/useSessionDetail";
 import type { SetSegment } from "@/lib/types";
+import { lightMockColors } from "./helpers/theme";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -25,26 +26,7 @@ jest.mock("@/lib/db/sets", () => {
   };
 });
 
-const mockColors = {
-  primary: "#6200ee",
-  primaryContainer: "#e8def8",
-  onPrimary: "#ffffff",
-  onPrimaryContainer: "#21005d",
-  secondaryContainer: "#e8def8",
-  onSecondaryContainer: "#1d192b",
-  onSurface: "#1c1b1f",
-  onSurfaceVariant: "#49454f",
-  surface: "#fffbfe",
-  surfaceVariant: "#e7e0ec",
-  tertiaryContainer: "#f8e1e7",
-  onTertiaryContainer: "#31101d",
-  errorContainer: "#ffdad6",
-  onErrorContainer: "#410002",
-  error: "#b3261e",
-  outline: "#79747e",
-  background: "#fffbfe",
-  onError: "#ffffff",
-} as Parameters<typeof ExerciseGroupRow>[0]["colors"];
+const mockColors = lightMockColors as Parameters<typeof ExerciseGroupRow>[0]["colors"];
 
 // ─── Factories ────────────────────────────────────────────────────────────────
 
