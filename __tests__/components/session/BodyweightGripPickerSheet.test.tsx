@@ -50,16 +50,10 @@ jest.mock("@/components/ui/segmented-control", () => {
   };
 });
 
-jest.mock("@/hooks/useThemeColors", () => ({
-  useThemeColors: () => ({
-    surfaceVariant: "#ECE6F0",
-    onSurfaceVariant: "#49454F",
-    onSurface: "#1C1B1F",
-    primary: "#6750A4",
-    onPrimary: "#FFFFFF",
-    outline: "#79747E",
-  }),
-}));
+jest.mock("@/hooks/useThemeColors", () => {
+  const { lightMockColors } = require("../../helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 
 describe("BodyweightGripPickerSheet — BLD-822", () => {
   it("confirming without any tap saves NULL/NULL (silent-default trap closure)", () => {

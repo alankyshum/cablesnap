@@ -25,35 +25,19 @@ jest.mock("expo-router", () => ({
   useRouter: () => ({ push: jest.fn() }),
 }));
 
-const MOCK_PRIMARY = "#6200EE";
-const MOCK_MUTED = "#E5E7EB";
-
-const MOCK_COLORS = {
-  primary: MOCK_PRIMARY,
-  primaryForeground: "#FFFFFF",
-  onPrimary: "#FFFFFF",
-  onBackground: "#000000",
-  onSurface: "#000000",
-  onSurfaceVariant: "#6B7280",
-  surface: "#FFFFFF",
-  surfaceVariant: "#F3F4F6",
-  muted: MOCK_MUTED,
-  outline: "#D1D5DB",
-  background: "#FFFFFF",
-  text: "#111111",
-};
-
-jest.mock("@/hooks/useThemeColors", () => ({
-  useThemeColors: () => MOCK_COLORS,
-}));
+jest.mock("@/hooks/useThemeColors", () => {
+  const { lightMockColors } = require("../../helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 
 jest.mock("@/hooks/useColorScheme", () => ({
   useColorScheme: () => "light",
 }));
 
-jest.mock("@/hooks/useColor", () => ({
-  useColor: (key: string) => MOCK_COLORS[key as keyof typeof MOCK_COLORS] ?? "#000000",
-}));
+jest.mock("@/hooks/useColor", () => {
+  const { lightColors } = require("../../../theme/colors");
+  return { useColor: (key: string) => lightColors[key as keyof typeof lightColors] ?? "#000000" };
+});
 
 jest.mock("@expo/vector-icons/MaterialCommunityIcons", () => "Icon");
 
@@ -73,6 +57,13 @@ import {
   CuratedCaption,
   useCuratedCaption,
 } from "../../../components/program/CuratedExtras";
+import { lightMockColors as MOCK_COLORS } from "../../helpers/theme";
+import { lightColors } from "../../../theme/colors";
+
+// Convenience aliases used in assertions (derived from real palette)
+const MOCK_PRIMARY = MOCK_COLORS.primary;
+// chip.tsx unselected bg comes from useColor("muted") → Colors.light.muted
+const MOCK_MUTED = lightColors.muted;
 
 // ─── Test data ────────────────────────────────────────────────────────────────
 

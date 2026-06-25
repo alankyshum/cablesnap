@@ -19,27 +19,10 @@ import type { SetSegment } from "@/lib/types";
 
 // ─── Mock: useThemeColors ─────────────────────────────────────────────────────
 
-jest.mock("@/hooks/useThemeColors", () => ({
-  useThemeColors: () => ({
-    primary: "#6200ee",
-    primaryContainer: "#e8def8",
-    onPrimary: "#ffffff",
-    onPrimaryContainer: "#21005d",
-    secondaryContainer: "#e8def8",
-    onSecondaryContainer: "#1d192b",
-    onSurface: "#1c1b1f",
-    onSurfaceVariant: "#49454f",
-    surface: "#fffbfe",
-    surfaceVariant: "#e7e0ec",
-    tertiaryContainer: "#f8e1e7",
-    onTertiaryContainer: "#31101d",
-    errorContainer: "#ffdad6",
-    onErrorContainer: "#410002",
-    error: "#b3261e",
-    outline: "#79747e",
-    background: "#fffbfe",
-  }),
-}));
+jest.mock("@/hooks/useThemeColors", () => {
+  const { lightMockColors } = require("./helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 
 // ─── Mock: Alert (spy on Alert.alert so we can control confirm/cancel) ────────
 

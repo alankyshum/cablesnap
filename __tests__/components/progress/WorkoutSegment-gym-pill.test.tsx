@@ -29,18 +29,10 @@ jest.mock("expo-router", () => {
 });
 
 jest.mock("@expo/vector-icons/MaterialCommunityIcons", () => "Icon");
-jest.mock("@/hooks/useThemeColors", () => ({
-  useThemeColors: () => ({
-    primary: "#6750A4",
-    primaryContainer: "#EADDFF",
-    onPrimaryContainer: "#21005D",
-    surface: "#FFFBFE",
-    onSurface: "#1C1B1F",
-    onSurfaceVariant: "#49454F",
-    onPrimary: "#FFFFFF",
-    outlineVariant: "#CAC4D0",
-  }),
-}));
+jest.mock("@/hooks/useThemeColors", () => {
+  const { lightMockColors } = require("../../helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 jest.mock("@/lib/layout", () => ({
   useLayout: () => ({ wide: false, atLeastMedium: false, width: 390, scale: 1.0 }),
 }));

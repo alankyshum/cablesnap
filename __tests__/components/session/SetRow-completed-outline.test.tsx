@@ -40,7 +40,7 @@ jest.mock("@/hooks/useThemeColors", () => ({
   useThemeColors: () => ({
     primary: PRIMARY,
     primaryContainer: "#e8def8",
-    onPrimary: "#ffffff",
+    onPrimary: "#1A2138",
     onSurface: "#1c1b1f",
     onSurfaceVariant: "#49454f",
     surface: "#fffbfe",
