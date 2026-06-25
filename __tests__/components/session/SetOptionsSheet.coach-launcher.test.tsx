@@ -9,24 +9,10 @@
 import React from "react";
 import { render } from "@testing-library/react-native";
 
-jest.mock("@/hooks/useThemeColors", () => ({
-  useThemeColors: () => ({
-    primary: "#6200ee",
-    primaryContainer: "#e8def8",
-    onPrimary: "#ffffff",
-    onPrimaryContainer: "#21005d",
-    surface: "#fffbfe",
-    onSurface: "#1c1b1f",
-    onSurfaceVariant: "#49454f",
-    surfaceVariant: "#e7e0ec",
-    surfaceDisabled: "#e0e0e0",
-    outlineVariant: "#cac4d0",
-    tertiaryContainer: "#ffd8e4",
-    onTertiaryContainer: "#31111d",
-    errorContainer: "#f9dedc",
-    onErrorContainer: "#410e0b",
-  }),
-}));
+jest.mock("@/hooks/useThemeColors", () => {
+  const { lightMockColors } = require("../../helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 
 jest.mock("@/components/ui/text", () => {
   const { Text: RNText } = require("react-native");

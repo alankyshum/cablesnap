@@ -8,23 +8,10 @@ jest.mock("../../../lib/useProfileGender", () => ({
   useProfileGender: () => "male",
 }));
 
-jest.mock("../../../hooks/useThemeColors", () => ({
-  useThemeColors: () => ({
-    primary: "#6750A4",
-    onPrimary: "#FFFFFF",
-    primaryContainer: "#EADDFF",
-    onPrimaryContainer: "#21005D",
-    secondaryContainer: "#E8DEF8",
-    onSecondaryContainer: "#1D192B",
-    tertiaryContainer: "#FFD8E4",
-    onTertiaryContainer: "#31111D",
-    onSurface: "#1C1B1F",
-    onSurfaceVariant: "#49454F",
-    surfaceVariant: "#E7E0EC",
-    outlineVariant: "#CAC4D0",
-    surface: "#FFFBFE",
-  }),
-}));
+jest.mock("../../../hooks/useThemeColors", () => {
+  const { lightMockColors } = require("../../helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 
 // MuscleMap is heavy (react-native-body-highlighter SVG); replace with a marker view.
 jest.mock("../../../components/MuscleMap", () => {

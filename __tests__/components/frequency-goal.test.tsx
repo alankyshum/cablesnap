@@ -1,21 +1,10 @@
 import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
 
-// Mock theme colors
-const mockColors = {
-  primary: "#6200EE",
-  onPrimary: "#FFFFFF",
-  surface: "#FFFFFF",
-  onSurface: "#000000",
-  onSurfaceVariant: "#666666",
-  surfaceVariant: "#E0E0E0",
-  background: "#FFFFFF",
-  onBackground: "#000000",
-};
-
-jest.mock("@/hooks/useThemeColors", () => ({
-  useThemeColors: () => mockColors,
-}));
+jest.mock("@/hooks/useThemeColors", () => {
+  const { lightMockColors } = require("../helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 
 jest.mock("@/components/ui/card", () => {
   const { View } = require("react-native");
@@ -38,6 +27,7 @@ import FrequencyGoalPicker from "../../components/settings/FrequencyGoalPicker";
 import AdherenceBar from "../../components/home/AdherenceBar";
 import StatsRow from "../../components/home/StatsRow";
 import type { WeeklyGoalProgress } from "../../components/home/loadHomeData";
+import { lightMockColors as mockColors } from "../helpers/theme";
 
 jest.mock("@expo/vector-icons/MaterialCommunityIcons", () => "Icon");
 

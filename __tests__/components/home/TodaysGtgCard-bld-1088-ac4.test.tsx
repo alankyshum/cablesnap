@@ -12,32 +12,16 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-jest.mock("../../../hooks/useThemeColors", () => ({
-  useThemeColors: () => ({
-    primary: "#5B67E8",
-    onPrimary: "#FFFFFF",
-    surface: "#FFFFFF",
-    surfaceVariant: "#F2F2F7",
-    onSurface: "#1A2138",
-    onSurfaceVariant: "#6B7280",
-    outline: "#D1D5DB",
-  }),
-}));
+jest.mock("../../../hooks/useThemeColors", () => {
+  const { lightMockColors } = require("../../helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 
 import React from "react";
 import { render } from "@testing-library/react-native";
 import TodaysGtgCard from "../../../components/home/TodaysGtgCard";
 import type { TodayGtgSummaryRow } from "../../../lib/db/day-session";
-
-const COLORS = {
-  primary: "#5B67E8",
-  onPrimary: "#FFFFFF",
-  surface: "#FFFFFF",
-  surfaceVariant: "#F2F2F7",
-  onSurface: "#1A2138",
-  onSurfaceVariant: "#6B7280",
-  outline: "#D1D5DB",
-} as any;
+import { lightMockColors as COLORS } from "../../helpers/theme";
 
 const NOW = new Date("2026-05-10T12:00:00.000Z").getTime();
 

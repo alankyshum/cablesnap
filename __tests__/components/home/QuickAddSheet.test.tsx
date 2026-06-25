@@ -19,21 +19,10 @@ jest.mock("../../../hooks/useColorScheme", () => ({
   useColorScheme: () => "light",
 }));
 
-jest.mock("../../../hooks/useThemeColors", () => ({
-  useThemeColors: () => ({
-    primary: "#5B67E8",
-    onPrimary: "#FFFFFF",
-    surface: "#FFFFFF",
-    surfaceVariant: "#F2F2F7",
-    onSurface: "#1A2138",
-    onSurfaceVariant: "#6B7280",
-    background: "#F5F5F5",
-    errorContainer: "#FDECEA",
-    onErrorContainer: "#D32F2F",
-    outline: "#D1D5DB",
-    outlineVariant: "#E5E7EB",
-  }),
-}));
+jest.mock("../../../hooks/useThemeColors", () => {
+  const { lightMockColors } = require("../../helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 
 // Mock BottomSheet so it renders children without portal/animation
 jest.mock("@gorhom/bottom-sheet", () => {

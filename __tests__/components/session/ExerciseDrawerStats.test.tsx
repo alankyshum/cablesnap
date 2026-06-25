@@ -6,17 +6,10 @@ jest.mock("../../../hooks/useExerciseDrawerStats", () => ({
   useExerciseDrawerStats: jest.fn(),
 }));
 
-jest.mock("../../../hooks/useThemeColors", () => ({
-  useThemeColors: () => ({
-    primary: "#6750A4",
-    onPrimary: "#FFFFFF",
-    onSurface: "#1C1B1F",
-    onSurfaceVariant: "#49454F",
-    surfaceVariant: "#E7E0EC",
-    outlineVariant: "#CAC4D0",
-    surface: "#FFFBFE",
-  }),
-}));
+jest.mock("../../../hooks/useThemeColors", () => {
+  const { lightMockColors } = require("../../helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 
 const { useExerciseDrawerStats } = require("../../../hooks/useExerciseDrawerStats");
 

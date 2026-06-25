@@ -12,17 +12,10 @@
 import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
 
-jest.mock("@/hooks/useThemeColors", () => ({
-  useThemeColors: () => ({
-    surface: "#fffbfe",
-    onSurface: "#1c1b1f",
-    onSurfaceVariant: "#49454f",
-    surfaceVariant: "#e7e0ec",
-    primary: "#6200ee",
-    onPrimary: "#ffffff",
-    error: "#b3261e",
-  }),
-}));
+jest.mock("@/hooks/useThemeColors", () => {
+  const { lightMockColors } = require("../helpers/theme");
+  return { useThemeColors: () => lightMockColors };
+});
 
 import { PulleyPinPickerSheet } from "../../components/session/PulleyPinPickerSheet";
 
