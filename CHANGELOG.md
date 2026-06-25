@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.41 — 2026-06-25
+<!-- versionCode: 111 -->
+
 - **Fix: Advanced Set Types help screen now hints when there's more to scroll** — on narrow phones (e.g. 320px wide) the last "Myo-reps" section could sit at the bottom edge with no cue that more content existed below. The screen now shows a subtle bottom fade while the list can still be scrolled, and the fade disappears once you reach the end. (BLD-1916)
 
 ## v0.26.40 — 2026-06-24
