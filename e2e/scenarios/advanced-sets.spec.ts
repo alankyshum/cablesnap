@@ -163,6 +163,15 @@ test.describe("@scenario advanced-sets", () => {
   test("harness renders all help entries including full Myo-reps description (BLD-1261)", async ({
     page,
   }) => {
+    // BLD-1943: `__SKIP_ONBOARDING__` must be set before navigation so the root
+    // layout's `useAppInit` bypasses the DB onboarding check. Without it,
+    // `isOnboardingComplete()` returns false on a fresh worker DB, causing the
+    // root layout to Redirect to /onboarding/welcome — the harness component
+    // never mounts and `data-test-ready` is never set, timing out at 10 s.
+    await page.addInitScript(() => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+    });
     await page.goto("/__test__/advanced-sets");
     await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 10_000 });
 
