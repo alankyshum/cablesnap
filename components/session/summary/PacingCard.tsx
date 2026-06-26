@@ -10,6 +10,10 @@
  * Valenced words ("Idle", "Wasted", "Inactive", "Off-task", "Distraction") are FORBIDDEN
  * in this file — enforced by source-contracts-batch.test.ts.
  * ⓘ disclosure copy is verbatim per AC§147 — locked by source-contracts.
+ *
+ * CVD accessibility (BLD-1939): The "Other" segment carries a diagonal hatch
+ * overlay so it is distinguishable from "Working" under deuteranopia/protanopia.
+ * The hatch is additive — full-colour appearance for sighted users is unchanged.
  */
 
 import { useState } from "react";
@@ -19,6 +23,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import Svg, { Defs, Line, Pattern, Rect } from "react-native-svg";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -38,6 +43,78 @@ function useSegmentColors() {
     rest: colors.heatmapLow,          // Blue (#1E88E5 / dark variant)
     other: colors.onSurfaceVariant,   // Mid grey — legible on card background
   };
+}
+
+// ─── Diagonal hatch overlay (BLD-1939 CVD fix) ───────────────────────────────
+//
+// Renders an SVG diagonal stripe pattern as an absolute-fill overlay.
+// The overlay is purely decorative: aria-hidden + accessibilityElementsHidden
+// so it does not pollute the a11y tree. pointerEvents="none" ensures taps
+// pass through to the parent Pressable.
+//
+// The hatch stroke colour is semi-transparent white so it works on both
+// light and dark themes without hardcoding a specific shade.
+
+const HATCH_PATTERN_ID = "pacing-other-hatch";
+const HATCH_SIZE = 6;          // tile size in px
+const HATCH_STROKE_WIDTH = 1.5;
+const HATCH_STROKE_COLOR = "rgba(255,255,255,0.55)"; // semi-white for theme-agnostic contrast
+
+type HatchOverlayProps = {
+  /** Width and height of the area to cover. Pass explicit values for the bar
+   *  segment (determined by flex at runtime) or the legend dot (8×8). */
+  width: number;
+  height: number;
+  testID?: string;
+};
+
+/**
+ * HatchOverlay — decorative diagonal stripe fill.
+ * Caller is responsible for positioning (absoluteFill or explicit dimensions).
+ */
+export function HatchOverlay({ width, height, testID }: HatchOverlayProps) {
+  if (width <= 0 || height <= 0) return null;
+  return (
+    <Svg
+      width={width}
+      height={height}
+      style={StyleSheet.absoluteFillObject}
+      // Decorative overlay — must NOT be announced by screen readers
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      aria-hidden
+      pointerEvents="none"
+      testID={testID}
+    >
+      <Defs>
+        <Pattern
+          id={HATCH_PATTERN_ID}
+          x="0"
+          y="0"
+          width={HATCH_SIZE}
+          height={HATCH_SIZE}
+          patternUnits="userSpaceOnUse"
+          patternTransform="rotate(45)"
+        >
+          <Line
+            x1="0"
+            y1="0"
+            x2="0"
+            y2={HATCH_SIZE}
+            stroke={HATCH_STROKE_COLOR}
+            strokeWidth={HATCH_STROKE_WIDTH}
+          />
+        </Pattern>
+      </Defs>
+      <Rect
+        x="0"
+        y="0"
+        width={width}
+        height={height}
+        fill={`url(#${HATCH_PATTERN_ID})`}
+      />
+    </Svg>
+  );
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -122,30 +199,42 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
                 accessibilityElementsHidden={Platform.OS !== 'web'}
               >
                 <View
+                  testID="pacing-seg-working"
                   style={[
                     styles.barSegment,
                     { flex: workingFrac, backgroundColor: segColors.working, borderTopLeftRadius: 4, borderBottomLeftRadius: 4 },
                   ]}
                 />
                 <View
+                  testID="pacing-seg-rest"
                   style={[
                     styles.barSegment,
                     { flex: restFrac, backgroundColor: segColors.rest },
                   ]}
                 />
+                {/* Other segment: hatch overlay for CVD (BLD-1939) */}
                 <View
+                  testID="pacing-seg-other"
                   style={[
                     styles.barSegment,
                     { flex: otherFrac, backgroundColor: segColors.other, borderTopRightRadius: 4, borderBottomRightRadius: 4 },
                   ]}
-                />
+                >
+                  {otherFrac > 0 && (
+                    <HatchOverlay
+                      width={BAR_HEIGHT}
+                      height={BAR_HEIGHT}
+                      testID="pacing-seg-other-pattern"
+                    />
+                  )}
+                </View>
               </View>
 
               {/* Labels */}
               <View style={styles.labelsRow}>
-                <LabelChip label="Working" value={workingLabel} color={segColors.working} textColor={colors.onSurface} />
-                <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} />
-                <LabelChip label="Other" value={otherLabel} color={segColors.other} textColor={colors.onSurface} />
+                <LabelChip label="Working" value={workingLabel} color={segColors.working} textColor={colors.onSurface} showHatch={false} />
+                <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} />
+                <LabelChip label="Other" value={otherLabel} color={segColors.other} textColor={colors.onSurface} showHatch />
               </View>
 
               <Text
@@ -170,20 +259,38 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
   );
 }
 
+// ─── LabelChip ────────────────────────────────────────────────────────────────
+
+const LEGEND_DOT_SIZE = 8;
+
 function LabelChip({
   label,
   value,
   color,
   textColor,
+  showHatch,
 }: {
   label: string;
   value: string;
   color: string;
   textColor: string;
+  showHatch: boolean;
 }) {
   return (
     <View style={styles.labelChip}>
-      <View style={[styles.legendDot, { backgroundColor: color }]} />
+      {/* Legend dot with optional hatch overlay (BLD-1939) */}
+      <View
+        testID={`pacing-dot-${label.toLowerCase()}`}
+        style={[styles.legendDot, { backgroundColor: color }]}
+      >
+        {showHatch && (
+          <HatchOverlay
+            width={LEGEND_DOT_SIZE}
+            height={LEGEND_DOT_SIZE}
+            testID={`pacing-dot-${label.toLowerCase()}-pattern`}
+          />
+        )}
+      </View>
       <Text variant="caption" style={{ color: textColor, fontWeight: "600" }}>
         {label}
       </Text>
@@ -194,14 +301,18 @@ function LabelChip({
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const BAR_HEIGHT = 18;
+
 const styles = StyleSheet.create({
   card: { marginBottom: 16 },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   infoButton: { padding: 4 },
   disclosure: { marginBottom: 8, lineHeight: 18 },
-  barContainer: { height: 18, flexDirection: "row", borderRadius: 4, overflow: "hidden", marginBottom: 8 },
+  barContainer: { height: BAR_HEIGHT, flexDirection: "row", borderRadius: 4, overflow: "hidden", marginBottom: 8 },
   barSegment: { height: "100%" },
   labelsRow: { flexDirection: "row", justifyContent: "space-around", flexWrap: "wrap", gap: 4 },
   labelChip: { flexDirection: "row", alignItems: "center", gap: 3 },
-  legendDot: { width: 8, height: 8, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(0,0,0,0.18)" },
+  legendDot: { width: LEGEND_DOT_SIZE, height: LEGEND_DOT_SIZE, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(0,0,0,0.18)", overflow: "hidden" },
 });
