@@ -11,7 +11,7 @@
  * as `scenario-session-1`, so this spec can navigate directly to the summary
  * route without first reading the DB.
  *
- * Refs: BLD-494, BLD-481, BLD-744
+ * Refs: BLD-494, BLD-481, BLD-744, BLD-1942
  */
 import { test, expect } from "@playwright/test";
 import * as path from "path";
@@ -63,7 +63,13 @@ test.describe("@scenario completed-workout", () => {
     // is captured. window.scrollTo() does not move RN's scroll container —
     // scroll the testID element directly (same fix as settings.spec.ts BLD-1124).
     // BLD-1768 root cause: FlatList never scrolled, pacing-card clipped at bottom.
+    // BLD-1942: wait for the FlatList to appear before scrolling — useSummaryData
+    // may still be loading the session (seed runs concurrently with the first DB
+    // read; if the hook fired before the seed, session was null and the FlatList
+    // didn't render yet). data-test-ready only signals seed completion, not
+    // React state hydration.
     const scrollEl = page.getByTestId("summary-scroll-view");
+    await expect(scrollEl).toBeVisible({ timeout: 10_000 });
     await scrollEl.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
     await page.waitForTimeout(300);
 

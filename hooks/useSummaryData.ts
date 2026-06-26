@@ -32,6 +32,45 @@ type Comparison = {
 
 export type { PR, RepPR, DurationPR, Increase, Comparison };
 
+// BLD-1942: detect Playwright's webdriver flag — used to gate the session-load
+// retry so production behavior is unchanged (single attempt outside webdriver).
+function isUnderWebdriver(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (navigator as Navigator & { webdriver?: boolean }).webdriver === true;
+}
+
+/**
+ * BLD-1942: bounded poll for the session row.
+ *
+ * Under Playwright the scenario seed runs concurrently with the first
+ * getSessionById call. If this hook fires before the seed inserts the row,
+ * the hook would permanently bail (`if (!sess) return`) and the FlatList
+ * with `testID="summary-scroll-view"` would never render. Poll up to
+ * MAX_ATTEMPTS times with BACKOFF_MS between attempts, but ONLY under
+ * navigator.webdriver — outside webdriver (production, unit tests) this
+ * runs exactly once so behavior is unchanged.
+ */
+const SESSION_POLL_MAX_ATTEMPTS = 10;
+const SESSION_POLL_BACKOFF_MS = 200;
+
+async function pollSessionById(
+  id: string,
+  cancelled: { current: boolean },
+): Promise<Awaited<ReturnType<typeof getSessionById>> | undefined> {
+  const maxAttempts = isUnderWebdriver() ? SESSION_POLL_MAX_ATTEMPTS : 1;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const sess = await getSessionById(id);
+    if (cancelled.current) return undefined;
+    if (sess) return sess;
+    if (attempt < maxAttempts) {
+      await new Promise<void>((resolve) =>
+        setTimeout(resolve, SESSION_POLL_BACKOFF_MS),
+      );
+    }
+  }
+  return undefined;
+}
+
 export function useSummaryData(id: string | undefined) {
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [sets, setSets] = useState<(WorkoutSet & { exercise_name?: string })[]>([]);
@@ -59,10 +98,14 @@ export function useSummaryData(id: string | undefined) {
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
+    const cancelRef = { current: false };
     (async () => {
       try {
+        // BLD-1942: use pollSessionById to handle the race where the Playwright
+        // scenario seed runs concurrently with this initial DB read. See the
+        // module-level helper for full rationale.
         const [sess, settings] = await Promise.all([
-          getSessionById(id),
+          pollSessionById(id, cancelRef),
           getBodySettings(),
         ]);
         if (cancelled) return;
@@ -134,6 +177,7 @@ export function useSummaryData(id: string | undefined) {
     })();
     return () => {
       cancelled = true;
+      cancelRef.current = true;
     };
   }, [id]);
 
