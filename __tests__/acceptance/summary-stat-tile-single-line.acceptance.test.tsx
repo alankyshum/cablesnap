@@ -1,11 +1,13 @@
 /**
- * Acceptance test for BLD-1876 / BLD-1873:
+ * Acceptance test for BLD-1876 / BLD-1873 / BLD-1938:
  * Summary screen stat tile captions must not wrap to multiple lines.
  *
  * Verifies:
  *  - All three stat captions (Duration, Sets, Volume) have numberOfLines={1}
- *  - All three captions have adjustsFontSizeToFit and minimumFontScale={0.8}
- *    so long breakdowns shrink instead of wrap
+ *  - Duration and Volume captions have adjustsFontSizeToFit and minimumFontScale={0.8}
+ *  - Sets caption has adjustsFontSizeToFit and minimumFontScale={0.6} (BLD-1938:
+ *    lowered from 0.8 so "Sets (9 working)" fits in the ~78px card width at 390px
+ *    viewport without truncation)
  *  - The Sets tile accessibilityLabel still exposes the full breakdown text
  *    (screen-reader accessibility must not regress)
  *  - Captions render correctly for both single-type and multi-type set breakdowns
@@ -121,7 +123,7 @@ describe('Summary stat tile captions — single-line constraint (BLD-1876)', () 
     expect(durationCaption.props.minimumFontScale).toBe(0.8)
   })
 
-  it('Sets caption has numberOfLines=1 and adjustsFontSizeToFit for single set type (9 working)', async () => {
+  it('Sets caption has numberOfLines=1, adjustsFontSizeToFit, and minimumFontScale=0.6 to prevent truncation (BLD-1938)', async () => {
     const { session, exercises, sets } = createCompletedWorkoutFixture({ setCount: 9 })
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
@@ -134,11 +136,13 @@ describe('Summary stat tile captions — single-line constraint (BLD-1876)', () 
     expect(setsCard).toBeTruthy()
 
     // Find the Sets caption — it will be "Sets (9 working)" or plain "Sets"
+    // BLD-1938: minimumFontScale lowered from 0.8 → 0.6 so "Sets (9 working)" fits
+    // in the ~78px available width at 390px viewport without truncation.
     const setsCaptions = await screen.findAllByText(/^Sets/i)
     const setsCaption = setsCaptions[0]
     expect(setsCaption.props.numberOfLines).toBe(1)
     expect(setsCaption.props.adjustsFontSizeToFit).toBe(true)
-    expect(setsCaption.props.minimumFontScale).toBe(0.8)
+    expect(setsCaption.props.minimumFontScale).toBe(0.6)
   })
 
   it('Volume caption has numberOfLines=1 and adjustsFontSizeToFit', async () => {
