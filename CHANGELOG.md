@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Fix: "Sets" stat label no longer truncates on the workout summary screen** — on 390 px viewports the "Sets (9 working)" caption was cut off with an ellipsis because the auto-shrink limit of 80% wasn't enough headroom. The minimum font scale is now 60%, giving the caption enough room to fit on one line. Duration and Volume captions are unchanged. (BLD-1938)
 
 ## v0.26.41 — 2026-06-25
 <!-- versionCode: 111 -->
