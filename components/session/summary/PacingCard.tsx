@@ -82,7 +82,6 @@ export function HatchOverlay({ width, height, testID }: HatchOverlayProps) {
       // Decorative overlay — must NOT be announced by screen readers
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      // @ts-expect-error aria-hidden valid on SVG in react-native-svg ≥ 13
       aria-hidden
       pointerEvents="none"
       testID={testID}
