@@ -321,8 +321,28 @@ case "$cmd" in
     ;;
 
   wake-agent)
+    # BLD-1981: This endpoint is SELF-WAKE ONLY. The server
+    # (POST /agents/:id/wakeup) returns 403 "Agent can only invoke itself"
+    # when an agent actor targets any id other than its own, so this command
+    # can only ever re-wake the caller. It always posts to $AGENT (self).
+    #
+    # Two prior defects fixed here:
+    #   1. It still POSTed `source:"cli"`, which is not in the API enum
+    #      (timer|assignment|on_demand|automation) and 400'd every call.
+    #      Now uses "on_demand".
+    #   2. The original BLD-1981 report expected `wake-agent <UUID> <reason>`
+    #      to wake a *different* agent. That is not achievable for an agent
+    #      caller (403 by design). To avoid the silent-self-wake foot-gun, a
+    #      UUID-shaped first arg is rejected with guidance toward the real
+    #      cross-boundary push path: an @mention on a shared issue.
+    if [[ "${1:-}" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+      echo "ERROR: wake-agent only wakes the calling agent (self). The Paperclip API rejects" >&2
+      echo "       cross-agent wakeups with HTTP 403 \"Agent can only invoke itself\"." >&2
+      echo "       To nudge another agent, @mention it in a comment on an issue it can access." >&2
+      exit 1
+    fi
     reason="${1:-manual wakeup}"
-    api_post "/agents/$AGENT/wakeup" "{\"source\":\"cli\",\"reason\":$(echo "$reason" | jq -Rs '.')}" | jq_or_cat '.'
+    api_post "/agents/$AGENT/wakeup" "{\"source\":\"on_demand\",\"reason\":$(echo "$reason" | jq -Rs '.')}" | jq_or_cat '.'
     ;;
 
   # === Dashboard & Activity ===
@@ -424,7 +444,10 @@ LABELS:
 AGENTS:
   create-agent --name N --model M [--role R] [--instructions-file /skills/AGENTS-X.md]
                Always uses copilot_local adapter (enforced, not overridable)
-  list-agents | get-me | get-agent <ID> | wake-agent [reason]
+  list-agents | get-me | get-agent <ID>
+  wake-agent [reason]        Re-wake the CALLING agent (self only). The API
+                             rejects cross-agent wakeups (403); to nudge
+                             another agent, @mention it on a shared issue.
 
 DASHBOARD:
   dashboard | activity [--agent-id ID] | badges
