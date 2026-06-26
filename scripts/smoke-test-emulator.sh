@@ -12,21 +12,113 @@
 # `cablesnap-fdroid.apk` (F-Droid variant). The emulator must already be
 # booted and available via adb.
 #
-# Exit codes: 0 on success, 1 on any smoke-test failure.
+# Exit codes:
+#   0  — smoke tests passed
+#   1  — app failure (FATAL EXCEPTION / process-not-found on healthy emulator)
+#   2  — emulator-infrastructure failure (dead emulator could not be revived)
+#        This exit code signals a CI infrastructure flake, NOT an app regression.
 
 set -euo pipefail
 
 PACKAGE="com.persoack.cablesnap"
 ACTIVITY="${PACKAGE}/.MainActivity"
 
+# ---------------------------------------------------------------------------
+# Dead-emulator detection
+# ---------------------------------------------------------------------------
+# Returns 0 (true) if the output string is consistent with a dead/crashed
+# emulator: "Broken pipe", "Can't find service: activity|package", or
+# "error: no devices/emulators found" / "device offline".
+#
+# Usage: is_dead_emulator_error "$output_string"
+is_dead_emulator_error() {
+  local output="$1"
+  if echo "$output" | grep -qE \
+       'Broken pipe|Can'"'"'t find service: (activity|package)|error: no devices|device offline|error: device offline'; then
+    return 0
+  fi
+  return 1
+}
+
+# ---------------------------------------------------------------------------
+# Emulator health-restore
+# ---------------------------------------------------------------------------
+# After detecting that the emulator process has died or become unreachable,
+# attempt to wait for it to recover within a bounded timeout.
+#
+# Strategy:
+#   1. adb wait-for-device — blocks until the ADB transport layer reconnects.
+#   2. Poll sys.boot_completed until it returns "1" (bounded by BOOT_TIMEOUT_S).
+#   3. Probe the package service to confirm Android system services are live.
+#
+# Returns 0 if the emulator is healthy, 1 if it could not be revived within
+# the timeout.
+#
+# Usage: restore_emulator_health
+BOOT_TIMEOUT_S="${EMULATOR_BOOT_TIMEOUT_S:-120}"
+
+restore_emulator_health() {
+  echo "--- Emulator health-restore: waiting for ADB transport (timeout: ${BOOT_TIMEOUT_S}s) ---"
+
+  # Step 1: Wait for device transport to reconnect (bounded timeout via timeout(1)).
+  if ! timeout "${BOOT_TIMEOUT_S}" adb wait-for-device 2>&1; then
+    echo "::error::Emulator infrastructure failure — adb wait-for-device timed out after ${BOOT_TIMEOUT_S}s. This is a CI runner resource issue, not an app regression."
+    return 1
+  fi
+  echo "--- ADB transport up; polling boot_completed ---"
+
+  # Step 2: Poll sys.boot_completed until "1".
+  local deadline=$(( $(date +%s) + BOOT_TIMEOUT_S ))
+  while true; do
+    local boot_val
+    boot_val=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '[:space:]') || boot_val=""
+    if [ "$boot_val" = "1" ]; then
+      echo "--- sys.boot_completed=1 ---"
+      break
+    fi
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      echo "::error::Emulator infrastructure failure — sys.boot_completed never reached 1 within ${BOOT_TIMEOUT_S}s. This is a CI runner resource issue, not an app regression."
+      return 1
+    fi
+    sleep 5
+  done
+
+  # Step 3: Confirm package service is alive.
+  echo "--- Probing Android package service ---"
+  local pkg_probe
+  pkg_probe=$(adb shell cmd package list packages 2>&1 | head -3) || pkg_probe=""
+  if is_dead_emulator_error "$pkg_probe"; then
+    echo "::error::Emulator infrastructure failure — Android package service unresponsive after boot_completed=1. This is a CI runner resource issue, not an app regression."
+    return 1
+  fi
+
+  echo "--- Emulator health-restore: emulator is healthy ---"
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# Single-variant smoke test
+# ---------------------------------------------------------------------------
 smoke_test_apk() {
   local APK_PATH="$1"
   local LABEL="$2"
 
   echo "=== Smoke-testing $LABEL: $APK_PATH ==="
 
-  # Install
-  adb install "$APK_PATH"
+  # Install — capture output so we can inspect for dead-emulator symptoms.
+  local install_out
+  if ! install_out=$(adb install "$APK_PATH" 2>&1); then
+    # Distinguish infrastructure death from a genuine install failure.
+    if is_dead_emulator_error "$install_out"; then
+      echo "--- Dead-emulator detected during install (broken-pipe / can't-find-service) ---"
+      echo "$install_out"
+      # Signal caller to attempt health-restore + retry.
+      return 2
+    fi
+    echo "::error::$LABEL install failed (not a dead-emulator signal)."
+    echo "$install_out"
+    return 1
+  fi
 
   # Clear logcat before launch
   adb logcat -c
@@ -38,7 +130,8 @@ smoke_test_apk() {
   # take longer to settle than older versions; the previous 10s caught the app
   # mid-boot in run #25242273020 where pidof was set but dumpsys hadn't yet
   # promoted MainActivity to RESUMED.
-  sleep 15
+  # EMULATOR_APP_SETTLE_S can be overridden in tests to reduce wall-clock time.
+  sleep "${EMULATOR_APP_SETTLE_S:-15}"
 
   # Hard-fail check 1: process must still be alive (catches launch crashes).
   if ! adb shell pidof "$PACKAGE" > /dev/null 2>&1; then
@@ -92,33 +185,56 @@ smoke_test_apk() {
   adb uninstall "$PACKAGE"
 }
 
-# Test Play variant
-PLAY_EXIT=0
-smoke_test_apk "cablesnap.apk" "Play APK" || PLAY_EXIT=$?
+# ---------------------------------------------------------------------------
+# Run smoke test for one variant with dead-emulator-aware retry
+# ---------------------------------------------------------------------------
+# Usage: run_variant_smoke_test <apk_path> <label>
+# Exits the whole script on:
+#   - Genuine app failure (exit 1)
+#   - Emulator cannot be revived (exit 2)
+run_variant_smoke_test() {
+  local APK_PATH="$1"
+  local LABEL="$2"
 
-if [ "$PLAY_EXIT" -ne 0 ]; then
-  echo "Retrying Play APK smoke test (flaky emulator guard)..."
+  local EXIT_CODE=0
+  smoke_test_apk "$APK_PATH" "$LABEL" || EXIT_CODE=$?
+
+  if [ "$EXIT_CODE" -eq 0 ]; then
+    return 0
+  fi
+
+  if [ "$EXIT_CODE" -eq 2 ]; then
+    # Dead-emulator path: attempt health-restore before retry.
+    echo "Dead-emulator signal detected for $LABEL — attempting health-restore before retry..."
+    if ! restore_emulator_health; then
+      # restore_emulator_health already printed the ::error:: message.
+      exit 2
+    fi
+    # Emulator is healthy — clean up any partial install and retry.
+    adb uninstall "$PACKAGE" 2>/dev/null || true
+    if ! smoke_test_apk "$APK_PATH" "$LABEL (retry after health-restore)"; then
+      echo "::error::$LABEL failed smoke test after emulator health-restore."
+      exit 1
+    fi
+    return 0
+  fi
+
+  # EXIT_CODE=1: genuine app failure on first attempt — allow one blind retry
+  # for transient non-emulator-death flake (original behavior preserved).
+  echo "Retrying $LABEL smoke test (flaky emulator guard)..."
   sleep 5
   # Ensure clean state for retry
   adb uninstall "$PACKAGE" 2>/dev/null || true
-  if ! smoke_test_apk "cablesnap.apk" "Play APK (retry)"; then
-    echo "::error::Play APK failed smoke test on retry."
+  if ! smoke_test_apk "$APK_PATH" "$LABEL (retry)"; then
+    echo "::error::$LABEL failed smoke test on retry."
     exit 1
   fi
-fi
+}
+
+# Test Play variant
+run_variant_smoke_test "cablesnap.apk" "Play APK"
 
 # Test F-Droid variant
-FDROID_EXIT=0
-smoke_test_apk "cablesnap-fdroid.apk" "F-Droid APK" || FDROID_EXIT=$?
-
-if [ "$FDROID_EXIT" -ne 0 ]; then
-  echo "Retrying F-Droid APK smoke test (flaky emulator guard)..."
-  sleep 5
-  adb uninstall "$PACKAGE" 2>/dev/null || true
-  if ! smoke_test_apk "cablesnap-fdroid.apk" "F-Droid APK (retry)"; then
-    echo "::error::F-Droid APK failed smoke test on retry."
-    exit 1
-  fi
-fi
+run_variant_smoke_test "cablesnap-fdroid.apk" "F-Droid APK"
 
 echo "All emulator smoke tests passed."
