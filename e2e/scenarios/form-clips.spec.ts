@@ -45,6 +45,27 @@ test.describe("@scenario form-clips", () => {
     );
   });
 
+  test("Select header toggle meets 44x44 touch target in form-clips harness", async ({
+    page,
+  }) => {
+    await page.addInitScript((seed) => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+      w.__FORM_CLIPS_HARNESS__ = seed;
+    }, HARNESS_SEED);
+    await page.goto("/__test__/form-clips");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({
+      timeout: 15_000,
+    });
+
+    const selectBtn = page.getByRole("button", { name: "Select clips" });
+    await expect(selectBtn).toBeVisible({ timeout: 5_000 });
+    const box = await selectBtn.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+  });
+
   test("Record CTA is visible and enabled in form-clips harness", async ({
     page,
   }) => {

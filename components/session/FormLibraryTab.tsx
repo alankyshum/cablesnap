@@ -275,7 +275,7 @@ export function FormLibraryTab({ exerciseId, onClipsChanged }: Props) {
             onPress={selectMode ? exitSelectMode : enterSelectMode}
             accessibilityRole="button"
             accessibilityLabel={selectMode ? "Exit select mode" : "Select clips"}
-            hitSlop={8}
+            style={styles.selectTogglePressable}
           >
             <Text style={[styles.selectToggle, { color: colors.primary }]}>
               {selectMode ? "Done" : "Select"}
@@ -650,6 +650,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   countBadgeText: { fontSize: fontSizes.xs, fontWeight: "700" },
+  selectTogglePressable: {
+    minHeight: 44,
+    paddingHorizontal: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   selectToggle: { fontSize: fontSizes.sm, fontWeight: "600" },
   recordCTA: {
     flexDirection: "row",
