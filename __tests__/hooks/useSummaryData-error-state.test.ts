@@ -121,4 +121,35 @@ describe("useSummaryData — defense-in-depth error state (BLD-1636)", () => {
     // Achievement failure is non-fatal — summary still renders, no boundary throw.
     expect(result.current.error).toBeNull();
   });
+
+  // BLD-1942: under Playwright (navigator.webdriver === true) useSummaryData
+  // retries getSessionById up to 10 times with 200ms backoff when it returns
+  // null, because the scenario seed runs concurrently with the initial DB read.
+  // This test exercises the retry path by simulating a null first response
+  // followed by a found session.
+  it("retries getSessionById under webdriver when session is initially null (BLD-1942)", async () => {
+    mockHappyPath();
+    const g = global as unknown as Record<string, unknown>;
+    const originalNavigator = g.navigator;
+
+    // Simulate Playwright's navigator.webdriver flag.
+    g.navigator = { webdriver: true };
+
+    // First call returns null (seed hasn't run yet); second returns the session.
+    db.getSessionById
+      .mockResolvedValueOnce(null)
+      .mockResolvedValue({ id: "s1", weight_unit: "kg", duration_seconds: 60 });
+
+    const { result } = renderHook(() => useSummaryData("s1"));
+
+    await waitFor(
+      () => expect(result.current.session).not.toBeNull(),
+      { timeout: 5000 },
+    );
+    // getSessionById was called at least twice — once returning null, then found.
+    expect(db.getSessionById.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(result.current.error).toBeNull();
+
+    g.navigator = originalNavigator;
+  });
 });

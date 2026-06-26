@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Fix: Pacing bar is now distinguishable under red-green colour blindness** — the "Other" (grey) segment in the post-workout pacing bar now carries a diagonal hatch pattern so it remains separable from the "Working" (coral) segment for users with deuteranopia or protanopia. The hatch is mirrored on the matching legend dot. Full-colour appearance for sighted users is unchanged. (BLD-1939)
+- **Fix: "Sets" stat label no longer truncates on the workout summary screen** — on 390 px viewports the "Sets (9 working)" caption was cut off with an ellipsis because the auto-shrink limit of 80% wasn't enough headroom. The minimum font scale is now 60%, giving the caption enough room to fit on one line. Duration and Volume captions are unchanged. (BLD-1938)
 
 ## v0.26.41 — 2026-06-25
 <!-- versionCode: 111 -->
