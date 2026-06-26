@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Fix: Pacing bar is now distinguishable under red-green colour blindness** — the "Other" (grey) segment in the post-workout pacing bar now carries a diagonal hatch pattern so it remains separable from the "Working" (coral) segment for users with deuteranopia or protanopia. The hatch is mirrored on the matching legend dot. Full-colour appearance for sighted users is unchanged. (BLD-1939)
 
 ## v0.26.41 — 2026-06-25
 <!-- versionCode: 111 -->
