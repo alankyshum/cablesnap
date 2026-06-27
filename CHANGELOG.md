@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- Settings: tidied up text hierarchy so titles, labels, and helper text use consistent sizes and weights for a cleaner, less cluttered look.
 - **Improvement: Settings tiles are lighter and less cluttered** — the Settings screen previously rendered as a vertical stack of drop-shadowed boxes. Each tile now uses a subtle 1px outline instead of a shadow, with slightly tighter padding, so the screen reads as a clean, calm list rather than a column of floating cards. (BLD-2030)
 
 ## v0.26.42 — 2026-06-27

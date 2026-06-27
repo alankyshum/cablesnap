@@ -30,7 +30,7 @@ import FeedbackCard from '../../components/settings/FeedbackCard';
 import ReminderSection from '../../components/settings/ReminderSection';
 import ReleaseNotesModal from '../../components/ReleaseNotesModal';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { fontSizes, spacing } from '@/constants/design-tokens';
+import { spacing } from '@/constants/design-tokens';
 import { useSettingsData } from '@/hooks/useSettingsData';
 import BackupCategorySheet from '@/components/settings/BackupCategorySheet';
 import { handleExport, pickImportBackup } from './_settings-handlers';
@@ -185,7 +185,7 @@ export default function Settings() {
               style={styles.settingsLinkRow}
             >
               <View style={styles.settingsLinkMeta}>
-                <Text variant="body" style={[styles.settingsLinkTitle, { color: colors.onSurface }]}>Gym Profiles</Text>
+                <Text variant="subtitle" style={{ color: colors.onSurface }}>Gym Profiles</Text>
                 <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                   Manage gyms, cable stacks, and marker calibrations.
                 </Text>
@@ -203,7 +203,7 @@ export default function Settings() {
               style={styles.settingsLinkRow}
             >
               <View style={styles.settingsLinkMeta}>
-                <Text variant="body" style={[styles.settingsLinkTitle, { color: colors.onSurface }]}>Advanced Set Types</Text>
+                <Text variant="subtitle" style={{ color: colors.onSurface }}>Advanced Set Types</Text>
                 <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                   How to use rest-pause, cluster, and myo-rep sets.
                 </Text>
@@ -221,7 +221,7 @@ export default function Settings() {
               style={styles.settingsLinkRow}
             >
               <View style={styles.settingsLinkMeta}>
-                <Text variant="body" style={[styles.settingsLinkTitle, { color: colors.onSurface }]}>Adaptive Macro Coach</Text>
+                <Text variant="subtitle" style={{ color: colors.onSurface }}>Adaptive Macro Coach</Text>
                 <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                   {macroCoachEnabled === null ? '' : macroCoachEnabled ? 'On — weekly advisory card on Nutrition tab' : 'Off — tap to set up'}
                 </Text>
@@ -290,7 +290,7 @@ export default function Settings() {
         />
         <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
           <CardContent>
-            <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>
+            <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
               About
             </Text>
             <Pressable
@@ -306,14 +306,14 @@ export default function Settings() {
             >
               <Text
                 variant="body"
-                style={{ color: colors.onSurface, fontSize: fontSizes.sm, fontWeight: '600' }}
+                style={{ color: colors.onSurface, fontWeight: '500' }}
               >
                 {`CableSnap v${appVersion}`}
               </Text>
               <View style={styles.versionRowRight}>
                 <Text
-                  variant="body"
-                  style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm, marginRight: 4 }}
+                  variant="caption"
+                  style={{ marginRight: 4 }}
                 >
                   What&apos;s new
                 </Text>
@@ -321,7 +321,7 @@ export default function Settings() {
               </View>
             </Pressable>
             <View style={styles.aboutBlock}>
-              <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
+              <Text variant="caption">
                 Free & open-source workout tracker — optimized for cable machines, supports all major exercises.
               </Text>
               <Text
@@ -400,10 +400,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     minHeight: 44,
   },
-  settingsRowLabel: {
-    fontSize: fontSizes.sm,
-    fontWeight: '600',
-  },
   versionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -426,9 +422,5 @@ const styles = StyleSheet.create({
   settingsLinkMeta: {
     flex: 1,
     marginRight: 12,
-  },
-  settingsLinkTitle: {
-    fontSize: fontSizes.sm,
-    fontWeight: '600',
   },
 });
