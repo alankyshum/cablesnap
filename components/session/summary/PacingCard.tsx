@@ -83,7 +83,9 @@ export function HatchOverlay({ width, height, testID }: HatchOverlayProps) {
       // RN-only a11y props are gated to native: react-native-svg's WebShape
       // does not strip them before DOM render, causing React prop warnings
       // on web (BLD-1872 pattern). aria-hidden handles web a11y correctly.
-      accessibilityElementsHidden={Platform.OS !== 'web'}
+      // Spread-omit pattern: false value still reaches the DOM and warns;
+      // spreading an empty object omits the prop entirely on web (BLD-2004).
+      {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
       importantForAccessibility={Platform.OS === 'web' ? undefined : 'no-hide-descendants'}
       aria-hidden
       pointerEvents="none"
@@ -199,7 +201,7 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
               {/* Stacked bar */}
               <View
                 style={styles.barContainer}
-                accessibilityElementsHidden={Platform.OS !== 'web'}
+                {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
               >
                 <View
                   testID="pacing-seg-working"
