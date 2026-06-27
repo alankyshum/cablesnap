@@ -16,6 +16,7 @@
  */
 
 import React from "react";
+import { Platform } from "react-native";
 import { render } from "@testing-library/react-native";
 import PacingCard, { HatchOverlay } from "../../../../components/session/summary/PacingCard";
 import type { PacingBreakdown } from "@/lib/session-pacing";
@@ -123,11 +124,35 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     expect(flat.backgroundColor).toBeTruthy();
   });
 
-  // ── 8. Hatch overlay is a11y-hidden ───────────────────────────────────────
-  it("hatch overlay has accessibilityElementsHidden to avoid polluting a11y tree", () => {
+  // ── 8. Hatch overlay is a11y-hidden (Platform-aware — BLD-1994) ──────────
+  //
+  // On native, accessibilityElementsHidden must be true so screen readers skip
+  // the decorative overlay. On web, the prop must NOT be true — react-native-svg's
+  // WebShape does not strip RN-only a11y props before DOM render, which causes
+  // a React DOM warning "Received `true` for a non-boolean attribute" and a
+  // visible error toast. Web a11y is handled correctly via aria-hidden instead.
+  it("hatch overlay accessibilityElementsHidden is Platform-gated (true on native, false on web)", () => {
     const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
     const hatch = getByTestId("pacing-seg-other-pattern", { includeHiddenElements: true });
-    expect(hatch.props.accessibilityElementsHidden).toBe(true);
+    if (Platform.OS === 'web') {
+      // Must NOT be true on web — avoids DOM prop warning / error toast
+      expect(hatch.props.accessibilityElementsHidden).not.toBe(true);
+    } else {
+      // Must be true on native — screen reader skips decorative overlay
+      expect(hatch.props.accessibilityElementsHidden).toBe(true);
+    }
+  });
+
+  it("hatch overlay importantForAccessibility is undefined on web", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const hatch = getByTestId("pacing-seg-other-pattern", { includeHiddenElements: true });
+    if (Platform.OS === 'web') {
+      // Must be undefined on web — avoids DOM prop warning (BLD-1994)
+      expect(hatch.props.importantForAccessibility).toBeUndefined();
+    } else {
+      // Must be 'no-hide-descendants' on native
+      expect(hatch.props.importantForAccessibility).toBe('no-hide-descendants');
+    }
   });
 
   // ── 9. Empty state — otherFrac == 0: no crash, hatch absent ───────────────

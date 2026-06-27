@@ -43,6 +43,30 @@ test.describe("@scenario completed-workout", () => {
   });
 
   test("captures post-workout summary screen", async ({ page }) => {
+    // BLD-1994 regression guard: fail if React DOM prop warnings fire (RN-only a11y
+    // prop leaks to SVG DOM previously caused a persistent error toast on this screen).
+    const domPropErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        const text = msg.text();
+        if (
+          text.includes("does not recognize") ||
+          text.includes("non-boolean attribute") ||
+          text.includes("Invalid prop")
+        ) {
+          domPropErrors.push(text);
+        }
+      }
+    });
+    page.on("pageerror", (err) => {
+      if (
+        err.message.includes("does not recognize") ||
+        err.message.includes("non-boolean attribute")
+      ) {
+        domPropErrors.push(err.message);
+      }
+    });
+
     await page.addInitScript((scenario) => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
@@ -82,6 +106,12 @@ test.describe("@scenario completed-workout", () => {
     // Assert the Working/Rest/Other legend (pacing-card) is in the viewport
     // BEFORE capturing, so a genuine future cutoff regression still fails the test.
     await expect(pacingCard).toBeInViewport({ timeout: 5000 });
+
+    // BLD-1994: assert no React DOM prop warnings were emitted on this screen.
+    expect(
+      domPropErrors,
+      "React DOM prop warnings found on completed-workout summary screen — RN-only a11y props may be leaking to SVG DOM elements",
+    ).toHaveLength(0);
 
     const viewport = "mobile";
     await captureWithCvd({
