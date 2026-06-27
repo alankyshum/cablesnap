@@ -2,37 +2,87 @@
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
-import { BORDER_RADIUS } from '@/theme/globals';
+import { radii, spacing } from '@/constants/design-tokens';
 import { Pressable, StyleProp, TextStyle, ViewStyle, type ViewProps } from 'react-native';
+
+/**
+ * Surface treatment for a {@link Card}.
+ *
+ * - `elevated` (default) — opaque `card` background with a soft drop shadow /
+ *   `elevation`. This is the historical Card look; it remains the default so
+ *   the ~95 existing call sites render unchanged.
+ * - `outline` — opaque `card` background with a 1px `border` hairline and no
+ *   shadow / no elevation. Used to declutter dense stacks of tiles (Settings)
+ *   that otherwise read as a column of drop-shadowed boxes (BLD-2030).
+ * - `ghost` — `muted` surface tint, no border, no shadow / no elevation. The
+ *   lightest treatment, for grouping without a visible container edge.
+ */
+export type CardVariant = 'elevated' | 'outline' | 'ghost';
 
 interface CardProps extends Omit<ViewProps, 'style'> {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   onPress?: () => void;
+  /** Surface treatment. Defaults to `'elevated'` (backwards-compatible). */
+  variant?: CardVariant;
 }
 
-export function Card({ children, style, onPress, ...viewProps }: CardProps) {
+export function Card({
+  children,
+  style,
+  onPress,
+  variant = 'elevated',
+  ...viewProps
+}: CardProps) {
   const cardColor = useColor('card');
+  const mutedColor = useColor('muted');
+  const borderColor = useColor('border');
   const foregroundColor = useColor('foreground');
 
-  const content = (
-    <View
-      {...viewProps}
-      style={[
-        {
-          width: '100%',
-          backgroundColor: cardColor,
-          borderRadius: BORDER_RADIUS,
-          padding: 18,
+  const getVariantStyle = (): ViewStyle => {
+    // Shared across every variant: full-width tile, token radius/padding.
+    const baseStyle: ViewStyle = {
+      width: '100%',
+      borderRadius: radii.lg,
+      padding: spacing.base,
+      backgroundColor: cardColor,
+    };
+
+    switch (variant) {
+      case 'outline':
+        return {
+          ...baseStyle,
+          borderWidth: 1,
+          borderColor,
+          // Explicitly flatten elevation/shadow so an `elevated` style higher
+          // in a merge never bleeds through.
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
+        };
+      case 'ghost':
+        return {
+          ...baseStyle,
+          backgroundColor: mutedColor,
+          shadowOpacity: 0,
+          shadowRadius: 0,
+          elevation: 0,
+        };
+      case 'elevated':
+      default:
+        return {
+          ...baseStyle,
           shadowColor: foregroundColor,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.05,
           shadowRadius: 3,
           elevation: 2,
-        },
-        style,
-      ]}
-    >
+        };
+    }
+  };
+
+  const content = (
+    <View {...viewProps} style={[getVariantStyle(), style]}>
       {children}
     </View>
   );

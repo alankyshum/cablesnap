@@ -31,7 +31,7 @@ export default function CSVExportCard({ colors }: Props) {
   }, [range]);
 
   return (
-    <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+    <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
       <CardContent>
         <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>CSV Export</Text>
         <SegmentedControl value={range} onValueChange={setRange} buttons={RANGE_BUTTONS} style={styles.segment} />
