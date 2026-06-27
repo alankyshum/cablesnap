@@ -46,6 +46,62 @@ test.describe("@scenario session-pacing", () => {
     );
   });
 
+  // BLD-1994 regression guard: fail if any React DOM prop warning fires on this screen.
+  // "React does not recognize the `importantForAccessibility` prop" (and similar RN-only
+  // a11y prop leaks) previously produced a persistent red error toast visible on this screen.
+  test("no React DOM prop warnings on session-pacing screen (BLD-1994)", async ({ page }) => {
+    const domPropErrors: string[] = [];
+
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        const text = msg.text();
+        if (
+          text.includes("does not recognize") ||
+          text.includes("non-boolean attribute") ||
+          text.includes("Invalid prop")
+        ) {
+          domPropErrors.push(text);
+        }
+      }
+    });
+
+    page.on("pageerror", (err) => {
+      if (
+        err.message.includes("does not recognize") ||
+        err.message.includes("non-boolean attribute")
+      ) {
+        domPropErrors.push(err.message);
+      }
+    });
+
+    await page.addInitScript((pacing) => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+      w.__SESSION_PACING_HARNESS__ = {
+        harnessActive: true,
+        pacing,
+        exerciseNames: {
+          ex1: "Cable Row",
+          ex2: "Lat Pulldown",
+          ex3: "Face Pull",
+          ex4: "Bodyweight Dips",
+        },
+      };
+    }, SAMPLE_PACING);
+
+    await page.goto("/__test__/session-pacing");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("pacing-card")).toBeVisible({ timeout: 5000 });
+
+    // Allow any deferred renders to fire
+    await page.waitForTimeout(500);
+
+    expect(
+      domPropErrors,
+      "React DOM prop warnings found on session-pacing screen — RN-only a11y props may be leaking to SVG DOM elements",
+    ).toHaveLength(0);
+  });
+
   test("PacingCard renders with literal title and segment labels (AC§134)", async ({ page }) => {
     await page.addInitScript((pacing) => {
       const w = window as unknown as Record<string, unknown>;
