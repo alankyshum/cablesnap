@@ -1,59 +1,52 @@
-import { Children, type ReactNode } from "react";
-import { StyleSheet, View, type ViewStyle } from "react-native";
+import { type ReactNode } from "react";
+import { type ViewStyle } from "react-native";
+import Masonry from "./Masonry";
 
 type Props = {
   children: ReactNode;
   /** Gap between cards in pixels. Default 12. */
   gap?: number;
-  /** Minimum width for each child card. Default 280. */
+  /**
+   * @deprecated No longer used. {@link Masonry} derives its column count from the
+   * window class via `useLayout()`, not from a per-child minimum width. Retained
+   * only so existing call sites that still pass this prop keep type-checking.
+   */
   minChildWidth?: number;
   style?: ViewStyle;
 };
 
 /**
- * Pinterest-style flowing container. Children wrap into as many columns
- * as fit based on available width.
+ * @deprecated Prefer importing {@link Masonry} directly. `FlowContainer` is now a
+ * thin backwards-compatibility shim that delegates to `Masonry`.
  *
- * Each child is automatically wrapped in a flow-cell `<View>` that applies
- * `flowCardStyle` (minWidth/flexBasis/flexGrow). This guarantees correct
- * row-wrap layout on Android even if a child forgets to apply `flowCardStyle`
- * itself — without the wrapper, a width-less child collapses to its content's
- * intrinsic width inside a `flexDirection: row` parent, breaking the column
- * layout, ScrollView height calculation, and visible interaction area.
+ * Historically this was a flex `row + wrap` ("Pinterest-style") container, but
+ * flex-wrap stretches every wrapped row to its tallest child, leaving dead
+ * vertical space under shorter tiles. {@link Masonry} replaces that with a true
+ * column-distributing, shortest-column-first layout. This wrapper keeps the old
+ * public API (same props, same `null`/`false` child handling) so existing call
+ * sites migrate with zero churn.
  */
-export default function FlowContainer({
-  children,
-  gap = 12,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  minChildWidth,
-  style,
-}: Props) {
+export default function FlowContainer({ children, gap = 12, style }: Props) {
   return (
-    <View style={[styles.container, { gap }, style]}>
-      {Children.map(children, (child, index) =>
-        child == null || child === false ? null : (
-          <View key={index} style={flowCardStyle}>
-            {child}
-          </View>
-        )
-      )}
-    </View>
+    <Masonry gap={gap} style={style}>
+      {children}
+    </Masonry>
   );
 }
 
 export const FLOW_CARD_MIN = 280;
 export const FLOW_CARD_MAX = 420;
 
+/**
+ * @deprecated Retained for backwards compatibility with call sites that spread
+ * this into a tile's own style (e.g. `{ ...flowCardStyle, maxWidth: 560 }`).
+ * Inside a {@link Masonry} column a tile is already full-column width, so the
+ * `minWidth`/`flexBasis` here are inert and harmless. New code should not rely
+ * on this style.
+ */
 export const flowCardStyle: ViewStyle = {
   minWidth: FLOW_CARD_MIN,
   flexGrow: 1,
   flexShrink: 1,
   flexBasis: FLOW_CARD_MIN,
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-});
