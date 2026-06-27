@@ -19,24 +19,33 @@ CableSnap is licensed under **AGPL-3.0-or-later**. All agents MUST comply:
 - **Styling:** React Native StyleSheet
 - **Testing:** Jest (unit), Playwright (e2e), Maestro (mobile e2e)
 
-## Concurrent-Agent Safety (MANDATORY for parallel work)
+## Concurrent-Agent Safety (MANDATORY — unconditional as of BLD-2040)
 
 `/projects/cablesnap` is a single shared filesystem mount across agent
 containers. When two agents work in parallel, `git checkout` on one yanks
 the working tree out from under the other — silently — and corrupts any
 untracked artefacts (image gen output, build outputs, snapshots, dev-server
 state). See `.learnings/INDEX.md` → "Concurrent-Agent Safety" and BLD-765.
+Rule made unconditional after recurrence in BLD-2039; fixed in BLD-2040.
 
-**Rule:** Use a per-branch git worktree whenever the work
-- generates untracked artefacts (image gen, builds, snapshots), OR
-- requires a stable branch checkout while another CableSnap agent might be active.
+**Rule (unconditional):** For ANY CableSnap implementation work — any
+`git checkout`/`git switch`/`git branch`-then-edit, any file edit, any
+build/test/artefact generation — you MUST work inside a per-ticket worktree
+under `/tmp/wt-<branch>` created via `scripts/agent-worktree.sh start`.
 
-When in doubt, use a worktree. The cost is sub-second; the upside is no clobbered work.
+The ONLY operations permitted directly in `/projects/cablesnap` are read-only
+inspection of `origin/main` (`git fetch origin`, `git log origin/main`, reading
+files). **NEVER run `git checkout <branch>` or `git switch` in `/projects/cablesnap`.**
 
 ```bash
+# Preflight: refuse immediately if you are in the shared primary checkout
+./scripts/agent-worktree.sh guard   # exits 3 in /projects/cablesnap (correct)
+
 # Start (idempotent — reuses if the worktree already exists)
 eval "$(./scripts/agent-worktree.sh start bld-N-feature)"
 cd "$AGENT_WORKTREE_DIR"
+
+./scripts/agent-worktree.sh guard   # exits 0 inside worktree (safe)
 
 # ... do work, run tests, generate artefacts ...
 
@@ -45,6 +54,7 @@ eval "$(./scripts/agent-worktree.sh stop bld-N-feature)"
 ```
 
 Subcommands:
+- `guard [<dir>]` — **preflight**: exits 3 with error if `<dir>` (default `$PWD`) is the shared primary checkout; exits 0 if safe.
 - `start <branch>` — create or reuse `/tmp/wt-<branch>`. Fetches from origin if missing.
 - `stop <branch> [--force]` — remove worktree. No-op if missing. Refuses dirty without `--force`.
 - `status [<branch>]` — show one or all worktrees.
