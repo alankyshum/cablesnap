@@ -85,6 +85,17 @@ warn() { printf "${YELLOW}[wt]${NC} %s\n" "$*" >&2; }
 err()  { printf "${RED}[wt]${NC} %s\n" "$*" >&2; }
 info() { printf "${CYAN}[wt]${NC} %s\n" "$*" >&2; }
 
+# resolve_lexical <path>
+#
+# Canonicalise a path WITHOUT requiring it to exist on disk (lexical resolution).
+# Uses: realpath -m → readlink -m → raw path (fallback).
+# This ensures guard works on CI runners where /projects/cablesnap is absent.
+resolve_lexical() {
+    realpath -m -- "$1" 2>/dev/null \
+        || readlink -m -- "$1" 2>/dev/null \
+        || printf '%s' "$1"
+}
+
 require_branch_arg() {
     if [ -z "${1:-}" ]; then
         err "Missing required <branch> argument"
@@ -296,18 +307,29 @@ cmd_list() {
 cmd_guard() {
     local check_dir="${1:-$PWD}"
 
-    # Resolve the directory to an absolute real path (follow symlinks)
-    if ! check_dir="$(realpath "$check_dir" 2>/dev/null)"; then
-        err "guard: cannot resolve path: ${1:-$PWD}"
+    # Resolve a path lexically (no filesystem existence required).
+    # Prefers `realpath -m` (GNU coreutils); falls back to `readlink -m`
+    # (also GNU, older); final fallback: return the path as-is.
+    # This ensures guard works on CI runners where /projects/cablesnap is absent.
+    resolve_lexical() {
+        realpath -m -- "$1" 2>/dev/null \
+            || readlink -m -- "$1" 2>/dev/null \
+            || printf '%s' "$1"
+    }
+
+    # Validate the argument: reject empty string only (not non-existent paths).
+    if [ -z "$check_dir" ]; then
+        err "guard: empty directory argument"
         exit 2
     fi
+    check_dir="$(resolve_lexical "$check_dir")"
 
     # Determine the primary checkout path using three methods; any match = primary
 
     # Method 1: env override (for testability)
     local primary_path=""
     if [ -n "${CABLESNAP_PRIMARY_CHECKOUT:-}" ]; then
-        primary_path="$(realpath "$CABLESNAP_PRIMARY_CHECKOUT" 2>/dev/null || echo "$CABLESNAP_PRIMARY_CHECKOUT")"
+        primary_path="$(resolve_lexical "$CABLESNAP_PRIMARY_CHECKOUT")"
     fi
 
     # Method 2: first entry of `git worktree list --porcelain` from REPO_DIR
@@ -316,13 +338,13 @@ cmd_guard() {
         wt_first="$(git -C "$REPO_DIR" worktree list --porcelain 2>/dev/null \
             | awk 'NR==1 && $1=="worktree" { print $2; exit }' || true)"
         if [ -n "$wt_first" ]; then
-            primary_path="$(realpath "$wt_first" 2>/dev/null || echo "$wt_first")"
+            primary_path="$(resolve_lexical "$wt_first")"
         fi
     fi
 
     # Method 3: fall back to hardcoded canonical path
     local hardcoded_primary
-    hardcoded_primary="$(realpath "/projects/cablesnap" 2>/dev/null || echo "/projects/cablesnap")"
+    hardcoded_primary="$(resolve_lexical "/projects/cablesnap")"
 
     # Check: is check_dir the primary checkout?
     local is_primary=0
