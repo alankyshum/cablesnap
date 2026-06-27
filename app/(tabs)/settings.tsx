@@ -176,7 +176,7 @@ export default function Settings() {
           fatGoal={fatGoal}
         />
         <AppearanceCard colors={colors} />
-        <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+        <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
           <CardContent>
             <Pressable
               onPress={() => router.push('/settings/gym-profiles')}
@@ -194,7 +194,7 @@ export default function Settings() {
             </Pressable>
           </CardContent>
         </Card>
-        <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+        <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
           <CardContent>
             <Pressable
               onPress={() => router.push('/settings/advanced-sets')}
@@ -212,7 +212,7 @@ export default function Settings() {
             </Pressable>
           </CardContent>
         </Card>
-        <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+        <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
           <CardContent>
             <Pressable
               onPress={() => router.push('/settings/macro-coach')}
@@ -288,7 +288,7 @@ export default function Settings() {
           onFeature={() => router.push({ pathname: '/feedback', params: { type: 'feature' } })}
           onErrors={() => router.push('/errors')}
         />
-        <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+        <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
           <CardContent>
             <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>
               About

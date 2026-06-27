@@ -22,7 +22,7 @@ export default function BodyProfileCard({ weightUnit, heightUnit }: BodyProfileC
 
   if (profile.cardState === "loading") {
     return (
-      <Card style={cardStyle}>
+      <Card variant="outline" style={cardStyle}>
         <CardContent>
           <View style={styles.loadingContainer}>
             <Spinner size="sm" />
@@ -35,7 +35,7 @@ export default function BodyProfileCard({ weightUnit, heightUnit }: BodyProfileC
 
   if (profile.cardState === "error") {
     return (
-      <Card style={cardStyle}>
+      <Card variant="outline" style={cardStyle}>
         <CardContent>
           <Text variant="body" style={{ color: colors.error, marginBottom: 8 }}>Could not load profile</Text>
           <Button variant="outline" onPress={profile.loadProfile} accessibilityLabel="Retry loading profile">Retry</Button>
@@ -45,7 +45,7 @@ export default function BodyProfileCard({ weightUnit, heightUnit }: BodyProfileC
   }
 
   return (
-    <Card style={cardStyle}>
+    <Card variant="outline" style={cardStyle}>
       <CardContent>
         <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Body Profile</Text>
         <BodyProfileForm colors={colors} {...profile} />
