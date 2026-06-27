@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Fix: "Sets" and "Volume" stat labels no longer truncate on the workout summary screen** — the stacked stat-tile captions on the completed-workout summary were clipped with an ellipsis on narrow viewports. The label layout was restructured so each caption renders on a single line at full width. (BLD-1993)
 - **Fix: "Select" link in the Form clips header now meets the 44 dp touch target minimum** — the previous implementation used a small `hitSlop` that only extended the tappable area to ~36 dp, making the control difficult to tap reliably. The tap area is now at least 44×44 dp as required by HIG and Material guidelines. (BLD-1941)
 - **Fix: Pacing bar is now distinguishable under red-green colour blindness** — the "Other" (grey) segment in the post-workout pacing bar now carries a diagonal hatch pattern so it remains separable from the "Working" (coral) segment for users with deuteranopia or protanopia. The hatch is mirrored on the matching legend dot. Full-colour appearance for sighted users is unchanged. (BLD-1939)
 - **Fix: "Sets" stat label no longer truncates on the workout summary screen** — on 390 px viewports the "Sets (9 working)" caption was cut off with an ellipsis because the auto-shrink limit of 80% wasn't enough headroom. The minimum font scale is now 60%, giving the caption enough room to fit on one line. Duration and Volume captions are unchanged. (BLD-1938)
