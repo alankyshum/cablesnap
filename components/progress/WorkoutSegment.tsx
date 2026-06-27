@@ -7,6 +7,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import Masonry from "@/components/ui/Masonry";
 import { Text } from "@/components/ui/text";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
@@ -124,7 +125,7 @@ export default function WorkoutSegment() {
   );
 
   const chartWidth = layout.atLeastMedium
-    ? (screenWidth - 96) / 2 - 32
+    ? Math.floor((screenWidth - layout.horizontalPadding * 2 - 16 * (layout.expanded ? 2 : 1)) / (layout.expanded ? 3 : 2)) - 32
     : screenWidth - 48;
 
   const empty = sessions.length === 0 && freq.length === 0;
@@ -203,13 +204,10 @@ export default function WorkoutSegment() {
     );
   }
 
-  const wideCard = layout.atLeastMedium ? styles.wideCard : undefined;
-
   const achievementsCard = (
     <Pressable
       style={[
         styles.card,
-        wideCard,
         { backgroundColor: colors.surface, borderRadius: 12, padding: 18 },
       ]}
       onPress={() => router.push("/progress/achievements")}
@@ -240,7 +238,6 @@ export default function WorkoutSegment() {
         xKey="x"
         yKey="y"
         chartWidth={chartWidth}
-        style={wideCard}
       />
     ) : null;
 
@@ -252,12 +249,11 @@ export default function WorkoutSegment() {
         xKey="x"
         yKey="y"
         chartWidth={chartWidth}
-        style={wideCard}
       />
     ) : null;
 
   const sessionsByGymCard =
-    showGymUI && sessionsByGym.length > 0 ? <SessionsByGymCard rows={sessionsByGym} style={wideCard} /> : null;
+    showGymUI && sessionsByGym.length > 0 ? <SessionsByGymCard rows={sessionsByGym} /> : null;
 
   return (
     <FlatList
@@ -275,27 +271,22 @@ export default function WorkoutSegment() {
             {gymFilter}
             <WeeklySummary />
             {achievementsCard}
-            <View style={styles.grid}>
+            <Masonry gap={16} testID="workout-progress-masonry">
               {freqCard}
               {volCard}
-            </View>
-            <View style={styles.grid}>
-              <RPETrendCard chartWidth={chartWidth} gymId={selectedGymId === "all" ? null : selectedGymId} style={wideCard} />
-              <RatingTrendCard chartWidth={chartWidth} gymId={selectedGymId === "all" ? null : selectedGymId} style={wideCard} />
-            </View>
-            <View style={styles.grid}>
+              <RPETrendCard chartWidth={chartWidth} gymId={selectedGymId === "all" ? null : selectedGymId} />
+              <RatingTrendCard chartWidth={chartWidth} gymId={selectedGymId === "all" ? null : selectedGymId} />
               <PRSummaryCard
                 recentPRs={recentPRs}
                 stats={prStats}
                 weightUnit={weightUnit}
                 onSeeAll={() => router.push("/progress/records")}
-                style={wideCard}
               />
-              <SessionsCard sessions={sessions} style={wideCard} />
-            </View>
-            {sessionsByGymCard ? <View style={styles.grid}>{sessionsByGymCard}</View> : null}
-            <ActiveGoalsCard />
-            <StrengthLevelsCard />
+              <SessionsCard sessions={sessions} />
+              {sessionsByGymCard}
+              <ActiveGoalsCard />
+              <StrengthLevelsCard />
+            </Masonry>
           </>
         ) : (
           <>
@@ -333,10 +324,6 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 80,
   },
-  grid: {
-    flexDirection: "row",
-    gap: 16,
-  },
   card: {
     marginBottom: 16,
   },
@@ -370,9 +357,6 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: "center",
     justifyContent: "center",
-  },
-  wideCard: {
-    flex: 1,
   },
   cardHeader: {
     flexDirection: "row",

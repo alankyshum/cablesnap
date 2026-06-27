@@ -7,14 +7,16 @@ import {
 } from "react-native";
 import { FAB } from "@/components/ui/fab";
 import { Text } from "@/components/ui/text";
+import Masonry from "@/components/ui/Masonry";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect } from "expo-router";
-import type { BodyWeight } from "../../lib/types";
+import type { BodyWeight, BodySettings, BodyMeasurements } from "../../lib/types";
 import { toDisplay } from "../../lib/units";
 import { radii } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useFloatingTabBarHeight } from "@/components/FloatingTabBar";
 import { useBodyMetrics } from "@/hooks/useBodyMetrics";
+import { useLayout } from "@/lib/layout";
 import WeightLogModal from "./WeightLogModal";
 import {
   WeightCard,
@@ -107,9 +109,70 @@ function BodyModal({
   );
 }
 
+type BodyMetricsCardsProps = {
+  latest: BodyWeight | null;
+  delta: number | null;
+  deltaLabel: string;
+  unit: "kg" | "lb";
+  toggleUnit: () => void;
+  settings: BodySettings | null;
+  measurements: BodyMeasurements | null;
+  chart: { date: string; weight: number }[];
+  atLeastMedium: boolean;
+};
+
+function BodyMetricsCards({
+  latest,
+  delta,
+  deltaLabel,
+  unit,
+  toggleUnit,
+  settings,
+  measurements,
+  chart,
+  atLeastMedium,
+}: BodyMetricsCardsProps) {
+  const cards = (
+    <>
+      {latest && (
+        <WeightCard
+          latest={latest}
+          delta={delta}
+          deltaLabel={deltaLabel}
+          unit={unit}
+          onToggleUnit={toggleUnit}
+        />
+      )}
+      {settings && (
+        <GoalsCard
+          settings={settings}
+          latest={latest}
+          measurements={measurements}
+          unit={unit}
+        />
+      )}
+      {chart.length >= 2 && <ChartCard chart={chart} unit={unit} />}
+      {chart.length === 1 && latest && (
+        <SingleEntryCard latest={latest} unit={unit} />
+      )}
+      <MeasurementsCard measurements={measurements} />
+      <ProgressPhotosCard />
+    </>
+  );
+
+  return atLeastMedium ? (
+    <Masonry gap={16} testID="body-segment-masonry">
+      {cards}
+    </Masonry>
+  ) : (
+    <>{cards}</>
+  );
+}
+
 export default function BodySegment() {
   const colors = useThemeColors();
   const tabBarHeight = useFloatingTabBarHeight();
+  const layout = useLayout();
   const {
     settings,
     latest,
@@ -206,27 +269,17 @@ export default function BodySegment() {
         contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
         ListHeaderComponent={
           <>
-            {latest && (
-              <WeightCard
-                latest={latest}
-                delta={delta}
-                deltaLabel={deltaLabel}
-                unit={unit}
-                onToggleUnit={toggleUnit}
-              />
-            )}
-            <GoalsCard
-              settings={settings}
+            <BodyMetricsCards
               latest={latest}
-              measurements={measurements}
+              delta={delta}
+              deltaLabel={deltaLabel}
               unit={unit}
+              toggleUnit={toggleUnit}
+              settings={settings}
+              measurements={measurements}
+              chart={chart}
+              atLeastMedium={layout.atLeastMedium}
             />
-            {chart.length >= 2 && <ChartCard chart={chart} unit={unit} />}
-            {chart.length === 1 && latest && (
-              <SingleEntryCard latest={latest} unit={unit} />
-            )}
-            <MeasurementsCard measurements={measurements} />
-            <ProgressPhotosCard />
             <Text
               variant="subtitle"
               style={{

@@ -11,6 +11,7 @@ import { spacing, fontSizes } from "@/constants/design-tokens";
 import { useMonthlyReport, formatMonthLabel, formatVolume } from "@/hooks/useMonthlyReport";
 import { toDisplay } from "@/lib/units";
 import MonthlyShareCard from "@/components/share/MonthlyShareCard";
+import Masonry from "@/components/ui/Masonry";
 import {
   HeroStatsCard,
   ConsistencyCard,
@@ -123,25 +124,46 @@ export default function MonthlyReportSegment() {
           </Text>
         </View>
       ) : (
-        <View style={styles.cards}>
-          <HeroStatsCard
-            data={data}
-            unit={unit}
-            volChange={volChange}
-            sessionDelta={sessionDelta}
-          />
-
-          <ConsistencyCard
-            trainingDays={data.trainingDays}
-            longestStreak={data.longestStreak}
-            daysInMonth={daysInMonth}
-          />
-
-          <PRsCard prs={data.prs} unit={unit} />
-          <MuscleBalanceCard distribution={data.muscleDistribution} />
-          <MostImprovedCard data={data.mostImproved} />
-          <BodyCard data={data.body} unit={unit} />
-          <NutritionCard data={data.nutrition} />
+        <>
+          {layout.atLeastMedium ? (
+            <Masonry gap={16} style={styles.cards} testID="monthly-report-masonry">
+              <HeroStatsCard
+                data={data}
+                unit={unit}
+                volChange={volChange}
+                sessionDelta={sessionDelta}
+              />
+              <ConsistencyCard
+                trainingDays={data.trainingDays}
+                longestStreak={data.longestStreak}
+                daysInMonth={daysInMonth}
+              />
+              <PRsCard prs={data.prs} unit={unit} />
+              <MuscleBalanceCard distribution={data.muscleDistribution} />
+              <MostImprovedCard data={data.mostImproved} />
+              <BodyCard data={data.body} unit={unit} />
+              <NutritionCard data={data.nutrition} />
+            </Masonry>
+          ) : (
+            <View style={styles.cards}>
+              <HeroStatsCard
+                data={data}
+                unit={unit}
+                volChange={volChange}
+                sessionDelta={sessionDelta}
+              />
+              <ConsistencyCard
+                trainingDays={data.trainingDays}
+                longestStreak={data.longestStreak}
+                daysInMonth={daysInMonth}
+              />
+              <PRsCard prs={data.prs} unit={unit} />
+              <MuscleBalanceCard distribution={data.muscleDistribution} />
+              <MostImprovedCard data={data.mostImproved} />
+              <BodyCard data={data.body} unit={unit} />
+              <NutritionCard data={data.nutrition} />
+            </View>
+          )}
 
           {/* Share button */}
           <Button
@@ -160,7 +182,7 @@ export default function MonthlyReportSegment() {
               </Text>
             </View>
           </Button>
-        </View>
+        </>
       )}
 
       {/* Offscreen share card for image capture */}
