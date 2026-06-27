@@ -31,7 +31,7 @@ import FeedbackCard from '../../components/settings/FeedbackCard';
 import ReminderSection from '../../components/settings/ReminderSection';
 import ReleaseNotesModal from '../../components/ReleaseNotesModal';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { fontSizes, spacing } from '@/constants/design-tokens';
+import { spacing } from '@/constants/design-tokens';
 import { useSettingsData } from '@/hooks/useSettingsData';
 import BackupCategorySheet from '@/components/settings/BackupCategorySheet';
 import { handleExport, pickImportBackup } from './_settings-handlers';
@@ -282,22 +282,19 @@ export default function Settings() {
           >
             <Text
               variant="body"
-              style={{ color: colors.onSurface, fontSize: fontSizes.sm, fontWeight: '600' }}
+              style={{ color: colors.onSurface, fontWeight: '500' }}
             >
               {`CableSnap v${appVersion}`}
             </Text>
             <View style={styles.versionRowRight}>
-              <Text
-                variant="body"
-                style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm, marginRight: 4 }}
-              >
+              <Text variant="caption" style={{ marginRight: 4 }}>
                 What&apos;s new
               </Text>
               <ChevronRight size={18} color={colors.onSurfaceVariant} />
             </View>
           </Pressable>
           <View style={styles.aboutBlock}>
-            <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
+            <Text variant="caption">
               Free & open-source workout tracker — optimized for cable machines, supports all major exercises.
             </Text>
             <Text
@@ -373,10 +370,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     minHeight: 44,
-  },
-  settingsRowLabel: {
-    fontSize: fontSizes.sm,
-    fontWeight: '600',
   },
   versionRow: {
     flexDirection: 'row',

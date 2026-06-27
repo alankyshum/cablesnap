@@ -26,10 +26,16 @@ type Props = {
  * title type (`subtitle` 18/600) so density is tuned in one place rather than
  * per-card. The tile *is* the Card — children must not nest another Card inside
  * (the declutter epic bans card-in-card).
+ *
+ * Renders the `outline` Card variant (1px hairline, no drop shadow) so the
+ * Settings stack reads as a calm list rather than a column of floating cards,
+ * matching the declutter treatment applied to every other Settings card in
+ * BLD-2030.
  */
 export function SettingsTile({ title, children, colors, style, testID }: Props) {
   return (
     <Card
+      variant="outline"
       testID={testID}
       style={StyleSheet.flatten([
         styles.tile,

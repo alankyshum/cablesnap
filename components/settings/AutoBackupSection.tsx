@@ -116,7 +116,7 @@ export default function AutoBackupSection({ colors, toast }: Props) {
   if (!ready) return null;
 
   return (
-    <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+    <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
       <CardContent>
         <Text
           variant="body"

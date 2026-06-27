@@ -22,6 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
+- Settings: tidied up text hierarchy so titles, labels, and helper text use consistent sizes and weights for a cleaner, less cluttered look.
+- **Improvement: Settings tiles are lighter and less cluttered** — the Settings screen previously rendered as a vertical stack of drop-shadowed boxes. Each tile now uses a subtle 1px outline instead of a shadow, with slightly tighter padding, so the screen reads as a clean, calm list rather than a column of floating cards. (BLD-2030)
 - **Improvement: Settings link rows are more legible and easier to tap** — the Gym Profiles, Advanced Set Types, and Adaptive Macro Coach entries now use a larger, consistent title size and a guaranteed 48 dp minimum touch target, and Settings tiles share a single, consistent density (padding and heading size). No functionality changed — the links open the same screens as before. (BLD-2032)
 
 ## v0.26.42 — 2026-06-27
