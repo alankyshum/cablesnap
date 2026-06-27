@@ -37,14 +37,23 @@ agents are active at the same time, `git checkout` on one **silently**
 yanks the working tree out from under the other and corrupts untracked
 artefacts (image gen, builds, snapshots, dev-server state).
 
-**Rule:** Use a per-branch git worktree whenever the work generates
-untracked artefacts OR another CableSnap agent might be active. When in
-doubt, use a worktree.
+**Rule (unconditional — BLD-2040):** For ANY CableSnap implementation
+work — any file edit, build, test, artefact generation, or git
+checkout/switch — you MUST work inside a per-ticket worktree under
+`/tmp/wt-<branch>`. The ONLY operations permitted directly in
+`/projects/cablesnap` are read-only inspection of `origin/main`
+(`git fetch origin`, `git log origin/main`, reading files).
+**NEVER run `git checkout <branch>` or `git switch` in `/projects/cablesnap`.**
 
 ```bash
+# Preflight: fail fast if you are in the shared primary checkout
+./scripts/agent-worktree.sh guard   # exits 3 in /projects/cablesnap
+
 # Start an isolated worktree
 eval "$(./scripts/agent-worktree.sh start bld-N-feature)"
 cd "$AGENT_WORKTREE_DIR"
+
+./scripts/agent-worktree.sh guard   # exits 0 inside worktree (safe)
 
 # ... do work ...
 
@@ -52,8 +61,8 @@ cd "$AGENT_WORKTREE_DIR"
 eval "$(./scripts/agent-worktree.sh stop bld-N-feature)"
 ```
 
-See BLD-765 learning in `process/quality-pipeline.md` for the full
-incident and pattern. The script is idempotent, recovers stale locks,
+See BLD-765 + BLD-2039 learnings in `process/quality-pipeline.md` for the
+full incidents and pattern. The script is idempotent, recovers stale locks,
 and refuses to remove dirty worktrees without `--force`.
 
 Full doctrine: [`/projects/cablesnap/.agents/CONCURRENT-AGENT-SAFETY.md`](../.agents/CONCURRENT-AGENT-SAFETY.md).
