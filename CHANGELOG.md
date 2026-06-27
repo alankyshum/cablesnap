@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.42 — 2026-06-27
+<!-- versionCode: 112 -->
+
 - **Fix: Red error toast no longer appears on the session pacing and post-workout summary screens** — a React DOM prop warning caused by an accessibility attribute leaking onto an SVG element produced a persistent red error toast on these screens. The prop is now correctly scoped to native only; the web accessibility attribute (`aria-hidden`) handles screen readers on web as before. (BLD-1994)
 - **Fix: "Sets" and "Volume" stat labels no longer truncate on the workout summary screen** — the stacked stat-tile captions on the completed-workout summary were clipped with an ellipsis on narrow viewports. The label layout was restructured so each caption renders on a single line at full width. (BLD-1993)
 - **Fix: "Select" link in the Form clips header now meets the 44 dp touch target minimum** — the previous implementation used a small `hitSlop` that only extended the tappable area to ~36 dp, making the control difficult to tap reliably. The tap area is now at least 44×44 dp as required by HIG and Material guidelines. (BLD-1941)
