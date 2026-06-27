@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Improvement: Settings link rows are more legible and easier to tap** — the Gym Profiles, Advanced Set Types, and Adaptive Macro Coach entries now use a larger, consistent title size and a guaranteed 48 dp minimum touch target, and Settings tiles share a single, consistent density (padding and heading size). No functionality changed — the links open the same screens as before. (BLD-2032)
 
 ## v0.26.42 — 2026-06-27
 <!-- versionCode: 112 -->
