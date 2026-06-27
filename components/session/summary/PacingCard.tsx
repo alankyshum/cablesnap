@@ -86,7 +86,7 @@ export function HatchOverlay({ width, height, testID }: HatchOverlayProps) {
       // Spread-omit pattern: false value still reaches the DOM and warns;
       // spreading an empty object omits the prop entirely on web (BLD-2004).
       {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
-      importantForAccessibility={Platform.OS === 'web' ? undefined : 'no-hide-descendants'}
+      {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
       aria-hidden
       pointerEvents="none"
       testID={testID}
