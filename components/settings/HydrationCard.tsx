@@ -127,7 +127,7 @@ export default function HydrationCard({ colors, toast }: Props) {
   };
 
   return (
-    <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
+    <Card variant="outline" style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
       <CardContent>
         <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>
           Hydration

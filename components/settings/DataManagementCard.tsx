@@ -23,6 +23,7 @@ export default function DataManagementCard({
 }: Props) {
   return (
     <Card
+      variant="outline"
       style={StyleSheet.flatten([
         styles.flowCard,
         styles.wideCard,

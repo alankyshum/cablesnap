@@ -14,7 +14,7 @@ export default function AppearanceCard({ colors }: Props) {
   const { themeMode, setThemeMode } = useThemeMode();
 
   return (
-    <Card style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+    <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
       <CardContent>
         <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Appearance</Text>
         <View style={styles.row}>
