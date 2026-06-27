@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Settings: tidied up text hierarchy so titles, labels, and helper text use consistent sizes and weights for a cleaner, less cluttered look.
 
 ## v0.26.42 — 2026-06-27
 <!-- versionCode: 112 -->
