@@ -278,14 +278,17 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 6. Integrations ── */}
-        <IntegrationsCard
-          colors={colors}
-          toast={toast}
-          stravaAthlete={stravaAthlete}
-          setStravaAthlete={setStravaAthlete}
-          stravaLoading={stravaLoading}
-          setStravaLoading={setStravaLoading}
-        />
+        <SettingsTile colors={colors} title="Integrations" testID="settings-tile-integrations">
+          <IntegrationsCard
+            colors={colors}
+            toast={toast}
+            stravaAthlete={stravaAthlete}
+            setStravaAthlete={setStravaAthlete}
+            stravaLoading={stravaLoading}
+            setStravaLoading={setStravaLoading}
+            bareContent
+          />
+        </SettingsTile>
 
         {/* ── 7. Data & Backup ── */}
         <SettingsTile colors={colors} title="Data & Backup" testID="settings-tile-data-backup">
@@ -306,13 +309,16 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 8. Feedback ── */}
-        <FeedbackCard
-          colors={colors}
-          count={count}
-          onBug={() => router.push({ pathname: '/feedback', params: { type: 'bug' } })}
-          onFeature={() => router.push({ pathname: '/feedback', params: { type: 'feature' } })}
-          onErrors={() => router.push('/errors')}
-        />
+        <SettingsTile colors={colors} title="Feedback & Reports" testID="settings-tile-feedback">
+          <FeedbackCard
+            colors={colors}
+            count={count}
+            onBug={() => router.push({ pathname: '/feedback', params: { type: 'bug' } })}
+            onFeature={() => router.push({ pathname: '/feedback', params: { type: 'feature' } })}
+            onErrors={() => router.push('/errors')}
+            bareContent
+          />
+        </SettingsTile>
 
         {/* ── 9. About ── */}
         <SettingsTile colors={colors} title="About" testID="settings-tile-about">

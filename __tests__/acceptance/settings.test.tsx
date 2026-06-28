@@ -166,6 +166,27 @@ describe('Settings Screen Acceptance', () => {
     expect(await findByText(/Free & open-source workout tracker/)).toBeTruthy()
   })
 
+  // ── BLD-2090: All 9 tiles use SettingsTile (visual consistency) ──────────────────────────────────
+
+  it('renders all 9 SettingsTile testIDs — Integrations and Feedback wrapped as peers (BLD-2090)', async () => {
+    const { findByTestId } = renderScreen(<Settings />)
+    // Verify all 9 tiles render via SettingsTile (consistent padding/heading)
+    expect(await findByTestId('settings-tile-profile')).toBeTruthy()
+    expect(await findByTestId('settings-tile-units-appearance')).toBeTruthy()
+    expect(await findByTestId('settings-tile-training')).toBeTruthy()
+    expect(await findByTestId('settings-tile-notifications')).toBeTruthy()
+    expect(await findByTestId('settings-tile-coaching')).toBeTruthy()
+    expect(await findByTestId('settings-tile-integrations')).toBeTruthy()
+    expect(await findByTestId('settings-tile-data-backup')).toBeTruthy()
+    expect(await findByTestId('settings-tile-feedback')).toBeTruthy()
+    expect(await findByTestId('settings-tile-about')).toBeTruthy()
+  })
+
+  it('Integrations tile renders its title heading via SettingsTile (BLD-2090)', async () => {
+    const { findByText } = renderScreen(<Settings />)
+    expect(await findByText('Integrations')).toBeTruthy()
+  })
+
   // ── Unit Toggles (Weight kg/lb) ──────────────────────────────────
 
   it('shows weight unit toggle defaulting to kg with both options visible', async () => {

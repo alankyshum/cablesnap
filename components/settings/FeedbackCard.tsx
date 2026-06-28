@@ -22,12 +22,14 @@ type Props = {
 export default function FeedbackCard({ colors, count, onBug, onFeature, onErrors, bareContent = false }: Props) {
   const content = (
     <>
-      <Text
-        variant="body"
-        style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}
-      >
-        Feedback &amp; Reports
-      </Text>
+      {!bareContent && (
+        <Text
+          variant="body"
+          style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}
+        >
+          Feedback &amp; Reports
+        </Text>
+      )}
       <View style={styles.buttonFlow}>
         <Button variant="default" size="sm" icon={Bug} onPress={onBug} accessibilityLabel="Report a bug">
           Report Bug
