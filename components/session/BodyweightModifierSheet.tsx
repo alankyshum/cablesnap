@@ -183,19 +183,16 @@ export function BodyweightModifierSheet({
             label="Bodyweight"
             selected={mode === "bodyweight"}
             onPress={() => onModeChange("bodyweight")}
-            colors={colors}
           />
           <SegmentButton
             label="Added"
             selected={mode === "added"}
             onPress={() => onModeChange("added")}
-            colors={colors}
           />
           <SegmentButton
             label="Assisted"
             selected={mode === "assisted"}
             onPress={() => onModeChange("assisted")}
-            colors={colors}
           />
         </View>
 
@@ -308,10 +305,9 @@ type SegmentProps = {
   label: string;
   selected: boolean;
   onPress: () => void;
-  colors: ReturnType<typeof useThemeColors>;
 };
 
-function SegmentButton({ label, selected, onPress, colors }: SegmentProps) {
+function SegmentButton({ label, selected, onPress }: SegmentProps) {
   return (
     <Button
       variant={selected ? "default" : "ghost"}

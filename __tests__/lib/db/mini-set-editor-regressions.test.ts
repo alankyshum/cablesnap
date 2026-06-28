@@ -72,7 +72,7 @@ jest.mock('drizzle-orm/expo-sqlite', () => ({
 
 jest.mock('../../../lib/uuid', () => ({ uuid: jest.fn(() => 'mock-uuid') }));
 
-import { insertSegment, collapseAdvancedSetToNormal, getSegmentsForSets, computeSetCacheValues } from '../../../lib/db/sets';
+import { insertSegment, collapseAdvancedSetToNormal, computeSetCacheValues } from '../../../lib/db/sets';
 
 beforeEach(() => {
   jest.clearAllMocks();

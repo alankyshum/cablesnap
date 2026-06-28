@@ -405,7 +405,7 @@ describe("queryHistoryMedian — timestamp unit regression", () => {
     await resolveRest("s1", "e1", "normal");
 
     expect(mockGetAllAsync).toHaveBeenCalled();
-    const [_sql, args] = mockGetAllAsync.mock.calls[0];
+    const [, args] = mockGetAllAsync.mock.calls[0];
     const windowStart: number = args[1]; // second positional arg is windowStart
 
     // windowStart must be in SECONDS (~10-digit epoch), NOT milliseconds (~13-digit).

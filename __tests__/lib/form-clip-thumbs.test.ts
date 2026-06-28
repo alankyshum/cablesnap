@@ -62,7 +62,7 @@ jest.mock("expo-file-system", () => {
       this.uri = u;
     }
     get exists(): boolean { return true; }
-    create(_opts?: unknown): void { /* noop */ }
+    create(): void { /* noop */ }
     list(): FakeFile[] {
       return Array.from(mockFakeFS.entries())
         .filter(([k, v]) =>
