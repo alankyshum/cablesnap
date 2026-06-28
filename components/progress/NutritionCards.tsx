@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { CartesianChart, Line } from "victory-native";
+import { ChartGate } from "@/components/ui/ChartGate";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { semantic } from "../../constants/theme";
 import type { DailyNutritionTotal, WeeklyNutritionAverage, NutritionAdherence } from "../../lib/db";
@@ -51,32 +52,34 @@ export function CalorieTrendCard({
         accessibilityLabel={summaryLabel}
       >
         {chartData.length >= 2 ? (
-          <CartesianChart
-            data={chartData}
-            xKey="x"
-            yKeys={calorieTarget ? ["calories", "target"] : ["calories"]}
-            domainPadding={{ left: 10, right: 10 }}
-          >
-            {({ points }) => (
-              <>
-                <Line
-                  points={points.calories}
-                  color={colors.primary}
-                  strokeWidth={2}
-                  curveType="natural"
-                  animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
-                />
-                {calorieTarget && points.target ? (
+          <ChartGate>
+            <CartesianChart
+              data={chartData}
+              xKey="x"
+              yKeys={calorieTarget ? ["calories", "target"] : ["calories"]}
+              domainPadding={{ left: 10, right: 10 }}
+            >
+              {({ points }) => (
+                <>
                   <Line
-                    points={points.target}
-                    color={colors.outline}
-                    strokeWidth={1}
-                    curveType="linear"
+                    points={points.calories}
+                    color={colors.primary}
+                    strokeWidth={2}
+                    curveType="natural"
+                    animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
                   />
-                ) : null}
-              </>
-            )}
-          </CartesianChart>
+                  {calorieTarget && points.target ? (
+                    <Line
+                      points={points.target}
+                      color={colors.outline}
+                      strokeWidth={1}
+                      curveType="linear"
+                    />
+                  ) : null}
+                </>
+              )}
+            </CartesianChart>
+          </ChartGate>
         ) : (
           <View style={styles.chartEmpty}>
             <Text style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
@@ -283,38 +286,40 @@ export function MacroTrendCard({ weeklyAverages, chartWidth, reducedMotion, styl
         accessibilityRole="image"
         accessibilityLabel={summaryLabel}
       >
-        <CartesianChart
-          data={chartData}
-          xKey="x"
-          yKeys={["protein", "carbs", "fat"]}
-          domainPadding={{ left: 10, right: 10 }}
-        >
-          {({ points }) => (
-            <>
-              <Line
-                points={points.protein}
-                color={semantic.protein}
-                strokeWidth={2}
-                curveType="natural"
-                animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
-              />
-              <Line
-                points={points.carbs}
-                color={semantic.carbs}
-                strokeWidth={2}
-                curveType="natural"
-                animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
-              />
-              <Line
-                points={points.fat}
-                color={semantic.fat}
-                strokeWidth={2}
-                curveType="natural"
-                animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
-              />
-            </>
-          )}
-        </CartesianChart>
+        <ChartGate>
+          <CartesianChart
+            data={chartData}
+            xKey="x"
+            yKeys={["protein", "carbs", "fat"]}
+            domainPadding={{ left: 10, right: 10 }}
+          >
+            {({ points }) => (
+              <>
+                <Line
+                  points={points.protein}
+                  color={semantic.protein}
+                  strokeWidth={2}
+                  curveType="natural"
+                  animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
+                />
+                <Line
+                  points={points.carbs}
+                  color={semantic.carbs}
+                  strokeWidth={2}
+                  curveType="natural"
+                  animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
+                />
+                <Line
+                  points={points.fat}
+                  color={semantic.fat}
+                  strokeWidth={2}
+                  curveType="natural"
+                  animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
+                />
+              </>
+            )}
+          </CartesianChart>
+        </ChartGate>
       </View>
     </Card>
   );

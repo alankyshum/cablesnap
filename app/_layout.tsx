@@ -107,8 +107,13 @@ export default Sentry.wrap(function RootLayout() {
   );
   const formClipsCtx = useMemo(() => ({ backupExclusionOk }), [backupExclusionOk]);
 
-  // Web-only: gate the tree on CanvasKit readiness (BLD-2078 / useSkiaWebInit).
-  const skiaReady = useSkiaWebInit();
+  // BLD-2078: kick off CanvasKit (react-native-skia WASM) loading at app boot
+  // on web so charts can render as soon as possible. We do NOT gate the whole
+  // tree on readiness — each chart fails closed at its own `ChartGate`
+  // boundary, so non-chart UI (and narrow layouts) render immediately while
+  // CanvasKit is still loading. Gating the tree here previously regressed the
+  // narrow viewport to a blank/crash screen (see BLD-2078 review).
+  useSkiaWebInit();
 
   if (!ready) return null;
 
@@ -143,8 +148,6 @@ export default Sentry.wrap(function RootLayout() {
       </GestureHandlerRootView>
     );
   }
-
-  if (!skiaReady) return null;
 
   const headerStyle = { backgroundColor: themeColors.card };
 

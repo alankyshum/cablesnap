@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { CartesianChart, Line, Scatter } from "victory-native";
+import { ChartGate } from "@/components/ui/ChartGate";
 import { useFocusEffect } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import {
@@ -66,32 +67,34 @@ export function TrendLineCard({
         accessibilityRole="image"
         accessibilityLabel={accessibilityLabel}
       >
-        <CartesianChart
-          data={data}
-          xKey="x"
-          yKeys={["y"]}
-          domain={{ y: yDomain }}
-          domainPadding={{ left: 10, right: 10 }}
-        >
-          {({ points }) => (
-            <>
-              <Line
-                points={points.y}
-                color={lineColor}
-                strokeWidth={2}
-                curveType="monotoneX"
-              />
-              {data.length === 1 && (
-                <Scatter
+        <ChartGate>
+          <CartesianChart
+            data={data}
+            xKey="x"
+            yKeys={["y"]}
+            domain={{ y: yDomain }}
+            domainPadding={{ left: 10, right: 10 }}
+          >
+            {({ points }) => (
+              <>
+                <Line
                   points={points.y}
                   color={lineColor}
-                  radius={5}
-                  shape="circle"
+                  strokeWidth={2}
+                  curveType="monotoneX"
                 />
-              )}
-            </>
-          )}
-        </CartesianChart>
+                {data.length === 1 && (
+                  <Scatter
+                    points={points.y}
+                    color={lineColor}
+                    radius={5}
+                    shape="circle"
+                  />
+                )}
+              </>
+            )}
+          </CartesianChart>
+        </ChartGate>
       </View>
     </Card>
   );
