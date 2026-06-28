@@ -8,12 +8,13 @@ name: CI
 # no matrix. Bundle Gate (`bundle-gate.yml`) continues to run independently.
 #
 # Job split rationale (Option C): typecheck and jest run as separate jobs so
-# each can be independently marked non-blocking via `continue-on-error: true`
-# until the pre-existing failures on `main` are cleaned up. Typecheck flipped
-# back to blocking in BLD-764 once the pre-existing TS errors were cleared.
-# - jest: 12 pre-existing test failures across 3 suites (supersets,
-#   session-add-exercise, WorkoutHeatmap) → see BLD-753. Flips to blocking
-#   once those failures are fixed.
+# each result is independently reported in the PR status checks UI.
+# Both jobs are blocking (no continue-on-error). See BLD-2161.
+#
+# jest: pre-existing failures (BLD-753: supersets, session-add-exercise,
+# WorkoutHeatmap) were caused by harness pollution — jest was resolving test
+# files from .paperclip/worktrees/ git worktrees. Fixed in BLD-2161 by adding
+# .paperclip/worktrees/ to testPathIgnorePatterns in jest.config.js.
 
 on:
   pull_request: {}
@@ -60,12 +61,6 @@ jobs:
     name: Jest
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # TODO(BLD-753): flip to blocking (remove `continue-on-error`) after the
-    # 12 pre-existing test failures across 3 suites surfaced by this
-    # workflow's first run are fixed (supersets, session-add-exercise,
-    # WorkoutHeatmap). BLD-749 mock fix already landed; remaining failures
-    # are real assertion mismatches against current UI behavior.
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
