@@ -46,10 +46,13 @@ function createChainableSelect() {
 }
 
 function createChainableInsert() {
-  return {
+  const chain: any = {
     values: jest.fn().mockReturnThis(),
+    onConflictDoNothing: jest.fn().mockReturnThis(),
+    onConflictDoUpdate: jest.fn().mockReturnThis(),
     then: (resolve: any, reject: any) => Promise.resolve().then(resolve, reject),
   };
+  return chain;
 }
 
 function createChainableUpdate() {

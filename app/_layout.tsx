@@ -12,8 +12,7 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Redirect, Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform } from "react-native";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import { BNAThemeProvider } from "../theme/theme-provider";
 import { ToastProvider } from "../components/ui/bna-toast";
@@ -29,6 +28,7 @@ import { QueryProvider } from "../lib/query";
 import { OnboardingContext } from "../lib/onboarding-context";
 import { FormClipsContext } from "../lib/form-clips-context";
 import { useAppInit } from "../hooks/useAppInit";
+import { useSkiaWebInit } from "../hooks/useSkiaWebInit";
 import { SCREEN_CONFIGS } from "../constants/screen-config";
 import { LayoutToastBridge } from "../components/LayoutToastBridge";
 import { LayoutBanners } from "../components/LayoutBanners";
@@ -107,20 +107,8 @@ export default Sentry.wrap(function RootLayout() {
   );
   const formClipsCtx = useMemo(() => ({ backupExclusionOk }), [backupExclusionOk]);
 
-  // Web-only: react-native-skia charts (CartesianChart) call into CanvasKit
-  // synchronously at render. CanvasKit must be loaded first or the whole
-  // screen throws `Cannot read properties of undefined (reading 'XYWHRect')`.
-  // Gate the normal tree on LoadSkiaWeb so charts render on web.
-  const [skiaReady, setSkiaReady] = useState(Platform.OS !== "web");
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    let cancelled = false;
-    import("@shopify/react-native-skia/lib/module/web/LoadSkiaWeb")
-      .then((m) => m.LoadSkiaWeb())
-      .then(() => { if (!cancelled) setSkiaReady(true); })
-      .catch(() => { if (!cancelled) setSkiaReady(true); });
-    return () => { cancelled = true; };
-  }, []);
+  // Web-only: gate the tree on CanvasKit readiness (BLD-2078 / useSkiaWebInit).
+  const skiaReady = useSkiaWebInit();
 
   if (!ready) return null;
 
