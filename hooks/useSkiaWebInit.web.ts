@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Platform } from "react-native";
+import { canvaskitLocateFile } from "./canvaskitLocateFile";
 
 /**
  * Web implementation of the CanvasKit readiness signal. The native (default)
@@ -76,7 +77,10 @@ export function useSkiaWebInit(): boolean {
           const mod = await import(
             "@shopify/react-native-skia/lib/module/web/LoadSkiaWeb"
           );
-          await mod.LoadSkiaWeb();
+          // Pass `locateFile` so CanvasKit fetches the root-staged
+          // `/canvaskit.wasm` (see `canvaskitLocateFile`) instead of the
+          // non-existent path next to its JS chunk (BLD-2125).
+          await mod.LoadSkiaWeb({ locateFile: canvaskitLocateFile });
           if (markReadyIfLoaded()) return;
         } catch {
           // Transient (e.g. "Failed to fetch" on the WASM under a contended
