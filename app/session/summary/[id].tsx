@@ -284,8 +284,8 @@ function SummaryHeader({ colors, session, duration, durationSpokenText, complete
         </Card>
         <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={`Total volume: ${volumeDisplay.toLocaleString()} ${unit}`}>
           <CardContent style={styles.statInner}>
-            <Text variant="heading" style={{ color: colors.primary }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{volumeDisplay.toLocaleString()} {unit}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1}>Volume</Text>
+            <Text variant="heading" style={{ color: colors.primary }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{volumeDisplay.toLocaleString()}</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1}>Volume ({unit})</Text>
           </CardContent>
         </Card>
       </View>
