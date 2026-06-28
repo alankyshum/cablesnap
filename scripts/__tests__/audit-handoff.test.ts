@@ -29,6 +29,11 @@
  *   AC4: Issue already in_review or further → no-op, exit 0
  *   AC5: PATCH call ordering → create with creating-agent; PATCH switches
  *        BOTH status and assignee in one call
+ *   AC6: Post-PATCH verification is strict — the verified end-state must be
+ *        re-read successfully AND status==in_review AND assignee==ux-designer.
+ *        Any unverifiable/wrong end-state exits non-zero (exit 4), because each
+ *        case independently breaks ux-designer's assignment-wake. (QD review of
+ *        PR #660: a "not backlog" check + WARN-only assignee was too weak.)
  *
  * Refs: BLD-2109, BLD-2107, BLD-2105.
  */
@@ -75,6 +80,8 @@ function buildSandbox(opts: {
   patchFail?: boolean;
   patchHttpErr?: string;
   getFail?: boolean;
+  getStatusOverride?: string;
+  getAssigneeOverride?: string;
   trackCalls?: boolean;
 }): {
   dir: string;
@@ -119,6 +126,8 @@ function buildSandbox(opts: {
       STUB_CLIP_PATCH_FAIL: opts.patchFail ? "1" : "0",
       STUB_CLIP_GET_FAIL: opts.getFail ? "1" : "0",
       STUB_CLIP_PATCH_HTTP_ERR: opts.patchHttpErr ?? "",
+      STUB_CLIP_GET_STATUS_OVERRIDE: opts.getStatusOverride ?? "",
+      STUB_CLIP_GET_ASSIGNEE_OVERRIDE: opts.getAssigneeOverride ?? "",
       STUB_CLIP_TRACK_CALLS: opts.trackCalls ? "1" : "0",
       STUB_CLIP_CALL_LOG: callLogPath,
       // Point the script at our stub clip.sh.
@@ -475,6 +484,97 @@ d("audit-handoff.sh — BLD-2109", () => {
         const state = readState();
         expect(state.issues[0].status).toBe("in_review");
         expect(state.issues[0].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
+      } finally {
+        cleanup(dir);
+      }
+    });
+  });
+
+  describe("AC6: strict post-PATCH verification — unverifiable/wrong end-state is fatal (exit 4)", () => {
+    it("verification re-read failure → exit 4 (must NOT report success)", () => {
+      // PATCH succeeds (patchFail not set) but the post-PATCH get-issue fails.
+      // No --issue-id, so step-0 idempotency read is skipped; the only get-issue
+      // is the verification read. An unverifiable end-state must be fatal.
+      const { dir, run, readState } = buildSandbox({ getFail: true });
+      try {
+        const r = run();
+        expect(r.status).toBe(4);
+        // PATCH did apply to stored state, but the script must not trust that
+        // without a successful re-read.
+        const state = readState();
+        expect(state.issues[0].status).toBe("in_review");
+      } finally {
+        cleanup(dir);
+      }
+    });
+
+    it("verification re-read failure → stderr is FATAL + ACTION REQUIRED (not WARN)", () => {
+      const { dir, run } = buildSandbox({ getFail: true });
+      try {
+        const r = run();
+        expect(r.stderr).toMatch(/FATAL/i);
+        expect(r.stderr).toMatch(/ACTION REQUIRED/i);
+        expect(r.stderr).toMatch(/UNVERIFIABLE/i);
+        // Must NOT claim a successful (even "unverified") done.
+        expect(r.combined).not.toMatch(/DONE \(unverified\)/i);
+      } finally {
+        cleanup(dir);
+      }
+    });
+
+    it("verified status != in_review (e.g. reverted to todo) → exit 4", () => {
+      // Simulate PATCH 2xx but a concurrent mutation leaving status=todo.
+      const { dir, run } = buildSandbox({ getStatusOverride: "todo" });
+      try {
+        const r = run();
+        expect(r.status).toBe(4);
+        expect(r.stderr).toMatch(/FATAL/i);
+        expect(r.stderr).toMatch(/expected in_review/i);
+      } finally {
+        cleanup(dir);
+      }
+    });
+
+    it("verified status still backlog → exit 4 with explicit 'still in backlog' message", () => {
+      const { dir, run } = buildSandbox({ getStatusOverride: "backlog" });
+      try {
+        const r = run();
+        expect(r.status).toBe(4);
+        expect(r.stderr).toMatch(/STILL in backlog/i);
+        expect(r.stderr).toMatch(/will NOT be woken/i);
+      } finally {
+        cleanup(dir);
+      }
+    });
+
+    it("verified status=in_review but assignee != ux-designer → exit 4 (FATAL, not WARN)", () => {
+      // The exact failure this script prevents: status looks fine but the wake
+      // would target the wrong agent. Must be fatal.
+      const wrongAssignee = "00000000-0000-0000-0000-000000000000";
+      const { dir, run } = buildSandbox({
+        getStatusOverride: "in_review",
+        getAssigneeOverride: wrongAssignee,
+      });
+      try {
+        const r = run();
+        expect(r.status).toBe(4);
+        expect(r.stderr).toMatch(/FATAL/i);
+        expect(r.stderr).toMatch(/expected ux-designer/i);
+        expect(r.stderr).toMatch(/will NOT be woken/i);
+      } finally {
+        cleanup(dir);
+      }
+    });
+
+    it("fully-correct verified end-state (in_review + ux-designer) → exit 0, VERIFIED", () => {
+      // Control case: with no overrides the re-read matches the PATCH, so the
+      // strict verification passes and the script reports VERIFIED + DONE.
+      const { dir, run } = buildSandbox({});
+      try {
+        const r = run();
+        expect(r.status).toBe(0);
+        expect(r.combined).toMatch(/VERIFIED/);
+        expect(r.combined).toMatch(/DONE: ux-designer will be woken/);
       } finally {
         cleanup(dir);
       }

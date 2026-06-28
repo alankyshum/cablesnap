@@ -22,6 +22,16 @@
 #   STUB_CLIP_GET_FAIL       — "1" → get-issue returns exit 1
 #   STUB_CLIP_PATCH_HTTP_ERR — HTTP status code to simulate (e.g. "403") for update-issue
 #   STUB_CLIP_TRACK_CALLS    — "1" → append each call to $STUB_CLIP_CALL_LOG
+#
+# Divergent-read controls (simulate PATCH 2xx but server end-state wrong, e.g.
+# a concurrent mutation that reverted the change — the scenario the script's
+# verification block defends against):
+#   STUB_CLIP_GET_STATUS_OVERRIDE   — if set, get-issue reports this status
+#                                      instead of the stored one
+#   STUB_CLIP_GET_ASSIGNEE_OVERRIDE — if set, get-issue reports this assignee
+#                                      instead of the stored one
+# These affect get-issue ONLY (not update-issue), so the stored state still
+# reflects the PATCH while the re-read returns the overridden, divergent values.
 
 set -u
 
@@ -32,6 +42,8 @@ GET_FAIL="${STUB_CLIP_GET_FAIL:-0}"
 PATCH_HTTP_ERR="${STUB_CLIP_PATCH_HTTP_ERR:-}"
 TRACK="${STUB_CLIP_TRACK_CALLS:-0}"
 CALL_LOG="${STUB_CLIP_CALL_LOG:-/tmp/audit-handoff-stub-calls.log}"
+GET_STATUS_OVERRIDE="${STUB_CLIP_GET_STATUS_OVERRIDE:-}"
+GET_ASSIGNEE_OVERRIDE="${STUB_CLIP_GET_ASSIGNEE_OVERRIDE:-}"
 
 # Log calls for sequence assertion in tests.
 if [[ "$TRACK" == "1" ]]; then
@@ -172,6 +184,16 @@ case "$CMD" in
     if [[ -z "$result" ]]; then
       echo "{\"error\":\"issue not found: $issue_id\"}" >&2
       exit 1
+    fi
+
+    # Divergent-read overrides: simulate a server end-state that differs from
+    # what the PATCH stored (e.g. concurrent mutation). Applied to the emitted
+    # JSON only; stored state is untouched.
+    if [[ -n "$GET_STATUS_OVERRIDE" ]]; then
+      result=$(echo "$result" | jq --arg s "$GET_STATUS_OVERRIDE" '.status = $s')
+    fi
+    if [[ -n "$GET_ASSIGNEE_OVERRIDE" ]]; then
+      result=$(echo "$result" | jq --arg a "$GET_ASSIGNEE_OVERRIDE" '.assigneeAgentId = $a')
     fi
 
     echo "$result"

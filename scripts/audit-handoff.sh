@@ -46,13 +46,15 @@
 # can compose the right default status comment.
 #
 # ## Exit codes
-#   0  — Issue created-or-reused and successfully advanced to in_review
-#          (or already ≥ in_review; no-op)
+#   0  — Issue created-or-reused and VERIFIED at status=in_review assigned to
+#          ux-designer (or already ≥ in_review assigned to ux-designer; no-op)
 #   1  — Usage error
 #   2  — clip.sh create-issue failed
 #   3  — clip.sh PATCH (status + assignee transition) failed (exits loudly;
 #          never leaves issue in backlog assigned to ux-designer)
-#   4  — verify re-read failed or status still backlog after PATCH
+#   4  — post-PATCH verification failed: re-read errored, OR status != in_review,
+#          OR assignee != ux-designer. Any unverifiable/wrong end-state is fatal
+#          because it means ux-designer's assignment-wake will not fire.
 #
 # Refs: BLD-2109, BLD-2107, BLD-2106, BLD-2105.
 
@@ -104,11 +106,12 @@ The --issue-id flag is for the partial-rerun case (issue already created in a
 prior attempt; skip create and go straight to the transition).
 
 Exit codes:
-  0  success (issue at in_review assigned to ux-designer)
+  0  success (issue VERIFIED at in_review assigned to ux-designer)
   1  usage error
   2  create-issue failed
   3  PATCH (status + assignee transition) failed — NEVER leaves backlog
-  4  post-PATCH verify failed or status still backlog
+  4  post-PATCH verify failed: read errored, status != in_review, or
+     assignee != ux-designer (any unverifiable/wrong end-state is fatal)
 EOF
   exit "${1:-1}"
 }
@@ -298,6 +301,12 @@ echo "[audit-handoff] PATCH succeeded."
 # We never trust the PATCH response alone. A 2xx response with an unexpected
 # body (or a concurrent mutation) could leave the issue in an unexpected state.
 # Re-reading and asserting is the only way to guarantee the downstream wake fires.
+#
+# The verified end-state must satisfy ALL THREE invariants, each FATAL on failure
+# (exit 4) because each independently breaks ux-designer's assignment-wake:
+#   (a) the re-read itself must succeed (else the end-state is unverifiable),
+#   (b) status MUST be exactly in_review (not merely "not backlog"),
+#   (c) assignee MUST be ux-designer (else the wake targets the wrong agent).
 
 echo "[audit-handoff] Verifying end-state for $ISSUE_ID ..."
 
@@ -307,28 +316,43 @@ verify_json=$(run_clip get-issue "$ISSUE_ID" 2>&1)
 verify_rc=$?
 set -e
 
+# (a) Read failure is FATAL. An unverifiable end-state must NOT pass: if we
+# cannot re-read the issue we cannot prove ux-designer's wake will fire, which
+# is the entire purpose of this script (BLD-2109). Exit non-zero so the caller
+# (and CI) surfaces it loudly instead of silently assuming success.
 if [[ $verify_rc -ne 0 ]]; then
-  echo "[audit-handoff] WARN: could not re-read $ISSUE_ID for verification (rc=$verify_rc)." >&2
+  echo "[audit-handoff] FATAL: could not re-read $ISSUE_ID for verification (rc=$verify_rc)." >&2
   echo "[audit-handoff] Output: $verify_json" >&2
-  # Non-fatal warn only — PATCH appeared to succeed; we just can't verify.
-  echo "[audit-handoff] WARN: proceeding despite verify failure. Monitor $ISSUE_ID manually." >&2
-  echo "[audit-handoff] DONE (unverified): $ISSUE_ID → in_review / ux-designer"
-  exit 0
+  echo "[audit-handoff] End-state is UNVERIFIABLE; refusing to report success." >&2
+  echo "[audit-handoff] ACTION REQUIRED: board must confirm $ISSUE_ID is in_review assigned to ux-designer." >&2
+  exit 4
 fi
 
 final_status=$(json_field "$verify_json" "status")
 final_assignee=$(json_field "$verify_json" "assigneeAgentId")
 
-if [[ "$final_status" == "backlog" ]]; then
-  echo "[audit-handoff] FATAL: $ISSUE_ID is STILL in backlog after PATCH. ux-designer will NOT be woken." >&2
-  echo "[audit-handoff] ACTION REQUIRED: board must manually advance $ISSUE_ID." >&2
+# (b) Status must POSITIVELY be in_review. Asserting "not backlog" is too weak —
+# any other status (todo, blocked, an empty/garbled read, a concurrent mutation
+# that reverted the PATCH) also means the verified end-state is wrong. Only
+# in_review proves the assignment-wake will fire, so require it explicitly.
+if [[ "$final_status" != "in_review" ]]; then
+  echo "[audit-handoff] FATAL: $ISSUE_ID status=$final_status after PATCH (expected in_review)." >&2
+  if [[ "$final_status" == "backlog" ]]; then
+    echo "[audit-handoff] Issue is STILL in backlog — ux-designer will NOT be woken." >&2
+  fi
+  echo "[audit-handoff] ACTION REQUIRED: board must manually advance $ISSUE_ID to in_review." >&2
   exit 4
 fi
 
+# (c) Assignee must be ux-designer. A wrong assignee means ux-designer is never
+# woken — the exact failure this script exists to prevent — so this is FATAL,
+# not a warning. (in_review alone is insufficient: the assignment-wake targets
+# the assignee, and only ux-designer should review the audit.)
 if [[ "$final_assignee" != "$UX_DESIGNER_AGENT_ID" ]]; then
-  echo "[audit-handoff] WARN: $ISSUE_ID status=$final_status but assignee=$final_assignee (expected $UX_DESIGNER_AGENT_ID)." >&2
-  # Not a fatal error — status is not backlog, so the wake path is not blocked.
-  # But log loudly so operators can investigate.
+  echo "[audit-handoff] FATAL: $ISSUE_ID status=in_review but assignee=$final_assignee (expected ux-designer $UX_DESIGNER_AGENT_ID)." >&2
+  echo "[audit-handoff] ux-designer will NOT be woken on the audit." >&2
+  echo "[audit-handoff] ACTION REQUIRED: board must reassign $ISSUE_ID to ux-designer." >&2
+  exit 4
 fi
 
 echo "[audit-handoff] VERIFIED: $ISSUE_ID status=$final_status assignee=$final_assignee"
