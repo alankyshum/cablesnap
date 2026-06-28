@@ -7,7 +7,6 @@ import {
   View,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
-import { Card, CardContent } from '@/components/ui/card';
 import { useLayout } from '../../lib/layout';
 import { useFloatingTabBarHeight } from '../../components/FloatingTabBar';
 import FlowContainer from '../../components/ui/FlowContainer';
@@ -26,6 +25,8 @@ import UnitsCard from '../../components/settings/UnitsCard';
 import DataManagementCard from '../../components/settings/DataManagementCard';
 import AutoBackupSection from '../../components/settings/AutoBackupSection';
 import { FormClipsStorageRow } from '../../components/settings/FormClipsStorageRow';
+import { SettingsLinkRow } from '../../components/settings/SettingsLinkRow';
+import { SettingsTile } from '../../components/settings/SettingsTile';
 import FeedbackCard from '../../components/settings/FeedbackCard';
 import ReminderSection from '../../components/settings/ReminderSection';
 import ReleaseNotesModal from '../../components/ReleaseNotesModal';
@@ -176,60 +177,39 @@ export default function Settings() {
           fatGoal={fatGoal}
         />
         <AppearanceCard colors={colors} />
-        <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
-          <CardContent>
-            <Pressable
-              onPress={() => router.push('/settings/gym-profiles')}
-              accessibilityRole="button"
-              accessibilityLabel="Open gym profiles settings"
-              style={styles.settingsLinkRow}
-            >
-              <View style={styles.settingsLinkMeta}>
-                <Text variant="subtitle" style={{ color: colors.onSurface }}>Gym Profiles</Text>
-                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                  Manage gyms, cable stacks, and marker calibrations.
-                </Text>
-              </View>
-              <ChevronRight size={18} color={colors.onSurfaceVariant} />
-            </Pressable>
-          </CardContent>
-        </Card>
-        <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
-          <CardContent>
-            <Pressable
-              onPress={() => router.push('/settings/advanced-sets')}
-              accessibilityRole="button"
-              accessibilityLabel="Open advanced set types help"
-              style={styles.settingsLinkRow}
-            >
-              <View style={styles.settingsLinkMeta}>
-                <Text variant="subtitle" style={{ color: colors.onSurface }}>Advanced Set Types</Text>
-                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                  How to use rest-pause, cluster, and myo-rep sets.
-                </Text>
-              </View>
-              <ChevronRight size={18} color={colors.onSurfaceVariant} />
-            </Pressable>
-          </CardContent>
-        </Card>
-        <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
-          <CardContent>
-            <Pressable
-              onPress={() => router.push('/settings/macro-coach')}
-              accessibilityRole="button"
-              accessibilityLabel="Open Adaptive Macro Coach settings"
-              style={styles.settingsLinkRow}
-            >
-              <View style={styles.settingsLinkMeta}>
-                <Text variant="subtitle" style={{ color: colors.onSurface }}>Adaptive Macro Coach</Text>
-                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                  {macroCoachEnabled === null ? '' : macroCoachEnabled ? 'On — weekly advisory card on Nutrition tab' : 'Off — tap to set up'}
-                </Text>
-              </View>
-              <ChevronRight size={18} color={colors.onSurfaceVariant} />
-            </Pressable>
-          </CardContent>
-        </Card>
+        <SettingsTile colors={colors}>
+          <SettingsLinkRow
+            colors={colors}
+            title="Gym Profiles"
+            caption="Manage gyms, cable stacks, and marker calibrations."
+            accessibilityLabel="Open gym profiles settings"
+            onPress={() => router.push('/settings/gym-profiles')}
+          />
+        </SettingsTile>
+        <SettingsTile colors={colors}>
+          <SettingsLinkRow
+            colors={colors}
+            title="Advanced Set Types"
+            caption="How to use rest-pause, cluster, and myo-rep sets."
+            accessibilityLabel="Open advanced set types help"
+            onPress={() => router.push('/settings/advanced-sets')}
+          />
+        </SettingsTile>
+        <SettingsTile colors={colors}>
+          <SettingsLinkRow
+            colors={colors}
+            title="Adaptive Macro Coach"
+            caption={
+              macroCoachEnabled === null
+                ? ''
+                : macroCoachEnabled
+                  ? 'On — weekly advisory card on Nutrition tab'
+                  : 'Off — tap to set up'
+            }
+            accessibilityLabel="Open Adaptive Macro Coach settings"
+            onPress={() => router.push('/settings/macro-coach')}
+          />
+        </SettingsTile>
         <BodyProfileCard weightUnit={weightUnit} heightUnit={measureUnit} />
         <FrequencyGoalPicker
           colors={colors}
@@ -288,76 +268,68 @@ export default function Settings() {
           onFeature={() => router.push({ pathname: '/feedback', params: { type: 'feature' } })}
           onErrors={() => router.push('/errors')}
         />
-        <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
-          <CardContent>
-            <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
-              About
+        <SettingsTile colors={colors} title="About">
+          <Pressable
+            onPress={() => setReleaseNotesVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`View release notes, current version ${appVersion}`}
+            testID="settings-version-row"
+            android_ripple={{ color: colors.surfaceVariant }}
+            style={({ pressed }) => [
+              styles.versionRow,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Text
+              variant="body"
+              style={{ color: colors.onSurface, fontWeight: '500' }}
+            >
+              {`CableSnap v${appVersion}`}
+            </Text>
+            <View style={styles.versionRowRight}>
+              <Text variant="caption" style={{ marginRight: 4 }}>
+                What&apos;s new
+              </Text>
+              <ChevronRight size={18} color={colors.onSurfaceVariant} />
+            </View>
+          </Pressable>
+          <View style={styles.aboutBlock}>
+            <Text variant="caption">
+              Free & open-source workout tracker — optimized for cable machines, supports all major exercises.
+            </Text>
+            <Text
+              variant="body"
+              style={{ color: colors.primary, marginTop: 4 }}
+              onPress={() =>
+                Linking.openURL('https://github.com/alankyshum/cablesnap/blob/main/LICENSE')
+              }
+            >
+              AGPL-3.0 License
             </Text>
             <Pressable
-              onPress={() => setReleaseNotesVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel={`View release notes, current version ${appVersion}`}
-              testID="settings-version-row"
-              android_ripple={{ color: colors.surfaceVariant }}
-              style={({ pressed }) => [
-                styles.versionRow,
-                { opacity: pressed ? 0.7 : 1 },
-              ]}
+              onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
+              accessibilityRole="link"
+              accessibilityLabel="Buy me a coffee"
+              style={{ marginTop: 8 }}
             >
-              <Text
-                variant="body"
-                style={{ color: colors.onSurface, fontWeight: '500' }}
-              >
-                {`CableSnap v${appVersion}`}
-              </Text>
-              <View style={styles.versionRowRight}>
-                <Text
-                  variant="caption"
-                  style={{ marginRight: 4 }}
-                >
-                  What&apos;s new
-                </Text>
-                <ChevronRight size={18} color={colors.onSurfaceVariant} />
-              </View>
+              <Image
+                source={require('../../assets/badges/bmc-button.png')}
+                style={{ width: 180, height: 50, resizeMode: 'contain' }}
+              />
             </Pressable>
-            <View style={styles.aboutBlock}>
-              <Text variant="caption">
-                Free & open-source workout tracker — optimized for cable machines, supports all major exercises.
-              </Text>
-              <Text
-                variant="body"
-                style={{ color: colors.primary, marginTop: 4 }}
-                onPress={() =>
-                  Linking.openURL('https://github.com/alankyshum/cablesnap/blob/main/LICENSE')
-                }
-              >
-                AGPL-3.0 License
-              </Text>
-              <Pressable
-                onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
-                accessibilityRole="link"
-                accessibilityLabel="Buy me a coffee"
-                style={{ marginTop: 8 }}
-              >
-                <Image
-                  source={require('../../assets/badges/bmc-button.png')}
-                  style={{ width: 180, height: 50, resizeMode: 'contain' }}
-                />
-              </Pressable>
-              <Pressable
-                onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
-                accessibilityRole="link"
-                accessibilityLabel="Sponsor on thanks.dev"
-                style={{ marginTop: 8 }}
-              >
-                <Image
-                  source={require('../../assets/badges/thanks-dev-button.png')}
-                  style={{ width: 180, height: 24, resizeMode: 'contain' }}
-                />
-              </Pressable>
-            </View>
-          </CardContent>
-        </Card>
+            <Pressable
+              onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
+              accessibilityRole="link"
+              accessibilityLabel="Sponsor on thanks.dev"
+              style={{ marginTop: 8 }}
+            >
+              <Image
+                source={require('../../assets/badges/thanks-dev-button.png')}
+                style={{ width: 180, height: 24, resizeMode: 'contain' }}
+              />
+            </Pressable>
+          </View>
+        </SettingsTile>
       </FlowContainer>
       <ReleaseNotesModal
         visible={releaseNotesVisible}
@@ -391,7 +363,6 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  flowCard: { padding: spacing.md },
   settingsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -413,14 +384,5 @@ const styles = StyleSheet.create({
   },
   aboutBlock: {
     marginTop: 4,
-  },
-  settingsLinkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  settingsLinkMeta: {
-    flex: 1,
-    marginRight: 12,
   },
 });
