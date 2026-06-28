@@ -137,6 +137,7 @@ jest.mock('../../lib/strava', () => ({
 
 import Settings, { SETTINGS_SCROLL_EXTRA_BOTTOM } from '../../app/(tabs)/settings'
 import { FLOATING_TAB_BAR_HEIGHT } from '../../components/FloatingTabBar'
+import { spacing } from '../../constants/design-tokens'
 
 const { setEnabled: mockSetAudioEnabled } = require('../../lib/audio')
 const { requestPermission, scheduleReminders, cancelAll } = require('../../lib/notifications')
@@ -424,19 +425,23 @@ describe('Settings Screen Acceptance', () => {
     expect(remindersToggle.props.accessibilityHint).toBeTruthy()
   })
 
-  // ── Scroll padding regression (BLD-1106) ──────────────────────────────────
+  // ── Scroll padding rhythm (BLD-1106 regression + BLD-2034 tokenization) ──────
 
   it('ScrollView contentContainerStyle is a flat object with paddingBottom === FLOATING_TAB_BAR_HEIGHT + SETTINGS_SCROLL_EXTRA_BOTTOM', () => {
     const { getByTestId } = renderScreen(<Settings />)
     const scroll = getByTestId('settings-scroll-view')
     // contentContainerStyle must be a single flat object — no style-array merge ambiguity.
     // useSafeAreaInsets returns { bottom: 0 } in test env, so tabBarHeight = FLOATING_TAB_BAR_HEIGHT.
-    // SETTINGS_SCROLL_EXTRA_BOTTOM >= 96 ensures conservative clearance for Z Fold6 and other
-    // large-screen / foldable form factors where safe-area insets may understate actual visual
-    // clearance needed (BLD-1124 follow-up to BLD-1106).
+    // BLD-2034 (epic BLD-2028 P1-6): the extra clearance is now a single spacing token
+    // (no stray magic numbers). tabBarHeight already spans the full floating-bar zone
+    // (FLOATING_TAB_BAR_HEIGHT = 88 + insets.bottom; bar tops out at insets.bottom + 80),
+    // so tabBarHeight + spacing.xxxl still clears the bar by ~56px on foldables where
+    // insets.bottom reports 0 (the case BLD-1106/1124 guarded).
     const style = scroll.props.contentContainerStyle
     expect(style).not.toBeInstanceOf(Array)
-    expect(SETTINGS_SCROLL_EXTRA_BOTTOM).toBeGreaterThanOrEqual(96)
+    // Extra inset comes from the spacing scale, not an ad-hoc literal.
+    expect(Object.values(spacing)).toContain(SETTINGS_SCROLL_EXTRA_BOTTOM)
+    expect(SETTINGS_SCROLL_EXTRA_BOTTOM).toBe(spacing.xxxl)
     expect(style.paddingBottom).toBe(FLOATING_TAB_BAR_HEIGHT + SETTINGS_SCROLL_EXTRA_BOTTOM)
   })
 })
