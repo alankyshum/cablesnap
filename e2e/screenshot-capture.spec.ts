@@ -12,8 +12,8 @@
  * Screenshots are generated artifacts -- they are gitignored and
  * regenerated on each run (old files are cleaned up first).
  */
-import { test, type Page } from "@playwright/test";
-import { skipOnboarding, navigateTo } from "./helpers";
+import { test, expect, type Page } from "@playwright/test";
+import { skipOnboarding, navigateTo, enablePerWorkerDb } from "./helpers";
 import * as fs from "fs";
 import * as path from "path";
 import {
@@ -112,14 +112,33 @@ test.describe("Screenshot Capture -- Store", () => {
       !testInfo.project.name.startsWith("store-"),
       "Only runs on store-* projects",
     );
-    await skipOnboarding(page);
+    await enablePerWorkerDb(page, testInfo.parallelIndex);
   });
 
   for (const screen of STORE_SCREENS) {
     test(`store capture ${screen.name}`, async ({ page }, testInfo) => {
       const viewport = testInfo.project.name;
       const dateStamp = getDateStamp();
-      await captureScreen(page, screen, viewport, dateStamp, false);
+      const slug = slugify(screen.name);
+      const filename = `${slug}-${viewport}-${dateStamp}.png`;
+      const filepath = path.join(SCREENSHOT_DIR, filename);
+
+      await page.addInitScript(() => {
+        const w = window as unknown as Record<string, unknown>;
+        w.__SKIP_ONBOARDING__ = true;
+        w.__TEST_SCENARIO__ = "store-showcase";
+      });
+
+      await page.goto(screen.path);
+
+      await expect(page.locator("body[data-test-ready='true']")).toBeVisible({
+        timeout: 15_000,
+      });
+      // Assert no dev error overlay is present (catches SQLite/CanvasKit crashes on wide viewports).
+      await expect(page.getByText("Uncaught Error")).toHaveCount(0);
+      await page.waitForTimeout(500);
+
+      await page.screenshot({ path: filepath, fullPage: false });
     });
   }
 });

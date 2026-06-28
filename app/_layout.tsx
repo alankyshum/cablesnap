@@ -12,7 +12,8 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Redirect, Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Platform } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { BNAThemeProvider } from "../theme/theme-provider";
 import { ToastProvider } from "../components/ui/bna-toast";
@@ -106,6 +107,21 @@ export default Sentry.wrap(function RootLayout() {
   );
   const formClipsCtx = useMemo(() => ({ backupExclusionOk }), [backupExclusionOk]);
 
+  // Web-only: react-native-skia charts (CartesianChart) call into CanvasKit
+  // synchronously at render. CanvasKit must be loaded first or the whole
+  // screen throws `Cannot read properties of undefined (reading 'XYWHRect')`.
+  // Gate the normal tree on LoadSkiaWeb so charts render on web.
+  const [skiaReady, setSkiaReady] = useState(Platform.OS !== "web");
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    let cancelled = false;
+    import("@shopify/react-native-skia/lib/module/web/LoadSkiaWeb")
+      .then((m) => m.LoadSkiaWeb())
+      .then(() => { if (!cancelled) setSkiaReady(true); })
+      .catch(() => { if (!cancelled) setSkiaReady(true); });
+    return () => { cancelled = true; };
+  }, []);
+
   if (!ready) return null;
 
   // BLD-565: on a web host without cross-origin isolation, drizzle's
@@ -139,6 +155,8 @@ export default Sentry.wrap(function RootLayout() {
       </GestureHandlerRootView>
     );
   }
+
+  if (!skiaReady) return null;
 
   const headerStyle = { backgroundColor: themeColors.card };
 

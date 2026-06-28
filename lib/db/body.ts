@@ -15,7 +15,10 @@ export async function getBodySettings(): Promise<BodySettings> {
     measurement_unit: "cm",
     sex: "male",
     updated_at: now,
-  });
+  }).onConflictDoNothing();
+  // Re-read in case a concurrent call inserted the default row first (avoids PK race crash).
+  const created = await db.select().from(bodySettings).limit(1).get();
+  if (created) return created as unknown as BodySettings;
   return { id: "default", weight_unit: "kg", measurement_unit: "cm", sex: "male", weight_goal: null, body_fat_goal: null, updated_at: now };
 }
 
