@@ -48,18 +48,20 @@ import { getEnabled as getMacroCoachEnabled } from '@/lib/db/macro-coach-setting
 import { useQueryClient } from '@tanstack/react-query';
 
 /**
- * Extra bottom clearance beyond the floating tab bar zone.
+ * Extra bottom clearance below the floating tab bar zone, derived from spacing
+ * tokens (`spacing.xxl * 5` = 160) rather than an ad-hoc magic number
+ * (BLD-2034, epic BLD-2028 P1-6: "no stray magic numbers").
  *
- * On Android with gesture navigation, `insets.bottom` is often 0, so the
- * floating tab bar (which is `position: absolute`) can overlay the bottom
- * cards and block interaction unless we add generous extra clearance here.
- *
- * Set to 160px to guarantee the last interactive card sits comfortably above
- * the floating tab bar on Android phones with gesture navigation, foldables,
- * and other form factors where safe-area-inset reporting may understate the
- * actual visual clearance needed.
+ * The numeric clearance (160) is intentionally preserved from the prior literal,
+ * NOT reduced — git history shows it was raised 48 → 96 → 160 because the
+ * absolutely-positioned floating tab bar was still overlapping and blocking
+ * interaction on the bottom cards on Android gesture-nav / foldables, where
+ * `insets.bottom` is frequently reported as 0 (BLD-1106 → BLD-1124, GitHub #533
+ * Z Fold6 regression). This pass only de-magic-numbers the value by expressing
+ * it through tokens; it deliberately keeps the validated clearance so there is
+ * zero behavioral change to the foldable scroll-cutoff guard.
  */
-export const SETTINGS_SCROLL_EXTRA_BOTTOM = 160;
+export const SETTINGS_SCROLL_EXTRA_BOTTOM = spacing.xxl * 5;
 
 export default function Settings() {
   const colors = useThemeColors();
@@ -159,7 +161,7 @@ export default function Settings() {
       testID="settings-scroll-view"
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={{
-        paddingTop: 16,
+        paddingTop: spacing.base,
         paddingHorizontal: layout.horizontalPadding,
         paddingBottom: tabBarHeight + SETTINGS_SCROLL_EXTRA_BOTTOM,
       }}
@@ -174,7 +176,7 @@ export default function Settings() {
        *   - Keep logging path untouched (session screen not affected here)
        *   - Do not gate tile visibility on reveal transitions (headless-safe)
        */}
-      <Masonry gap={16} testID="settings-masonry">
+      <Masonry gap={spacing.base} testID="settings-masonry">
 
         {/* ── 1. Profile ── */}
         <SettingsTile colors={colors} title="Profile" testID="settings-tile-profile">
@@ -340,7 +342,7 @@ export default function Settings() {
               {`CableSnap v${appVersion}`}
             </Text>
             <View style={styles.versionRowRight}>
-              <Text variant="caption" style={{ marginRight: 4 }}>
+              <Text variant="caption" style={{ marginRight: spacing.xs }}>
                 What&apos;s new
               </Text>
               <ChevronRight size={18} color={colors.onSurfaceVariant} />
@@ -352,7 +354,7 @@ export default function Settings() {
             </Text>
             <Text
               variant="body"
-              style={{ color: colors.primary, marginTop: 4 }}
+              style={{ color: colors.primary, marginTop: spacing.xs }}
               onPress={() =>
                 Linking.openURL('https://github.com/alankyshum/cablesnap/blob/main/LICENSE')
               }
@@ -363,7 +365,7 @@ export default function Settings() {
               onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
               accessibilityRole="link"
               accessibilityLabel="Buy me a coffee"
-              style={{ marginTop: 8 }}
+              style={{ marginTop: spacing.sm }}
             >
               <Image
                 source={require('../../assets/badges/bmc-button.png')}
@@ -374,7 +376,7 @@ export default function Settings() {
               onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
               accessibilityRole="link"
               accessibilityLabel="Sponsor on thanks.dev"
-              style={{ marginTop: 8 }}
+              style={{ marginTop: spacing.sm }}
             >
               <Image
                 source={require('../../assets/badges/thanks-dev-button.png')}
@@ -429,7 +431,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   aboutBlock: {
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   /** Vertical margin around the hairline Separator between sub-sections within a tile. */
   tileDivider: {

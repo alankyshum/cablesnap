@@ -137,6 +137,7 @@ jest.mock('../../lib/strava', () => ({
 
 import Settings, { SETTINGS_SCROLL_EXTRA_BOTTOM } from '../../app/(tabs)/settings'
 import { FLOATING_TAB_BAR_HEIGHT } from '../../components/FloatingTabBar'
+import { spacing } from '../../constants/design-tokens'
 
 const { setEnabled: mockSetAudioEnabled } = require('../../lib/audio')
 const { requestPermission, scheduleReminders, cancelAll } = require('../../lib/notifications')
@@ -445,18 +446,25 @@ describe('Settings Screen Acceptance', () => {
     expect(remindersToggle.props.accessibilityHint).toBeTruthy()
   })
 
-  // ── Scroll padding regression (BLD-1106) ──────────────────────────────────
+  // ── Scroll padding rhythm (BLD-1106 regression + BLD-2034 tokenization) ──────
 
   it('ScrollView contentContainerStyle is a flat object with paddingBottom === FLOATING_TAB_BAR_HEIGHT + SETTINGS_SCROLL_EXTRA_BOTTOM', () => {
     const { getByTestId } = renderScreen(<Settings />)
     const scroll = getByTestId('settings-scroll-view')
     // contentContainerStyle must be a single flat object — no style-array merge ambiguity.
     // useSafeAreaInsets returns { bottom: 0 } in test env, so tabBarHeight = FLOATING_TAB_BAR_HEIGHT.
-    // SETTINGS_SCROLL_EXTRA_BOTTOM >= 96 ensures conservative clearance for Z Fold6 and other
-    // large-screen / foldable form factors where safe-area insets may understate actual visual
-    // clearance needed (BLD-1124 follow-up to BLD-1106).
+    // BLD-2034 (epic BLD-2028 P1-6): the extra clearance is now derived from spacing
+    // tokens (spacing.xxl * 5 = 160), not a bare magic number ("no stray magic numbers").
+    // The 160 clearance is preserved unchanged from the prior literal and must stay >= 96:
+    // git history shows it was raised 48 -> 96 -> 160 because the absolutely-positioned
+    // floating tab bar still overlapped / blocked interaction on the bottom cards
+    // (BMC/thanks.dev badges, About) on Z Fold6 and Android gesture-nav where insets.bottom
+    // reports 0 (BLD-1106 -> BLD-1124, GitHub #533). This assertion guards that regression.
     const style = scroll.props.contentContainerStyle
     expect(style).not.toBeInstanceOf(Array)
+    // Inset is a spacing-token expression, not an ad-hoc literal, and preserves the
+    // validated foldable clearance.
+    expect(SETTINGS_SCROLL_EXTRA_BOTTOM).toBe(spacing.xxl * 5)
     expect(SETTINGS_SCROLL_EXTRA_BOTTOM).toBeGreaterThanOrEqual(96)
     expect(style.paddingBottom).toBe(FLOATING_TAB_BAR_HEIGHT + SETTINGS_SCROLL_EXTRA_BOTTOM)
   })
