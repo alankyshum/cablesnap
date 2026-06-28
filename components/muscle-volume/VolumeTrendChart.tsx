@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/text";
 import { CardContent } from "@/components/ui/card";
 import { CartesianChart, Line } from "victory-native";
 import { matchFont } from "@shopify/react-native-skia";
+import { ChartGate } from "@/components/ui/ChartGate";
 import type { MuscleGroup } from "../../lib/types";
 import { MUSCLE_LABELS } from "../../lib/types";
 import type { TrendRow } from "../../hooks/useMuscleVolume";
@@ -63,39 +64,41 @@ export default function VolumeTrendChart({
       </Text>
       {hasEnoughTrend ? (
         <View style={chartContainerStyle} testID="volume-trend-chart">
-          <CartesianChart
-            data={data}
-            xKey="week"
-            yKeys={["sets"]}
-            domainPadding={{ left: 16, right: 16, top: 12, bottom: 8 }}
-            xAxis={{
-              font: axisFont,
-              tickCount: xTickCount,
-              labelColor: colors.onSurfaceVariant,
-              lineColor: colors.outlineVariant,
-              labelOffset: 4,
-            }}
-            yAxis={[
-              {
+          <ChartGate>
+            <CartesianChart
+              data={data}
+              xKey="week"
+              yKeys={["sets"]}
+              domainPadding={{ left: 16, right: 16, top: 12, bottom: 8 }}
+              xAxis={{
                 font: axisFont,
-                tickCount: 4,
+                tickCount: xTickCount,
                 labelColor: colors.onSurfaceVariant,
                 lineColor: colors.outlineVariant,
-                // Sets are always whole numbers — round and drop fractional ticks.
-                formatYLabel: (v) => `${Math.round(Number(v))}`,
                 labelOffset: 4,
-              },
-            ]}
-          >
-            {({ points }) => (
-              <Line
-                points={points.sets}
-                color={colors.primary}
-                strokeWidth={2}
-                curveType={reduced ? "linear" : "natural"}
-              />
-            )}
-          </CartesianChart>
+              }}
+              yAxis={[
+                {
+                  font: axisFont,
+                  tickCount: 4,
+                  labelColor: colors.onSurfaceVariant,
+                  lineColor: colors.outlineVariant,
+                  // Sets are always whole numbers — round and drop fractional ticks.
+                  formatYLabel: (v) => `${Math.round(Number(v))}`,
+                  labelOffset: 4,
+                },
+              ]}
+            >
+              {({ points }) => (
+                <Line
+                  points={points.sets}
+                  color={colors.primary}
+                  strokeWidth={2}
+                  curveType={reduced ? "linear" : "natural"}
+                />
+              )}
+            </CartesianChart>
+          </ChartGate>
         </View>
       ) : (
         <Text

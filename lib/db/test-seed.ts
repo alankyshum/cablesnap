@@ -34,6 +34,7 @@ export const SUPPORTED_SCENARIOS = [
   "workout-history",
   "form-clips",
   "advanced-sets",
+  "store-showcase",
 ] as const;
 
 export type ScenarioKey = (typeof SUPPORTED_SCENARIOS)[number];
@@ -172,6 +173,9 @@ export async function seedScenario(): Promise<void> {
     DELETE FROM strava_sync_log;
     DELETE FROM workout_sets;
     DELETE FROM workout_sessions;
+    DELETE FROM daily_log;
+    DELETE FROM food_entries;
+    DELETE FROM macro_targets;
   `);
 
   switch (scenario as ScenarioKey) {
@@ -186,6 +190,9 @@ export async function seedScenario(): Promise<void> {
       break;
     case "form-clips":
       await seedFormClips(db);
+      break;
+    case "store-showcase":
+      await seedStoreShowcase(db);
       break;
   }
 
@@ -414,4 +421,77 @@ export async function seedAdvancedSets(
   ];
 
   await bulkInsertSegments("scenario-advanced-set-1", segments);
+}
+
+export async function seedStoreShowcase(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+): Promise<void> {
+  // 1. Seed workout history so Workouts + Progress populate
+  await seedWorkoutHistory(db);
+
+  // 2. Seed nutrition
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const todayStr = `${y}-${m}-${day}`;
+  const now = Date.now();
+
+  // Macro target: 2000 cal, 150g protein, 250g carbs, 65g fat
+  await db.runAsync(
+    `INSERT INTO macro_targets (id, calories, protein, carbs, fat, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
+    ["store-showcase-macro-target", 2000, 150, 250, 65, now]
+  );
+
+  // Food entries & Daily logs
+  const mealsData = [
+    {
+      foodId: "food-oatmeal",
+      name: "Oatmeal with Banana",
+      calories: 350,
+      protein: 12,
+      carbs: 60,
+      fat: 6,
+      servingSize: "1 bowl",
+      meal: "breakfast",
+      servings: 1,
+    },
+    {
+      foodId: "food-chicken",
+      name: "Grilled Chicken & Rice",
+      calories: 650,
+      protein: 45,
+      carbs: 85,
+      fat: 12,
+      servingSize: "1 plate",
+      meal: "lunch",
+      servings: 1,
+    },
+    {
+      foodId: "food-shake",
+      name: "Protein Shake & Almonds",
+      calories: 450,
+      protein: 35,
+      carbs: 25,
+      fat: 15,
+      servingSize: "1 shake + 1oz nuts",
+      meal: "snack",
+      servings: 1,
+    },
+  ];
+
+  for (let i = 0; i < mealsData.length; i++) {
+    const meal = mealsData[i];
+    await db.runAsync(
+      `INSERT INTO food_entries (id, name, calories, protein, carbs, fat, serving_size, is_favorite, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+      [meal.foodId, meal.name, meal.calories, meal.protein, meal.carbs, meal.fat, meal.servingSize, now - i * 1000]
+    );
+
+    await db.runAsync(
+      `INSERT INTO daily_log (id, food_entry_id, date, meal, servings, logged_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [`log-${meal.foodId}`, meal.foodId, todayStr, meal.meal, meal.servings, now - i * 1000]
+    );
+  }
 }

@@ -28,6 +28,7 @@ import { QueryProvider } from "../lib/query";
 import { OnboardingContext } from "../lib/onboarding-context";
 import { FormClipsContext } from "../lib/form-clips-context";
 import { useAppInit } from "../hooks/useAppInit";
+import { useSkiaWebInit } from "../hooks/useSkiaWebInit";
 import { SCREEN_CONFIGS } from "../constants/screen-config";
 import { LayoutToastBridge } from "../components/LayoutToastBridge";
 import { LayoutBanners } from "../components/LayoutBanners";
@@ -105,6 +106,12 @@ export default Sentry.wrap(function RootLayout() {
     [completeOnboarding]
   );
   const formClipsCtx = useMemo(() => ({ backupExclusionOk }), [backupExclusionOk]);
+
+  // BLD-2078: warm CanvasKit (react-native-skia WASM) at boot on web. We do NOT
+  // gate the tree on readiness — each chart fails closed at its own `ChartGate`,
+  // so non-chart UI and narrow layouts render immediately (gating here regressed
+  // the narrow viewport to a crash screen — see BLD-2078 review).
+  useSkiaWebInit();
 
   if (!ready) return null;
 

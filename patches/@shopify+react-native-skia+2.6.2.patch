@@ -1,0 +1,214 @@
+diff --git a/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/AnimatedImage.js b/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/AnimatedImage.js
+index a5d7b50..d578cbc 100644
+--- a/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/AnimatedImage.js
++++ b/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/AnimatedImage.js
+@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", {
+ exports.useAnimatedImage = void 0;
+ var _Skia = require("../Skia");
+ var _Data = require("./Data");
+-const animatedImgFactory = _Skia.Skia.AnimatedImage.MakeAnimatedImageFromEncoded.bind(_Skia.Skia.AnimatedImage);
++const animatedImgFactory = (...args) => _Skia.Skia.AnimatedImage.MakeAnimatedImageFromEncoded(...args); // cablesnap BLD-2078: lazy bind
+ 
+ /**
+  * Returns a Skia Animated Image object
+diff --git a/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/Image.js b/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/Image.js
+index 11afd07..2bb0386 100644
+--- a/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/Image.js
++++ b/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/Image.js
+@@ -7,7 +7,7 @@ exports.useImage = exports.makeImageFromView = void 0;
+ var _Platform = require("../../Platform");
+ var _Skia = require("../Skia");
+ var _Data = require("./Data");
+-const imgFactory = _Skia.Skia.Image.MakeImageFromEncoded.bind(_Skia.Skia.Image);
++const imgFactory = (...args) => _Skia.Skia.Image.MakeImageFromEncoded(...args); // cablesnap BLD-2078: lazy bind
+ 
+ /**
+  * Returns a Skia Image object
+diff --git a/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/SVG.js b/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/SVG.js
+index e9b42b3..869f108 100644
+--- a/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/SVG.js
++++ b/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/SVG.js
+@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", {
+ exports.useSVG = void 0;
+ var _Skia = require("../Skia");
+ var _Data = require("./Data");
+-const svgFactory = _Skia.Skia.SVG.MakeFromData.bind(_Skia.Skia.SVG);
++const svgFactory = (...args) => _Skia.Skia.SVG.MakeFromData(...args); // cablesnap BLD-2078: lazy bind
+ const useSVG = (source, onError) => (0, _Data.useRawData)(source, svgFactory, onError);
+ exports.useSVG = useSVG;
+ //# sourceMappingURL=SVG.js.map
+\ No newline at end of file
+diff --git a/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/Typeface.js b/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/Typeface.js
+index a474d2b..69bc18a 100644
+--- a/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/Typeface.js
++++ b/node_modules/@shopify/react-native-skia/lib/commonjs/skia/core/Typeface.js
+@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", {
+ exports.useTypeface = void 0;
+ var _Skia = require("../Skia");
+ var _Data = require("./Data");
+-const tfFactory = _Skia.Skia.Typeface.MakeFreeTypeFaceFromData.bind(_Skia.Skia.Typeface);
++const tfFactory = (...args) => _Skia.Skia.Typeface.MakeFreeTypeFaceFromData(...args); // cablesnap BLD-2078: lazy bind
+ 
+ /**
+  * Returns a Skia Typeface object
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/Skia.web.js b/node_modules/@shopify/react-native-skia/lib/module/skia/Skia.web.js
+index d1d23ea..c9689db 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/Skia.web.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/Skia.web.js
+@@ -1,3 +1,25 @@
+ import { JsiSkApi } from "./web";
+-export const Skia = JsiSkApi(global.CanvasKit);
++// BLD-2074: Skia.web.js previously evaluated JsiSkApi(global.CanvasKit) at
++// module load time (before the async LoadSkiaWeb() call in _layout.tsx could
++// set global.CanvasKit). This caused CartesianChart to crash with
++// "Cannot read properties of undefined (reading 'XYWHRect')" because CanvasKit
++// was undefined at bundle evaluation time.
++//
++// Fix (v2): use a lazy Proxy that defers JsiSkApi construction until the first
++// property access. Do NOT cache the instance when CanvasKit is still undefined —
++// caching a null-CanvasKit instance produces a broken object where every method
++// throws, and the stale instance is never replaced. Re-check global.CanvasKit
++// on every access until LoadSkiaWeb() in _layout.tsx populates it.
++let _skiaInstance = null;
++export const Skia = new Proxy(
++  {},
++  {
++    get(_target, prop) {
++      if (!_skiaInstance && global.CanvasKit) {
++        _skiaInstance = JsiSkApi(global.CanvasKit);
++      }
++      return _skiaInstance ? _skiaInstance[prop] : undefined;
++    },
++  }
++);
+ //# sourceMappingURL=Skia.web.js.map
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/core/AnimatedImage.js b/node_modules/@shopify/react-native-skia/lib/module/skia/core/AnimatedImage.js
+index cb6f4e9..377a50f 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/core/AnimatedImage.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/core/AnimatedImage.js
+@@ -1,6 +1,9 @@
+ import { Skia } from "../Skia";
+ import { useRawData } from "./Data";
+-const animatedImgFactory = Skia.AnimatedImage.MakeAnimatedImageFromEncoded.bind(Skia.AnimatedImage);
++// cablesnap BLD-2078: bind lazily (see core/Typeface.js) — avoid the
++// import-time `Cannot read properties of undefined` crash on web before
++// CanvasKit's WASM has loaded.
++const animatedImgFactory = (...args) => Skia.AnimatedImage.MakeAnimatedImageFromEncoded(...args);
+ 
+ /**
+  * Returns a Skia Animated Image object
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/core/Image.js b/node_modules/@shopify/react-native-skia/lib/module/skia/core/Image.js
+index 49ad8ba..db9feb0 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/core/Image.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/core/Image.js
+@@ -1,7 +1,10 @@
+ import { Platform } from "../../Platform";
+ import { Skia } from "../Skia";
+ import { useRawData } from "./Data";
+-const imgFactory = Skia.Image.MakeImageFromEncoded.bind(Skia.Image);
++// cablesnap BLD-2078: bind lazily (see core/Typeface.js) — avoid the
++// import-time `Cannot read properties of undefined` crash on web before
++// CanvasKit's WASM has loaded.
++const imgFactory = (...args) => Skia.Image.MakeImageFromEncoded(...args);
+ 
+ /**
+  * Returns a Skia Image object
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/core/SVG.js b/node_modules/@shopify/react-native-skia/lib/module/skia/core/SVG.js
+index 17a6753..e0d4d60 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/core/SVG.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/core/SVG.js
+@@ -1,5 +1,8 @@
+ import { Skia } from "../Skia";
+ import { useRawData } from "./Data";
+-const svgFactory = Skia.SVG.MakeFromData.bind(Skia.SVG);
++// cablesnap BLD-2078: bind lazily (see core/Typeface.js) — avoid the
++// import-time `Cannot read properties of undefined` crash on web before
++// CanvasKit's WASM has loaded.
++const svgFactory = (...args) => Skia.SVG.MakeFromData(...args);
+ export const useSVG = (source, onError) => useRawData(source, svgFactory, onError);
+ //# sourceMappingURL=SVG.js.map
+\ No newline at end of file
+diff --git a/node_modules/@shopify/react-native-skia/lib/module/skia/core/Typeface.js b/node_modules/@shopify/react-native-skia/lib/module/skia/core/Typeface.js
+index d9b941b..e2e6707 100644
+--- a/node_modules/@shopify/react-native-skia/lib/module/skia/core/Typeface.js
++++ b/node_modules/@shopify/react-native-skia/lib/module/skia/core/Typeface.js
+@@ -1,6 +1,12 @@
+ import { Skia } from "../Skia";
+ import { useRawData } from "./Data";
+-const tfFactory = Skia.Typeface.MakeFreeTypeFaceFromData.bind(Skia.Typeface);
++// cablesnap BLD-2078: bind lazily. On web `Skia` is a Proxy that returns
++// `undefined` for `Skia.Typeface` until CanvasKit's WASM has loaded, so binding
++// at module scope threw `Cannot read properties of undefined (reading
++// 'MakeFreeTypeFaceFromData')` during import and crashed the whole bundle before
++// CanvasKit could load. Defer the bind to call time (inside the hook), by which
++// point CanvasKit is loaded (the app gates chart render on readiness).
++const tfFactory = (...args) => Skia.Typeface.MakeFreeTypeFaceFromData(...args);
+ 
+ /**
+  * Returns a Skia Typeface object
+diff --git a/node_modules/@shopify/react-native-skia/src/skia/core/AnimatedImage.ts b/node_modules/@shopify/react-native-skia/src/skia/core/AnimatedImage.ts
+index a49a63e..3270653 100644
+--- a/node_modules/@shopify/react-native-skia/src/skia/core/AnimatedImage.ts
++++ b/node_modules/@shopify/react-native-skia/src/skia/core/AnimatedImage.ts
+@@ -3,9 +3,10 @@ import type { DataSourceParam } from "../types";
+ 
+ import { useRawData } from "./Data";
+ 
+-const animatedImgFactory = Skia.AnimatedImage.MakeAnimatedImageFromEncoded.bind(
+-  Skia.AnimatedImage
+-);
++// cablesnap BLD-2078: bind lazily (see core/Typeface.ts).
++const animatedImgFactory = (
++  ...args: Parameters<typeof Skia.AnimatedImage.MakeAnimatedImageFromEncoded>
++) => Skia.AnimatedImage.MakeAnimatedImageFromEncoded(...args);
+ 
+ /**
+  * Returns a Skia Animated Image object
+diff --git a/node_modules/@shopify/react-native-skia/src/skia/core/Image.ts b/node_modules/@shopify/react-native-skia/src/skia/core/Image.ts
+index 85a8f5b..99f08f9 100644
+--- a/node_modules/@shopify/react-native-skia/src/skia/core/Image.ts
++++ b/node_modules/@shopify/react-native-skia/src/skia/core/Image.ts
+@@ -4,7 +4,9 @@ import type { DataSourceParam, SkImage } from "../types";
+ 
+ import { useRawData } from "./Data";
+ 
+-const imgFactory = Skia.Image.MakeImageFromEncoded.bind(Skia.Image);
++// cablesnap BLD-2078: bind lazily (see core/Typeface.ts).
++const imgFactory = (...args: Parameters<typeof Skia.Image.MakeImageFromEncoded>) =>
++  Skia.Image.MakeImageFromEncoded(...args);
+ 
+ /**
+  * Returns a Skia Image object
+diff --git a/node_modules/@shopify/react-native-skia/src/skia/core/SVG.ts b/node_modules/@shopify/react-native-skia/src/skia/core/SVG.ts
+index a483b91..165be49 100644
+--- a/node_modules/@shopify/react-native-skia/src/skia/core/SVG.ts
++++ b/node_modules/@shopify/react-native-skia/src/skia/core/SVG.ts
+@@ -3,7 +3,9 @@ import type { DataSourceParam } from "../types";
+ 
+ import { useRawData } from "./Data";
+ 
+-const svgFactory = Skia.SVG.MakeFromData.bind(Skia.SVG);
++// cablesnap BLD-2078: bind lazily (see core/Typeface.ts).
++const svgFactory = (...args: Parameters<typeof Skia.SVG.MakeFromData>) =>
++  Skia.SVG.MakeFromData(...args);
+ 
+ export const useSVG = (
+   source: DataSourceParam,
+diff --git a/node_modules/@shopify/react-native-skia/src/skia/core/Typeface.ts b/node_modules/@shopify/react-native-skia/src/skia/core/Typeface.ts
+index 07619bc..73deb21 100644
+--- a/node_modules/@shopify/react-native-skia/src/skia/core/Typeface.ts
++++ b/node_modules/@shopify/react-native-skia/src/skia/core/Typeface.ts
+@@ -3,7 +3,12 @@ import type { DataSourceParam } from "../types";
+ 
+ import { useRawData } from "./Data";
+ 
+-const tfFactory = Skia.Typeface.MakeFreeTypeFaceFromData.bind(Skia.Typeface);
++// cablesnap BLD-2078: bind lazily. On web `Skia` is a Proxy that returns
++// `undefined` until CanvasKit's WASM has loaded; binding at module scope threw
++// `Cannot read properties of undefined (reading 'MakeFreeTypeFaceFromData')` at
++// import and crashed the whole bundle before CanvasKit could load.
++const tfFactory = (...args: Parameters<typeof Skia.Typeface.MakeFreeTypeFaceFromData>) =>
++  Skia.Typeface.MakeFreeTypeFaceFromData(...args);
+ 
+ /**
+  * Returns a Skia Typeface object
