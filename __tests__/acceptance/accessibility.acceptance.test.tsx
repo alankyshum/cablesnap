@@ -47,6 +47,7 @@ jest.mock('react-native-reanimated', () => {
     const obj: Record<string, unknown> = {}
     obj.delay = () => obj
     obj.duration = () => obj
+    obj.easing = () => obj
     return obj
   }
   return {
