@@ -12,6 +12,11 @@ type Props = {
   exportProgress: string | null;
   onExport: () => void;
   onImport: () => void;
+  /**
+   * When `true`, omit the outer Card wrapper so this component can be
+   * composed inside a parent SettingsTile without nesting cards (BLD-2031).
+   */
+  bareContent?: boolean;
 };
 
 export default function DataManagementCard({
@@ -20,7 +25,64 @@ export default function DataManagementCard({
   exportProgress,
   onExport,
   onImport,
+  bareContent = false,
 }: Props) {
+  const content = (
+    <>
+      <Text
+        variant="body"
+        style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}
+      >
+        Data Management
+      </Text>
+      <View style={styles.buttonFlow}>
+        <Button
+          variant="default"
+          size="sm"
+          icon={Download}
+          onPress={onExport}
+          loading={loading}
+          disabled={loading}
+          accessibilityLabel="Export all data as JSON"
+          accessibilityRole="button"
+        >
+          Export All Data
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          icon={Upload}
+          onPress={onImport}
+          loading={loading}
+          disabled={loading}
+          accessibilityLabel="Import data"
+          accessibilityRole="button"
+        >
+          Import CableSnap Backup
+        </Button>
+      </View>
+      {exportProgress && (
+        <Text
+          variant="caption"
+          style={{ color: colors.primary, marginTop: 8 }}
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={exportProgress}
+        >
+          {exportProgress}
+        </Text>
+      )}
+      <Text
+        variant="caption"
+        style={{ color: colors.onSurfaceVariant, marginTop: 8, marginBottom: 16 }}
+      >
+        Export your complete CableSnap data as a JSON backup file, or restore from a previous
+        backup. Duplicates are skipped.
+      </Text>
+    </>
+  );
+
+  if (bareContent) return <View>{content}</View>;
+
   return (
     <Card
       variant="outline"
@@ -30,57 +92,7 @@ export default function DataManagementCard({
         { backgroundColor: colors.surface },
       ])}
     >
-      <CardContent>
-        <Text
-          variant="body"
-          style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}
-        >
-          Data Management
-        </Text>
-        <View style={styles.buttonFlow}>
-          <Button
-            variant="default"
-            size="sm"
-            icon={Download}
-            onPress={onExport}
-            loading={loading}
-            disabled={loading}
-            accessibilityLabel="Export all data as JSON"
-            accessibilityRole="button"
-          >
-            Export All Data
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            icon={Upload}
-            onPress={onImport}
-            loading={loading}
-            disabled={loading}
-            accessibilityLabel="Import data"
-            accessibilityRole="button"
-          >
-            Import CableSnap Backup
-          </Button>
-        </View>
-        {exportProgress && (
-          <Text
-            variant="caption"
-            style={{ color: colors.primary, marginTop: 8 }}
-            accessibilityLiveRegion="polite"
-            accessibilityLabel={exportProgress}
-          >
-            {exportProgress}
-          </Text>
-        )}
-        <Text
-          variant="caption"
-          style={{ color: colors.onSurfaceVariant, marginTop: 8, marginBottom: 16 }}
-        >
-          Export your complete CableSnap data as a JSON backup file, or restore from a previous
-          backup. Duplicates are skipped.
-        </Text>
-      </CardContent>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 }

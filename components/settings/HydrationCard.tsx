@@ -17,6 +17,11 @@ import { mlToOz, ozToMl, type HydrationUnit } from "@/lib/hydration-units";
 type Props = {
   colors: ThemeColors;
   toast: ReturnType<typeof useToast>;
+  /**
+   * When `true`, omit the outer Card wrapper so this component can be
+   * composed inside a parent SettingsTile without nesting cards (BLD-2031).
+   */
+  bareContent?: boolean;
 };
 
 const DEFAULT_GOAL_ML = 2000;
@@ -35,7 +40,7 @@ function fromDisplay(text: string, unit: HydrationUnit): number | null {
   return Math.round(unit === "ml" ? n : ozToMl(n));
 }
 
-export default function HydrationCard({ colors, toast }: Props) {
+export default function HydrationCard({ colors, toast, bareContent = false }: Props) {
   const [unit, setUnit] = useState<HydrationUnit>("ml");
   const [goalText, setGoalText] = useState(String(DEFAULT_GOAL_ML));
   const [presetText, setPresetText] = useState<[string, string, string]>(["250", "500", "750"]);
@@ -126,89 +131,97 @@ export default function HydrationCard({ colors, toast }: Props) {
     } catch { toast.error("Failed to reset hydration settings"); }
   };
 
-  return (
-    <Card variant="outline" style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
-      <CardContent>
-        <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>
-          Hydration
-        </Text>
+  const hydrationContent = (
+    <>
+      <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>
+        Hydration
+      </Text>
 
-        {/* Unit toggle */}
-        <View style={styles.row}>
-          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>Unit</Text>
-          <View style={styles.toggleRow}>
-            {(["ml", "fl_oz"] as HydrationUnit[]).map((u) => (
-              <Pressable
-                key={u}
-                onPress={() => handleUnitChange(u)}
-                accessibilityLabel={u === "ml" ? "Use milliliters" : "Use fluid ounces"}
-                accessibilityRole="button"
-                accessibilityState={{ selected: unit === u }}
-                style={({ pressed }) => [
-                  styles.toggleBtn,
-                  { borderColor: colors.primary },
-                  unit === u && { backgroundColor: colors.primary },
-                  pressed && { opacity: 0.7 },
-                ]}
-              >
-                <Text variant="caption" style={{ color: unit === u ? "#fff" : colors.primary }}>
-                  {u === "ml" ? "ml" : "fl oz"}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+      {/* Unit toggle */}
+      <View style={styles.row}>
+        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>Unit</Text>
+        <View style={styles.toggleRow}>
+          {(["ml", "fl_oz"] as HydrationUnit[]).map((u) => (
+            <Pressable
+              key={u}
+              onPress={() => handleUnitChange(u)}
+              accessibilityLabel={u === "ml" ? "Use milliliters" : "Use fluid ounces"}
+              accessibilityRole="button"
+              accessibilityState={{ selected: unit === u }}
+              style={({ pressed }) => [
+                styles.toggleBtn,
+                { borderColor: colors.primary },
+                unit === u && { backgroundColor: colors.primary },
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Text variant="caption" style={{ color: unit === u ? "#fff" : colors.primary }}>
+                {u === "ml" ? "ml" : "fl oz"}
+              </Text>
+            </Pressable>
+          ))}
         </View>
+      </View>
 
-        {/* Daily goal */}
-        <View style={styles.row}>
+      {/* Daily goal */}
+      <View style={styles.row}>
+        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
+          Daily goal ({unit === "ml" ? "ml" : "fl oz"})
+        </Text>
+        <TextInput
+          accessibilityLabel="Daily hydration goal"
+          value={goalText}
+          onChangeText={setGoalText}
+          onBlur={commitGoal}
+          keyboardType="numeric"
+          editable={hydrated}
+          style={[styles.input, { color: colors.onSurface, borderColor: colors.onSurfaceVariant }]}
+        />
+      </View>
+
+      {/* Presets */}
+      {[0, 1, 2].map((i) => (
+        <View key={`preset-${i}`} style={styles.row}>
           <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-            Daily goal ({unit === "ml" ? "ml" : "fl oz"})
+            Preset {i + 1} ({unit === "ml" ? "ml" : "fl oz"})
           </Text>
           <TextInput
-            accessibilityLabel="Daily hydration goal"
-            value={goalText}
-            onChangeText={setGoalText}
-            onBlur={commitGoal}
+            accessibilityLabel={`Preset ${i + 1}`}
+            value={presetText[i]}
+            onChangeText={(t) => setPresetText((p) => {
+              const next = [...p] as [string, string, string];
+              next[i] = t;
+              return next;
+            })}
+            onBlur={() => commitPreset(i as 0 | 1 | 2)}
             keyboardType="numeric"
             editable={hydrated}
             style={[styles.input, { color: colors.onSurface, borderColor: colors.onSurfaceVariant }]}
           />
         </View>
+      ))}
 
-        {/* Presets */}
-        {[0, 1, 2].map((i) => (
-          <View key={`preset-${i}`} style={styles.row}>
-            <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-              Preset {i + 1} ({unit === "ml" ? "ml" : "fl oz"})
-            </Text>
-            <TextInput
-              accessibilityLabel={`Preset ${i + 1}`}
-              value={presetText[i]}
-              onChangeText={(t) => setPresetText((p) => {
-                const next = [...p] as [string, string, string];
-                next[i] = t;
-                return next;
-              })}
-              onBlur={() => commitPreset(i as 0 | 1 | 2)}
-              keyboardType="numeric"
-              editable={hydrated}
-              style={[styles.input, { color: colors.onSurface, borderColor: colors.onSurfaceVariant }]}
-            />
-          </View>
-        ))}
+      <Pressable
+        onPress={handleReset}
+        accessibilityLabel="Reset hydration settings to defaults"
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          { marginTop: 12, alignSelf: "flex-start", minHeight: 44, justifyContent: "center", paddingHorizontal: 4 },
+          pressed && { opacity: 0.6 },
+        ]}
+        hitSlop={8}
+      >
+        <Text variant="caption" style={{ color: colors.primary }}>Reset to defaults</Text>
+      </Pressable>
+    </>
+  );
 
-        <Pressable
-          onPress={handleReset}
-          accessibilityLabel="Reset hydration settings to defaults"
-          accessibilityRole="button"
-          style={({ pressed }) => [
-            { marginTop: 12, alignSelf: "flex-start", minHeight: 44, justifyContent: "center", paddingHorizontal: 4 },
-            pressed && { opacity: 0.6 },
-          ]}
-          hitSlop={8}
-        >
-          <Text variant="caption" style={{ color: colors.primary }}>Reset to defaults</Text>
-        </Pressable>
+  if (bareContent) return <View>{hydrationContent}</View>;
+
+  return (
+    <Card variant="outline" style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
+      <CardContent>
+        {hydrationContent}
       </CardContent>
     </Card>
   );
