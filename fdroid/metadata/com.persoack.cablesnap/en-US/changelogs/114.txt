@@ -1,0 +1,2 @@
+- **Fix: Form clips, session pacing, and stack marker screens no longer show an error overlay in development builds** — tapping "Select clips", tapping the pacing card, or viewing the stack marker pill could trigger a red error overlay that blocked all interaction when testing on sub-path routes. Root cause: the CanvasKit WASM loader was resolving a relative path that Metro dev server returned as an HTML fallback page, causing a WebAssembly compile error. The
+…see in-app release notes
