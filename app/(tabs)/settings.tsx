@@ -7,9 +7,10 @@ import {
   View,
 } from 'react-native';
 import { Text } from '@/components/ui/text';
+import { Separator } from '@/components/ui/separator';
 import { useLayout } from '../../lib/layout';
 import { useFloatingTabBarHeight } from '../../components/FloatingTabBar';
-import FlowContainer from '../../components/ui/FlowContainer';
+import Masonry from '../../components/ui/Masonry';
 import BodyProfileCard from '../../components/BodyProfileCard';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
@@ -48,18 +49,15 @@ import { useQueryClient } from '@tanstack/react-query';
 
 /**
  * Extra bottom clearance beyond the floating tab bar zone.
- * On wide/foldable screens the FlowContainer produces a multi-column layout
- * that reduces total content height; this extra padding ensures the About
- * card (with badge images) is always comfortably scrollable into view.
  *
  * On Android with gesture navigation, `insets.bottom` is often 0, so the
  * floating tab bar (which is `position: absolute`) can overlay the bottom
  * cards and block interaction unless we add generous extra clearance here.
  *
- * Set to 160px (was 96px) to guarantee the last interactive card sits
- * comfortably above the floating tab bar on Android phones with gesture
- * navigation, foldables, and other form factors where safe-area-inset
- * reporting may understate the actual visual clearance needed.
+ * Set to 160px to guarantee the last interactive card sits comfortably above
+ * the floating tab bar on Android phones with gesture navigation, foldables,
+ * and other form factors where safe-area-inset reporting may understate the
+ * actual visual clearance needed.
  */
 export const SETTINGS_SCROLL_EXTRA_BOTTOM = 160;
 
@@ -81,6 +79,7 @@ export default function Settings() {
   useEffect(() => {
     getMacroCoachEnabled().then(setMacroCoachEnabled).catch(() => setMacroCoachEnabled(false));
   }, []);
+
   const {
     toast,
     loading, setLoading,
@@ -165,19 +164,53 @@ export default function Settings() {
         paddingBottom: tabBarHeight + SETTINGS_SCROLL_EXTRA_BOTTOM,
       }}
     >
-      <FlowContainer gap={16}>
-        <UnitsCard
-          colors={colors}
-          toast={toast}
-          weightUnit={weightUnit}
-          setWeightUnit={setWeightUnit}
-          measureUnit={measureUnit}
-          setMeasureUnit={setMeasureUnit}
-          weightGoal={weightGoal}
-          fatGoal={fatGoal}
-        />
-        <AppearanceCard colors={colors} />
-        <SettingsTile colors={colors}>
+      {/*
+       * P0-3: Settings IA — ~18 individual cards consolidated into ~8 themed
+       * masonry tiles (BLD-2031). FlowContainer replaced with Masonry so tiles
+       * pack shortest-column-first on wide screens instead of flex-wrap rows.
+       *
+       * Watch-outs (from BLD-2028 plan):
+       *   - No card-in-card nesting: child components use bareContent={true}
+       *   - Keep logging path untouched (session screen not affected here)
+       *   - Do not gate tile visibility on reveal transitions (headless-safe)
+       */}
+      <Masonry gap={16} testID="settings-masonry">
+
+        {/* ── 1. Profile ── */}
+        <SettingsTile colors={colors} title="Profile" testID="settings-tile-profile">
+          <BodyProfileCard
+            weightUnit={weightUnit}
+            heightUnit={measureUnit}
+            bareContent
+          />
+          <Separator style={styles.tileDivider} />
+          <FrequencyGoalPicker
+            colors={colors}
+            value={weeklyGoal}
+            onChange={handleWeeklyGoalChange}
+            bareContent
+          />
+        </SettingsTile>
+
+        {/* ── 2. Units & Appearance ── */}
+        <SettingsTile colors={colors} title="Units & Appearance" testID="settings-tile-units-appearance">
+          <UnitsCard
+            colors={colors}
+            toast={toast}
+            weightUnit={weightUnit}
+            setWeightUnit={setWeightUnit}
+            measureUnit={measureUnit}
+            setMeasureUnit={setMeasureUnit}
+            weightGoal={weightGoal}
+            fatGoal={fatGoal}
+            bareContent
+          />
+          <Separator style={styles.tileDivider} />
+          <AppearanceCard colors={colors} bareContent />
+        </SettingsTile>
+
+        {/* ── 3. Training ── */}
+        <SettingsTile colors={colors} title="Training" testID="settings-tile-training">
           <SettingsLinkRow
             colors={colors}
             title="Gym Profiles"
@@ -185,8 +218,6 @@ export default function Settings() {
             accessibilityLabel="Open gym profiles settings"
             onPress={() => router.push('/settings/gym-profiles')}
           />
-        </SettingsTile>
-        <SettingsTile colors={colors}>
           <SettingsLinkRow
             colors={colors}
             title="Advanced Set Types"
@@ -195,7 +226,40 @@ export default function Settings() {
             onPress={() => router.push('/settings/advanced-sets')}
           />
         </SettingsTile>
-        <SettingsTile colors={colors}>
+
+        {/* ── 4. Notifications ── */}
+        <SettingsTile colors={colors} title="Notifications" testID="settings-tile-notifications">
+          <PreferencesCard
+            colors={colors}
+            toast={toast}
+            soundEnabled={soundEnabled}
+            setSoundEnabled={setSoundEnabled}
+            bareContent
+          >
+            <ReminderSection
+              colors={colors}
+              toast={toast}
+              reminders={reminders}
+              setReminders={setReminders}
+              reminderTime={reminderTime}
+              setReminderTime={setReminderTime}
+              permDenied={permDenied}
+              setPermDenied={setPermDenied}
+              scheduleCount={scheduleCount}
+              restNotifications={restNotifications}
+              setRestNotifications={setRestNotifications}
+              restPreEndCueSeconds={restPreEndCueSeconds}
+              setRestPreEndCueSeconds={setRestPreEndCueSeconds}
+              restLiveCountdown={restLiveCountdown}
+              setRestLiveCountdown={setRestLiveCountdown}
+              restShowNextSet={restShowNextSet}
+              setRestShowNextSet={setRestShowNextSet}
+            />
+          </PreferencesCard>
+        </SettingsTile>
+
+        {/* ── 5. Coaching ── */}
+        <SettingsTile colors={colors} title="Coaching" testID="settings-tile-coaching">
           <SettingsLinkRow
             colors={colors}
             title="Adaptive Macro Coach"
@@ -209,40 +273,11 @@ export default function Settings() {
             accessibilityLabel="Open Adaptive Macro Coach settings"
             onPress={() => router.push('/settings/macro-coach')}
           />
+          <Separator style={styles.tileDivider} />
+          <HydrationCard colors={colors} toast={toast} bareContent />
         </SettingsTile>
-        <BodyProfileCard weightUnit={weightUnit} heightUnit={measureUnit} />
-        <FrequencyGoalPicker
-          colors={colors}
-          value={weeklyGoal}
-          onChange={handleWeeklyGoalChange}
-        />
-        <PreferencesCard
-          colors={colors}
-          toast={toast}
-          soundEnabled={soundEnabled}
-          setSoundEnabled={setSoundEnabled}
-        >
-          <ReminderSection
-            colors={colors}
-            toast={toast}
-            reminders={reminders}
-            setReminders={setReminders}
-            reminderTime={reminderTime}
-            setReminderTime={setReminderTime}
-            permDenied={permDenied}
-            setPermDenied={setPermDenied}
-            scheduleCount={scheduleCount}
-            restNotifications={restNotifications}
-            setRestNotifications={setRestNotifications}
-            restPreEndCueSeconds={restPreEndCueSeconds}
-            setRestPreEndCueSeconds={setRestPreEndCueSeconds}
-            restLiveCountdown={restLiveCountdown}
-            setRestLiveCountdown={setRestLiveCountdown}
-            restShowNextSet={restShowNextSet}
-            setRestShowNextSet={setRestShowNextSet}
-          />
-        </PreferencesCard>
-        <HydrationCard colors={colors} toast={toast} />
+
+        {/* ── 6. Integrations ── */}
         <IntegrationsCard
           colors={colors}
           toast={toast}
@@ -251,16 +286,26 @@ export default function Settings() {
           stravaLoading={stravaLoading}
           setStravaLoading={setStravaLoading}
         />
-        <AutoBackupSection colors={colors} toast={toast} />
-        <FormClipsStorageRow onClipsChanged={() => {}} />
-        <DataManagementCard
-          colors={colors}
-          loading={loading}
-          exportProgress={exportProgress}
-          onExport={() => setExportSheetVisible(true)}
-          onImport={openImportSheet}
-        />
-        <CSVExportCard colors={colors} />
+
+        {/* ── 7. Data & Backup ── */}
+        <SettingsTile colors={colors} title="Data & Backup" testID="settings-tile-data-backup">
+          <AutoBackupSection colors={colors} toast={toast} bareContent />
+          <Separator style={styles.tileDivider} />
+          <FormClipsStorageRow onClipsChanged={() => {}} />
+          <Separator style={styles.tileDivider} />
+          <DataManagementCard
+            colors={colors}
+            loading={loading}
+            exportProgress={exportProgress}
+            onExport={() => setExportSheetVisible(true)}
+            onImport={openImportSheet}
+            bareContent
+          />
+          <Separator style={styles.tileDivider} />
+          <CSVExportCard colors={colors} bareContent />
+        </SettingsTile>
+
+        {/* ── 8. Feedback ── */}
         <FeedbackCard
           colors={colors}
           count={count}
@@ -268,7 +313,9 @@ export default function Settings() {
           onFeature={() => router.push({ pathname: '/feedback', params: { type: 'feature' } })}
           onErrors={() => router.push('/errors')}
         />
-        <SettingsTile colors={colors} title="About">
+
+        {/* ── 9. About ── */}
+        <SettingsTile colors={colors} title="About" testID="settings-tile-about">
           <Pressable
             onPress={() => setReleaseNotesVisible(true)}
             accessibilityRole="button"
@@ -330,7 +377,8 @@ export default function Settings() {
             </Pressable>
           </View>
         </SettingsTile>
-      </FlowContainer>
+
+      </Masonry>
       <ReleaseNotesModal
         visible={releaseNotesVisible}
         onClose={() => setReleaseNotesVisible(false)}
@@ -363,20 +411,12 @@ export default function Settings() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  settingsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 44,
-  },
   versionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.sm,
-    minHeight: 44,
+    minHeight: 48,
   },
   versionRowRight: {
     flexDirection: 'row',
@@ -384,5 +424,9 @@ const styles = StyleSheet.create({
   },
   aboutBlock: {
     marginTop: 4,
+  },
+  /** Vertical margin around the hairline Separator between sub-sections within a tile. */
+  tileDivider: {
+    marginVertical: spacing.sm,
   },
 });

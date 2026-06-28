@@ -16,6 +16,11 @@ type Props = {
   setMeasureUnit: (v: 'cm' | 'in') => void;
   weightGoal: number | null;
   fatGoal: number | null;
+  /**
+   * When `true`, omit the outer Card wrapper so this component can be
+   * composed inside a parent SettingsTile without nesting cards (BLD-2031).
+   */
+  bareContent?: boolean;
 };
 
 export default function UnitsCard({
@@ -27,63 +32,70 @@ export default function UnitsCard({
   setMeasureUnit,
   weightGoal,
   fatGoal,
+  bareContent = false,
 }: Props) {
+  const content = (
+    <>
+      <Text
+        variant="body"
+        style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}
+      >
+        Units
+      </Text>
+      <View style={styles.row}>
+        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
+          Weight
+        </Text>
+        <View style={styles.unitToggle}>
+          <SegmentedControl
+            value={weightUnit}
+            onValueChange={async (val) => {
+              const u = val as 'kg' | 'lb';
+              setWeightUnit(u);
+              try {
+                await updateBodySettings(u, measureUnit, weightGoal, fatGoal);
+              } catch {
+                toast.error('Could not save unit');
+              }
+            }}
+            buttons={[
+              { value: 'kg', label: 'kg' },
+              { value: 'lb', label: 'lb' },
+            ]}
+          />
+        </View>
+      </View>
+      <View style={[styles.row, { marginTop: 12 }]}>
+        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
+          Measurements
+        </Text>
+        <View style={styles.unitToggle}>
+          <SegmentedControl
+            value={measureUnit}
+            onValueChange={async (val) => {
+              const m = val as 'cm' | 'in';
+              setMeasureUnit(m);
+              try {
+                await updateBodySettings(weightUnit, m, weightGoal, fatGoal);
+              } catch {
+                toast.error('Could not save unit');
+              }
+            }}
+            buttons={[
+              { value: 'cm', label: 'cm' },
+              { value: 'in', label: 'in' },
+            ]}
+          />
+        </View>
+      </View>
+    </>
+  );
+
+  if (bareContent) return <View>{content}</View>;
+
   return (
     <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
-      <CardContent>
-        <Text
-          variant="body"
-          style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}
-        >
-          Units
-        </Text>
-        <View style={styles.row}>
-          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-            Weight
-          </Text>
-          <View style={styles.unitToggle}>
-            <SegmentedControl
-              value={weightUnit}
-              onValueChange={async (val) => {
-                const u = val as 'kg' | 'lb';
-                setWeightUnit(u);
-                try {
-                  await updateBodySettings(u, measureUnit, weightGoal, fatGoal);
-                } catch {
-                  toast.error('Could not save unit');
-                }
-              }}
-              buttons={[
-                { value: 'kg', label: 'kg' },
-                { value: 'lb', label: 'lb' },
-              ]}
-            />
-          </View>
-        </View>
-        <View style={[styles.row, { marginTop: 12 }]}>
-          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-            Measurements
-          </Text>
-          <View style={styles.unitToggle}>
-            <SegmentedControl
-              value={measureUnit}
-              onValueChange={async (val) => {
-                const m = val as 'cm' | 'in';
-                setMeasureUnit(m);
-                try {
-                  await updateBodySettings(weightUnit, m, weightGoal, fatGoal);
-                } catch {
-                  toast.error('Could not save unit');
-                }
-              }}
-              buttons={[
-                { value: 'cm', label: 'cm' },
-                { value: 'in', label: 'in' },
-              ]}
-            />
-          </View>
-        </View>
-      </CardContent>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 }

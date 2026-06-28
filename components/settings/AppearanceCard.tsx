@@ -8,33 +8,44 @@ import type { ThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
   colors: ThemeColors;
+  /**
+   * When `true`, omit the outer Card wrapper so this component can be
+   * composed inside a parent SettingsTile without nesting cards (BLD-2031).
+   */
+  bareContent?: boolean;
 };
 
-export default function AppearanceCard({ colors }: Props) {
+export default function AppearanceCard({ colors, bareContent = false }: Props) {
   const { themeMode, setThemeMode } = useThemeMode();
+
+  const content = (
+    <>
+      <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Appearance</Text>
+      <View style={styles.row}>
+        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>Theme</Text>
+        <View style={styles.themeToggle}>
+          <SegmentedControl
+            value={themeMode}
+            onValueChange={(val) => setThemeMode(val as ThemeMode)}
+            buttons={[
+              { value: "system", label: "Auto" },
+              { value: "light", label: "Light" },
+              { value: "dark", label: "Dark" },
+            ]}
+          />
+        </View>
+      </View>
+      <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
+        Auto follows your device system setting.
+      </Text>
+    </>
+  );
+
+  if (bareContent) return <View>{content}</View>;
 
   return (
     <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
-      <CardContent>
-        <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Appearance</Text>
-        <View style={styles.row}>
-          <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>Theme</Text>
-          <View style={styles.themeToggle}>
-            <SegmentedControl
-              value={themeMode}
-              onValueChange={(val) => setThemeMode(val as ThemeMode)}
-              buttons={[
-                { value: "system", label: "Auto" },
-                { value: "light", label: "Light" },
-                { value: "dark", label: "Dark" },
-              ]}
-            />
-          </View>
-        </View>
-        <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-          Auto follows your device system setting.
-        </Text>
-      </CardContent>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 }

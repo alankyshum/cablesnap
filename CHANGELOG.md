@@ -31,6 +31,7 @@ _No user-facing changes yet._
 - **Improvement: Settings tiles are lighter and less cluttered** — the Settings screen previously rendered as a vertical stack of drop-shadowed boxes. Each tile now uses a subtle 1px outline instead of a shadow, with slightly tighter padding, so the screen reads as a clean, calm list rather than a column of floating cards. (BLD-2030)
 - Wide screens (foldables/tablets) now use the full width across the Workouts and Progress tabs — cards flow into 2–3 balanced columns instead of a single centered column, so you see more at a glance. (BLD-2033)
 - **Improvement: Settings link rows are more legible and easier to tap** — the Gym Profiles, Advanced Set Types, and Adaptive Macro Coach entries now use a larger, consistent title size and a guaranteed 48 dp minimum touch target, and Settings tiles share a single, consistent density (padding and heading size). No functionality changed — the links open the same screens as before. (BLD-2032)
+- **Improvement: Settings screen is reorganised into themed sections** — the previously long list of ~18 individual setting cards is now grouped into 9 clearly-labelled tiles (Profile, Units & Appearance, Training, Notifications, Coaching, Integrations, Data & Backup, Feedback, About) using a tidy masonry layout on wider screens. Related settings now sit together under a named heading, and the screen reads as a clean, scannable list instead of a tall stack of cards. All settings open the same screens as before. (BLD-2031)
 
 ## v0.26.42 — 2026-06-27
 <!-- versionCode: 112 -->

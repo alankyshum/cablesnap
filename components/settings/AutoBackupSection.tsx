@@ -16,6 +16,11 @@ const STEP_BUTTON_SIZE = 32;
 type Props = {
   colors: ThemeColors;
   toast: ReturnType<typeof useToast>;
+  /**
+   * When `true`, omit the outer Card wrapper so this component can be
+   * composed inside a parent SettingsTile without nesting cards (BLD-2031).
+   */
+  bareContent?: boolean;
 };
 
 function formatLastBackup(iso: string | null): string {
@@ -41,7 +46,7 @@ function formatLastBackup(iso: string | null): string {
   return `Last backup: ${date.toLocaleDateString()} at ${time}`;
 }
 
-export default function AutoBackupSection({ colors, toast }: Props) {
+export default function AutoBackupSection({ colors, toast, bareContent = false }: Props) {
   const router = useRouter();
   const [enabled, setEnabled] = useState(true);
   const [retention, setRetention] = useState(5);
@@ -115,110 +120,116 @@ export default function AutoBackupSection({ colors, toast }: Props) {
 
   if (!ready) return null;
 
-  return (
-    <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
-      <CardContent>
-        <Text
-          variant="body"
-          style={{ color: colors.onSurface, fontWeight: "600", fontSize: fontSizes.sm, marginBottom: 8 }}
+  const content = (
+    <>
+      <Text
+        variant="body"
+        style={{ color: colors.onSurface, fontWeight: "600", fontSize: fontSizes.sm, marginBottom: 8 }}
+      >
+        Auto-Backup
+      </Text>
+
+      <View style={styles.row}>
+        <Pressable
+          onPress={() => setTooltipVisible(!tooltipVisible)}
+          accessibilityRole="button"
+          accessibilityLabel="Auto-Backup. Tap for more info"
+          style={{ flex: 1 }}
         >
-          Auto-Backup
-        </Text>
+          <View style={styles.labelWithIcon}>
+            <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
+              Auto-Backup
+            </Text>
+            <Text variant="caption" style={{ color: colors.primary, fontSize: fontSizes.xs, marginLeft: 4 }}>ⓘ</Text>
+          </View>
+        </Pressable>
+        <Switch
+          value={enabled}
+          onValueChange={handleToggle}
+          accessibilityRole="switch"
+          accessibilityLabel="Toggle auto-backup after workouts"
+        />
+      </View>
 
-        <View style={styles.row}>
-          <Pressable
-            onPress={() => setTooltipVisible(!tooltipVisible)}
-            accessibilityRole="button"
-            accessibilityLabel="Auto-Backup. Tap for more info"
-            style={{ flex: 1 }}
-          >
-            <View style={styles.labelWithIcon}>
-              <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
-                Auto-Backup
-              </Text>
-              <Text variant="caption" style={{ color: colors.primary, fontSize: fontSizes.xs, marginLeft: 4 }}>ⓘ</Text>
-            </View>
-          </Pressable>
-          <Switch
-            value={enabled}
-            onValueChange={handleToggle}
-            accessibilityRole="switch"
-            accessibilityLabel="Toggle auto-backup after workouts"
-          />
-        </View>
-
-        {tooltipVisible && (
-          <Text
-            variant="caption"
-            style={[styles.tooltipText, { color: colors.onSurfaceVariant, backgroundColor: colors.surfaceVariant }]}
-          >
-            Automatically saves your data after each workout.
-          </Text>
-        )}
-
+      {tooltipVisible && (
         <Text
           variant="caption"
-          style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}
-          accessibilityLabel={formatLastBackup(lastBackup)}
+          style={[styles.tooltipText, { color: colors.onSurfaceVariant, backgroundColor: colors.surfaceVariant }]}
         >
-          {formatLastBackup(lastBackup)}
+          Automatically saves your data after each workout.
         </Text>
+      )}
 
-        {enabled && (
-          <View style={styles.retentionRow} accessibilityLabel={`Keep last ${retention} backups`}>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
-              Keep last
-            </Text>
-            <Pressable
-              onPress={() => retention > MIN_RETENTION && handleRetentionChange(retention - 1)}
-              disabled={retention <= MIN_RETENTION}
-              accessibilityRole="button"
-              accessibilityLabel="Decrease backup retention"
-              style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: retention > MIN_RETENTION ? 1 : 0.35 }]}
-            >
-              <MaterialCommunityIcons name="minus" size={16} color={colors.onSurface} />
-            </Pressable>
-            <Text variant="body" style={[styles.retentionValue, { color: colors.onSurface }]}>
-              {retention}
-            </Text>
-            <Pressable
-              onPress={() => retention < MAX_RETENTION && handleRetentionChange(retention + 1)}
-              disabled={retention >= MAX_RETENTION}
-              accessibilityRole="button"
-              accessibilityLabel="Increase backup retention"
-              style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: retention < MAX_RETENTION ? 1 : 0.35 }]}
-            >
-              <MaterialCommunityIcons name="plus" size={16} color={colors.onSurface} />
-            </Pressable>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
-              backups
-            </Text>
-          </View>
-        )}
+      <Text
+        variant="caption"
+        style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}
+        accessibilityLabel={formatLastBackup(lastBackup)}
+      >
+        {formatLastBackup(lastBackup)}
+      </Text>
 
-        <View style={styles.buttonRow}>
-          <Button
-            variant="outline"
-            size="sm"
-            onPress={handleBackupNow}
-            loading={loading}
-            disabled={loading}
-            accessibilityLabel="Create a backup now"
+      {enabled && (
+        <View style={styles.retentionRow} accessibilityLabel={`Keep last ${retention} backups`}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
+            Keep last
+          </Text>
+          <Pressable
+            onPress={() => retention > MIN_RETENTION && handleRetentionChange(retention - 1)}
+            disabled={retention <= MIN_RETENTION}
             accessibilityRole="button"
+            accessibilityLabel="Decrease backup retention"
+            style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: retention > MIN_RETENTION ? 1 : 0.35 }]}
           >
-            Backup Now
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onPress={() => router.push("/settings/backups")}
-            accessibilityLabel="View all backups"
+            <MaterialCommunityIcons name="minus" size={16} color={colors.onSurface} />
+          </Pressable>
+          <Text variant="body" style={[styles.retentionValue, { color: colors.onSurface }]}>
+            {retention}
+          </Text>
+          <Pressable
+            onPress={() => retention < MAX_RETENTION && handleRetentionChange(retention + 1)}
+            disabled={retention >= MAX_RETENTION}
             accessibilityRole="button"
+            accessibilityLabel="Increase backup retention"
+            style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: retention < MAX_RETENTION ? 1 : 0.35 }]}
           >
-            View Backups
-          </Button>
+            <MaterialCommunityIcons name="plus" size={16} color={colors.onSurface} />
+          </Pressable>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
+            backups
+          </Text>
         </View>
-      </CardContent>
+      )}
+
+      <View style={styles.buttonRow}>
+        <Button
+          variant="outline"
+          size="sm"
+          onPress={handleBackupNow}
+          loading={loading}
+          disabled={loading}
+          accessibilityLabel="Create a backup now"
+          accessibilityRole="button"
+        >
+          Backup Now
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onPress={() => router.push("/settings/backups")}
+          accessibilityLabel="View all backups"
+          accessibilityRole="button"
+        >
+          View Backups
+        </Button>
+      </View>
+    </>
+  );
+
+  if (bareContent) return <View>{content}</View>;
+
+  return (
+    <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
+      <CardContent>{content}</CardContent>
     </Card>
   );
 }
