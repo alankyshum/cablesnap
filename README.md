@@ -7,6 +7,12 @@
 > **Custom F-Droid repo** — open the link above on your Android device to add the repo, or add it manually in F-Droid:\
 > `https://alankyshum.github.io/cablesnap/repo`
 
+## Demo
+
+[<img src="https://img.youtube.com/vi/8WLv-Xj03uQ/maxresdefault.jpg" alt="CableSnap promo video" width="240">](https://youtube.com/shorts/8WLv-Xj03uQ)
+
+▶️ **[Watch the promo (YouTube Shorts)](https://youtube.com/shorts/8WLv-Xj03uQ)**
+
 ## Screenshots
 
 <p align="center">
