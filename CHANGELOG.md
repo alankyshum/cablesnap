@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Fix: Form clips, session pacing, and stack marker screens no longer show an error overlay in development builds** — tapping "Select clips", tapping the pacing card, or viewing the stack marker pill could trigger a red error overlay that blocked all interaction when testing on sub-path routes. Root cause: the CanvasKit WASM loader was resolving a relative path that Metro dev server returned as an HTML fallback page, causing a WebAssembly compile error. The loader now uses an absolute path and probes WASM availability before loading. (BLD-2125)
 - **Fix: Progress tab no longer crashes with a white error screen on large-screen devices (Fold 7)** — on wide-viewport devices the Progress tab could display a full-screen dev error overlay instead of your progress data. Two root causes were fixed: the CanvasKit chart library is now initialised before the app renders (preventing a crash during chart load), and the body-settings database row is now inserted safely so simultaneous accesses no longer conflict. The Progress tab renders correctly on all screen sizes. (BLD-2078)
 - **Improvement: Integrations and Feedback tiles now match the visual style of all other Settings tiles** — Integrations and Feedback were previously rendered as standalone full-bleed cards without the consistent tile heading and padding that the other 7 Settings sections use. Both are now wrapped in `SettingsTile` so all 9 sections share the same 16 px padding and 18 px/600 heading typography. No functionality changed. (BLD-2090)
 
