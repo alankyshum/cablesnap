@@ -52,6 +52,46 @@ if (!fs.existsSync(skiaPkg)) {
   }
 }
 
+// Step 1b (BLD-2078): stage CanvasKit's WASM into public/ for web.
+//
+// On web, react-native-skia loads Skia from `canvaskit-wasm`. `LoadSkiaWeb()`
+// calls `CanvasKitInit()` which fetches `canvaskit.wasm` relative to the page
+// origin. Expo copies everything under `public/` to the web bundle root on
+// `expo export`, so placing the wasm at `public/canvaskit.wasm` makes it
+// available same-origin at `/canvaskit.wasm` (both under `npx serve -s dist`
+// for the screenshot/e2e pipeline and on the deployed static host). Without
+// this, `LoadSkiaWeb()` fetches the SPA fallback HTML, fails to instantiate
+// (`expected magic word 00 61 73 6d`), CanvasKit never initialises, and the
+// Progress-tab charts can never render. Runs on ALL platforms (web needs it
+// regardless of host OS). The file is git-ignored — it is a build artifact
+// reproduced from node_modules on every install.
+try {
+  const wasmSrc = path.join(
+    projectRoot,
+    "node_modules",
+    "canvaskit-wasm",
+    "bin",
+    "full",
+    "canvaskit.wasm"
+  );
+  const publicDir = path.join(projectRoot, "public");
+  const wasmDest = path.join(publicDir, "canvaskit.wasm");
+  if (fs.existsSync(wasmSrc)) {
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+    fs.copyFileSync(wasmSrc, wasmDest);
+    console.log("-- Staged canvaskit.wasm -> public/canvaskit.wasm");
+  } else {
+    console.warn(
+      "-- canvaskit-wasm/bin/full/canvaskit.wasm not found; web charts will not render until it is staged"
+    );
+  }
+} catch (e) {
+  console.error("-- Failed to stage canvaskit.wasm:", e.message);
+  // Non-fatal — native/typecheck/lint unaffected; only web chart rendering needs it.
+}
+
 // Step 2: On macOS, run Skia's install-libs.js to copy native frameworks
 if (process.platform !== "darwin") {
   console.log(
