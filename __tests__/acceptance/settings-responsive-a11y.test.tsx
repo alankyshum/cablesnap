@@ -25,6 +25,10 @@ import React from 'react'
 import { StyleSheet } from 'react-native'
 import { waitFor, within } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
+// Derive the expected column distribution from the REAL masonry algorithm
+// rather than hardcoding an i,i+3,i+6 split — keeps this suite in lockstep with
+// distributeIntoColumns (mirrors __tests__/components/ui/Masonry.test.tsx).
+import { distributeIntoColumns } from '../../components/ui/Masonry'
 
 // ── Mutable layout mock — compact/medium/expanded presets (mirrors the
 //    masonry-wide-screen suite). The jest babel-hoist rule requires the
@@ -162,8 +166,15 @@ import Settings from '../../app/(tabs)/settings'
 const MASONRY = 'settings-masonry'
 
 /**
- * Source order of the 9 Settings masonry tiles (must match settings.tsx). Used
- * to assert that the visual column distribution preserves reading/source order.
+ * Source order of the Settings masonry tiles wrapped in <SettingsTile> on
+ * `main` (= this PR's base). Used to assert that the visual column distribution
+ * preserves reading/source order.
+ *
+ * NOTE: Integrations & Feedback render as bare <IntegrationsCard>/<FeedbackCard>
+ * here (no settings-tile-* testID). Wrapping them as 2 additional tiles is the
+ * scope of BLD-2090/2091 (PR #658); their tile coverage lands once #658 merges.
+ * This suite deliberately validates only the 7 real tiles so it has no
+ * merge-order dependency on #658.
  */
 const TILE_ORDER = [
   'settings-tile-profile',
@@ -171,9 +182,7 @@ const TILE_ORDER = [
   'settings-tile-training',
   'settings-tile-notifications',
   'settings-tile-coaching',
-  'settings-tile-integrations',
   'settings-tile-data-backup',
-  'settings-tile-feedback',
   'settings-tile-about',
 ]
 
@@ -217,7 +226,7 @@ describe('Settings masonry — responsive column structure (BLD-2037 P2-9)', () 
     expect(queryByTestId(`${MASONRY}-col-3`)).toBeNull()
   })
 
-  it('renders all 9 themed tiles at every width with no onLayout fired (headless-safe, no reveal-gating)', async () => {
+  it('renders all 7 themed tiles at every width with no onLayout fired (headless-safe, no reveal-gating)', async () => {
     for (const layout of [mockCompactLayout, mockMediumLayout, mockExpandedLayout]) {
       mockLayoutReturn = { ...layout }
       const { getByTestId, unmount } = renderScreen(<Settings />)
@@ -262,15 +271,42 @@ describe('Settings masonry — reading order across columns (BLD-2037 P2-9)', ()
       expect(ranks).toEqual([...ranks].sort((a, b) => a - b))
     }
 
-    // 2. All 9 tiles are distributed exactly once across the 3 columns.
+    // 2. All 7 tiles are distributed exactly once across the 3 columns.
     const flat = cols.flat()
     expect(flat.slice().sort()).toEqual([...TILE_ORDER].slice().sort())
 
-    // 3. Tier-1 (headless, equal weights) round-robin: col i holds source
-    //    indices i, i+3, i+6 — the deterministic reading-order distribution.
-    expect(cols[0]).toEqual(['settings-tile-profile', 'settings-tile-notifications', 'settings-tile-data-backup'])
-    expect(cols[1]).toEqual(['settings-tile-units-appearance', 'settings-tile-coaching', 'settings-tile-feedback'])
-    expect(cols[2]).toEqual(['settings-tile-training', 'settings-tile-integrations', 'settings-tile-about'])
+    // 3. Tier-1 (headless: onLayout never fires → equal weights) distribution.
+    //    Derive the expected per-column arrays from the SAME algorithm the
+    //    screen uses (distributeIntoColumns, shortest-col-first → round-robin)
+    //    instead of hardcoding the split.
+    //
+    //    CRITICAL: the Masonry receives all 9 settings.tsx children in source
+    //    order — the 7 SettingsTile tiles PLUS the 2 bare cards Integrations
+    //    (source idx 5) and Feedback (source idx 7), which carry no
+    //    settings-tile-* testID. Those bare cards still occupy column slots and
+    //    shift the tiles, so we must distribute the full 9-child sequence and
+    //    only THEN filter to the visible tile IDs (matching what tilesInColumn
+    //    reads back). Modeling only the 7 tiles would mis-predict the columns.
+    //    The 2 bare cards become real tiles in BLD-2090/2091 (PR #658).
+    const MASONRY_CHILDREN_IN_SOURCE_ORDER = [
+      'settings-tile-profile',
+      'settings-tile-units-appearance',
+      'settings-tile-training',
+      'settings-tile-notifications',
+      'settings-tile-coaching',
+      'bare-integrations-card', // no settings-tile-* testID (BLD-2090/2091)
+      'settings-tile-data-backup',
+      'bare-feedback-card', // no settings-tile-* testID (BLD-2090/2091)
+      'settings-tile-about',
+    ]
+    // Zero weights model the unmeasured first-paint case
+    // (mirrors __tests__/components/ui/Masonry.test.tsx).
+    const expectedCols = distributeIntoColumns(
+      MASONRY_CHILDREN_IN_SOURCE_ORDER,
+      3,
+      MASONRY_CHILDREN_IN_SOURCE_ORDER.map(() => 0),
+    ).map((col) => col.filter((id) => TILE_ORDER.includes(id)))
+    expect(cols).toEqual(expectedCols)
   })
 })
 
