@@ -72,7 +72,6 @@ jest.mock('@/components/ui/bna-toast', () => ({
   useToast: () => ({
     toast: jest.fn(), success: jest.fn(), error: jest.fn(),
     warning: jest.fn(), info: jest.fn(), dismiss: jest.fn(), dismissAll: jest.fn(),
-    info: jest.fn(),
   }),
 }))
 
