@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Improvement: Settings tiles fade in with a subtle staggered entrance** — when the Settings screen opens, its themed tiles now ease in with a brief fade/slide-up cascade instead of appearing all at once, giving the redesigned screen a more polished first paint. The effect is intentionally short and is fully disabled when the device's "Reduce Motion" accessibility setting is on (tiles appear instantly). Tile content is never hidden behind the animation. (BLD-2036)
 
 ## v0.26.44 — 2026-06-28
 <!-- versionCode: 114 -->

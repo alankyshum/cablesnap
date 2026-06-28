@@ -58,6 +58,11 @@ test.describe("@scenario settings", () => {
   });
 
   test("captures settings top (title + first cards)", async ({ page }, testInfo) => {
+    // Reduce motion so the BLD-2036 tile entrance animation is inert on capture
+    // (instant final state) — keeps the daily UX-audit screenshots deterministic
+    // and immune to mid-animation/blank-tile frames. The SettingsTile entrance
+    // honors reduced motion via useReducedMotion → no `entering` animation.
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.addInitScript(() => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
@@ -95,6 +100,8 @@ test.describe("@scenario settings", () => {
   });
 
   test("captures settings bottom — BMC/About cards above floating tab bar", async ({ page }, testInfo) => {
+    // Reduce motion so the BLD-2036 tile entrance is inert on capture (see "top").
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.addInitScript(() => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;

@@ -47,6 +47,7 @@ jest.mock('react-native-reanimated', () => {
     const obj: Record<string, unknown> = {}
     obj.delay = () => obj
     obj.duration = () => obj
+    obj.easing = () => obj
     return obj
   }
   return {
@@ -57,6 +58,7 @@ jest.mock('react-native-reanimated', () => {
     },
     FadeIn: chainable(),
     FadeInDown: chainable(),
+    FadeInUp: chainable(),
     useAnimatedStyle: () => ({}),
     useAnimatedProps: (fn: () => unknown) => fn(),
     useSharedValue: <T,>(v: T) => ({ value: v }),

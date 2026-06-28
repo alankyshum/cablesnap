@@ -6,11 +6,12 @@ const React = require('react');
 const noop = () => {};
 const noopValue = (v) => ({ value: v });
 
-// Chainable layout animation mock — supports .delay().duration() and .duration().delay()
+// Chainable layout animation mock — supports .delay().duration().easing() in any order
 const makeLayoutAnim = () => {
   const anim = {};
   anim.duration = () => anim;
   anim.delay = () => anim;
+  anim.easing = () => anim;
   anim.springify = () => anim;
   anim.damping = () => anim;
   anim.stiffness = () => anim;
