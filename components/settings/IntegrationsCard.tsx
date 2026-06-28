@@ -32,7 +32,9 @@ export default function IntegrationsCard({
 
   const content = (
     <>
-      <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Integrations</Text>
+      {!bareContent && (
+        <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Integrations</Text>
+      )}
 
       {stravaAthlete ? (
         <View>
