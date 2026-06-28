@@ -18,7 +18,13 @@
  * Three CVD-emulated variants (deuteranopia / protanopia / tritanopia) are
  * also captured for the "bottom" shot via `captureWithCvd`.
  *
- * Refs: BLD-1106, BLD-1124
+ * Structural IA assertions (BLD-2091):
+ *   - "settings-masonry container and all 7 settings-tile-* IDs are mounted"
+ *     asserts the masonry container and all 7 tile testIDs from PR #655 are
+ *     attached to the DOM. Uses toBeAttached() (not toBeVisible()) because tiles
+ *     lower in the scroll list may be off-screen on short viewports.
+ *
+ * Refs: BLD-1106, BLD-1124, BLD-2031, BLD-2091
  */
 import { test, expect } from "@playwright/test";
 import * as path from "path";
@@ -128,5 +134,50 @@ test.describe("@scenario settings", () => {
         note: "Bottom of settings — BMC/About section above floating tab bar (BLD-1124 regression surface)",
       },
     });
+  });
+
+  test("settings-masonry container and all 7 settings-tile-* IDs are mounted (BLD-2091)", async ({ page }) => {
+    // BLD-2091: regression-lock the Settings IA structure introduced in PR #655.
+    // Assert that the masonry container and every named tile testID are attached
+    // to the DOM after page load. We use toBeAttached() rather than toBeVisible()
+    // because tiles toward the bottom of the scroll list may be off-screen on
+    // short-viewport devices (iPhone SE 3rd gen, etc.) and would fail a
+    // toBeVisible() check without scrolling — but structural presence is the
+    // invariant we want to protect, not viewport position.
+    await page.addInitScript(() => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+    });
+
+    await page.goto("/settings");
+
+    // Wait for the scroll view to mount — indicates the settings tree is rendered.
+    await expect(page.getByTestId("settings-scroll-view")).toBeVisible({
+      timeout: 20_000,
+    });
+
+    // Assert the masonry container is attached.
+    await expect(page.getByTestId("settings-masonry")).toBeAttached({
+      timeout: 5_000,
+    });
+
+    // Assert all 7 settings-tile-* IDs introduced in PR #655 are attached.
+    // If a tile is removed or its testID is renamed, this test will catch it.
+    const expectedTileIds = [
+      "settings-tile-profile",
+      "settings-tile-units-appearance",
+      "settings-tile-training",
+      "settings-tile-notifications",
+      "settings-tile-coaching",
+      "settings-tile-data-backup",
+      "settings-tile-about",
+    ] as const;
+
+    for (const tileId of expectedTileIds) {
+      await expect(
+        page.getByTestId(tileId),
+        `Expected tile "${tileId}" to be attached to the DOM`,
+      ).toBeAttached({ timeout: 5_000 });
+    }
   });
 });
