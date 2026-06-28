@@ -179,7 +179,7 @@ export default function Settings() {
       <Masonry gap={spacing.base} testID="settings-masonry">
 
         {/* ── 1. Profile ── */}
-        <SettingsTile colors={colors} title="Profile" testID="settings-tile-profile">
+        <SettingsTile colors={colors} title="Profile" testID="settings-tile-profile" index={0}>
           <BodyProfileCard
             weightUnit={weightUnit}
             heightUnit={measureUnit}
@@ -195,7 +195,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 2. Units & Appearance ── */}
-        <SettingsTile colors={colors} title="Units & Appearance" testID="settings-tile-units-appearance">
+        <SettingsTile colors={colors} title="Units & Appearance" testID="settings-tile-units-appearance" index={1}>
           <UnitsCard
             colors={colors}
             toast={toast}
@@ -212,7 +212,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 3. Training ── */}
-        <SettingsTile colors={colors} title="Training" testID="settings-tile-training">
+        <SettingsTile colors={colors} title="Training" testID="settings-tile-training" index={2}>
           <SettingsLinkRow
             colors={colors}
             title="Gym Profiles"
@@ -230,7 +230,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 4. Notifications ── */}
-        <SettingsTile colors={colors} title="Notifications" testID="settings-tile-notifications">
+        <SettingsTile colors={colors} title="Notifications" testID="settings-tile-notifications" index={3}>
           <PreferencesCard
             colors={colors}
             toast={toast}
@@ -261,7 +261,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 5. Coaching ── */}
-        <SettingsTile colors={colors} title="Coaching" testID="settings-tile-coaching">
+        <SettingsTile colors={colors} title="Coaching" testID="settings-tile-coaching" index={4}>
           <SettingsLinkRow
             colors={colors}
             title="Adaptive Macro Coach"
@@ -280,7 +280,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 6. Integrations ── */}
-        <SettingsTile colors={colors} title="Integrations" testID="settings-tile-integrations">
+        <SettingsTile colors={colors} title="Integrations" testID="settings-tile-integrations" index={5}>
           <IntegrationsCard
             colors={colors}
             toast={toast}
@@ -293,7 +293,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 7. Data & Backup ── */}
-        <SettingsTile colors={colors} title="Data & Backup" testID="settings-tile-data-backup">
+        <SettingsTile colors={colors} title="Data & Backup" testID="settings-tile-data-backup" index={6}>
           <AutoBackupSection colors={colors} toast={toast} bareContent />
           <Separator style={styles.tileDivider} />
           <FormClipsStorageRow onClipsChanged={() => {}} />
@@ -311,7 +311,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 8. Feedback ── */}
-        <SettingsTile colors={colors} title="Feedback & Reports" testID="settings-tile-feedback">
+        <SettingsTile colors={colors} title="Feedback & Reports" testID="settings-tile-feedback" index={7}>
           <FeedbackCard
             colors={colors}
             count={count}
@@ -323,7 +323,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 9. About ── */}
-        <SettingsTile colors={colors} title="About" testID="settings-tile-about">
+        <SettingsTile colors={colors} title="About" testID="settings-tile-about" index={8}>
           <Pressable
             onPress={() => setReleaseNotesVisible(true)}
             accessibilityRole="button"
