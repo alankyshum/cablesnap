@@ -82,6 +82,56 @@ test.describe("@scenario completed-workout", () => {
     });
     await page.waitForTimeout(500);
 
+    const summaryStatValues = [
+      {
+        label: "Duration",
+        locator: page.locator('[aria-label^="Duration:"] [dir="auto"]').first(),
+      },
+      {
+        label: "Sets",
+        locator: page
+          .locator('[aria-label$="sets completed"] [dir="auto"], [aria-label*=" sets:"] [dir="auto"]')
+          .first(),
+      },
+      {
+        label: "Volume",
+        locator: page.locator('[aria-label^="Total volume:"] [dir="auto"]').first(),
+      },
+    ];
+
+    const statMetrics = [];
+    for (const { label, locator } of summaryStatValues) {
+      await expect(locator, `${label} summary stat value should render`).toBeVisible({
+        timeout: 10_000,
+      });
+      statMetrics.push(
+        await locator.evaluate((el, statLabel) => {
+          const textEl = el as HTMLElement;
+          const scrollWidth = textEl.scrollWidth;
+          const clientWidth = textEl.clientWidth;
+
+          return {
+            label: statLabel,
+            text: textEl.textContent?.trim() ?? "",
+            scrollWidth,
+            clientWidth,
+            truncated: scrollWidth > clientWidth + 1,
+          };
+        }, label),
+      );
+    }
+
+    const truncatedStats = statMetrics.filter((stat) => stat.truncated);
+    expect(
+      truncatedStats,
+      `Summary stat values truncated:\n${truncatedStats
+        .map(
+          (stat) =>
+            `  ${stat.label} "${stat.text}" scrollWidth=${stat.scrollWidth} > clientWidth=${stat.clientWidth}`,
+        )
+        .join("\n")}`,
+    ).toHaveLength(0);
+
     // Scroll the inner React Native FlatList (not the document) to the bottom
     // so below-fold content (Estimated pacing card, Sets card, action buttons)
     // is captured. window.scrollTo() does not move RN's scroll container —
