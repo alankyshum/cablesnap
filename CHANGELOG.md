@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Fix: Progress tab no longer crashes with a white error screen on large-screen devices (Fold 7)** — on wide-viewport devices the Progress tab could display a full-screen dev error overlay instead of your progress data. Two root causes were fixed: the CanvasKit chart library is now initialised before the app renders (preventing a crash during chart load), and the body-settings database row is now inserted safely so simultaneous accesses no longer conflict. The Progress tab renders correctly on all screen sizes. (BLD-2078)
+- **Improvement: Integrations and Feedback tiles now match the visual style of all other Settings tiles** — Integrations and Feedback were previously rendered as standalone full-bleed cards without the consistent tile heading and padding that the other 7 Settings sections use. Both are now wrapped in `SettingsTile` so all 9 sections share the same 16 px padding and 18 px/600 heading typography. No functionality changed. (BLD-2090)
 
 ## v0.26.43 — 2026-06-28
 <!-- versionCode: 113 -->
