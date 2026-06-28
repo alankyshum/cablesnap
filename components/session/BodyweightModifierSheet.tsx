@@ -65,6 +65,9 @@ export function BodyweightModifierSheet({
   // Re-hydrate state when the sheet is opened for a new set.
   useEffect(() => {
     const nn = normalizeModifier(initialModifierKg);
+    // Intentional re-hydration of the editor to the incoming set's modifier —
+    // runs only on initialModifierKg/unit change, not a render loop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode(modeOfModifier(initialModifierKg));
     const mag = nn === null ? 0 : Math.round(toDisplay(Math.abs(nn), unit) * 10) / 10;
     setMagnitude(mag);
