@@ -16,6 +16,7 @@ import {
   MacroTrendCard,
 } from "./NutritionCards";
 import { fontSizes } from "@/constants/design-tokens";
+import Masonry from "@/components/ui/Masonry";
 
 
 
@@ -46,7 +47,7 @@ export default function NutritionSegment() {
   );
 
   const chartWidth = layout.atLeastMedium
-    ? (screenWidth - 96) / 2 - 32
+    ? Math.floor((screenWidth - layout.horizontalPadding * 2 - 16 * (layout.expanded ? 2 : 1)) / (layout.expanded ? 3 : 2)) - 32
     : screenWidth - 48;
 
   // Error state
@@ -115,7 +116,6 @@ export default function NutritionSegment() {
 
   const insufficientData = dailyTotals.length < 3;
   const noTargets = !targets;
-  const wideCard = layout.atLeastMedium ? styles.wideCard : undefined;
 
   return (
     <ScrollView
@@ -150,30 +150,21 @@ export default function NutritionSegment() {
 
       {/* Cards */}
       {layout.atLeastMedium ? (
-        <>
-          <View style={styles.grid}>
-            <CalorieTrendCard
-              dailyTotals={dailyTotals}
-              calorieTarget={targets?.calories ?? null}
-              chartWidth={chartWidth}
-              reducedMotion={reducedMotion}
-              style={wideCard}
-            />
-            <WeeklyAveragesCard
-              weeklyAverages={weeklyAverages}
-              style={wideCard}
-            />
-          </View>
-          <View style={styles.grid}>
-            {adherence && <AdherenceCard adherence={adherence} style={wideCard} />}
-            <MacroTrendCard
-              weeklyAverages={weeklyAverages}
-              chartWidth={chartWidth}
-              reducedMotion={reducedMotion}
-              style={wideCard}
-            />
-          </View>
-        </>
+        <Masonry gap={16} testID="nutrition-progress-masonry">
+          <CalorieTrendCard
+            dailyTotals={dailyTotals}
+            calorieTarget={targets?.calories ?? null}
+            chartWidth={chartWidth}
+            reducedMotion={reducedMotion}
+          />
+          <WeeklyAveragesCard weeklyAverages={weeklyAverages} />
+          {adherence && <AdherenceCard adherence={adherence} />}
+          <MacroTrendCard
+            weeklyAverages={weeklyAverages}
+            chartWidth={chartWidth}
+            reducedMotion={reducedMotion}
+          />
+        </Masonry>
       ) : (
         <>
           <CalorieTrendCard
@@ -269,13 +260,6 @@ const styles = StyleSheet.create({
   infoBanner: {
     marginBottom: 12,
     padding: 12,
-  },
-  grid: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  wideCard: {
-    flex: 1,
   },
   errorCard: {
     margin: 32,

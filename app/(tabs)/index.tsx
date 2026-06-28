@@ -30,6 +30,7 @@ import QuickAddFab from "../../components/home/QuickAddFab";
 import QuickAddSheet from "../../components/home/QuickAddSheet";
 import TodaysGtgCard from "../../components/home/TodaysGtgCard";
 import { useRouter } from "expo-router";
+import Masonry from "../../components/ui/Masonry";
 
 const defaultProgress: WeeklyGoalProgress = { mode: "hidden", slots: [], completedCount: 0, targetCount: 0 };
 
@@ -94,10 +95,79 @@ export default function Workouts() {
     router.push(`/session/${s.id}?templateId=${todaySchedule.template_id}`);
   }, [todaySchedule, router]);
 
+  // On wide screens the info tiles (summary, GTG, recovery heatmap, templates/programs,
+  // recent workouts) flow into 2-3 Masonry columns. Quick Start and the page header
+  // (stats, banners, adherence bar) always stay full-width.
+  const masonryTiles = (
+    <>
+      <WeeklySummaryCard
+        colors={colors}
+        totalVolume={data?.weeklyWorkouts?.totalVolume ?? 0}
+        previousWeekVolume={data?.weeklyWorkouts?.previousWeekVolume ?? null}
+        totalDurationSeconds={data?.weeklyWorkouts?.totalDurationSeconds ?? 0}
+        sessionCount={data?.weeklyWorkouts?.sessionCount ?? 0}
+        unitSystem={data?.unitSystem ?? "kg"}
+      />
+      {/* BLD-1089: Today's GTG card — AC4 */}
+      {(gtgRows?.length ?? 0) > 0 && (
+        <TodaysGtgCard
+          colors={colors}
+          rows={gtgRows ?? []}
+          onRowPress={(id) => router.push(`/day-session/${id}`)}
+        />
+      )}
+      <RecoveryHeatmap recoveryStatus={data?.recoveryStatus ?? []} colors={colors} />
+      <View>
+        <SegmentedControl
+          value={segment}
+          onValueChange={(v) => setUserSegment(v)}
+          buttons={[
+            { value: "templates", label: "Templates", accessibilityLabel: "Templates tab" },
+            { value: "programs", label: "Programs", accessibilityLabel: "Programs tab" },
+          ]}
+          style={styles.segmented}
+        />
+        {segment === "templates" ? (
+          <TemplatesList
+            colors={colors}
+            templates={allTemplates}
+            counts={data?.counts ?? {}}
+            durationEstimates={data?.durationEstimates ?? {}}
+            starterMeta={starterMeta}
+            templateReadiness={data?.templateReadiness ?? {}}
+            showReadiness={data?.showReadiness ?? false}
+            onStart={startFromTemplate}
+            onDelete={confirmDelete}
+            onOptions={showTemplateOptions}
+            onEdit={(id) => router.push(`/template/${id}`)}
+            onImport={() => void importTemplates()}
+            onExport={(id) => void exportTemplate(id)}
+          />
+        ) : (
+          <ProgramsList
+            colors={colors}
+            programs={allPrograms}
+            dayCounts={data?.dayCounts ?? {}}
+            onPress={(id) => router.push(`/program/${id}`)}
+            onDelete={confirmDeleteProgram}
+            onOptions={showProgramOptions}
+          />
+        )}
+      </View>
+      <RecentWorkoutsList
+        colors={colors}
+        sessions={data?.sessions ?? []}
+        setCounts={data?.setCounts ?? {}}
+        avgRPEs={data?.avgRPEs ?? {}}
+      />
+    </>
+  );
+
   return (
     // bounded list — ScrollView is intentional: renders fixed sub-components (stats, banners, templates/programs), not unbounded .map()
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 80 }}>
+        {/* Full-width header section: always single column */}
         <StatsRow colors={colors} streak={data?.streak ?? 0} progress={progress} prCount={(data?.recentPRs ?? []).length} />
         <ErrorBoundary>
           {showDeloadNudge ? (
@@ -110,24 +180,8 @@ export default function Workouts() {
         </ErrorBoundary>
         <HomeBanners colors={colors} active={data?.active ?? null} todaySchedule={todaySchedule} todayDone={data?.todayDone ?? false} adherence={adherence} nextWorkout={nextWorkout} onResumeSession={(id) => router.push(`/session/${id}`)} onStartFromSchedule={startFromSchedule} onStartNextWorkout={startNextWorkout} />
         <AdherenceBar colors={colors} progress={progress} />
-        <WeeklySummaryCard
-          colors={colors}
-          totalVolume={data?.weeklyWorkouts?.totalVolume ?? 0}
-          previousWeekVolume={data?.weeklyWorkouts?.previousWeekVolume ?? null}
-          totalDurationSeconds={data?.weeklyWorkouts?.totalDurationSeconds ?? 0}
-          sessionCount={data?.weeklyWorkouts?.sessionCount ?? 0}
-          unitSystem={data?.unitSystem ?? "kg"}
-        />
-        {/* BLD-1089: Today's GTG card — AC4 */}
-        {(gtgRows?.length ?? 0) > 0 && (
-          <TodaysGtgCard
-            colors={colors}
-            rows={gtgRows ?? []}
-            onRowPress={(id) => router.push(`/day-session/${id}`)}
-          />
-        )}
-        <RecoveryHeatmap recoveryStatus={data?.recoveryStatus ?? []} colors={colors} />
 
+        {/* Quick Start: always full-width and prominent */}
         <View style={styles.actionRow}>
           <Button variant="default" onPress={quickStart} accessibilityLabel="Quick start workout">
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -137,15 +191,14 @@ export default function Workouts() {
           </Button>
         </View>
 
-        <SegmentedControl value={segment} onValueChange={(v) => setUserSegment(v)} buttons={[{ value: "templates", label: "Templates", accessibilityLabel: "Templates tab" }, { value: "programs", label: "Programs", accessibilityLabel: "Programs tab" }]} style={styles.segmented} />
-
-        {segment === "templates" ? (
-          <TemplatesList colors={colors} templates={allTemplates} counts={data?.counts ?? {}} durationEstimates={data?.durationEstimates ?? {}} starterMeta={starterMeta} templateReadiness={data?.templateReadiness ?? {}} showReadiness={data?.showReadiness ?? false} onStart={startFromTemplate} onDelete={confirmDelete} onOptions={showTemplateOptions} onEdit={(id) => router.push(`/template/${id}`)} onImport={() => void importTemplates()} onExport={(id) => void exportTemplate(id)} />
+        {/* Info tiles: Masonry on wide screens, linear stack on compact */}
+        {layout.atLeastMedium ? (
+          <Masonry gap={16} testID="home-masonry">
+            {masonryTiles}
+          </Masonry>
         ) : (
-          <ProgramsList colors={colors} programs={allPrograms} dayCounts={data?.dayCounts ?? {}} onPress={(id) => router.push(`/program/${id}`)} onDelete={confirmDeleteProgram} onOptions={showProgramOptions} />
+          masonryTiles
         )}
-
-        <RecentWorkoutsList colors={colors} sessions={data?.sessions ?? []} setCounts={data?.setCounts ?? {}} avgRPEs={data?.avgRPEs ?? {}} />
       </ScrollView>
 
       {/* BLD-1089: Quick Add FAB — AC1 */}
