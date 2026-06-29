@@ -32,7 +32,12 @@ module.exports = {
   moduleNameMapper: {
     'react-native-reanimated': '<rootDir>/__mocks__/react-native-reanimated.js',
   },
-  testPathIgnorePatterns: ['/node_modules/', '__tests__/helpers/', '__tests__/fixtures/', '/e2e/'],
+  // BLD-2161: Exclude paperclip agent worktrees so jest does not load test
+  // files from isolated run-specific git worktrees. Without this, a live
+  // worktree (e.g. .paperclip/worktrees/run/-issue-run/) causes duplicate
+  // manual-mock warnings and runs stale test variants against the main
+  // project's source, producing false failures that redden the gate.
+  testPathIgnorePatterns: ['/node_modules/', '__tests__/helpers/', '__tests__/fixtures/', '/e2e/', '/.paperclip/worktrees/'],
   globalSetup: './jest.global-setup.js',
   setupFiles: ['./jest.setup.js'],
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect'],
