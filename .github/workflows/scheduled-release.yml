@@ -19,6 +19,24 @@ on:
 permissions:
   contents: write
 
+# BLD-2316: serialize Scheduled Release runs so two never publish at once.
+# Without this, the 12h `schedule` cron firing while a `workflow_dispatch` run
+# is mid-flight (or two dispatches) lets both compute the SAME `NEXT` version
+# from the same checkout-time `git tag` snapshot; the loser then dies at
+# "Create GitHub Release" with "a release with the same tag name already
+# exists" (run #28403940771 vs the concurrent run that shipped v0.26.47).
+#
+# `cancel-in-progress: false` is REQUIRED, not a default: a release run that has
+# already built + signed + pushed a version-bump commit must NOT be killed
+# mid-flight — that would leave a bumped CHANGELOG/version on main with no
+# GitHub Release (a "ghost version", the exact failure class BLD-2139 fixed).
+# Queue the second run behind the first instead. The group is a constant
+# (NOT keyed on github.ref or run id) so every dispatch + cron run shares one
+# lane — matching fdroid-release.yml, the repo's other release workflow.
+concurrency:
+  group: scheduled-release
+  cancel-in-progress: false
+
 jobs:
   release:
     name: Check, build & release
@@ -770,6 +788,34 @@ jobs:
           # repo build pulls cablesnap-fdroid.apk per
           # `.github/workflows/fdroid-release.yml`.
           VERSION="${{ steps.next_version.outputs.version }}"
+
+          # BLD-2316 (IDEMPOTENT CREATE): a concurrent Scheduled Release run can
+          # already have published this exact version. The workflow-level
+          # `concurrency: { group: scheduled-release, cancel-in-progress: false }`
+          # serializes runs, but a queued run still wakes with its own
+          # `next_version` output set, so it reaches this step even though the
+          # "Commit and push" step early-exited on "No staged delta after
+          # regenerate — concurrent merge already shipped v$VERSION". Without
+          # this guard the queued run dies on `gh release create` with "a
+          # release with the same tag name already exists" (the BLD-2315 false
+          # failure; run #28403940771 hit it 31 min after v0.26.47 shipped).
+          #
+          # In the normal bump path, an already-existing release means the
+          # concurrent run published identical artifacts from the same commit —
+          # treat it as a successful no-op (do NOT re-upload / duplicate assets).
+          #
+          # Republish mode is DELIBERATELY exempt: it already hard-errors in
+          # "Compute next version" (BLD-1101) when the tag exists, so an
+          # operator-driven republish whose release somehow exists must still
+          # fail loudly here rather than be silently swallowed — keep republish
+          # strictness intact (BLD-2316 edge-case table).
+          if [ "${{ inputs.republish_current }}" != "true" ] && \
+             gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "::notice::Release v$VERSION already exists — a concurrent Scheduled Release run already published it. Treating as a no-op success (no duplicate assets uploaded)."
+            echo "Skipped create: v$VERSION already published by a concurrent run."
+            exit 0
+          fi
+
           gh release create "v$VERSION" \
             cablesnap.apk \
             cablesnap-fdroid.apk \
