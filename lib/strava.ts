@@ -6,7 +6,7 @@
  * It only accepts http(s):// URLs whose host matches the registered
  * "Authorization Callback Domain".
  *
- * Fix: We send redirect_uri=https://strava-proxy.alan200994.workers.dev/callback
+ * Fix: We send redirect_uri=https://strava-proxy.alankyshum.workers.dev/callback
  * (accepted by Strava). The worker's GET /callback handler reads the code/scope/
  * state query params and 302-redirects to cablesnap://strava-callback?<params>.
  * WebBrowser.openAuthSessionAsync intercepts that cablesnap:// redirect (matches
@@ -78,7 +78,7 @@ function getProxyUrl(): string {
 // OAuth redirect constants
 // redirect_uri sent to Strava — must be an https:// URL matching the registered domain.
 // The worker's GET /callback bounces this to the cablesnap:// deep link below.
-const REDIRECT_URI_FOR_STRAVA = `${Constants.expoConfig?.extra?.stravaProxyUrl ?? "https://strava-proxy.alan200994.workers.dev"}/callback`;
+const REDIRECT_URI_FOR_STRAVA = `${Constants.expoConfig?.extra?.stravaProxyUrl ?? "https://strava-proxy.alankyshum.workers.dev"}/callback`;
 // Deep link that WebBrowser.openAuthSessionAsync watches for to close the browser.
 const APP_DEEP_LINK = "cablesnap://strava-callback";
 // On bare Android, Custom Tabs may dismiss and report `cancel`/`dismiss` one

@@ -24,7 +24,7 @@ require_var() {
 # Constants — public, OK to hardcode.
 STRAVA_APP_ID="227474"
 STRAVA_OWNER_ID="22254762"
-WORKER_BASE="https://strava-proxy.alan200994.workers.dev"
+WORKER_BASE="https://strava-proxy.alankyshum.workers.dev"
 DASHBOARD_BASE="https://www.strava.com/api/next/data/athlete-applications"
 
 # Wrap real curl to bypass any shell wrappers that truncate output.
