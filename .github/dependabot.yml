@@ -13,3 +13,9 @@ updates:
       # Ignore major updates as most major updates will need manual intervention
       - dependency-name: "*"
         update-types: [ "version-update:semver-major" ]
+      # react-test-renderer must stay version-locked to the Expo-SDK-pinned react
+      # version (see .learnings BLD-75). Dependabot must not bump it independently —
+      # it only moves during a manual Expo SDK upgrade. Closed PR #674 was a failing
+      # patch bump that slipped past the major-only ignore.
+      - dependency-name: "react-test-renderer"
+        update-types: [ "version-update:semver-minor", "version-update:semver-patch" ]
