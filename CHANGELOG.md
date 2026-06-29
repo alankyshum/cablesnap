@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Fix: "Connect Strava" really does use the working callback proxy now** — v0.26.47's release notes listed this fix, but that APK was compiled moments before the fix landed, so the old, dead hostname was still baked into the binary. This build ships the corrected `strava-proxy.alankyshum.workers.dev` OAuth callback proxy for real, so authorizing Strava no longer dead-ends on a DNS error. (#648)
 
 ## v0.26.47 — 2026-06-29
 <!-- versionCode: 117 -->
