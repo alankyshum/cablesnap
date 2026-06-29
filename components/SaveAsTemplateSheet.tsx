@@ -32,6 +32,10 @@ export default function SaveAsTemplateSheet({ visible, onClose, meal, items, onS
   const inputRef = useRef<RNTextInput>(null);
 
   useEffect(() => {
+    // Reset the name field + focus the input when the sheet opens. Intentional
+    // on-visible reset (runs only on the `visible`/`defaultName` change), not a
+    // render loop. react-hooks/set-state-in-effect flags the synchronous reset.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (visible) { setName(defaultName); setTimeout(() => inputRef.current?.focus(), 400); }
   }, [visible, defaultName]);
 

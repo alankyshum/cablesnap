@@ -42,6 +42,9 @@ export default function GoalSetForm({
   // Reset state when the sheet opens with new data
   React.useEffect(() => {
     if (isVisible) {
+      // Intentional on-visible reset of the form to the incoming goal data —
+      // runs only on the visible/goal-id change, not a render loop.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTargetValue(getInitialValue());
       setDeadline(existingGoal?.deadline ?? null);
     }

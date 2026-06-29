@@ -33,7 +33,7 @@ type Props = {
   onRequestCompare?: (clipA: SetMediaRow) => void;
 };
 
-export function FormClipsPlayer({ isVisible, clip, weightLabel, reps, onClose, onDelete, exerciseId, siblingClipCount, onRequestCompare }: Props) {
+export function FormClipsPlayer({ isVisible, clip, weightLabel, reps, onClose, onDelete, siblingClipCount, onRequestCompare }: Props) {
   if (!isVisible || !clip) return null;
   return (
     <BottomSheet isVisible={isVisible} onClose={onClose}>

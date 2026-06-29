@@ -2,7 +2,7 @@
  * BLD-1028 — Pinned Per-Exercise Notes
  * 7 required acceptance tests as specified in the plan.
  */
-import { AppState, AppStateStatus } from "react-native";
+import { AppStateStatus } from "react-native";
 
 // ---- Mock the DB module ----
 jest.mock("../../lib/db", () => ({

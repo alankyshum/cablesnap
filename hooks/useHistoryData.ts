@@ -311,9 +311,19 @@ export function useHistoryData() {
     setFilterPage((p) => p + 1);
   }, [useFilteredQueryPath, filterLoading, filteredRows.length, filteredTotal]);
 
+  // `changeMonth` is invoked from the swipe gesture's onEnd worklet (runOnJS)
+  // and drives the month-transition slide. Writing the Reanimated shared value
+  // `translateX.value` here is the documented pattern for an event handler, but
+  // the React Compiler can't model shared-value writes, so it (a) cannot
+  // preserve this manual useCallback memoization and (b) reports the writes as
+  // immutability violations. Both are false positives; the disables keep the
+  // existing animation behavior exactly. See the same convention in
+  // .eslintrc.js for lib/animations/** and components/ui/**.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const changeMonth = useCallback((direction: -1 | 1) => {
     const animDurationMs = reducedMotion ? 0 : animDuration.normal;
     const slideDistance = layout.width * direction * -1;
+    // eslint-disable-next-line react-hooks/immutability
     translateX.value = slideDistance;
     translateX.value = withTiming(0, { duration: animDurationMs });
     setSelected(null); setQuery("");

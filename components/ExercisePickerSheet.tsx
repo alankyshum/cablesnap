@@ -87,6 +87,12 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
 
   useEffect(() => {
     if (visible) {
+      // Re-hydrate the sheet each time it opens (mount + reset query/selection
+      // + reload data). This is an intentional on-visible reset, not a render
+      // loop — it runs only on the `visible` transition. The upgraded
+      // react-hooks plugin flags the synchronous setState; behavior is correct
+      // and must be preserved (the sheet relies on this reset).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMounted(true);
       setQuery("");
       setSelected(new Set());
@@ -120,7 +126,12 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
   }, [visible, mounted, translateY, backdropOpacity, SCREEN_H, SNAP_OPEN, showError]);
 
   const dismiss = useCallback(() => {
+    // Reanimated shared-value writes from an event handler (canonical pattern);
+    // drives the sheet dismissal animation. react-hooks/immutability can't see
+    // the Reanimated boundary and false-positives here.
+    // eslint-disable-next-line react-hooks/immutability
     translateY.value = withTiming(SCREEN_H, { duration: durationTokens.fast });
+    // eslint-disable-next-line react-hooks/immutability
     backdropOpacity.value = withTiming(0, { duration: durationTokens.fast }, () => {
       runOnJS(onDismiss)();
     });
@@ -132,6 +143,9 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
     })
     .onUpdate((e) => {
       const next = context.value + e.translationY;
+      // Shared-value write inside a gesture worklet (UI thread) — the entire
+      // point of Reanimated. react-hooks/immutability false-positives.
+      // eslint-disable-next-line react-hooks/immutability
       translateY.value = Math.max(SNAP_TOP, next);
     })
     .onEnd((e) => {
@@ -141,6 +155,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
       if (current > DISMISS_THRESHOLD || velocity > 800) {
         runOnJS(dismiss)();
       } else if (current < (SNAP_MID + SNAP_TOP) / 2 || velocity < -400) {
+        // eslint-disable-next-line react-hooks/immutability
         translateY.value = withSpring(SNAP_TOP, SPRING_CONFIG);
       } else {
         translateY.value = withSpring(SNAP_MID, SPRING_CONFIG);

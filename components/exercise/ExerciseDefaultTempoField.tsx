@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -23,7 +23,7 @@ type Props = {
  * Uses the same TempoEditorSheet as the per-set SetOptionsSheet tempo row
  * (single implementation, two entry points).
  */
-export function ExerciseDefaultTempoField({ exerciseId: _exerciseId, currentTempo, onSave }: Props) {
+export function ExerciseDefaultTempoField({ currentTempo, onSave }: Props) {
   const colors = useThemeColors();
   const [showEditor, setShowEditor] = useState(false);
 
