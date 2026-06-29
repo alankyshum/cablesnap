@@ -60,24 +60,45 @@ const HATCH_SIZE = 6;          // tile size in px
 const HATCH_STROKE_WIDTH = 1.5;
 const HATCH_STROKE_COLOR = "rgba(255,255,255,0.55)"; // semi-white for theme-agnostic contrast
 
-type HatchOverlayProps = {
-  /** Width and height of the area to cover. Pass explicit values for the bar
-   *  segment (determined by flex at runtime) or the legend dot (8×8). */
-  width: number;
-  height: number;
-  testID?: string;
-};
+type HatchOverlayProps =
+  | {
+      /** Fill mode: SVG and Rect use "100%" to cover the full flex-sized parent.
+       *  Use for the bar Other segment where width is determined by flex at runtime. */
+      fill: true;
+      width?: never;
+      height?: never;
+      testID?: string;
+    }
+  | {
+      /** Explicit-size mode: pass exact pixel dimensions for fixed-size elements
+       *  such as the legend dot (8×8). */
+      fill?: false;
+      width: number;
+      height: number;
+      testID?: string;
+    };
 
 /**
  * HatchOverlay — decorative diagonal stripe fill.
  * Caller is responsible for positioning (absoluteFill or explicit dimensions).
+ *
+ * Two modes:
+ *   fill=true  — SVG canvas is "100%×100%" so it fills any flex-sized parent
+ *                without needing runtime width measurement. Use for the bar
+ *                Other segment (BLD-2205 fix: prevents 18px-only coverage).
+ *   fill=false — Pass explicit width/height for fixed-size elements (legend dot).
  */
-export function HatchOverlay({ width, height, testID }: HatchOverlayProps) {
-  if (width <= 0 || height <= 0) return null;
+export function HatchOverlay({ fill, width, height, testID }: HatchOverlayProps) {
+  // In explicit-size mode, guard against non-positive dimensions.
+  if (!fill && (width <= 0 || height <= 0)) return null;
+
+  const svgWidth = fill ? "100%" : width;
+  const svgHeight = fill ? "100%" : height;
+
   return (
     <Svg
-      width={width}
-      height={height}
+      width={svgWidth}
+      height={svgHeight}
       style={StyleSheet.absoluteFillObject}
       // Decorative overlay — must NOT be announced by screen readers.
       // RN-only a11y props are gated to native: react-native-svg's WebShape
@@ -114,8 +135,8 @@ export function HatchOverlay({ width, height, testID }: HatchOverlayProps) {
       <Rect
         x="0"
         y="0"
-        width={width}
-        height={height}
+        width={svgWidth}
+        height={svgHeight}
         fill={`url(#${HATCH_PATTERN_ID})`}
       />
     </Svg>
@@ -227,8 +248,7 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
                 >
                   {otherFrac > 0 && (
                     <HatchOverlay
-                      width={BAR_HEIGHT}
-                      height={BAR_HEIGHT}
+                      fill
                       testID="pacing-seg-other-pattern"
                     />
                   )}
