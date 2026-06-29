@@ -70,7 +70,7 @@ set -euo pipefail
 
 # Resolve the cablesnap repo from the script location (repo/scripts/foo.sh)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_DIR="${AGENT_WORKTREE_REPO_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 
 WORKTREE_ROOT="${AGENT_WORKTREE_ROOT:-/tmp}"
 
@@ -366,6 +366,115 @@ cmd_guard() {
     return 0
 }
 
+# ── Worktree census & reaping (BLD-2251) ─────────────────────────────────────
+#
+# Why this exists
+# ---------------
+# Worktrees accrete in /tmp because review/PR worktrees are rarely cleaned up
+# after their PR merges. With 40+ worktrees + hundreds of /tmp dirs, the
+# dispatch heartbeat path-scan blew past ARG_MAX ("argument list too long").
+# `reap` removes stale worktrees and `guard-count` is a regression guard that
+# fails before the count gets dangerous again.
+#
+# DURABLE RULE: never glob all worktree paths into one argv. Enumerate with
+# `git worktree list --porcelain` (bounded, no shell glob) or, for filesystem
+# scans, `find … -print0 | xargs -0` so each path is NUL-delimited and chunked.
+
+PRIMARY_PATH() {
+    git -C "$REPO_DIR" worktree list --porcelain 2>/dev/null \
+        | awk 'NR==1 && $1=="worktree" { print $2; exit }'
+}
+
+# Emit non-primary worktree paths, one per line. Uses porcelain output (no glob).
+list_nonprimary_worktrees() {
+    local primary; primary="$(PRIMARY_PATH)"
+    git -C "$REPO_DIR" worktree list --porcelain 2>/dev/null \
+        | awk -v primary="$primary" '$1=="worktree" && $2!=primary { print $2 }'
+}
+
+# cmd_count — print number of non-primary worktrees
+cmd_count() {
+    list_nonprimary_worktrees | wc -l | tr -d ' '
+}
+
+# cmd_guard_count [--limit N] — regression guard. Exit 1 if count >= limit.
+cmd_guard_count() {
+    local limit=100
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --limit) limit="$2"; shift 2 ;;
+            *) err "Unknown guard-count flag: $1"; return 2 ;;
+        esac
+    done
+    local n; n="$(cmd_count)"
+    if [ "$n" -ge "$limit" ]; then
+        err "worktree count $n >= limit $limit — run 'agent-worktree.sh reap' to stop ARG_MAX risk (BLD-2251)"
+        return 1
+    fi
+    info "guard-count OK — $n worktrees (limit $limit)"
+    return 0
+}
+
+# A worktree is reapable if it is stale (mtime older than max-age) and safe:
+# clean, or only package-lock.json modified (a transient npm-install artefact).
+# Worktrees with real uncommitted changes or a live lockfile are kept + logged.
+reapable() {
+    local d="$1" max_age_h="$2"
+    [ -d "$d" ] || return 1
+    local ts age dirty live_lock
+    ts="$(stat -c %Y "$d" 2>/dev/null || echo 0)"
+    age=$(( ( $(date +%s) - ts ) / 3600 ))
+    [ "$age" -ge "$max_age_h" ] || return 1
+    # Live lock = an agent is using it
+    local lock; lock="$d.lock"
+    if [ -f "$lock" ]; then
+        local pid; pid="$(cat "$lock" 2>/dev/null || echo)"
+        [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && return 1
+    fi
+    dirty="$(git -C "$d" status --porcelain 2>/dev/null | grep -v 'package-lock.json' || true)"
+    [ -z "$dirty" ] || return 1
+    # Final safety: keep worktrees whose HEAD has commits not in origin/main
+    # (unmerged/unpushed work). Reaping these would lose work — refuse unless
+    # caller passes --include-unmerged. cherry shows '+' for unmerged commits.
+    if [ "${REAP_INCLUDE_UNMERGED:-0}" != "1" ]; then
+        local unmerged
+        unmerged="$(git -C "$d" cherry origin/main HEAD 2>/dev/null | grep -c '^+')"
+        [ "${unmerged:-0}" -eq 0 ] || return 1
+    fi
+    return 0
+}
+
+# cmd_reap [--dry-run] [--max-age-hours N]
+cmd_reap() {
+    local dry=0 max_age=48
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --dry-run) dry=1; shift ;;
+            --max-age-hours) max_age="$2"; shift 2 ;;
+            --include-unmerged) export REAP_INCLUDE_UNMERGED=1; shift ;;
+            *) err "Unknown reap flag: $1"; return 2 ;;
+        esac
+    done
+    local reaped=0 kept=0
+    while IFS= read -r d; do
+        [ -n "$d" ] || continue
+        if reapable "$d" "$max_age"; then
+            if [ "$dry" -eq 1 ]; then
+                info "would reap: $d"
+            else
+                git -C "$REPO_DIR" worktree remove --force "$d" >&2 2>/dev/null || rm -rf "$d"
+                rm -f "$d.lock"
+                log "reaped: $d"
+            fi
+            reaped=$((reaped+1))
+        else
+            kept=$((kept+1))
+        fi
+    done < <(list_nonprimary_worktrees)
+    [ "$dry" -eq 1 ] || git -C "$REPO_DIR" worktree prune >&2 2>/dev/null || true
+    info "reap: $reaped reapable, $kept kept (max-age ${max_age}h, dry-run=$dry)"
+}
+
 usage() {
     cat <<'EOF' >&2
 agent-worktree.sh — per-agent git worktree helper for CableSnap
@@ -375,6 +484,9 @@ USAGE:
   scripts/agent-worktree.sh stop  <branch> [--force]
   scripts/agent-worktree.sh status [<branch>]
   scripts/agent-worktree.sh list
+  scripts/agent-worktree.sh count
+  scripts/agent-worktree.sh guard-count [--limit N]
+  scripts/agent-worktree.sh reap [--dry-run] [--max-age-hours N]
   scripts/agent-worktree.sh guard [<dir>]
 
 MANDATORY RULE (unconditional — BLD-2040):
@@ -411,6 +523,9 @@ main() {
         stop)   cmd_stop "$@" ;;
         status) cmd_status "$@" ;;
         list)   cmd_list ;;
+        count)  cmd_count ;;
+        guard-count) cmd_guard_count "$@" ;;
+        reap)   cmd_reap "$@" ;;
         guard)  cmd_guard "$@" ;;
         ""|-h|--help|help) usage ;;
         *) err "Unknown subcommand: $sub"; usage; exit 2 ;;
