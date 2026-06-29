@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.47",
+    "date": "2026-06-29",
+    "versionCode": 117,
+    "body": "- **Rest-complete now plays a satisfying \"ca-ching\" chime** — when a rest timer finishes, the phone notification now plays a custom ascending \"ca-ching\" completion sound instead of the generic system tone, so finishing a rest feels like ticking off a win. The sound is a procedurally-generated, public-domain (CC0) bell — no third-party samples. (Note: paired smartwatches still play their own notification tone/vibration for bridged alerts; the custom sound applies to the phone.) (BLD-1263)\n- **Fix: \"Connect Strava\" no longer fails with a DNS error after authorization** — the OAuth callback proxy moved to its current Cloudflare Workers subdomain (`strava-proxy.alankyshum.workers.dev`); the old hostname stopped resolving (`DNS_PROBE_FINISHED_NXDOMAIN`). (#648)"
+  },
+  {
     "version": "0.26.46",
     "date": "2026-06-29",
     "versionCode": 116,
