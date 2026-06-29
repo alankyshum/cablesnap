@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Rest-complete now plays a satisfying "ca-ching" chime** — when a rest timer finishes, the phone notification now plays a custom ascending "ca-ching" completion sound instead of the generic system tone, so finishing a rest feels like ticking off a win. The sound is a procedurally-generated, public-domain (CC0) bell — no third-party samples. (Note: paired smartwatches still play their own notification tone/vibration for bridged alerts; the custom sound applies to the phone.) (BLD-1263)
 
 ## v0.26.46 — 2026-06-29
 <!-- versionCode: 116 -->
