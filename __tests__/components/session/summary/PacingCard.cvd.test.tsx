@@ -195,4 +195,47 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     const { toJSON } = render(<HatchOverlay width={18} height={0} />);
     expect(toJSON()).toBeNull();
   });
+
+  // ── 13. Bar Other hatch must be full-fill, NOT a fixed px size (BLD-2205) ──
+  //
+  // This test locks the regression: the bar segment is flex-sized (often 100-300px
+  // wide) but the original fix (BLD-1939) rendered the SVG at 18×18px, covering
+  // only the leftmost 18px of the Other segment. Full-fill requires width="100%"
+  // and height="100%" on both the Svg canvas and the Rect fill element.
+  it("bar Other hatch SVG canvas is full-fill (width/height = '100%', not a fixed px number)", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const hatch = getByTestId("pacing-seg-other-pattern", { includeHiddenElements: true });
+    // The Svg element receives the width/height props directly.
+    expect(hatch.props.width).toBe("100%");
+    expect(hatch.props.height).toBe("100%");
+  });
+
+  it("bar Other hatch Rect fill is full-fill (width/height = '100%', not a fixed px number)", () => {
+    const { getByTestId, UNSAFE_getAllByType } = render(<PacingCard pacing={makePacing()} />);
+    // Verify hatch is present first
+    getByTestId("pacing-seg-other-pattern", { includeHiddenElements: true });
+    // Find all Rect elements (from react-native-svg) and locate the fill rect
+    // inside the bar hatch SVG. The Rect that covers the hatch area uses the
+    // fill url pattern and should have "100%" dimensions.
+    const Rect = require("react-native-svg").Rect;
+    const rects = UNSAFE_getAllByType(Rect);
+    // The bar's fill Rect (pacing-seg-other-pattern's inner rect) uses "100%"
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fillRect = rects.find((r: any) =>
+      r.props.width === "100%" &&
+      typeof r.props.fill === "string" &&
+      r.props.fill.startsWith("url(")
+    );
+    expect(fillRect).toBeTruthy();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((fillRect as any).props.height).toBe("100%");
+  });
+
+  it("legend dot hatch SVG canvas keeps explicit 8×8 dimensions (not full-fill)", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dotHatch = getByTestId("pacing-dot-other-pattern", { includeHiddenElements: true });
+    // Legend dot is fixed 8×8 — must NOT use "100%" (that would scale with the dot container)
+    expect(dotHatch.props.width).toBe(8);
+    expect(dotHatch.props.height).toBe(8);
+  });
 });
