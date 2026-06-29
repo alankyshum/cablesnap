@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Fix: Pacing bar CVD hatch now covers the full "Other" segment** — the diagonal hatch overlay that makes the grey "Other" segment distinguishable under red-green colour blindness previously only covered the leftmost 18 px of the segment. The hatch now fills the full flex-width segment, so the CVD pattern is visible at any bar width. The legend dot appearance is unchanged. (BLD-2205)
 
 ## v0.26.45 — 2026-06-29
 <!-- versionCode: 115 -->
