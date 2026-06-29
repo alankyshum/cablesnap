@@ -56,7 +56,22 @@ rm -f "$ZIP_PATH"
 #     --clobber. If GitHub rejects deletion (immutable latest), fall back to
 #     a unique tag suffix derived from the current UTC timestamp.
 TITLE="Visual UX audit $DATE ($SHA)"
-NOTES="Daily scenario screenshot bundle. Commit: $SHA. Scenarios: $(ls "$SRC_DIR" | xargs echo)."
+# BLD-2198: enumerate only scenario dirs that contain at least one .png — empty
+# dirs (e.g. adaptive-rest when the spec produced no screenshots) must NOT appear.
+# Uses a portable while-read loop (no mapfile) to work on bash 3.2 (macOS).
+_scenarios_with_pngs() {
+  local base="$1"
+  local result=()
+  while IFS= read -r -d '' dir; do
+    local name
+    name="$(basename "$dir")"
+    if compgen -G "$dir/*.png" > /dev/null 2>&1; then
+      result+=("$name")
+    fi
+  done < <(find "$base" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+  echo "${result[*]}"
+}
+NOTES="Daily scenario screenshot bundle. Commit: $SHA. Scenarios: $(_scenarios_with_pngs "$SRC_DIR")."
 
 publish_release() {
   local tag="$1"

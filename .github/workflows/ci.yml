@@ -1,19 +1,22 @@
 name: CI
 
-# Runs typecheck (`tsc --noEmit`) and unit tests (`jest`) on every PR and on
-# pushes to `main`. Establishes the automated verification gate that was
-# missing from the repo (BLD-742).
+# Runs typecheck (`tsc --noEmit`), lint (`eslint`), and unit tests (`jest`) on
+# every PR and on pushes to `main`. Establishes the automated verification gate
+# that was missing from the repo (BLD-742).
 #
-# Scope intentionally narrow per BLD-742 spec: no lint, no coverage, no e2e,
-# no matrix. Bundle Gate (`bundle-gate.yml`) continues to run independently.
+# Originally narrow per BLD-742 (no lint). BLD-2160 added the blocking `lint`
+# job once the 29 pre-existing ESLint errors on `main` were fixed. Coverage,
+# e2e, and matrix remain out of scope. Bundle Gate (`bundle-gate.yml`) runs
+# independently.
 #
 # Job split rationale (Option C): typecheck and jest run as separate jobs so
-# each can be independently marked non-blocking via `continue-on-error: true`
-# until the pre-existing failures on `main` are cleaned up. Typecheck flipped
-# back to blocking in BLD-764 once the pre-existing TS errors were cleared.
-# - jest: 12 pre-existing test failures across 3 suites (supersets,
-#   session-add-exercise, WorkoutHeatmap) → see BLD-753. Flips to blocking
-#   once those failures are fixed.
+# each result is independently reported in the PR status checks UI.
+# Both jobs are blocking (no continue-on-error). See BLD-2161.
+#
+# jest: pre-existing failures (BLD-753: supersets, session-add-exercise,
+# WorkoutHeatmap) were caused by harness pollution — jest was resolving test
+# files from .paperclip/worktrees/ git worktrees. Fixed in BLD-2161 by adding
+# .paperclip/worktrees/ to testPathIgnorePatterns in jest.config.js.
 
 on:
   pull_request: {}
@@ -56,16 +59,45 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # BLD-2160: blocking ESLint gate. Closes the hole where `react-hooks/*`
+    # correctness errors accumulated on `main` because CI had no lint job
+    # (lint-staged only checks locally-touched files). All 29 pre-existing
+    # ESLint *errors* are now fixed, so this job runs blocking from day one
+    # (no continue-on-error) — any newly-introduced error fails the PR.
+    #
+    # --max-warnings=17 ratchets the warning count at the 17 pre-existing
+    # `warn`-level findings (complexity / max-lines-per-function /
+    # no-restricted-syntax hardcoded-hex / one exhaustive-deps). Those are
+    # explicitly Out of Scope for BLD-2160 (refactoring the oversized/complex
+    # files is tracked separately) and are advisory by config in .eslintrc.js.
+    # The ratchet still fails the build the moment a NEW warning is added, so
+    # the debt can only shrink. Lower this number (toward 0) as the warnings
+    # are burned down in their own tickets; do NOT raise it.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Pinned to match `typecheck` / `bundle-gate.yml`.
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint
+        run: npm run lint -- --max-warnings=17
+
   jest:
     name: Jest
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # TODO(BLD-753): flip to blocking (remove `continue-on-error`) after the
-    # 12 pre-existing test failures across 3 suites surfaced by this
-    # workflow's first run are fixed (supersets, session-add-exercise,
-    # WorkoutHeatmap). BLD-749 mock fix already landed; remaining failures
-    # are real assertion mismatches against current UI behavior.
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4

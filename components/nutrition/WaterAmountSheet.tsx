@@ -27,6 +27,12 @@ export function WaterAmountSheet({
   const [text, setText] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // Sync the input text/error to the incoming props each time visibility or
+  // the initial amount changes. Intentional controlled reset of a sheet, not a
+  // render loop (runs only on visible/initialMl/unit change). The upgraded
+  // react-hooks plugin flags every synchronous setState path in this effect;
+  // they are all part of the same intentional reset. Behavior is preserved.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!visible) {
       setText("");
@@ -41,6 +47,7 @@ export function WaterAmountSheet({
     }
     setErrorMsg(null);
   }, [visible, initialMl, unit]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSubmit = async () => {
     const n = parseFloat(text.replace(",", "."));

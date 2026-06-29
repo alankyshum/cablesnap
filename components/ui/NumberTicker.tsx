@@ -31,6 +31,10 @@ export function NumberTicker({
   useEffect(() => {
     if (reducedMotion) {
       animatedValue.value = value;
+      // Reduced-motion path: snap the displayed text immediately instead of
+      // animating. Intentional sync on value/reducedMotion change, not a
+      // render loop. react-hooks/set-state-in-effect flags the synchronous set.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDisplayText(format(value));
       return;
     }

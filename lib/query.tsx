@@ -48,6 +48,15 @@ export function useFocusRefetch(...keys: string[][]) {
   const qc = useQueryClient();
   const lastSeenVersions = useRef<Map<string, number> | null>(null);
 
+  // Stable signature for the variadic `keys` so the focus callback is
+  // re-created only when the *set* of keys changes — not on every render
+  // (a rest param is a fresh array each render). Collapsing to a single
+  // derived string lets the dependency list below be a literal array, which
+  // the react-hooks manual-memoization rule requires. The callback closes
+  // over `keys` directly; because the callback is rebuilt whenever
+  // `keysSignature` changes, the closed-over `keys` always matches it.
+  const keysSignature = keys.map((k) => k.join(".")).join("|");
+
   useFocusEffect(
     useCallback(() => {
       const isFirstFocus = lastSeenVersions.current === null;
@@ -71,6 +80,6 @@ export function useFocusRefetch(...keys: string[][]) {
           lastSeenVersions.current!.set(keyStr, currentVer);
         }
       }
-    }, [qc, ...keys.map((k) => k.join("."))])
+    }, [qc, keysSignature])
   );
 }

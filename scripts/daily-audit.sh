@@ -244,6 +244,26 @@ else
   echo "[daily-audit] note: no HEAD captures to copy (HEAD scenarios may have failed)" >&2
 fi
 
+# BLD-2198: write captured-scenarios.txt — the machine source of truth for which
+# scenario dirs have at least one .png. ux-designer copies this into the audit
+# issue body under "Scenarios Captured (HEAD)". We write it into HEAD_OUT (the
+# live scenarios dir) so audit-bundle.sh zips it alongside the screenshots.
+#
+# Portable: no mapfile, works on bash 3.2 (macOS). Excludes the bld-480-prefix
+# fixture dir — it is an internal regression anchor, not a user-facing scenario.
+CAPTURED_SCENARIOS_FILE="${HEAD_OUT}/captured-scenarios.txt"
+{
+  while IFS= read -r -d '' dir; do
+    name="$(basename "$dir")"
+    # Skip the bld-480-prefix fixture — it is a regression anchor, not a real scenario.
+    [[ "$name" == "$PREFIX_SCENARIO_DIR" ]] && continue
+    if compgen -G "${dir}/*.png" > /dev/null 2>&1; then
+      echo "$name"
+    fi
+  done < <(find "$HEAD_OUT" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+} > "$CAPTURED_SCENARIOS_FILE"
+echo "[daily-audit] captured-scenarios.txt → $CAPTURED_SCENARIOS_FILE"
+
 # 2) BLD-480 pre-fix FIXTURE regression-catcher (BLD-1023).
 #
 # We deliberately keep the output bundle directory name `BLD_480_PRE_FIX`

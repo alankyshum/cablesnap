@@ -27,10 +27,6 @@ const pragmaResults: { workout_sets: { name: string }[] } = {
   ],
 };
 
-// Tracks PRAGMA call count so the second run can return the post-migration
-// table shape (columns present).
-let runIndex = 0;
-
 const mockGetAllAsync = jest.fn(async (sql: string) => {
   if (sql.startsWith('PRAGMA table_info(workout_sets)')) {
     return pragmaResults.workout_sets;
@@ -62,7 +58,6 @@ import * as SQLite from 'expo-sqlite';
 beforeEach(() => {
   execCalls.length = 0;
   jest.clearAllMocks();
-  runIndex = 0;
   // Reset to first-run state.
   pragmaResults.workout_sets = [
     { name: 'id' },

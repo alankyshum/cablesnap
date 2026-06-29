@@ -19,7 +19,9 @@ jest.mock("expo-notifications", () => {
     dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
     scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
     setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
-    AndroidImportance: { LOW: 2, HIGH: 4 },
+    deleteNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
+    AndroidImportance: { LOW: 2, DEFAULT: 3, HIGH: 4, MAX: 5 },
+    AndroidNotificationPriority: { MIN: "min", LOW: "low", DEFAULT: "default", HIGH: "high", MAX: "max" },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setNotificationHandler: jest.fn((h: any) => { handler = h; }),
     addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
@@ -62,7 +64,9 @@ describe("notifications", () => {
         dismissNotificationAsync: jest.fn().mockResolvedValue(undefined),
         scheduleNotificationAsync: jest.fn().mockResolvedValue("notif-id"),
         setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
-        AndroidImportance: { LOW: 2, HIGH: 4 },
+        deleteNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
+        AndroidImportance: { LOW: 2, DEFAULT: 3, HIGH: 4, MAX: 5 },
+        AndroidNotificationPriority: { MIN: "min", LOW: "low", DEFAULT: "default", HIGH: "high", MAX: "max" },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setNotificationHandler: jest.fn((h: any) => { handler = h; }),
         addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
@@ -621,6 +625,10 @@ describe("notifications", () => {
         await notifications.scheduleRestComplete(60, "sess-ch");
         const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
         expect(call.content.channelId).toBe(notifications.REST_COMPLETE_CHANNEL);
+        // BLD-1262: channel must be the v2 id (immutable channels — v1 stuck LOW)
+        expect(call.content.channelId).toBe("rest-complete-v2");
+        // BLD-1262: MAX priority so the watch bridge mirrors it
+        expect(call.content.priority).toBe("max");
       } finally {
         (Platform as { OS: string }).OS = origOS;
       }
@@ -693,7 +701,7 @@ describe("notifications", () => {
       }
     });
 
-    it("BLD-1208 — registers REST_COMPLETE_CHANNEL (HIGH importance) on Android", async () => {
+    it("BLD-1262 — registers REST_COMPLETE_CHANNEL at MAX importance on Android", async () => {
       const { Platform } = require("react-native");
       const origOS = Platform.OS;
       (Platform as { OS: string }).OS = "android";
@@ -702,9 +710,24 @@ describe("notifications", () => {
         expect(Notifications.setNotificationChannelAsync).toHaveBeenCalledWith(
           notifications.REST_COMPLETE_CHANNEL,
           expect.objectContaining({
-            importance: Notifications.AndroidImportance.HIGH,
+            importance: Notifications.AndroidImportance.MAX,
           }),
         );
+      } finally {
+        (Platform as { OS: string }).OS = origOS;
+      }
+    });
+
+    it("BLD-1262 — deletes the legacy rest-complete channel so old LOW one doesn't linger", async () => {
+      const { Platform } = require("react-native");
+      const origOS = Platform.OS;
+      (Platform as { OS: string }).OS = "android";
+      try {
+        await notifications.ensureRestChannelsRegistered();
+        expect(Notifications.deleteNotificationChannelAsync).toHaveBeenCalledWith(
+          notifications.REST_COMPLETE_CHANNEL_LEGACY,
+        );
+        expect(notifications.REST_COMPLETE_CHANNEL_LEGACY).toBe("rest-complete");
       } finally {
         (Platform as { OS: string }).OS = origOS;
       }

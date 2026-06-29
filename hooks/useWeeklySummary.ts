@@ -69,7 +69,13 @@ export function useWeeklySummary() {
 
   useEffect(() => {
     if (reducedMotion) {
+      // Reduced-motion path: set the Reanimated shared values directly (no
+      // animation). Writing shared values inside an effect is the documented
+      // pattern; react-hooks/immutability can't see the Reanimated boundary
+      // and false-positives here. Behavior is preserved exactly.
+      // eslint-disable-next-line react-hooks/immutability
       expandHeight.value = expanded ? 2000 : 0;
+      // eslint-disable-next-line react-hooks/immutability
       expandOpacity.value = expanded ? 1 : 0;
       return;
     }

@@ -2,7 +2,6 @@ import React, { useCallback, useState } from "react";
 import {
   Pressable,
   StyleSheet,
-  TextInput,
   View,
   KeyboardAvoidingView,
   Platform,

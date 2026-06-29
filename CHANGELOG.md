@@ -23,6 +23,8 @@ marker) at release time.
 ## Unreleased
 
 - **Fix: Pacing bar CVD hatch now covers the full "Other" segment** — the diagonal hatch overlay that makes the grey "Other" segment distinguishable under red-green colour blindness previously only covered the leftmost 18 px of the segment. The hatch now fills the full flex-width segment, so the CVD pattern is visible at any bar width. The legend dot appearance is unchanged. (BLD-2205)
+- **Rest-complete now reaches your watch** — the "Rest complete" chime is now mirrored to paired smartwatches (Wear OS, incl. OnePlus Watch 3 via OHealth). Earlier installs created the rest-complete notification channel at low importance, which OEM watch bridges silently skip; it's now a fresh MAX-importance channel sent with MAX priority so the alert bridges to the watch while the phone is in your pocket between sets. (BLD-1262)
+- **Fix: Volume label in post-workout summary now shows fully without truncation** — the caption `Volume (kg)` was being cut off to `Volume ...` on narrow mobile screens. The label now auto-shrinks to fit the tile width, matching the behaviour of the value text above it. (BLD-2197)
 
 ## v0.26.45 — 2026-06-29
 <!-- versionCode: 115 -->

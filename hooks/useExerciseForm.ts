@@ -105,6 +105,12 @@ export function useExerciseForm({ initial, onSave, title }: UseExerciseFormParam
     toast.success(`Auto-filled ${fieldCount} field${fieldCount === 1 ? "" : "s"}`);
   }, [nlInput, flashAnim, toast]);
 
+  // `flashAnim` is a lifetime-stable Animated.Value held in a ref; calling
+  // `.interpolate()` during render is the documented React Native Animated
+  // pattern and does not read mutable render state. The react-hooks/refs
+  // rule can't distinguish an Animated.Value from a render-sensitive ref, so
+  // it false-positives here. Disabling preserves the exact prior behavior.
+  // eslint-disable-next-line react-hooks/refs
   const autoFillHighlight = flashAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ["transparent", colors.primaryContainer],

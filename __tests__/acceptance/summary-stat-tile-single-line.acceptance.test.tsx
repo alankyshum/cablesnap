@@ -170,8 +170,10 @@ describe('Summary stat tile captions — single-line constraint (BLD-1993)', () 
     // Caption is now "Volume (kg)" or "Volume (lb)" — NOT bare "Volume".
     const volumeCaption = await screen.findByText(/^Volume \((kg|lb)\)$/i)
     expect(volumeCaption.props.numberOfLines).toBe(1)
-    // Caption remains a static label — no need for adjustsFontSizeToFit
-    expect(volumeCaption.props.adjustsFontSizeToFit).toBeFalsy()
+    // BLD-2197: "Volume (kg)" still truncated to "Volume ..." in the narrow 3-tile
+    // row, so the caption now shrinks to fit (mirrors the value Text). Must keep
+    // adjustsFontSizeToFit so it never ellipsizes.
+    expect(volumeCaption.props.adjustsFontSizeToFit).toBe(true)
   })
 
   it('Volume VALUE text is a bare number (no unit suffix) with adjustsFontSizeToFit (BLD-2135)', async () => {
@@ -283,6 +285,8 @@ describe('Summary stat tile captions — single-line constraint (BLD-1993)', () 
     // Verify the caption carries the unit instead (BLD-2135)
     const volumeCaption = await screen.findByText(/^Volume \((kg|lb)\)$/i)
     expect(volumeCaption.props.numberOfLines).toBe(1)
-    expect(volumeCaption.props.adjustsFontSizeToFit).toBeFalsy()
+    // BLD-2197: caption "Volume (kg)" shrinks to fit (was truncating to "Volume ..."),
+    // matching the value Text treatment.
+    expect(volumeCaption.props.adjustsFontSizeToFit).toBe(true)
   })
 })

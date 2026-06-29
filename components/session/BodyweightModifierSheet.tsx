@@ -65,6 +65,9 @@ export function BodyweightModifierSheet({
   // Re-hydrate state when the sheet is opened for a new set.
   useEffect(() => {
     const nn = normalizeModifier(initialModifierKg);
+    // Intentional re-hydration of the editor to the incoming set's modifier —
+    // runs only on initialModifierKg/unit change, not a render loop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode(modeOfModifier(initialModifierKg));
     const mag = nn === null ? 0 : Math.round(toDisplay(Math.abs(nn), unit) * 10) / 10;
     setMagnitude(mag);
@@ -183,19 +186,16 @@ export function BodyweightModifierSheet({
             label="Bodyweight"
             selected={mode === "bodyweight"}
             onPress={() => onModeChange("bodyweight")}
-            colors={colors}
           />
           <SegmentButton
             label="Added"
             selected={mode === "added"}
             onPress={() => onModeChange("added")}
-            colors={colors}
           />
           <SegmentButton
             label="Assisted"
             selected={mode === "assisted"}
             onPress={() => onModeChange("assisted")}
-            colors={colors}
           />
         </View>
 
@@ -308,10 +308,9 @@ type SegmentProps = {
   label: string;
   selected: boolean;
   onPress: () => void;
-  colors: ReturnType<typeof useThemeColors>;
 };
 
-function SegmentButton({ label, selected, onPress, colors }: SegmentProps) {
+function SegmentButton({ label, selected, onPress }: SegmentProps) {
   return (
     <Button
       variant={selected ? "default" : "ghost"}

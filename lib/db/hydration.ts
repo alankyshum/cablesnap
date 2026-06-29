@@ -4,7 +4,7 @@
  * Stores water intake in ml. Day-key derivation lives in `lib/format.ts`
  * (`formatDateKey` / `todayKey`); do not duplicate that logic here.
  */
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { uuid } from "../uuid";
 import { getDrizzle } from "./helpers";
 import { waterLogs } from "./schema";
