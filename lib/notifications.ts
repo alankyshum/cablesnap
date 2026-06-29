@@ -41,9 +41,16 @@ export const REST_CUE_CHANNEL = "rest-cue";
 
 /**
  * Android channel for the rest-complete notification.
- * HIGH importance so Wear OS Companion bridges it to the watch (BLD-1208).
+ * Bumped to v2 (BLD-1262): Android notification channels are IMMUTABLE after
+ * creation, so installs that first created "rest-complete" at LOW importance
+ * (pre-BLD-1208) stay LOW forever — the Wear OS Companion / OnePlus OHealth
+ * bridge skips low-importance channels, so nothing reaches the watch. A new
+ * channel id forces re-creation at MAX importance for those users.
  */
-export const REST_COMPLETE_CHANNEL = "rest-complete";
+export const REST_COMPLETE_CHANNEL = "rest-complete-v2";
+
+/** Legacy rest-complete channel id (pre-BLD-1262). Deleted on cold start. */
+export const REST_COMPLETE_CHANNEL_LEGACY = "rest-complete";
 
 /**
  * Preview of the next set to display on the lock screen.
@@ -125,7 +132,7 @@ function formatBodyWeighted(
 
 /**
  * Register Android notification channels for the Smart Rest Coach (BLD-1137/BLD-1208).
- * Three channels: ongoing (LOW), cue (LOW), complete (HIGH — bridges to Wear OS).
+ * Three channels: ongoing (LOW), cue (LOW), complete (MAX — bridges to Wear OS / OnePlus OHealth).
  * Idempotent — safe to call on every cold start. No-op on iOS.
  */
 export async function ensureRestChannelsRegistered(): Promise<void> {
@@ -149,16 +156,24 @@ export async function ensureRestChannelsRegistered(): Promise<void> {
       vibrationPattern: [],
       showBadge: false,
     });
-    // HIGH importance required so Wear OS Companion bridges this to the watch (BLD-1208).
-    // rest-ongoing stays LOW (unobtrusive ticker — bridging to Wear would be obnoxious).
+    // MAX importance + the immutable v2 channel id (BLD-1262) guarantee the
+    // rest-complete notification bridges to paired watches (Wear OS Companion /
+    // OnePlus OHealth skip LOW/DEFAULT channels). rest-ongoing stays LOW
+    // (unobtrusive ticker — bridging the live countdown would be obnoxious).
+    const maxImportance = AndroidImportance.MAX ?? AndroidImportance.HIGH ?? 5;
     await mod.setNotificationChannelAsync(REST_COMPLETE_CHANNEL, {
       name: "Rest complete",
-      importance: AndroidImportance.HIGH ?? 4,
+      importance: maxImportance,
       sound: "default",
       vibrationPattern: [0, 250, 250, 250],
       showBadge: false,
       enableVibrate: true,
     });
+    // Remove the stale low-importance channel so users don't see a duplicate
+    // (and silent) "Rest complete" entry in system settings. Best-effort.
+    if (typeof mod.deleteNotificationChannelAsync === "function") {
+      try { await mod.deleteNotificationChannelAsync(REST_COMPLETE_CHANNEL_LEGACY); } catch { /* never created */ }
+    }
   } catch {
     // Non-critical — channel registration is best-effort
   }
@@ -488,7 +503,11 @@ export async function scheduleRestComplete(
         body,
         sound: "default",
         data: { sessionId, type: "rest_complete" },
-        ...(Platform.OS === "android" ? { channelId: REST_COMPLETE_CHANNEL } : {}),
+        // MAX priority + HIGH channel so the watch bridge (Wear OS Companion /
+        // OnePlus OHealth) mirrors this to the paired watch (BLD-1262).
+        ...(Platform.OS === "android"
+          ? { channelId: REST_COMPLETE_CHANNEL, priority: mod.AndroidNotificationPriority?.MAX ?? "max" }
+          : {}),
       },
       trigger: {
         type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL,

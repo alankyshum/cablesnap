@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Rest-complete now reaches your watch** — the "Rest complete" chime is now mirrored to paired smartwatches (Wear OS, incl. OnePlus Watch 3 via OHealth). Earlier installs created the rest-complete notification channel at low importance, which OEM watch bridges silently skip; it's now a fresh MAX-importance channel sent with MAX priority so the alert bridges to the watch while the phone is in your pocket between sets. (BLD-1262)
 
 ## v0.26.45 — 2026-06-29
 <!-- versionCode: 115 -->
