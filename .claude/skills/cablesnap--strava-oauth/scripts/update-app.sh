@@ -12,7 +12,7 @@ BODY=$(cat <<EOF
   "category": "Training",
   "userSupportUrl": "https://github.com/alankyshum/cablesnap",
   "description": "Free, open-source workout & macro tracker. A lightweight, responsive alternative to commercial fitness apps — no subscriptions, no ads, no paywalls.",
-  "domain": "alan200994.workers.dev"
+  "domain": "alankyshum.workers.dev"
 }
 EOF
 )

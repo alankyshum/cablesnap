@@ -4,7 +4,7 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 
-URL="https://www.strava.com/oauth/authorize?response_type=code&client_id=$STRAVA_APP_ID&redirect_uri=https%3A%2F%2Fstrava-proxy.alan200994.workers.dev%2Fcallback&scope=activity%3Awrite&approval_prompt=auto"
+URL="https://www.strava.com/oauth/authorize?response_type=code&client_id=$STRAVA_APP_ID&redirect_uri=https%3A%2F%2Fstrava-proxy.alankyshum.workers.dev%2Fcallback&scope=activity%3Awrite&approval_prompt=auto"
 
 echo "GET $URL"
 CODE=$("$CURL" -s -o /dev/null -w '%{http_code}' "$URL")
