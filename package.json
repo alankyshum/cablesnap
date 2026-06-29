@@ -1,6 +1,6 @@
 {
   "name": "cablesnap",
-  "version": "0.26.44",
+  "version": "0.26.45",
   "license": "AGPL-3.0-or-later",
   "main": "expo-router/entry",
   "scripts": {
@@ -8,9 +8,9 @@
     "prestart": "npm run changelog:gen",
     "start": "expo start",
     "preandroid": "npm run changelog:gen",
-    "android": "expo start --android",
+    "android": "expo run:android",
     "preios": "npm run changelog:gen",
-    "ios": "expo start --ios",
+    "ios": "expo run:ios",
     "preweb": "npm run changelog:gen",
     "web": "expo start --web",
     "lint": "eslint . --ext .ts,.tsx",

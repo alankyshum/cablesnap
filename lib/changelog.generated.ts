@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.45",
+    "date": "2026-06-29",
+    "versionCode": 115,
+    "body": "- **Fix: Volume stat in post-workout summary now shows the full number** — the value was truncated to `3,720…` with an ellipsis on mobile. The unit (e.g. `kg`) is now shown in the label below the number, freeing enough space for the full value to display. (BLD-2135)\n- **Improvement: Settings tiles fade in with a subtle staggered entrance** — when the Settings screen opens, its themed tiles now ease in with a brief fade/slide-up cascade instead of appearing all at once, giving the redesigned screen a more polished first paint. The effect is intentionally short and is fully disabled when the device's \"Reduce Motion\" accessibility setting is on (tiles appear instantly). Tile content is never hidden behind the animation. (BLD-2036)"
+  },
+  {
     "version": "0.26.44",
     "date": "2026-06-28",
     "versionCode": 114,

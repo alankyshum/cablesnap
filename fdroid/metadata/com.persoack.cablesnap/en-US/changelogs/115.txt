@@ -1,0 +1,3 @@
+- **Fix: Volume stat in post-workout summary now shows the full number** — the value was truncated to `3,720…` with an ellipsis on mobile. The unit (e.g. `kg`) is now shown in the label below the number, freeing enough space for the full value to display. (BLD-2135)
+- **Improvement: Settings tiles fade in with a subtle staggered entrance** — when the Settings screen opens, its themed tiles now ease in with a brief fade/slide-up cascade instead of appearing all
+…see in-app release notes
