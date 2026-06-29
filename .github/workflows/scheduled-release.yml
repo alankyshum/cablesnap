@@ -23,6 +23,10 @@ jobs:
   release:
     name: Check, build & release
     runs-on: ubuntu-latest
+    # BLD-2290: hard cap so a wedged QEMU can never burn ~90 min again.
+    # Happy-path is ~30–35 min (build + two emulator attempts); 60 min leaves
+    # headroom while still bounding any hang.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -459,6 +463,31 @@ jobs:
           fi
           echo "Cert fingerprint verified: $ACTUAL_NORM"
 
+      # --- KVM permission enable (BLD-2290) ---
+      #
+      # On some GitHub-hosted runners /dev/kvm exists but the runner user lacks
+      # rw permission, so android-emulator-runner falls back to software TCG
+      # emulation (-accel off), which deadlocks ("detected a hanging thread
+      # 'QEMU2 CPU1 thread'") and never boots (BLD-2289, recurrence of BLD-2137).
+      # Apply the reactivecircus/android-emulator-runner README's mandated udev
+      # rule so /dev/kvm becomes world-rw and real KVM acceleration engages.
+      # Best-effort: || true so the step never hard-fails on the perms tweak.
+      # Gate mirrors the primary smoke test's if: condition so this step runs
+      # iff the emulator would run.
+      - name: Enable KVM acceleration for emulator
+        id: kvm
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          if [ -e /dev/kvm ]; then
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+              | sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null || true
+            sudo udevadm control --reload-rules || true
+            sudo udevadm trigger --name-match=kvm || true
+            ls -l /dev/kvm || true
+          else
+            echo "::warning::/dev/kvm absent on this runner — KVM acceleration unavailable. The emulator step will fail loudly if acceleration cannot engage (disable-linux-hw-accel: false)."
+          fi
+
       # --- Emulator smoke test: verify APK launches without crashing ---
       #
       # BLD-2139 (ATOMIC RELEASE): this step now runs BEFORE "Commit and push".
@@ -506,6 +535,14 @@ jobs:
           # avoids GPU init hangs.
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
           disable-animations: true
+          # BLD-2290: force real KVM/HW acceleration. The action's default is
+          # `auto`, which can misdetect and silently disable acceleration →
+          # software CPU emulation (the BLD-2289 failure: QEMU2 CPU1 hang,
+          # ~90 min burn). With the 99-kvm4all.rules perms applied in the KVM
+          # step above, `false` makes the emulator hard-require acceleration;
+          # if it genuinely can't accelerate the step fails loudly/fast instead
+          # of crawling in software mode. Mirrors e2e-android-emulator.yml.
+          disable-linux-hw-accel: false
           # cores: 2 reduces QEMU contention on the shared ubuntu-latest runner
           # under post-build load; AVD boot is I/O + CPU bound, not RAM bound.
           cores: 2
@@ -546,6 +583,9 @@ jobs:
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save -camera-back none
           disable-animations: true
+          # BLD-2290: force real KVM/HW acceleration on retry as well.
+          # Same rationale as primary smoke test step above.
+          disable-linux-hw-accel: false
           cores: 2
           # force-avd-creation ensures a completely clean AVD for the retry,
           # eliminating any stale state from the failed primary attempt.
