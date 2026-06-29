@@ -41,15 +41,26 @@ export const REST_CUE_CHANNEL = "rest-cue";
 
 /**
  * Android channel for the rest-complete notification.
- * Bumped to v2 (BLD-1262): Android notification channels are IMMUTABLE after
- * creation, so installs that first created "rest-complete" at LOW importance
- * (pre-BLD-1208) stay LOW forever — the Wear OS Companion / OnePlus OHealth
- * bridge skips low-importance channels, so nothing reaches the watch. A new
- * channel id forces re-creation at MAX importance for those users.
+ * Bumped to v3 (BLD-1263): Android notification channels are IMMUTABLE after
+ * creation, so neither importance NOR sound can change on an existing channel.
+ * v2 (BLD-1262) raised importance to MAX so the alert bridges to the watch;
+ * v3 additionally swaps the system "default" tone for the custom "ca-ching"
+ * completion sound. A fresh channel id is the only way to apply the new sound
+ * to users who already created v2.
  */
-export const REST_COMPLETE_CHANNEL = "rest-complete-v2";
+export const REST_COMPLETE_CHANNEL = "rest-complete-v3";
 
-/** Legacy rest-complete channel id (pre-BLD-1262). Deleted on cold start. */
+/** Custom rest-complete sound (bundled via expo-notifications `sounds`). */
+export const REST_COMPLETE_SOUND = "cha_ching.wav";
+
+/**
+ * Superseded rest-complete channel ids. Deleted on cold start so users don't
+ * accumulate stale (wrong-importance / wrong-sound) duplicate entries in the
+ * system notification settings.
+ */
+export const REST_COMPLETE_CHANNELS_LEGACY = ["rest-complete", "rest-complete-v2"];
+
+/** @deprecated Use REST_COMPLETE_CHANNELS_LEGACY. Retained for back-compat. */
 export const REST_COMPLETE_CHANNEL_LEGACY = "rest-complete";
 
 /**
@@ -164,7 +175,7 @@ export async function ensureRestChannelsRegistered(): Promise<void> {
     await mod.setNotificationChannelAsync(REST_COMPLETE_CHANNEL, {
       name: "Rest complete",
       importance: maxImportance,
-      sound: "default",
+      sound: REST_COMPLETE_SOUND,
       vibrationPattern: [0, 250, 250, 250],
       showBadge: false,
       enableVibrate: true,
@@ -172,7 +183,9 @@ export async function ensureRestChannelsRegistered(): Promise<void> {
     // Remove the stale low-importance channel so users don't see a duplicate
     // (and silent) "Rest complete" entry in system settings. Best-effort.
     if (typeof mod.deleteNotificationChannelAsync === "function") {
-      try { await mod.deleteNotificationChannelAsync(REST_COMPLETE_CHANNEL_LEGACY); } catch { /* never created */ }
+      for (const legacyId of REST_COMPLETE_CHANNELS_LEGACY) {
+        try { await mod.deleteNotificationChannelAsync(legacyId); } catch { /* never created */ }
+      }
     }
   } catch {
     // Non-critical — channel registration is best-effort
@@ -501,7 +514,7 @@ export async function scheduleRestComplete(
       content: {
         title: "Rest complete",
         body,
-        sound: "default",
+        sound: REST_COMPLETE_SOUND,
         data: { sessionId, type: "rest_complete" },
         // MAX priority + HIGH channel so the watch bridge (Wear OS Companion /
         // OnePlus OHealth) mirrors this to the paired watch (BLD-1262).

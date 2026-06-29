@@ -583,11 +583,12 @@ describe("notifications", () => {
       }
     });
 
-    it("scheduleRestComplete has sound='default' (rest_timer_sound applies only here)", async () => {
+    it("BLD-1263 — scheduleRestComplete carries the custom ca-ching sound (cue + live countdown stay silent)", async () => {
       await notifications.scheduleRestComplete(60, "sess-sound");
       const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
       // Rest-complete alone carries sound — pre-end cue and live countdown are both silent
-      expect(call.content.sound).toBe("default");
+      expect(call.content.sound).toBe("cha_ching.wav");
+      expect(call.content.sound).toBe(notifications.REST_COMPLETE_SOUND);
     });
 
     // BLD-1208: new tests
@@ -625,8 +626,8 @@ describe("notifications", () => {
         await notifications.scheduleRestComplete(60, "sess-ch");
         const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
         expect(call.content.channelId).toBe(notifications.REST_COMPLETE_CHANNEL);
-        // BLD-1262: channel must be the v2 id (immutable channels — v1 stuck LOW)
-        expect(call.content.channelId).toBe("rest-complete-v2");
+        // BLD-1263: channel must be the v3 id (immutable channels — sound swap needs a new id)
+        expect(call.content.channelId).toBe("rest-complete-v3");
         // BLD-1262: MAX priority so the watch bridge mirrors it
         expect(call.content.priority).toBe("max");
       } finally {
@@ -711,6 +712,8 @@ describe("notifications", () => {
           notifications.REST_COMPLETE_CHANNEL,
           expect.objectContaining({
             importance: Notifications.AndroidImportance.MAX,
+            // BLD-1263: custom ca-ching sound baked into the (immutable) channel
+            sound: "cha_ching.wav",
           }),
         );
       } finally {
@@ -718,16 +721,16 @@ describe("notifications", () => {
       }
     });
 
-    it("BLD-1262 — deletes the legacy rest-complete channel so old LOW one doesn't linger", async () => {
+    it("BLD-1263 — deletes every superseded rest-complete channel (v1 LOW + v2 default-sound) so stale duplicates don't linger", async () => {
       const { Platform } = require("react-native");
       const origOS = Platform.OS;
       (Platform as { OS: string }).OS = "android";
       try {
         await notifications.ensureRestChannelsRegistered();
-        expect(Notifications.deleteNotificationChannelAsync).toHaveBeenCalledWith(
-          notifications.REST_COMPLETE_CHANNEL_LEGACY,
-        );
-        expect(notifications.REST_COMPLETE_CHANNEL_LEGACY).toBe("rest-complete");
+        for (const legacyId of notifications.REST_COMPLETE_CHANNELS_LEGACY) {
+          expect(Notifications.deleteNotificationChannelAsync).toHaveBeenCalledWith(legacyId);
+        }
+        expect(notifications.REST_COMPLETE_CHANNELS_LEGACY).toEqual(["rest-complete", "rest-complete-v2"]);
       } finally {
         (Platform as { OS: string }).OS = origOS;
       }
