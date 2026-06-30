@@ -72,8 +72,9 @@ export default function Nutrition() {
   }, [load]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View testID="nutrition-screen-container" style={[styles.container, { backgroundColor: colors.background }]}>
       <SectionList
+        testID="nutrition-scroll-view"
         sections={sections}
         keyExtractor={(item) => item.id}
         style={styles.scroll}
