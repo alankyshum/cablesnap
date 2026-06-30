@@ -146,15 +146,11 @@ export function LastNextRow({
   const hasNext = suggestion != null;
   if (!hasLast && !hasNext) return null;
 
+  // BLD-2386 Item B: removed Alert.alert wrapper — call onPrefillLast() directly.
+  // Safety is proven at the data layer: computePrefillSets (lib/format.ts:228)
+  // skips completed sets (:251) and any already-filled set (:259). Non-destructive.
   const confirmAndPrefillLast = () => {
-    alertFn(
-      "Refill from last session?",
-      "Empty sets will be filled with values from your previous session. Existing values won't be overwritten.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Refill", onPress: () => onPrefillLast() },
-      ],
-    );
+    onPrefillLast();
   };
 
   const confirmAndApplyNext = () => {

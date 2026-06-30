@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Improvement: Session set-logging is now faster with less visual noise** — the persistent "+ Add pinned note" empty-state prompt no longer appears on every exercise card; the "Last: …" confirmation dialog is gone (tapping "Last" now prefills the weight immediately without an extra tap); icon buttons got a slightly larger tap target; and the pulley-pin chip is now hidden until you have chosen a cable attachment/mount, so unset cable rows stay cleaner. (BLD-2386)
 
 ## v0.26.49 — 2026-06-30
 <!-- versionCode: 119 -->
