@@ -131,7 +131,14 @@ No device-only AC remains un-proxied. If QD later wants a physical-device confir
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+**APPROVED WITH CONDITIONS — no Critical/Major blockers.**
+
+- **Item D mechanic:** choose **D1**, not D2. Cable variants are core product metadata, so the affordance must stay visible before completion. D2 buries variant discovery until after the user checks the set and risks users logging cable work without noticing attachment/mount/pulley metadata. D1 best balances declutter with discoverability: keep a compact, always-visible `+ variant` / `+ grip` pill for unset rows, expand to the full controls on tap, and render existing variant chips unchanged once any value is set. D3 is acceptable only as a fallback if D1 creates row-density regressions, but it leaves too much of the current visual noise in place.
+- **Item B safety:** removing the `Last:` confirmation is safe because current copy and plan semantics are non-destructive: empty sets are filled, already-filled sets are skipped. Do **not** add a blocking dialog replacement. A toast-undo is optional, but if implemented it must be lightweight and must not become another confirmation step. Required test coverage should assert no `Alert.alert` call for `Last:` and no overwrite of filled values.
+- **Item A discovery:** removing the empty `+ Add pinned note` CTA is acceptable because the pin-outline icon remains in the header and opens the editor. New-user discovery risk is real but minor; do not add a tooltip in this scope because that reintroduces instructional chrome on the primary set-logging path.
+- **A11y conditions:** Item C should use real 44dp effective targets, preferably `padding: 10` around the 24dp icons unless the 390px baseline proves crowded; hitSlop-only is a fallback. Item D must preserve `accessibilityRole="button"`, composite labels, long-press clear hints, focus restoration refs, and add `accessibilityState={{ expanded }}` for the compact-to-expanded affordance. The compact affordance still needs an effective >=44x44dp target.
+- **Edge-case additions before implementation:** add explicit coverage for partial variant states (`attachment` without `mount_position`, `mount_position` without `attachment`, grip without width, width without grip), pulley-pin-only visibility, rows with completed sets plus RPE strip, large text/dynamic type at the 390px baseline, and focus returning to the correct row after picker dismissal.
+- **Verification expectation:** implementation PR must include behavioral component tests for A/B/C/D, plus at least one 390px visual/snapshot or e2e no-regression check proving the core weight -> reps -> check path remains visually dominant and <=3 taps.
 ### Tech Lead (Feasibility)
 _Pending_
 ### Psychologist (Behavior-Design)
