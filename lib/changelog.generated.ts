@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.49",
+    "date": "2026-06-30",
+    "versionCode": 119,
+    "body": "- **Fix: \"Volume\" label in the workout summary stats card no longer truncates with an ellipsis** — the caption `Volume (kg)` was being cut off to `Volume ...` on narrow mobile screens even after the BLD-2197 font-shrink fix. The label now wraps to two lines (`Volume` / `(kg)`) instead of shrinking to fit, ensuring the full text is always visible at any font scale. (BLD-2355)\n- **Fix: Rest Timer Notifications toggle no longer shows ON when the OS permission is denied** — the toggle in Settings now reflects the real system permission state; if the user previously denied notification permission at the OS level, the toggle correctly shows OFF rather than falsely indicating the feature is active. (BLD-2354)"
+  },
+  {
     "version": "0.26.48",
     "date": "2026-06-29",
     "versionCode": 118,

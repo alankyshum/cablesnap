@@ -1,0 +1,3 @@
+- **Fix: "Volume" label in the workout summary stats card no longer truncates with an ellipsis** — the caption `Volume (kg)` was being cut off to `Volume ...` on narrow mobile screens even after the BLD-2197 font-shrink fix. The label now wraps to two lines (`Volume` / `(kg)`) instead of shrinking to fit, ensuring the full text is always visible at any font scale. (BLD-2355)
+- **Fix: Rest Timer Notifications toggle no longer shows ON when the OS permission is
+…see in-app release notes
