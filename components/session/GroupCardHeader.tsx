@@ -278,6 +278,9 @@ function GroupCardHeaderInner({
           />
         )}
         {/* BLD-1028: pinned note read surface — always visible when a note exists */}
+        {/* BLD-2386 Item A: removed persistent "+ Add pinned note" empty-state CTA.
+            The pin-outline icon (above) is the sole affordance when no note exists.
+            No tooltip/instructional chrome reintroduced. */}
         {!pinnedNoteOpen && group.pinnedNote ? (
           <Pressable
             onPress={() => setPinnedNoteOpen(true)}
@@ -286,16 +289,6 @@ function GroupCardHeaderInner({
           >
             <Text style={[styles.pinnedNotePreview, { color: colors.onSurfaceVariant, borderColor: colors.outlineVariant }]}>
               📌 {group.pinnedNote}
-            </Text>
-          </Pressable>
-        ) : !pinnedNoteOpen && !group.pinnedNote ? (
-          <Pressable
-            onPress={() => setPinnedNoteOpen(true)}
-            accessibilityLabel={`Add pinned note for ${group.name}`}
-            accessibilityRole="button"
-          >
-            <Text style={[styles.pinnedNoteEmpty, { color: colors.primary }]}>
-              + Add pinned note
             </Text>
           </Pressable>
         ) : null}
@@ -358,7 +351,9 @@ const styles = StyleSheet.create({
   },
   detailsBtn: { marginLeft: -24 },
   controlsCluster: { flexDirection: "row", alignItems: "center" },
-  iconBtn: { padding: 8 },
+  // BLD-2386 Item C: padding 8→10 gives a visible 44×44dp box (24dp icon + 2×10 padding = 44dp).
+  // hitSlop is unchanged at 8 so effective hit target is 60dp (≥WCAG 2.5.5).
+  iconBtn: { padding: 10 },
   moveBtn: { width: 56, height: 56, alignItems: "center", justifyContent: "center" },
   moveBtnDisabled: { opacity: 0.4 },
   // BLD-1028: pinned note
@@ -370,7 +365,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  pinnedNoteEmpty: { fontSize: 13, fontWeight: "600", paddingVertical: 2 },
 });
 
 /**
