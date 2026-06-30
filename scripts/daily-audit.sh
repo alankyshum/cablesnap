@@ -164,9 +164,34 @@ echo "[daily-audit] building rolling coverage report (past ${ROLLING_WINDOW_DAYS
       plan_cell="—"
       [ -f "$plan" ] && plan_cell="\`$(basename "$plan")\`"
 
+      # UI-relevance heuristic (BLD-2350): a ticket is eligible for the
+      # MISSING flag only if its merge commit(s) in the rolling window touched
+      # files under app/, components/, or theme/. Infra/CI/bugfix tickets that
+      # never touch those paths (e.g. BLD-1631 playwright-install, BLD-1710
+      # dependabot, BLD-1796 test-flake, BLD-1976 emulator-smoke, BLD-2040
+      # worktree-guard) will NEVER have a visual scenario and used to inflate
+      # the MISSING count forever, burying real gaps. Any commit touching at
+      # least one app/, components/, or theme/ file counts as UI-relevant.
+      ui_files=$(git log --since="${ROLLING_WINDOW_DAYS} days ago" \
+        --pretty=format:'' --name-only --diff-filter=ACDMRT -- . \
+        2>/dev/null \
+        | grep -E '^(app|components|theme)/' | head -1 || true)
+      # Narrow to commits that mention this ticket in the subject line.
+      ticket_ui_files=$(git log --since="${ROLLING_WINDOW_DAYS} days ago" \
+        --pretty=format:'%s' --name-only --diff-filter=ACDMRT -- . \
+        2>/dev/null \
+        | awk -v t="$ticket" '
+          /^BLD-/ || /^(feat|fix|chore|test|refactor|docs|perf|ci)/ { in_commit=0 }
+          $0 ~ t { in_commit=1 }
+          in_commit && /^(app|components|theme)\// { print; exit }
+        ' || true)
       vis="❌ MISSING"
       if grep -rl "$ticket" e2e/scenarios/ 2>/dev/null | head -1 | grep -q .; then
         vis="✅"
+      elif [ -z "$ticket_ui_files" ]; then
+        # No app/components/theme files touched by this ticket's commits —
+        # it is an infra/CI/test/bugfix-only ticket; never flag as MISSING.
+        vis="— n/a (non-UI)"
       fi
 
       ac_cell="—"

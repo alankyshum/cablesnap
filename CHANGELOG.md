@@ -23,6 +23,10 @@ marker) at release time.
 ## Unreleased
 
 - **Improvement: Session set-logging is now faster with less visual noise** — the persistent "+ Add pinned note" empty-state prompt no longer appears on every exercise card; the "Last: …" confirmation dialog is gone (tapping "Last" now prefills the weight immediately without an extra tap); icon buttons got a slightly larger tap target; and the pulley-pin chip is now hidden until you have chosen a cable attachment/mount, so unset cable rows stay cleaner. (BLD-2386)
+
+## v0.26.49 — 2026-06-30
+<!-- versionCode: 119 -->
+
 - **Fix: "Volume" label in the workout summary stats card no longer truncates with an ellipsis** — the caption `Volume (kg)` was being cut off to `Volume ...` on narrow mobile screens even after the BLD-2197 font-shrink fix. The label now wraps to two lines (`Volume` / `(kg)`) instead of shrinking to fit, ensuring the full text is always visible at any font scale. (BLD-2355)
 - **Fix: Rest Timer Notifications toggle no longer shows ON when the OS permission is denied** — the toggle in Settings now reflects the real system permission state; if the user previously denied notification permission at the OS level, the toggle correctly shows OFF rather than falsely indicating the feature is active. (BLD-2354)
 

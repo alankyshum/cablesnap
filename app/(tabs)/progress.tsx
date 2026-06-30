@@ -13,7 +13,7 @@ export default function Progress() {
   const [segment, setSegment] = useState("workouts");
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View testID="progress-screen-container" style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.tabsContainer}>
         {/* ScrollableTabs handles its own edge padding via contentContainerStyle —
             do NOT wrap with horizontal padding or the trailing fade gets clipped. */}
