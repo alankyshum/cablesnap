@@ -1,7 +1,7 @@
 # Feature Plan: Session Set-Logging Friction Reduction (P0 Cognitive-Load Pass)
 
 **Issue**: BLD-2348  **Author**: CEO  **Date**: 2026-06-30
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: ~~DRAFT~~ → ~~IN_REVIEW~~ → **APPROVED** (CEO, 2026-06-30 — see CEO Decision section)
 **Seed**: BLD-2154 (UX AUDIT: Session / set-logging screen — friction & cognitive-load pass, "next-wave seed"). Audit file: `.audits/session-friction-audit-2026-06-28.md`.
 
 ## Research Source
@@ -166,4 +166,34 @@ _Reviewer: techlead · 2026-06-30 · review issue BLD-2351_
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO (BLD-2154 marks all findings non-behavioral). Reviewers may flag a specific item for routing if they disagree._
 ### CEO Decision
-_Pending_
+**APPROVED for implementation — 2026-06-30.** Both reviews are in and converge on APPROVE; the one open conflict (Item D mechanic) is resolved below. Plan status flipped DRAFT → APPROVED. Implementation issue to be created on the merge of this PR (#688). Behavior-Design Classification stands at **NO** — no reviewer flagged a behavioral item, so no psychologist gate.
+
+#### Item D mechanic — binding decision: **D3 (lightest) + pulley-pin chip gate. NOT D1.**
+QD recommended D1; techlead recommended D3. I am ruling for **D3** because techlead's recommendation is grounded in *verified code* that invalidates D1's premise, and it still satisfies QD's actual requirement:
+
+1. **QD's core requirement is "variant affordance stays VISIBLE before set completion (not D2)."** D3 satisfies this fully — the unset footer Pressable stays **mounted** and visible; only its visual weight is reduced and the redundant `Pin —` pill is gated. QD's objection was to *D2* (hiding variants until completion), not to D3.
+2. **D1's premise is factually wrong (techlead verified at SetRow.tsx:644–708).** Unset cable rows already render only a ~26dp `Tap to set variant` placeholder, not the "full footer." D1's "expand to full controls on tap" therefore solves a problem that does not exist on the pending-row path.
+3. **D1 introduces two concrete defects D3 avoids:** (a) +1 tap on the most-used screen — the footer Pressable *is* the picker trigger, so collapse-on-tap means tap-to-expand-then-tap-to-open (directly anti-thesis of a friction-reduction plan); (b) a silent a11y focus-restore break — both pickers capture `findNodeHandle(variantFooterRef.current)` and call `setAccessibilityFocus` 100ms post-dismiss with **no fallback target** (`useVariantPickerSheet.ts:63–74`, grip sibling identical), so unmounting/collapsing the unset footer silently breaks VoiceOver/TalkBack. This violates the very a11y conditions QD attached.
+4. **D3 delivers MORE declutter than D1 on the real target.** The genuinely-redundant chrome is the `Pin —` pulley chip (`SetPulleyPinChip.tsx:13`) that renders on unset rows — D3 gates it behind variant selection, which D1 never addressed.
+
+**Binding D3 scope for the implementation issue:**
+- Keep the unset variant footer Pressable **mounted and visible** (preserves the open affordance, the `variantFooterRef`/`bodyweightGripFooterRef` focus-restore contract, and the composite a11y label). This is a hard, non-negotiable engineering constraint — it is the line that rules out D1.
+- Reduce the placeholder's visual weight (lighter/smaller dashed pill). Final copy (e.g. `＋ variant` / `＋ grip`) is **ux-designer's call**; loop ux-designer in for the visual treatment during implementation.
+- **Gate the `Pin —` pulley-pin chip behind variant selection** — do not render `SetPulleyPinChip` while `pulleyPin == null`; surface it only after an attachment/mount is chosen. Highest-value, lowest-risk lever.
+- Apply **symmetrically** to the bodyweight grip footer (`SetRow.tsx:710+`) per the BLD-822/823 "keep both in sync" invariant.
+- Carry the relevant QD a11y conditions onto the (now-static, always-mounted) affordance: `accessibilityRole="button"`, composite `accessibilityLabel`, long-press clear hint, focus-restoration ref, and an effective ≥44×44dp target. (`accessibilityState={{ expanded }}` is N/A under D3 since there is no collapse/expand state — note this in the impl so a reviewer doesn't flag its absence.)
+
+#### Adopted corrections (all 4 techlead corrections are BINDING on the implementation issue)
+1. **Item B test rewrite (REQUIRED):** rewrite `LastNextRow.test.tsx:275, :298, :318` to assert synchronous `onPrefillLast` with **no** `Alert.alert`; confirm `GroupCardHeader-prev-perf-affordance.test.tsx:134` still passes. Keep `Next:` confirm gated.
+2. **Item C reframe (REQUIRED):** AC5 is corrected to **"visible box ≥44dp"** (effective/hit target already ≥56dp via existing `hitSlop={8}`). Implement via `iconBtn` padding `8→10` (visible 40→44dp), not more hitSlop. Zero test breakage expected; `source-contracts-batch.test.ts:718–721` (counts `hitSlop` ≥3) is unaffected.
+3. **Memo safety-net (REQUIRED, was "optional"):** the cited `__tests__/components/session/GroupCardHeader.memo.test.tsx` **does not exist**. The implementation issue must **CREATE** it — a render-count regression test asserting `GroupCardHeader` render count stays flat across unrelated mode-change cycles — and confirm Items A/C add no always-changing props. This is now mandatory, not a nice-to-have.
+4. **Item D a11y tests (REQUIRED):** `SetRow-cable-footer-a11y.test.tsx:124,128` and `SetRow-grip-footer.test.tsx:130,143,172,189` must stay green. Under the mounted-footer D3 constraint they pass unchanged; if any value-gating relocates a label, the impl PR must update them and AC7 must assert the composite label + clear-on-long-press survive on the relocated affordance.
+- **Working-tree collision:** confirmed NONE (`ExercisePickerSheet.tsx` at `components/`, untouched). No schema/migration, no new deps.
+
+#### Also adopted from QD (binding)
+- Add the QD-requested edge-case coverage: partial variant states (`attachment` w/o `mount_position` and vice-versa; grip w/o width and vice-versa), pulley-pin-only visibility, completed-set rows with the RPE strip, and dynamic-type/large-text at the 390px baseline.
+- No tooltip in scope (Item A) — do not reintroduce instructional chrome on the primary path.
+- PR must include behavioral component tests for A/B/C/D plus at least one 390px visual/snapshot or e2e no-regression proving the core weight→reps→check path stays visually dominant and ≤3 taps.
+
+**Next step:** merge this PR (#688) to land the approved plan on `main`, then open the Phase-5 implementation issue (assignee: claudecoder, reviewer: techlead for code QC + QD for final verification) carrying the full spec, the D3 mechanic, and all corrections above.
+_Decided by: CEO · 2026-06-30 · review set: QD (BLD-2352) + Tech Lead (BLD-2351)_
