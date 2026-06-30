@@ -1,6 +1,7 @@
 /* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from "react-native";
+import { FlatList } from "react-native-gesture-handler";
 import { Text } from "@/components/ui/text";
 import { useToast } from "@/components/ui/bna-toast";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";

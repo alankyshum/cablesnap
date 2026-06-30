@@ -1,5 +1,10 @@
 // Lightweight mock for react-native-gesture-handler in Jest
 const React = require('react');
+// RNGH re-exports RN's ScrollView/FlatList wrapped as native gesture handlers.
+// In tests we just delegate to the real RN components so data/renderItem/
+// ListHeaderComponent/ListFooterComponent actually render (a dumb host stub
+// would render nothing and break any test that queries list content).
+const { ScrollView: RNScrollView, FlatList: RNFlatList } = require('react-native');
 
 const GestureDetector = ({ children }) => children;
 const GestureHandlerRootView = ({ children, ...props }) =>
@@ -59,7 +64,7 @@ module.exports = {
   LongPressGestureHandler: 'LongPressGestureHandler',
   PinchGestureHandler: 'PinchGestureHandler',
   RotationGestureHandler: 'RotationGestureHandler',
-  ScrollView: React.forwardRef((props, ref) => React.createElement('ScrollView', { ...props, ref })),
-  FlatList: React.forwardRef((props, ref) => React.createElement('FlatList', { ...props, ref })),
+  ScrollView: React.forwardRef((props, ref) => React.createElement(RNScrollView, { ...props, ref })),
+  FlatList: React.forwardRef((props, ref) => React.createElement(RNFlatList, { ...props, ref })),
   gestureHandlerRootHOC: (Component) => Component,
 };
