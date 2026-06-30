@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Improvement: Session set-logging is now faster with less visual noise** — the persistent "+ Add pinned note" empty-state prompt no longer appears on every exercise card; the "Last: …" confirmation dialog is gone (tapping "Last" now prefills the weight immediately without an extra tap); icon buttons got a slightly larger tap target; and the pulley-pin chip is now hidden until you have chosen a cable attachment/mount, so unset cable rows stay cleaner. (BLD-2386)
+- **Fix: Removed a stray red error toast that could appear on body-diagram screens** — the muscle/body highlighter passed React Native accessibility props through to web SVG DOM nodes, producing a "Received `true` for a non-boolean attribute `accessible`" warning that surfaced as a red dev toast. Those props are now stripped before reaching the DOM. (BLD-2356)
 
 ## v0.26.49 — 2026-06-30
 <!-- versionCode: 119 -->
