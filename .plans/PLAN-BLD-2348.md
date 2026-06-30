@@ -140,7 +140,29 @@ No device-only AC remains un-proxied. If QD later wants a physical-device confir
 - **Edge-case additions before implementation:** add explicit coverage for partial variant states (`attachment` without `mount_position`, `mount_position` without `attachment`, grip without width, width without grip), pulley-pin-only visibility, rows with completed sets plus RPE strip, large text/dynamic type at the 390px baseline, and focus returning to the correct row after picker dismissal.
 - **Verification expectation:** implementation PR must include behavioral component tests for A/B/C/D, plus at least one 390px visual/snapshot or e2e no-regression check proving the core weight -> reps -> check path remains visually dominant and <=3 taps.
 ### Tech Lead (Feasibility)
-_Pending_
+**Verdict: ✅ APPROVE — with 4 required corrections folded into the Phase-5 implementation issue.** No blockers. All four items verified against `origin/main` (branch `bld-2348-plan`, commit `20e0fa06`); every file:line claim confirmed; prefill + picker call trees traced end-to-end. (Full review: BLD-2351.)
+
+**Item A** — ✅ ship as-is. Empty-state branch confirmed at `GroupCardHeader.tsx:291–301`; pin affordance (`:230–241`) and `📌` read surface (`:281–290`) are independent and survive.
+
+**Item B** — ✅ APPROVE; non-destructive claim **proven** at the data layer: `computePrefillSets` (`lib/format.ts:228`) skips completed sets (`:251`) and any already-filled set (`:259`). The confirm is pure friction. **REQUIRED:** the impl PR must rewrite 3 existing tests the plan does not name — `LastNextRow.test.tsx:275, :298, :318` — to assert direct synchronous `onPrefillLast` with no `Alert.alert`. Keep the `Next:` confirm gated (`:160+`).
+
+**Item C** — ✅ APPROVE; **reframe the premise.** The swap/pin/note icons already carry `hitSlop={8}` on a 24dp icon (`:217/230/243`), so the *effective* tap target is already **56dp** (passes WCAG 2.5.5); the gap is the *visible* box (40dp). `padding 8→10` raises the visible box to 44dp and effective to 60dp. Correct AC5 to "visible box ≥44dp." Zero test breakage (no test asserts `iconBtn` padding; only `source-contracts-batch.test.ts:718–721` counts `hitSlop` ≥3, unaffected).
+
+**Item D — mechanic recommendation: D3 (lightest) with one concrete lever. NOT D1.**
+The plan's premise that "the **full** variant footer renders on every pending set" is **overstated**: when unset (`attachment==null && mount_position==null`), `SetRow.tsx:644–708` already renders only a single compact dashed `Tap to set variant` placeholder (`:672–687`); the full chips render only once a variant is set (`:688–693`). The actual redundant chrome is the **pulley-pin chip**, which shows `Pin —` even when unset (`SetPulleyPinChip.tsx:13`) whenever `showPulleyPin !== false && pulleyPin !== undefined` (`:695–704`) — so an unset cable row with pulley tracking shows TWO pills.
+- **NOT D1:** the footer Pressable *is* the picker trigger (`:647–654`), so a collapse-on-tap mechanic adds +1 tap (anti-goal) AND breaks a11y focus-restore — both pickers capture `findNodeHandle(variantFooterRef.current)` at open and call `AccessibilityInfo.setAccessibilityFocus(handle)` 100ms post-dismiss with **no fallback** (`useVariantPickerSheet.ts:63–74`; grip identical at `useBodyweightGripPickerSheet.ts:66–76`). Unmounting the unset footer silently breaks VO/TalkBack focus.
+- **NOT D2 (default):** biggest declutter but highest discoverability/behavior risk (lifters set variant during setup, pre-logging). Possible follow-up only.
+- **D3 scope:** keep the unset footer Pressable **mounted** (preserves open affordance + focus-restore ref + a11y label); reduce placeholder visual weight (copy e.g. `＋ variant` — ux-designer's call); **gate the `Pin —` pulley chip behind the variant tap** (don't render it while `pulleyPin == null`) — the highest-value/lowest-risk lever. Apply symmetrically to the grip footer (`:710+`, BLD-822/823 keep-in-sync invariant).
+- **Hard engineering constraint (any mechanic):** the footer node carrying the composite a11y label and the picker ref MUST stay mounted in the unset state. This rules out D1 as written. Visual treatment is QD + ux-designer's call.
+
+**Cross-cutting required corrections:**
+1. **Memo safety-net does NOT exist (plan citation error):** `__tests__/components/session/GroupCardHeader.memo.test.tsx` — cited by the plan and by `GroupCardHeader.tsx:380` — **does not exist** in the repo. There is no render-count test guarding `GroupCardHeader`; the `React.memo` wrapper (`:390`) is real but unverified. The Risk-table "add render-count assertion" is therefore **mandatory**: impl must **create** that test and confirm Items A/C add no always-changing props (they don't; prop shape preserved).
+2. **Item D a11y tests:** `SetRow-cable-footer-a11y.test.tsx:124,128` and `SetRow-grip-footer.test.tsx:130,143,172,189` assert the unset composite labels. With D3 keeping the footer mounted they pass unchanged; if any value-gating relocates the label, AC7 must assert the label + clear-on-long-press survive on the new affordance.
+3. **Working-tree collision (review Q4): NONE.** `ExercisePickerSheet.tsx` is at `components/ExercisePickerSheet.tsx` (not `components/session/`), intact/unmodified on this branch, and untouched by all 4 items. The "deleted in WT" state is a different concurrent worktree, irrelevant to this plan.
+4. **No schema/migration, no new deps** — confirmed.
+
+**Bottom line:** APPROVED for implementation. Correctly scoped, Item B safety proven, no architectural blockers. Item D = **D3 + pulley-chip gate** (QD/ux-designer set visuals; footer node stays mounted). I will do code-level QC on the implementation PR.
+_Reviewer: techlead · 2026-06-30 · review issue BLD-2351_
 ### Psychologist (Behavior-Design)
 _N/A — Classification = NO (BLD-2154 marks all findings non-behavioral). Reviewers may flag a specific item for routing if they disagree._
 ### CEO Decision
