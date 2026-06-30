@@ -673,16 +673,21 @@ export const SetRow = memo(function SetRow({
                 <View
                   style={[
                     styles.variantPlaceholder,
-                    { borderColor: colors.outline },
+                    // BLD-2386 Item D3: lighter visual weight on unset placeholder.
+                    // Still mounted + visible for a11y (ref focus-restore contract).
+                    // accessibilityState={{ expanded }} is N/A under D3 — no collapse/expand.
+                    styles.variantPlaceholderLight,
+                    { borderColor: colors.outlineVariant },
                   ]}
                 >
                   <Text
                     style={[
                       styles.variantPlaceholderLabel,
-                      { color: colors.onSurfaceVariant },
+                      styles.variantPlaceholderLabelLight,
+                      { color: colors.outlineVariant },
                     ]}
                   >
-                    Tap to set variant
+                    + variant
                   </Text>
                 </View>
               ) : (
@@ -692,7 +697,10 @@ export const SetRow = memo(function SetRow({
                 </>
               )}
             </Pressable>
-            {(showPulleyPin !== false) && pulleyPin !== undefined ? (
+            {/* BLD-2386 Item D3: gate pulley-pin chip behind variant selection.
+                Show only after an attachment/mount is chosen — reduces chrome
+                on unset rows. Keep symmetric with grip footer (BLD-822/823). */}
+            {(showPulleyPin !== false) && pulleyPin !== undefined && (set.attachment != null || set.mount_position != null) ? (
               <Pressable
                 onPress={() => onOpenPulleyPinPicker?.(set.id)}
                 hitSlop={8}
@@ -773,16 +781,21 @@ export const SetRow = memo(function SetRow({
                 <View
                   style={[
                     styles.variantPlaceholder,
-                    { borderColor: colors.outline },
+                    // BLD-2386 Item D3: lighter visual weight — symmetric with cable footer.
+                    // Stays mounted for a11y ref focus-restore (bodyweightGripFooterRef).
+                    // accessibilityState={{ expanded }} N/A under D3 — no collapse/expand.
+                    styles.variantPlaceholderLight,
+                    { borderColor: colors.outlineVariant },
                   ]}
                 >
                   <Text
                     style={[
                       styles.variantPlaceholderLabel,
-                      { color: colors.onSurfaceVariant },
+                      styles.variantPlaceholderLabelLight,
+                      { color: colors.outlineVariant },
                     ]}
                   >
-                    Tap to set grip
+                    + grip
                   </Text>
                 </View>
               ) : (
@@ -943,6 +956,18 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xs,
     lineHeight: 16,
     fontWeight: "500",
+  },
+  // BLD-2386 Item D3: lighter variant for the unset-state pill (both null).
+  // Reduces visual weight vs. the partial-state placeholders (which remain
+  // at full weight because they signal a missing axis for a partially-set row).
+  variantPlaceholderLight: {
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+  },
+  variantPlaceholderLabelLight: {
+    fontSize: fontSizes.xs,
+    fontWeight: "400",
   },
   colSet: {
     width: 36,
