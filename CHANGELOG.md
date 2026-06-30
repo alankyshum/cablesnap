@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Fix: Rest Timer Notifications toggle no longer shows ON when the OS permission is denied** — the toggle in Settings now reflects the real system permission state; if the user previously denied notification permission at the OS level, the toggle correctly shows OFF rather than falsely indicating the feature is active. (BLD-2354)
 
 ## v0.26.48 — 2026-06-29
 <!-- versionCode: 118 -->
