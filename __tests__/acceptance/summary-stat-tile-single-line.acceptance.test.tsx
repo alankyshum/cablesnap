@@ -14,9 +14,13 @@
  *  - Volume label:   "Volume (kg)" (unit shown in caption instead)
  *  - accessibilityLabel on the card: "Total volume: 3,720 kg" (unchanged — a11y preserved)
  *
+ * BLD-2355 fixes the Volume caption still truncating even with adjustsFontSizeToFit:
+ *  - Volume label uses numberOfLines=2 (wraps to two lines) instead of numberOfLines=1
+ *  - adjustsFontSizeToFit is removed from the caption (no longer needed with wrapping)
+ *
  * Verifies:
  *  - Duration / Sets captions render exact static text with numberOfLines=1
- *  - Volume caption renders "Volume (kg)" or "Volume (lb)" with numberOfLines=1
+ *  - Volume caption renders "Volume (kg)" or "Volume (lb)" with numberOfLines=2 (BLD-2355)
  *  - Volume VALUE text is a bare number (no unit suffix)
  *  - Volume VALUE text has numberOfLines=1 and adjustsFontSizeToFit
  *  - The Volume Card accessibilityLabel still includes the unit (a11y not regressed)
@@ -158,7 +162,7 @@ describe('Summary stat tile captions — single-line constraint (BLD-1993)', () 
     expect(statCaption!.props.minimumFontScale).toBeFalsy()
   })
 
-  it('Volume caption renders "Volume (kg)" or "Volume (lb)" with numberOfLines=1 (BLD-2135)', async () => {
+  it('Volume caption renders "Volume (kg)" or "Volume (lb)" with numberOfLines=2 (BLD-2355)', async () => {
     const { session, exercises, sets } = createCompletedWorkoutFixture()
     mockDb.getSessionById.mockResolvedValue(session)
     mockDb.getSessionSets.mockResolvedValue(sets)
@@ -169,11 +173,11 @@ describe('Summary stat tile captions — single-line constraint (BLD-1993)', () 
     // BLD-2135: unit moved from value line to caption to prevent large-value truncation.
     // Caption is now "Volume (kg)" or "Volume (lb)" — NOT bare "Volume".
     const volumeCaption = await screen.findByText(/^Volume \((kg|lb)\)$/i)
-    expect(volumeCaption.props.numberOfLines).toBe(1)
-    // BLD-2197: "Volume (kg)" still truncated to "Volume ..." in the narrow 3-tile
-    // row, so the caption now shrinks to fit (mirrors the value Text). Must keep
-    // adjustsFontSizeToFit so it never ellipsizes.
-    expect(volumeCaption.props.adjustsFontSizeToFit).toBe(true)
+    // BLD-2355: caption wraps to two lines instead of truncating with ellipsis.
+    // numberOfLines=2 replaces the old numberOfLines=1 + adjustsFontSizeToFit approach.
+    expect(volumeCaption.props.numberOfLines).toBe(2)
+    // BLD-2355: adjustsFontSizeToFit is removed — wrapping is the correct fix.
+    expect(volumeCaption.props.adjustsFontSizeToFit).not.toBe(true)
   })
 
   it('Volume VALUE text is a bare number (no unit suffix) with adjustsFontSizeToFit (BLD-2135)', async () => {
@@ -194,7 +198,8 @@ describe('Summary stat tile captions — single-line constraint (BLD-1993)', () 
     // The value text node inside the card's heading is a bare number — no " kg"/" lb" suffix
     // The caption "Volume (kg)" carries the unit instead.
     const volumeCaption = await screen.findByText(/^Volume \((kg|lb)\)$/i)
-    expect(volumeCaption.props.numberOfLines).toBe(1)
+    // BLD-2355: caption now wraps to two lines instead of truncating
+    expect(volumeCaption.props.numberOfLines).toBe(2)
   })
 
   it('Sets tile accessibilityLabel still exposes full breakdown text (a11y not regressed)', async () => {
@@ -284,9 +289,9 @@ describe('Summary stat tile captions — single-line constraint (BLD-1993)', () 
     // The accessibilityLabel confirms the card is the right one.
     // Verify the caption carries the unit instead (BLD-2135)
     const volumeCaption = await screen.findByText(/^Volume \((kg|lb)\)$/i)
-    expect(volumeCaption.props.numberOfLines).toBe(1)
-    // BLD-2197: caption "Volume (kg)" shrinks to fit (was truncating to "Volume ..."),
-    // matching the value Text treatment.
-    expect(volumeCaption.props.adjustsFontSizeToFit).toBe(true)
+    // BLD-2355: caption wraps to two lines instead of ellipsizing
+    expect(volumeCaption.props.numberOfLines).toBe(2)
+    // BLD-2355: adjustsFontSizeToFit removed — wrapping is the correct fix.
+    expect(volumeCaption.props.adjustsFontSizeToFit).not.toBe(true)
   })
 })
