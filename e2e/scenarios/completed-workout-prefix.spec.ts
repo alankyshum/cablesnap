@@ -55,6 +55,33 @@ test.describe("@scenario bld-480-prefix", () => {
   });
 
   test("captures BLD-480 pre-fix MusclesWorkedCard reproducer", async ({ page }) => {
+    // BLD-2349 regression guard: fail if React DOM prop warnings fire.
+    // react-native-body-highlighter injects accessible={true} / accessibilityElementsHidden
+    // / importantForAccessibility onto every <Svg>/<Path>. Without the
+    // react-native-svg patch these leak onto the SVG DOM and appear as a red
+    // "Received `true` for a non-boolean attribute" error toast in the audit PNG.
+    const domPropErrors: string[] = [];
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        const text = msg.text();
+        if (
+          text.includes("does not recognize") ||
+          text.includes("non-boolean attribute") ||
+          text.includes("Invalid prop")
+        ) {
+          domPropErrors.push(text);
+        }
+      }
+    });
+    page.on("pageerror", (err) => {
+      if (
+        err.message.includes("does not recognize") ||
+        err.message.includes("non-boolean attribute")
+      ) {
+        domPropErrors.push(err.message);
+      }
+    });
+
     await page.addInitScript((scenario) => {
       const w = window as unknown as Record<string, unknown>;
       w.__SKIP_ONBOARDING__ = true;
@@ -80,6 +107,17 @@ test.describe("@scenario bld-480-prefix", () => {
       timeout: 10_000,
     });
     await page.waitForTimeout(500);
+
+    // BLD-2349: assert no React DOM prop warnings were emitted on this screen.
+    // If `accessible`, `accessibilityElementsHidden`, or `importantForAccessibility`
+    // leak from react-native-body-highlighter onto the SVG DOM, React emits a
+    // "Received `true` for a non-boolean attribute" warning that shows up as a
+    // persistent red error toast in the audit PNG. This guard catches that exact
+    // regression in the bld-480-prefix render path (identical to the audit pipeline).
+    expect(
+      domPropErrors,
+      "React DOM prop warnings found on bld-480-prefix fixture — RN-only a11y props may be leaking to SVG DOM elements (check react-native-svg patch, BLD-2349)",
+    ).toHaveLength(0);
 
     const viewport = "mobile";
     await captureWithCvd({

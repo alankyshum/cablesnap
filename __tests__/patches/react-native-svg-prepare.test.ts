@@ -110,3 +110,85 @@ describe('react-native-svg prepare() patch (BLD-1770)', () => {
     });
   });
 });
+
+/**
+ * BLD-2349: Regression test for RN-only accessibility prop stripping.
+ *
+ * react-native-body-highlighter's SvgMaleWrapper/SvgFemaleWrapper hardcodes
+ * `accessible={true}` (and `accessibilityLabel`) on every <Svg>/<Path> element.
+ * The render tree is: MusclesWorkedCard → MuscleMap → <Body> → <Svg>/<Path>.
+ *
+ * `accessible`, `accessibilityElementsHidden`, and `importantForAccessibility`
+ * are RN-only props with no SVG DOM equivalent. When they fall into `...rest`
+ * they reach `createDOMProps` and are emitted raw onto the SVG DOM element,
+ * causing React's "Received `true` for a non-boolean attribute `accessible`"
+ * warning — rendered as a red error toast in dev mode on the bld-480-prefix
+ * audit fixture.
+ *
+ * `accessibilityLabel` is intentionally NOT stripped here — react-native-web
+ * correctly maps it to `aria-label` (it is in createDOMProps's `_excluded`
+ * denylist) so stripping it would remove legitimate a11y labeling.
+ *
+ * Refs: BLD-2349, BLD-1670, BLD-1770.
+ */
+
+const RN_A11Y_PROPS = [
+  'accessible',
+  'accessibilityElementsHidden',
+  'importantForAccessibility',
+] as const;
+
+describe('react-native-svg prepare() patch (BLD-2349)', () => {
+  describe('RN-only accessibility props are stripped', () => {
+    it('does NOT include accessible / accessibilityElementsHidden / importantForAccessibility in the output', () => {
+      const stub = makeStub();
+      const result = prepare(stub as never, {
+        accessible: true,
+        accessibilityElementsHidden: false,
+        importantForAccessibility: 'yes',
+      } as never);
+      for (const prop of RN_A11Y_PROPS) {
+        expect(result).not.toHaveProperty(prop);
+      }
+    });
+
+    it('does NOT include accessible specifically (body-highlighter hardcodes accessible={true})', () => {
+      const stub = makeStub();
+      const onPress = () => (undefined as unknown as (x: unknown) => void)?.(null);
+      const result = prepare(stub as never, {
+        onPress,
+        accessible: true,
+        accessibilityLabel: 'body figure',
+      } as never);
+      expect(result).not.toHaveProperty('accessible');
+    });
+
+    it('preserves accessibilityLabel so react-native-web can map it to aria-label', () => {
+      const stub = makeStub();
+      const result = prepare(stub as never, {
+        accessibilityLabel: 'muscle group diagram',
+        accessible: true,
+      } as never);
+      // accessibilityLabel must NOT be stripped — it is handled by createDOMProps
+      // which maps it to aria-label. Stripping it would remove legitimate a11y.
+      expect(result).toHaveProperty('accessibilityLabel', 'muscle group diagram');
+    });
+
+    it('strips all three RN a11y props together (body-highlighter SvgWrapper pattern)', () => {
+      const stub = makeStub();
+      const onPress = () => (undefined as unknown as (x: unknown) => void)?.(null);
+      const result = prepare(stub as never, {
+        onPress,
+        accessible: true,
+        accessibilityLabel: 'human body diagram',
+        accessibilityElementsHidden: false,
+        importantForAccessibility: 'yes',
+      } as never);
+      for (const prop of RN_A11Y_PROPS) {
+        expect(result).not.toHaveProperty(prop);
+      }
+      // accessibilityLabel must survive
+      expect(result).toHaveProperty('accessibilityLabel', 'human body diagram');
+    });
+  });
+});
