@@ -120,7 +120,9 @@ describe("GroupCardHeader — previous-performance affordance (BLD-551 / BLD-850
     expect(UNSAFE_queryAllByProps({ name: "refresh" }).length).toBe(0);
   });
 
-  it("fires onPrefill on tap → confirm (no regression on BLD-449)", () => {
+  it("fires onPrefill on tap — direct invocation (BLD-2386: no confirm dialog on Last)", () => {
+    // BLD-2386 Item B: Alert.alert wrapper removed. onPrefill now fires synchronously
+    // on tap — the data-layer computePrefillSets is non-destructive.
     const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     const onPrefill = jest.fn();
     const { getByTestId } = render(
@@ -132,11 +134,9 @@ describe("GroupCardHeader — previous-performance affordance (BLD-551 / BLD-850
     );
 
     fireEvent.press(getByTestId("last-half"));
-    // BLD-850 gates the prefill behind a confirm dialog. Simulate the user
-    // pressing "Refill" — this is the BLD-449 functional contract.
-    const buttons = alertSpy.mock.calls[0][2] as Array<{ text: string; onPress?: () => void }>;
-    buttons.find((b) => b.text === "Refill")?.onPress?.();
+    // BLD-2386: direct tap fires onPrefill immediately, no confirm needed.
     expect(onPrefill).toHaveBeenCalledWith("ex-1");
+    expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 });

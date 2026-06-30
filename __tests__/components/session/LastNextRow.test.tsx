@@ -125,6 +125,7 @@ function pressAlertButton(spy: jest.SpyInstance, name: string): void {
   btn!.onPress?.();
 }
 
+// eslint-disable-next-line max-lines-per-function
 describe("LastNextRow (BLD-850)", () => {
   let alertSpy: jest.SpyInstance;
 
@@ -271,8 +272,10 @@ describe("LastNextRow (BLD-850)", () => {
     });
   });
 
-  describe("Last — refill confirm flow", () => {
-    it("opens the 'Refill from last session?' Alert on tap", () => {
+  describe("Last — refill (BLD-2386 Item B: no confirm dialog)", () => {
+    it("fires onPrefillLast synchronously on tap — no Alert.alert call", () => {
+      // BLD-2386: Alert.alert wrapper removed from Last half. onPrefillLast fires
+      // directly on tap — the data layer (computePrefillSets) is non-destructive.
       const onPrefillLast = jest.fn();
       const { getByTestId } = render(
         <LastNextRow
@@ -288,14 +291,12 @@ describe("LastNextRow (BLD-850)", () => {
         />,
       );
       fireEvent.press(getByTestId("last-half"));
-      expect(alertSpy).toHaveBeenCalledTimes(1);
-      const [title] = alertSpy.mock.calls[0];
-      expect(title).toBe("Refill from last session?");
-      // Without confirm, the prefill must not fire.
-      expect(onPrefillLast).not.toHaveBeenCalled();
+      // Must fire synchronously — no confirm dialog.
+      expect(onPrefillLast).toHaveBeenCalledTimes(1);
+      expect(alertSpy).not.toHaveBeenCalled();
     });
 
-    it("fires onPrefillLast when the user presses Refill", () => {
+    it("fires onPrefillLast on tap (direct invocation — replaces old 'Refill' button flow)", () => {
       const onPrefillLast = jest.fn();
       const { getByTestId } = render(
         <LastNextRow
@@ -311,11 +312,12 @@ describe("LastNextRow (BLD-850)", () => {
         />,
       );
       fireEvent.press(getByTestId("last-half"));
-      pressAlertButton(alertSpy, "Refill");
       expect(onPrefillLast).toHaveBeenCalledTimes(1);
     });
 
-    it("does NOT fire onPrefillLast when the user cancels", () => {
+    it("does NOT invoke Alert.alert for Last tap (no cancel path exists anymore)", () => {
+      // BLD-2386: the Cancel path is intentionally removed — the data layer is safe
+      // (non-destructive). No alert should be called on Last tap.
       const onPrefillLast = jest.fn();
       const { getByTestId } = render(
         <LastNextRow
@@ -331,8 +333,8 @@ describe("LastNextRow (BLD-850)", () => {
         />,
       );
       fireEvent.press(getByTestId("last-half"));
-      pressAlertButton(alertSpy, "Cancel");
-      expect(onPrefillLast).not.toHaveBeenCalled();
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(onPrefillLast).toHaveBeenCalledTimes(1);
     });
   });
 
