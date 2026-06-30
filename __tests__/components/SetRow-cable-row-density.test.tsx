@@ -189,16 +189,20 @@ describe("SetRow — setup photo thumbnail (BLD-1114)", () => {
 });
 
 describe("SetRow — pulley pin chip (BLD-1114)", () => {
+  // BLD-2386 Item D3: pulley-pin chip is only shown after an attachment or
+  // mount position is chosen. Tests that assert the chip is visible must pass
+  // a set with at least one of those fields populated.
+
   it("shows 'Pin 7' chip when pulleyPin=7", () => {
     const { getByText } = render(
-      <SetRow {...baseProps({ pulleyPin: 7, onOpenPulleyPinPicker: jest.fn() })} />
+      <SetRow {...baseProps({ set: makeSet({ attachment: "handle" }), pulleyPin: 7, onOpenPulleyPinPicker: jest.fn() })} />
     );
     expect(getByText("Pin 7")).toBeTruthy();
   });
 
   it("shows 'Pin —' placeholder when pulleyPin=null", () => {
     const { getByText } = render(
-      <SetRow {...baseProps({ pulleyPin: null, onOpenPulleyPinPicker: jest.fn() })} />
+      <SetRow {...baseProps({ set: makeSet({ attachment: "handle" }), pulleyPin: null, onOpenPulleyPinPicker: jest.fn() })} />
     );
     expect(getByText("Pin —")).toBeTruthy();
   });
@@ -206,7 +210,7 @@ describe("SetRow — pulley pin chip (BLD-1114)", () => {
   it("calls onOpenPulleyPinPicker with set id when chip is tapped", () => {
     const onOpenPulleyPinPicker = jest.fn();
     const { getByLabelText } = render(
-      <SetRow {...baseProps({ pulleyPin: 5, onOpenPulleyPinPicker })} />
+      <SetRow {...baseProps({ set: makeSet({ attachment: "handle" }), pulleyPin: 5, onOpenPulleyPinPicker })} />
     );
     fireEvent.press(getByLabelText("Pulley pin 5, tap to change"));
     expect(onOpenPulleyPinPicker).toHaveBeenCalledWith("s1");
