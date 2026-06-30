@@ -53,19 +53,96 @@ async function handleToken(request: Request, env: Env): Promise<Response> {
   });
 }
 
+const APP_PACKAGE = "com.persoack.cablesnap";
+
+// Escape a string for safe interpolation into an HTML attribute value.
+function htmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// Escape a string for safe interpolation inside a <script> string literal.
+function jsString(value: string): string {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 function handleCallback(request: Request): Response {
   // CONTRACT (manual verification only — no test framework configured for this worker):
   //   GET /callback?code=abc&scope=activity:write&state=xyz
-  //     → 302, Location: cablesnap://strava-callback?code=abc&scope=activity%3Awrite&state=xyz
+  //     → 200 text/html that bounces the browser to
+  //       cablesnap://strava-callback?code=abc&scope=activity%3Awrite&state=xyz
   //   GET /callback?error=access_denied&state=xyz
-  //     → 302, Location: cablesnap://strava-callback?error=access_denied&state=xyz
+  //     → 200 text/html bouncing to cablesnap://strava-callback?error=access_denied&state=xyz
   //   POST /callback → 405 (caught by the method-not-allowed guard above)
+  //
+  // Why an HTML interstitial instead of a bare 302 Location: cablesnap://… —
+  // Chrome / Android Custom Tabs refuse to follow a *server redirect* whose
+  // target is a non-http(s) custom scheme (shows "not found" /
+  // ERR_UNKNOWN_URL_SCHEME). A client-side navigation from a loaded page (plus
+  // a user-tappable fallback link) reliably launches the app, and is still
+  // intercepted by the app's WebBrowser.openAuthSessionAsync watcher.
   const incomingUrl = new URL(request.url);
   const target = new URL("cablesnap://strava-callback");
   incomingUrl.searchParams.forEach((value, key) => {
     target.searchParams.set(key, value);
   });
-  return Response.redirect(target.toString(), 302);
+  const deepLink = target.toString();
+
+  // Android intent:// fallback — explicit package guarantees the OS resolves it
+  // to CableSnap even when the custom scheme alone is ambiguous.
+  const query = target.search; // includes leading "?"
+  const intentLink =
+    `intent://strava-callback${query}#Intent;scheme=cablesnap;package=${APP_PACKAGE};end`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Returning to CableSnap…</title>
+<style>
+  body { font-family: system-ui, -apple-system, Roboto, sans-serif; background: #fafafa;
+         color: #1a1a1a; margin: 0; display: flex; min-height: 100vh; align-items: center;
+         justify-content: center; text-align: center; }
+  .card { padding: 2rem 1.5rem; max-width: 22rem; }
+  h1 { font-size: 1.25rem; margin: 0 0 .5rem; }
+  p { color: #555; margin: .25rem 0 1.5rem; }
+  a.btn { display: inline-block; background: #fc4c02; color: #fff; text-decoration: none;
+          font-weight: 600; padding: .75rem 1.5rem; border-radius: .5rem; }
+  a.alt { display: block; margin-top: 1rem; color: #888; font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Connecting to CableSnap…</h1>
+  <p>If the app doesn't open automatically, tap the button below.</p>
+  <a class="btn" id="open" href="${htmlAttr(deepLink)}">Open CableSnap</a>
+  <a class="alt" id="openIntent" href="${htmlAttr(intentLink)}">Still stuck? Tap here</a>
+</div>
+<script>
+  (function () {
+    var deepLink = ${jsString(deepLink)};
+    var intentLink = ${jsString(intentLink)};
+    // Android: prefer the explicit-package intent URL.
+    var isAndroid = /Android/i.test(navigator.userAgent);
+    try { window.location.replace(isAndroid ? intentLink : deepLink); }
+    catch (e) { try { window.location.href = deepLink; } catch (e2) {} }
+  })();
+</script>
+</body>
+</html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS },
+  });
 }
 
 async function handleRefresh(request: Request, env: Env): Promise<Response> {
