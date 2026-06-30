@@ -140,7 +140,7 @@ import { FLOATING_TAB_BAR_HEIGHT } from '../../components/FloatingTabBar'
 import { spacing } from '../../constants/design-tokens'
 
 const { setEnabled: mockSetAudioEnabled } = require('../../lib/audio')
-const { requestPermission, scheduleReminders, cancelAll } = require('../../lib/notifications')
+const { requestPermission, scheduleReminders, cancelAll, getPermissionStatus } = require('../../lib/notifications')
 
 describe('Settings Screen Acceptance', () => {
   beforeEach(() => {
@@ -367,6 +367,46 @@ describe('Settings Screen Acceptance', () => {
       expect(requestPermission).toHaveBeenCalled()
     })
     expect(await findByText(/Notifications blocked/)).toBeTruthy()
+  })
+
+  // ── Rest Timer Notifications toggle (BLD-2354) ──────────────────────────────────
+
+  it('Rest Timer Notifications toggle renders OFF when permission is denied (BLD-2354)', async () => {
+    // Simulate: restNotifications preference is saved as "true" but perm is denied
+    getPermissionStatus.mockResolvedValue('denied')
+
+    mockGetAppSetting.mockImplementation((key: string) => {
+      if (key === 'rest_notification_enabled') return Promise.resolve('true')
+      if (key === 'reminders_enabled') return Promise.resolve('false')
+      if (key === 'timer_sound_enabled') return Promise.resolve('true')
+      return Promise.resolve(null)
+    })
+
+    const { findByLabelText } = renderScreen(<Settings />)
+    const toggle = await findByLabelText('Rest Timer Notifications')
+
+    // Toggle value must be false when permission is denied — even if preference is saved as true
+    await waitFor(() => {
+      expect(toggle.props.value).toBe(false)
+    })
+  })
+
+  it('Rest Timer Notifications toggle renders ON when permission is granted and preference is true (BLD-2354)', async () => {
+    getPermissionStatus.mockResolvedValue('granted')
+
+    mockGetAppSetting.mockImplementation((key: string) => {
+      if (key === 'rest_notification_enabled') return Promise.resolve('true')
+      if (key === 'reminders_enabled') return Promise.resolve('false')
+      if (key === 'timer_sound_enabled') return Promise.resolve('true')
+      return Promise.resolve(null)
+    })
+
+    const { findByLabelText } = renderScreen(<Settings />)
+    const toggle = await findByLabelText('Rest Timer Notifications')
+
+    await waitFor(() => {
+      expect(toggle.props.value).toBe(true)
+    })
   })
 
   // ── Export/Import & CSV ──────────────────────────────────

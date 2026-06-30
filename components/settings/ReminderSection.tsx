@@ -223,7 +223,7 @@ export default function ReminderSection({
           </View>
         </Pressable>
         <Switch
-          value={restNotifications}
+          value={restNotifications && !permDenied}
           onValueChange={async (val) => {
             if (val) {
               try {
