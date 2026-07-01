@@ -41,6 +41,10 @@ jest.mock('../../lib/db', () => ({
   updateExerciseNote: jest.fn().mockResolvedValue(undefined),
   getExerciseBackfillCandidate: jest.fn().mockResolvedValue(null),
   dismissExerciseBackfill: jest.fn().mockResolvedValue(undefined),
+  // BLD-2561: preferred substitute fast-path
+  getPreferredSubstitutesBatch: jest.fn().mockResolvedValue({}),
+  getPreferredSubstitute: jest.fn().mockResolvedValue(null),
+  setPreferredSubstitute: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/programs', () => ({

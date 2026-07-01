@@ -248,6 +248,10 @@ jest.mock('../../lib/db', () => ({
   getActiveGymCount: jest.fn().mockResolvedValue(0),
   getGymProfiles: jest.fn().mockResolvedValue([]),
   getSessionsByGym: jest.fn().mockResolvedValue([]),
+  // BLD-2561: preferred substitute fast-path
+  getPreferredSubstitutesBatch: jest.fn().mockResolvedValue({}),
+  getPreferredSubstitute: jest.fn().mockResolvedValue(null),
+  setPreferredSubstitute: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('../../lib/db/pr-dashboard', () => ({

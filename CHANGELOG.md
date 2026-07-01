@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Quick exercise substitution — preferred swaps for occupied stations** — you can now save a "go-to" substitute for any exercise. When your usual station is taken, a one-tap chip on the session card swaps to your saved alternative instantly — no sheet, no confirmation dialog. Set a preference from the substitution sheet at any time via the "Set as my go-to for {exercise}" toggle. After a swap, an Undo affordance restores the original exercise. (BLD-2561)
 
 ## v0.26.52 — 2026-07-01
 <!-- versionCode: 122 -->
