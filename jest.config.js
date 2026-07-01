@@ -50,6 +50,7 @@ process.env.NODE_ENV = 'test';
 // only the default local/agent `jest` run trades ~120 s for determinism.
 const os = require('os');
 const fs = require('fs');
+const path = require('path');
 function cgroupMemLimitBytes() {
   // cgroup v2 (this container): "max" means unlimited.
   try {
@@ -78,6 +79,12 @@ function memoryAwareMaxWorkers() {
   return Math.max(1, Math.min(cpuMax, memMax));
 }
 
+function escapeRegex(value) {
+  return value.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
+}
+
+const agentWorktreesPattern = `${escapeRegex(path.join(__dirname, '.paperclip', 'worktrees'))}/`;
+
 module.exports = {
   preset: 'jest-expo',
   testTimeout: 10000,
@@ -98,7 +105,7 @@ module.exports = {
   },
   // BLD-2161: Exclude paperclip agent worktrees so jest does not RUN test
   // files from isolated run-specific git worktrees.
-  testPathIgnorePatterns: ['/node_modules/', '__tests__/helpers/', '__tests__/fixtures/', '/e2e/', '/.paperclip/worktrees/'],
+  testPathIgnorePatterns: ['/node_modules/', '__tests__/helpers/', '__tests__/fixtures/', '/e2e/', agentWorktreesPattern],
   // BLD-2482 (primary flake): testPathIgnorePatterns only filters which test
   // FILES execute — it does NOT stop jest-haste-map from crawling those dirs to
   // build the module graph and register manual mocks. A sibling agent worktree
@@ -116,8 +123,8 @@ module.exports = {
   // __mocks__ are never registered and cannot shadow or dangle. modulePathIgnore-
   // Patterns is the jest-29 knob that gates haste-map registration (not just test
   // execution); watchPathIgnorePatterns keeps watch-mode from re-crawling them.
-  modulePathIgnorePatterns: ['/.paperclip/worktrees/'],
-  watchPathIgnorePatterns: ['/.paperclip/worktrees/'],
+  modulePathIgnorePatterns: [agentWorktreesPattern],
+  watchPathIgnorePatterns: [agentWorktreesPattern],
   globalSetup: './jest.global-setup.js',
   setupFiles: ['./jest.setup.js'],
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect'],
