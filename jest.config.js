@@ -96,12 +96,28 @@ module.exports = {
   moduleNameMapper: {
     'react-native-reanimated': '<rootDir>/__mocks__/react-native-reanimated.js',
   },
-  // BLD-2161: Exclude paperclip agent worktrees so jest does not load test
-  // files from isolated run-specific git worktrees. Without this, a live
-  // worktree (e.g. .paperclip/worktrees/run/-issue-run/) causes duplicate
-  // manual-mock warnings and runs stale test variants against the main
-  // project's source, producing false failures that redden the gate.
+  // BLD-2161: Exclude paperclip agent worktrees so jest does not RUN test
+  // files from isolated run-specific git worktrees.
   testPathIgnorePatterns: ['/node_modules/', '__tests__/helpers/', '__tests__/fixtures/', '/e2e/', '/.paperclip/worktrees/'],
+  // BLD-2482 (primary flake): testPathIgnorePatterns only filters which test
+  // FILES execute — it does NOT stop jest-haste-map from crawling those dirs to
+  // build the module graph and register manual mocks. A sibling agent worktree
+  // under .paperclip/worktrees/ (e.g. .../run/-issue-run/__mocks__/) therefore
+  // still gets scanned: haste emits `duplicate manual mock found: <pkg>` and may
+  // pick the WORKTREE copy as canonical (shadowing the real <rootDir>/__mocks__).
+  // When another agent tears that worktree down MID-RUN (they churn constantly),
+  // the chosen mock file vanishes and every suite that transitively imports it
+  // dies with `Test suite failed to run: ENOENT ... /.paperclip/worktrees/.../
+  // __mocks__/<pkg>`. That is the non-deterministic "N suites failed, different
+  // set each run" symptom — reproduced here on clean main with a planted worktree
+  // mock (254 suites red from a single deleted __mocks__/@sentry/react-native.js).
+  //
+  // Fix: exclude the worktrees from the MODULE/haste registry entirely, so their
+  // __mocks__ are never registered and cannot shadow or dangle. modulePathIgnore-
+  // Patterns is the jest-29 knob that gates haste-map registration (not just test
+  // execution); watchPathIgnorePatterns keeps watch-mode from re-crawling them.
+  modulePathIgnorePatterns: ['/.paperclip/worktrees/'],
+  watchPathIgnorePatterns: ['/.paperclip/worktrees/'],
   globalSetup: './jest.global-setup.js',
   setupFiles: ['./jest.setup.js'],
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect'],
