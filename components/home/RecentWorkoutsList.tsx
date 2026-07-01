@@ -4,7 +4,7 @@ import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
 import { rpeColor, rpeText } from "@/lib/rpe";
 import { formatDuration, formatDateShort } from "@/lib/format";
-import { flowCardStyle } from "@/components/ui/FlowContainer";
+import Masonry from "@/components/ui/Masonry";
 import { Button } from "@/components/ui/button";
 import type { WorkoutSession } from "@/lib/types";
 import type { ThemeColors } from "@/hooks/useThemeColors";
@@ -32,7 +32,7 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
           <Text style={{ color: colors.onSurfaceVariant }}>No workouts yet. Start one above!</Text>
         </View>
       ) : (
-        <View style={styles.flowList}>
+        <Masonry gap={12}>
           {sessions.map((item, index) => {
             const rpe = avgRPEs[item.id];
             const rpeStr = rpe != null ? ` · RPE ${Math.round(rpe * 10) / 10}` : "";
@@ -59,7 +59,7 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
               </Animated.View>
             );
           })}
-        </View>
+        </Masonry>
       )}
     </View>
   );
@@ -68,8 +68,7 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
 const styles = StyleSheet.create({
   section: { marginBottom: 20 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  flowList: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  animatedCard: { ...flowCardStyle, alignSelf: "flex-start" },
+  animatedCard: { alignSelf: "stretch" },
   flowCard: { marginBottom: 8 },
   empty: { alignItems: "center", paddingVertical: 16 },
   recentRow: { flexDirection: "row", alignItems: "center" },

@@ -9,6 +9,7 @@ import type { Program } from "../../lib/types";
 import { FlowCard, difficultyBadge, type MetaBadge, type FlowCardMenuItem } from "../FlowCard";
 import type { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
+import Masonry from "@/components/ui/Masonry";
 
 type Props = {
   colors: ReturnType<typeof useThemeColors>;
@@ -116,7 +117,7 @@ export function ProgramsList({ colors, programs, dayCounts, onPress, onDelete, o
           )}
         </View>
       ) : (
-        <View style={styles.flowList}>
+        <Masonry gap={12}>
           {filtered.map((item) => {
             const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
             if (item.is_active) badges.push({ label: "ACTIVE", type: "active" });
@@ -144,14 +145,13 @@ export function ProgramsList({ colors, programs, dayCounts, onPress, onDelete, o
                 menuItems={menuItems} />
             );
           })}
-        </View>
+        </Masonry>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flowList: { flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "flex-start" },
   section: { marginBottom: 20 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   empty: { alignItems: "center", paddingVertical: 16 },

@@ -95,10 +95,12 @@ export default function Workouts() {
     router.push(`/session/${s.id}?templateId=${todaySchedule.template_id}`);
   }, [todaySchedule, router]);
 
-  // On wide screens the info tiles (summary, GTG, recovery heatmap, templates/programs,
-  // recent workouts) flow into 2-3 Masonry columns. Quick Start and the page header
-  // (stats, banners, adherence bar) always stay full-width.
-  const masonryTiles = (
+  // On wide screens the small info tiles (weekly summary, GTG, recovery heatmap)
+  // flow into 2-3 Masonry columns. The Templates/Programs and Recent Workouts
+  // lists render full-width below so their OWN internal Masonry grids can fan
+  // cards across the whole screen. Quick Start and the page header (stats,
+  // banners, adherence bar) always stay full-width.
+  const infoTiles = (
     <>
       <WeeklySummaryCard
         colors={colors}
@@ -117,6 +119,11 @@ export default function Workouts() {
         />
       )}
       <RecoveryHeatmap recoveryStatus={data?.recoveryStatus ?? []} colors={colors} />
+    </>
+  );
+
+  const mainLists = (
+    <>
       <View>
         <SegmentedControl
           value={segment}
@@ -191,14 +198,18 @@ export default function Workouts() {
           </Button>
         </View>
 
-        {/* Info tiles: Masonry on wide screens, linear stack on compact */}
+        {/* Small info tiles: Masonry on wide screens, linear stack on compact */}
         {layout.atLeastMedium ? (
           <Masonry gap={16} testID="home-masonry">
-            {masonryTiles}
+            {infoTiles}
           </Masonry>
         ) : (
-          masonryTiles
+          infoTiles
         )}
+        {/* Templates/Programs + Recent Workouts: always full-width so their own
+            internal Masonry grids flow across the entire screen (2 cols on
+            tablet / 3 on expanded) instead of being trapped in one outer column. */}
+        {mainLists}
       </ScrollView>
 
       {/* BLD-1089: Quick Add FAB — AC1 */}
