@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.50",
+    "date": "2026-06-30",
+    "versionCode": 120,
+    "body": "- **Improvement: Session set-logging is now faster with less visual noise** — the persistent \"+ Add pinned note\" empty-state prompt no longer appears on every exercise card; the \"Last: …\" confirmation dialog is gone (tapping \"Last\" now prefills the weight immediately without an extra tap); icon buttons got a slightly larger tap target; and the pulley-pin chip is now hidden until you have chosen a cable attachment/mount, so unset cable rows stay cleaner. (BLD-2386)\n- **Fix: Removed a stray red error toast that could appear on body-diagram screens** — the muscle/body highlighter passed React Native accessibility props through to web SVG DOM nodes, producing a \"Received `true` for a non-boolean attribute `accessible`\" warning that surfaced as a red dev toast. Those props are now stripped before reaching the DOM. (BLD-2356)\n- **Fix: workout sets now scroll reliably** — on the active workout screen, starting a drag on a set row sometimes failed to scroll the list (most often right after restarting the app), so lower sets were unreachable. The set list now uses a gesture-handler-aware scroll surface, so a vertical drag that begins on a row scrolls the list while horizontal swipes still trigger the row complete/delete actions."
+  },
+  {
     "version": "0.26.49",
     "date": "2026-06-30",
     "versionCode": 119,
