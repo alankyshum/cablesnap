@@ -23,7 +23,6 @@ marker) at release time.
 ## Unreleased
 
 - **Fix: the "Select clips" button in the Form clips header is now reliably tappable on phones** — the header toggle had a 44dp minimum height but no minimum width, so on narrow mobile screens the short "Select" label rendered only ~16px wide, well under the 44dp accessibility touch-target minimum. The button now enforces a 44dp minimum width, giving it a full-size, easy-to-hit tap area regardless of label length. (BLD-2449)
-- **Fix: Sentry no longer captures localhost/CI error events** — a `beforeSend` filter now drops any event whose URL tag resolves to `localhost`, `127.0.0.1`, or `0.0.0.0`; real device errors are unaffected. (BLD-2446)
 
 ## v0.26.51 — 2026-07-01
 <!-- versionCode: 121 -->
