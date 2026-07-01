@@ -144,3 +144,78 @@ export async function handleImport({ toast, setLoading, router }: Deps) {
   if (!picked) return;
   router.push({ pathname: '/settings/import-backup', params: { backupJson: picked.raw } });
 }
+
+// ---- E2E deterministic CSV import fixture (BLD-2463) ----
+//
+// Mirrors the BLD-1769 `readE2EImportFixture` seam pattern for the JSON backup
+// flow. The static `expo export -p web` bundle used for Playwright cannot drive
+// the OS file picker (`DocumentPicker.getDocumentAsync`), so the production
+// "Choose CSV File…" → router.push("/settings/import-workouts") flow cannot be
+// exercised headless without a fixture path.
+//
+// When Playwright (`navigator.webdriver === true`) has injected a CSV string
+// onto `window.__E2E_IMPORT_CSV_FIXTURE__`, `pickImportWorkoutsCsv` returns the
+// fixture file URI INSTEAD of opening the picker. The webdriver guard means a
+// console-injected flag in a real user's browser can NEVER bypass their picker —
+// the check is double-hardened (SSR guard + webdriver guard).
+function readE2ECsvImportFixture(): string | null {
+  if (typeof window === 'undefined') return null;
+  const nav =
+    typeof navigator !== 'undefined'
+      ? (navigator as Navigator & { webdriver?: boolean })
+      : null;
+  if (!nav?.webdriver) return null;
+  const raw = (window as unknown as { __E2E_IMPORT_CSV_FIXTURE__?: unknown })
+    .__E2E_IMPORT_CSV_FIXTURE__;
+  if (typeof raw !== 'string') return null;
+  return raw;
+}
+
+/**
+ * Prompt the user to pick a CSV file for workout history import.
+ * Returns the local file URI on success, or null if canceled/failed.
+ *
+ * E2E seam (BLD-2463): under Playwright (`navigator.webdriver === true`), a
+ * pre-injected CSV string on `window.__E2E_IMPORT_CSV_FIXTURE__` is written
+ * to a temp cache file and its URI returned, bypassing the OS picker.
+ */
+export async function pickImportWorkoutsCsv({
+  toast,
+}: Pick<Deps, 'toast'>): Promise<string | null> {
+  // E2E seam: write fixture CSV to a temp file and return its URI
+  const fixtureCsv = readE2ECsvImportFixture();
+  if (fixtureCsv !== null) {
+    try {
+      const { File, Paths } = await import('expo-file-system');
+      const tempFile = new File(Paths.cache, '__e2e_import_fixture__.csv');
+      await tempFile.write(fixtureCsv);
+      return tempFile.uri;
+    } catch {
+      // Fixture write failed — fall through to real picker
+    }
+  }
+
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      // Accept CSV MIME types; some platforms may not recognize text/csv alone
+      type: ['text/csv', 'text/comma-separated-values', '*/*'],
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.length) return null;
+    const asset = result.assets[0];
+
+    // Validate extension/size
+    if (asset.name && !asset.name.toLowerCase().endsWith('.csv')) {
+      Alert.alert('Invalid File', 'Please select a .csv file exported from your workout app.');
+      return null;
+    }
+    if (asset.size && asset.size > 50 * 1024 * 1024) {
+      Alert.alert('File Too Large', 'This CSV file is too large to process safely.');
+      return null;
+    }
+    return asset.uri;
+  } catch {
+    toast.error('Could not open file picker');
+    return null;
+  }
+}

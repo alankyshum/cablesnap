@@ -24,6 +24,7 @@ import CSVExportCard from '../../components/settings/CSVExportCard';
 import AppearanceCard from '../../components/settings/AppearanceCard';
 import UnitsCard from '../../components/settings/UnitsCard';
 import DataManagementCard from '../../components/settings/DataManagementCard';
+import ImportWorkoutsCard from '../../components/settings/ImportWorkoutsCard';
 import AutoBackupSection from '../../components/settings/AutoBackupSection';
 import { FormClipsStorageRow } from '../../components/settings/FormClipsStorageRow';
 import { SettingsLinkRow } from '../../components/settings/SettingsLinkRow';
@@ -35,7 +36,7 @@ import { useThemeColors } from '@/hooks/useThemeColors';
 import { spacing } from '@/constants/design-tokens';
 import { useSettingsData } from '@/hooks/useSettingsData';
 import BackupCategorySheet from '@/components/settings/BackupCategorySheet';
-import { handleExport, pickImportBackup } from './_settings-handlers';
+import { handleExport, pickImportBackup, pickImportWorkoutsCsv } from './_settings-handlers';
 import {
   BACKUP_CATEGORY_ORDER,
   deleteAppSetting,
@@ -141,6 +142,12 @@ export default function Settings() {
     setPendingImportJson(null);
     setImportCategories([]);
     setImportCategoryCounts({});
+  };
+
+  const openImportWorkoutsSheet = async () => {
+    const filePath = await pickImportWorkoutsCsv({ toast });
+    if (!filePath) return;
+    router.push({ pathname: '/settings/import-workouts', params: { filePath } });
   };
 
   const confirmImportCategories = (selectedCategories: BackupCategoryName[]) => {
@@ -308,6 +315,12 @@ export default function Settings() {
           />
           <Separator style={styles.tileDivider} />
           <CSVExportCard colors={colors} bareContent />
+          <Separator style={styles.tileDivider} />
+          <ImportWorkoutsCard
+            colors={colors}
+            onPick={openImportWorkoutsSheet}
+            bareContent
+          />
         </SettingsTile>
 
         {/* ── 8. Feedback ── */}
