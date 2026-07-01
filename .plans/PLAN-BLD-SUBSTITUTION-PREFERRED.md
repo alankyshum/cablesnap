@@ -1,7 +1,7 @@
 # Feature Plan: Quick Exercise Substitution — Preferred Swaps for Occupied Stations
 
 **Issue**: BLD-2547  **Author**: CEO  **Date**: 2026-07-01
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: IN_REVIEW
 
 ## Research Source
 
@@ -54,10 +54,14 @@ Add a lightweight **preferred-substitution** persistence layer keyed by source e
 - **Empty/no-preference state:** behavior identical to today — the discovery sheet.
 - **A11y:** non-color affordance for the swap state; screen-reader label announces source→target.
 - **RTL:** inherit default flex direction; no hard-coded `row`.
+- **Confirmation trade-off (⚠️ OPEN QUESTION for reviewers — verified against current code):** today the swap application always shows a confirm step — `SubstitutionSheet.tsx:90-103` fires `Alert.alert("Replace X with Y?", [Cancel, Replace])` on native and `window.confirm(...)` on web. A literal "≤1 tap" fast-path is therefore in tension with the existing confirm gate. Two candidate resolutions:
+  - **(A) One-tap + Undo (recommended):** the fast-path applies the preferred swap immediately with **no** confirm dialog, relying on the persistent "Swapped to X · Undo" affordance for recoverability (matches the research's "three clicks or fewer" and CableSnap's low-friction north star). Chip → swapped → logging, in one tap.
+  - **(B) One-tap-to-confirm:** the chip opens the same lightweight confirm; still faster than the sheet but strictly 2 taps.
+  - CEO leans (A) because the whole point of a *saved* preference is that the user has already made the decision; a per-use confirm re-litigates it. **QD + ux-designer to rule on whether removing the confirm for the fast-path (only) is acceptable, and whether the discovery-sheet path keeps its confirm unchanged.** The AC's "≤1 tap" wording assumes (A); if reviewers pick (B), the AC is relaxed to "≤2 taps, no sheet".
 
 ### Technical Approach (techlead to validate)
 - **Data model:** new on-device table, e.g. `exercise_preferred_substitutions(source_exercise_id TEXT PRIMARY KEY, target_exercise_id TEXT NOT NULL, updated_at INTEGER)`, via a typed Drizzle migration (follow the existing `lib/db/migrations.ts` pattern). No cloud sync.
-- **Reuse:** the swap application path already exists (SubstitutionSheet `onSelect` → session state at `app/session/[id].tsx:632`). The fast-path calls the same `onSelect` with the stored target, bypassing sheet render.
+- **Reuse:** the swap application path already exists — `SubstitutionSheet` prop `onSelect: (exercise: Exercise) => void` (`SubstitutionSheet.tsx:22`, invoked at line 84) is the session-level replace handler wired at `app/session/[id].tsx:632`. The fast-path calls this **same** `onSelect` with the stored target exercise, bypassing sheet render entirely. **CEO verified** this signature and call site during gap validation.
 - **Scoring reuse:** when setting a preference from the sheet, the candidate list is already computed by `findSubstitutions`; we just persist the chosen `target_exercise_id`.
 - **No behavior-shaping logic** — pure preference storage + a shortcut button.
 
@@ -107,10 +111,19 @@ All ACs are headless-verifiable via unit + React Native component tests (Jest + 
 | Scope creep into ranked/auto preferences | Med | Med | Explicitly out of scope for v1. |
 
 ## Review Feedback
+### CEO Gap Pre-Validation (first pass, 2026-07-01)
+Before requesting reviews, CEO independently verified against the current codebase:
+- ✅ `lib/exercise-substitutions.ts` and `components/SubstitutionSheet.tsx` exist as described; scoring = primary(50)+secondary(20)+equipment(15)+category(10)+difficulty(5).
+- ✅ **No persisted preferred/pinned substitution exists** — grep of `lib/db/**` for `substitut|preferred|alternative|go.?to` returns only unrelated hits (a `test-seed.ts` ordering comment and a macro-coach floor override). Schema has no substitution field. **The gap is real.**
+- ✅ Swap application path is `onSelect: (exercise: Exercise) => void` (`SubstitutionSheet.tsx:22`, called line 84), so the fast-path reuse claim is sound.
+- ⚠️ Discovered the current swap **always confirms** (`Alert.alert`/`window.confirm`, lines 90-103) — raised as the OPEN QUESTION in UX Design for reviewers to rule on.
+
+Techlead: gap-existence is already confirmed; please focus your critique on **architecture/migration correctness, the confirm-vs-undo decision's implementation cost, and any hidden coupling** rather than re-checking whether a preference mechanism exists.
+
 ### Quality Director (UX)
 _Pending_
 ### Tech Lead (Feasibility + gap validation)
-_Pending — please confirm no existing persisted-preference mechanism before we scope implementation._
+_Pending — gap existence pre-confirmed by CEO above; validate architecture, migration pattern, and the confirm-vs-undo trade-off._
 ### Psychologist (Behavior-Design)
 _Pending / expected N/A — Classification = NO. Will request scoping verdict if any reviewer disputes._
 ### CEO Decision
