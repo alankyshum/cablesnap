@@ -58,6 +58,21 @@ Wire the existing import engine to a new Settings entry point that runs: **pick 
 
 ### Technical Approach
 - **No new engine code.** Reuse `parseCsvExport` (`lib/csv-import.ts`), `importCsvSessions` (`lib/db/csv-import.ts`), and the exercise matcher (`lib/exercise-matcher.ts`) already invoked by the engine. If the matcher must be run at the UI boundary to build the `Map<string, MatchResult>` for preview, add a thin `hooks/useCsvImport.ts` that orchestrates parse → match → preview state → import (no DB logic in the hook; it calls existing lib fns).
+- **Exact engine call sequence** (implementer contract — matcher output keys the map identically to what `importCsvSessions` expects, so pass it straight through):
+```ts
+const raw = await new File(asset.uri).text();
+const parsed = parseCsvExport(raw);                 // CsvParseResult | CsvParseError
+if ('type' in parsed) { /* typed error screen */ }
+// unit: convert EXACTLY ONCE. convertWeights no-ops on 'kg'.
+let sessions = parsed.sessions;
+if (parsed.detectedUnit === null)      sessions = convertWeights(sessions, chosenUnit); // Strong / ambiguous FitNotes
+else if (parsed.detectedUnit === 'lbs') sessions = convertWeights(sessions, 'lbs');      // FitNotes(lbs)
+// (Hevy / CableSnap → detectedUnit==='kg' → no conversion, no unit step)
+const matches = matchAllExercises(parsed.uniqueExercises, await getAllExercises()); // Map<string,MatchResult>
+const result  = await importCsvSessions(sessions, matches, onProgress); // {batchId,sessionsInserted,setsInserted,exercisesCreated,skippedSets}
+```
+  **Double-conversion guard (call out in review):** convert weights exactly once, before import; never re-convert in the preview stat pass. Add a test asserting kg-format import weights are unchanged and lbs-format are ×0.4536.
+- **Route registration:** add `{ name: "settings/import-workouts", options: { headerShown: true, title: "Import Workout History" } }` to `constants/screen-config.ts` — **without this line the sub-screen header does not render** (known repo gotcha; assert header renders in the acceptance test).
 - **New files (UI only):**
   - `components/settings/ImportWorkoutsCard.tsx` — entry card (follows `DataManagementCard.tsx` props pattern: `{ colors, onPick, bareContent }`).
   - `app/settings/import-workouts.tsx` — preview + import screen (mirror `app/settings/import-backup.tsx`).
@@ -95,6 +110,17 @@ Wire the existing import engine to a new Settings entry point that runs: **pick 
 - [ ] Given a 5,000-row synthetic CSV When imported Then the preview list scrolls without a visible freeze and the import completes with progress feedback.
 - [ ] The summary copy contains NO motivational/identity framing (neutral counts only).
 - [ ] PR passes all tests with no regressions; no new lint warnings; app boots (typecheck + install verified before in_review).
+
+### Headless Verification Path (MANDATORY — device/manual steps proxied)
+The production entry point uses `DocumentPicker.getDocumentAsync`, which **cannot be driven headless/in CI** (no OS file picker). This is exactly the constraint the JSON import solved in **BLD-1769** via a `window.__E2E_IMPORT_BACKUP_FIXTURE__` webdriver-guarded seam (see `app/(tabs)/_settings-handlers.ts:34-50` `readE2EImportFixture`). The implementer MUST replicate that seam so QD can verify the flow headlessly and so no acceptance criterion depends on a human tapping the native picker. Pre-authorized at scope time:
+
+| Device/Manual AC | Risk it covers | Headless proxy that satisfies the same risk |
+|------------------|----------------|---------------------------------------------|
+| "User picks a CSV via OS file picker → it parses → preview → import" | The `DocumentPicker → File(uri).text() → parseCsvExport → matchAllExercises → importCsvSessions` wiring is correct end-to-end | **(a)** Unit-test the picker handler (`pickImportWorkoutsCsv`) with `expo-document-picker` + `expo-file-system` mocked (canned asset uri whose `File(uri).text()` yields a fixture CSV) — assert picked bytes reach `parseCsvExport`. **(b)** Add a webdriver-guarded E2E seam `window.__E2E_IMPORT_CSV_FIXTURE__` (mirror `readE2EImportFixture`, `navigator.webdriver`-guarded so a real user's console flag can NEVER bypass their picker) so the Playwright web bundle can drive the REAL `router.push('/settings/import-workouts')` → parse → preview → import path without the native picker. |
+| "Import writes to the DB; large import stays responsive" | Transactional insert integrity + no JS-thread block on big files | Component/integration test on the real (test) SQLite DB (`NODE_OPTIONS=--experimental-sqlite`): render the screen via the fixture seam, drive to Import, assert `workout_sessions`/`workout_sets` row deltas; and a Jest perf assertion parsing + importing a generated ~5k-row fixture inside a bounded `waitFor`, asserting the progress callback advances monotonically and final counts match. (Proxy for "feels responsive"; not a device FPS measurement — acceptable, no device farm.) |
+| "Export instructions help a real user produce the file from Strong/Hevy/FitNotes" | Copy accuracy / user can actually generate the CSV | **No headless proxy possible** (depends on 3rd-party apps + human). **Pre-authorized waiver:** instruction copy is static; QD reviews it for accuracy against the known export UIs; a user's real-world export is out of our control. QD signs off on copy; no device test required. |
+
+Test files to add (patterned on existing): `__tests__/acceptance/import-workouts.acceptance.test.tsx` (screen flow with mocks — model on `__tests__/acceptance/settings.test.tsx`, which already mocks DocumentPicker/File/lib-db), plus unit coverage for the picker handler. Reuse `__tests__/helpers/render.tsx` `renderScreen()` (wraps QueryClient + ToastProvider).
 
 ## Edge Cases
 | Scenario | Expected Behavior |
