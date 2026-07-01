@@ -188,6 +188,9 @@ export async function getTemplateById(
           user_rest_seconds: null,
           max_pulley_pins: null,
           default_tempo: r.exercise_default_tempo ?? null,
+          // BLD-2561: preferred substitute not loaded in template context (session-only).
+          preferred_substitute_id: null,
+          preferred_substitute_updated_at: null,
         })
       : undefined,
   }));

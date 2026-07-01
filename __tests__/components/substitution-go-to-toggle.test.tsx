@@ -13,8 +13,8 @@
 
 import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
-import { SubstitutionSheetBody } from "../../../components/substitution/SubstitutionSheetBody";
-import type { Exercise } from "../../../lib/types";
+import { SubstitutionSheetBody } from "../../components/substitution/SubstitutionSheetBody";
+import type { Exercise } from "../../lib/types";
 
 jest.mock("@expo/vector-icons/MaterialCommunityIcons", () => {
   const ReactLib = require("react");
@@ -36,7 +36,7 @@ jest.mock("@/hooks/useThemeColors", () => ({
 
 jest.mock("@gorhom/bottom-sheet", () => {
   const ReactLib = require("react");
-  const { View, FlatList } = require("react-native");
+  const { FlatList } = require("react-native");
   return {
     __esModule: true,
     BottomSheetFlatList: (props: React.ComponentProps<typeof FlatList>) =>
