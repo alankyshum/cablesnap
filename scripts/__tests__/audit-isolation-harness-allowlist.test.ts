@@ -407,6 +407,45 @@ describe('audit-create-finding.sh — BLD-1773 isolation-harness allowlist suppr
     }
   });
 
+  it('AC1: rest-coach scenario (BLD-2454) + near-empty title => SUPPRESSED', async () => {
+    // rest-coach is a dev-only isolation harness that renders ReminderSection
+    // rows in the top ~25% of the viewport, leaving ~75% blank by design.
+    // Without allowlist suppression, the daily audit re-files a near-empty
+    // finding every run (BLD-2454). Adding it to the allowlist stops that.
+    const fp = '113254aabb77';
+    const allowlist = writeAllowlist(['rest-coach']);
+    const desc = path.join(os.tmpdir(), `desc-rc-${process.pid}-${Date.now()}.md`);
+    fs.writeFileSync(
+      desc,
+      `## UX: rest-coach screen renders near-empty\n\n**Fingerprint**: \`${fp}\`\n\nOnly three toggle switches visible in top-right corner — rest of screen is blank.\n`,
+    );
+    const state: MockState = { issues: [], commentCalls: [], createCalls: [], nextId: 870 };
+    const server = await startMockServer(makeMock(state));
+    try {
+      const r = await runWrapper(
+        [
+          '--fingerprint', fp,
+          '--title', 'UX: rest-coach screen renders near-empty — only top-right controls visible',
+          '--description-file', desc,
+          '--audit-tag', 'audit-2026-07-01-a1735164',
+          '--run-id', 'run-restcoach-suppression',
+          '--scenario', 'rest-coach',
+          '--project-id', '00000000-0000-0000-0000-0000000000aa',
+        ],
+        allowlist,
+        server.url,
+      );
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe('SUPPRESSED rest-coach');
+      expect(state.createCalls).toHaveLength(0);
+      expect(state.commentCalls).toHaveLength(0);
+    } finally {
+      fs.unlinkSync(desc);
+      fs.unlinkSync(allowlist);
+      await server.close();
+    }
+  });
+
   it('allowlist typo / unknown scenario name => inert, issue created normally', async () => {
     // A scenario name in --scenario that does not appear in the allowlist
     // should be treated as non-allowlisted (no suppression).
