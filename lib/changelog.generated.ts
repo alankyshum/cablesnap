@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.52",
+    "date": "2026-07-01",
+    "versionCode": 122,
+    "body": "- **Accessibility: Water-preset chips now show a shape icon for users with red-green color vision deficiency** — the hydration preset chips (e.g. \"250 ml\", \"500 ml\") previously used only a blue-tinted water-drop color to distinguish the selected state, which is invisible to red-green CVD users. Each chip now also displays a small non-color icon affordance so the selected preset is identifiable regardless of color perception. (BLD-2462)\n- **Fix: the \"Select clips\" button in the Form clips header is now reliably tappable on phones** — the header toggle had a 44dp minimum height but no minimum width, so on narrow mobile screens the short \"Select\" label rendered only ~16px wide, well under the 44dp accessibility touch-target minimum. The button now enforces a 44dp minimum width, giving it a full-size, easy-to-hit tap area regardless of label length. (BLD-2449)\n- **Import your workout history from Strong, Hevy, or FitNotes** — a new Settings → Import Workout History screen reads a CSV export from Strong, Hevy, or FitNotes, matches exercises to your library, and adds past sessions to your log. (BLD-2463)"
+  },
+  {
     "version": "0.26.51",
     "date": "2026-07-01",
     "versionCode": 121,
