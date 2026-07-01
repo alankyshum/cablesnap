@@ -15,7 +15,21 @@
 #   or creates a new issue.
 #
 # Behaviour:
-#   0. (BLD-1773) If --scenario is provided and the scenario appears in
+#   0. (BLD-2464) If the finding is a CVD-mode finding (deuteranopia/protanopia/
+#      tritanopia) AND the title or description self-describes as a no-information-
+#      loss hue shift (i.e. the coral/orange brand primary desaturates to olive/
+#      gold-brown under CVD but every element remains distinguishable and no
+#      state/category information is lost — purely aesthetic), the finding is
+#      suppressed: print `SUPPRESSED-CVD <scenario>` and exit 0. No issue is
+#      created or commented on. This suppression is GLOBAL (not scenario-gated)
+#      because the brand coral (#FF6038 light / #FF7A55 dark) appears on many
+#      screens. It mirrors the BLD-1773 near-empty suppression in spirit but
+#      uses a separate code path and regex.
+#      Disposition: BLD-1901 explicitly deferred restoring hue-distinctness as a
+#      separate additive concern after fixing legibility (navy foreground). The
+#      daily audit re-filing the same aesthetic finding is audit noise, not a
+#      defect. Suppressed here per BLD-2464.
+#   1. (BLD-1773) If --scenario is provided and the scenario appears in
 #      `audit-isolation-harness-allowlist.json`, AND the finding title or
 #      description matches the near-empty/content-missing regex, the finding
 #      is suppressed: print `SUPPRESSED <scenario>` and exit 0. No issue is
@@ -24,17 +38,17 @@
 #      fingerprint changes per-commit (evading the regular dedup check).
 #      Non-allowlisted scenarios that genuinely render near-empty are still
 #      flagged normally — the suppression is allowlist-scoped, not a blanket mute.
-#   1. Search project issues whose description contains "Fingerprint: <hash>".
-#   2. For each candidate, fetch the full issue and confirm:
+#   2. Search project issues whose description contains "Fingerprint: <hash>".
+#   3. For each candidate, fetch the full issue and confirm:
 #        - description contains the EXACT case-sensitive substring
 #          `Fingerprint: <hash>` (or `\`<hash>\`` formatted equivalents),
 #        - status ∈ {todo, in_progress, in_review, backlog}
 #          (i.e. NOT cancelled, NOT done — re-occurrence after fix
 #          should re-open as a new issue per BLD-969 acceptance).
-#   3. If a match is found → comment on the existing issue with
+#   4. If a match is found → comment on the existing issue with
 #      "Same finding reproduced in audit-YYYY-MM-DD-<commit> (run <id>)"
 #      and print `RECURRENCE <identifier>` to stdout. Exit 0.
-#   4. Otherwise → invoke `clip.sh create-issue` with the provided args
+#   5. Otherwise → invoke `clip.sh create-issue` with the provided args
 #      and print `CREATED <identifier>` to stdout. Exit 0.
 #
 # Why a wrapper rather than embedding into clip.sh?
@@ -43,7 +57,18 @@
 #   and needs to know the fingerprint convention. Keeping it in a dedicated
 #   script also keeps the API helper's surface stable.
 #
-# Refs: BLD-969, BLD-952, BLD-956, BLD-939, BLD-1773.
+# Known-deferred CVD finding (BLD-1901 + BLD-2464):
+#   The brand-coral primary (#FF6038 light / #FF7A55 dark, "Electric Coral")
+#   desaturates to an olive/brown-gold hue under deuteranopia/protanopia CVD
+#   emulation. BLD-1901 fixed CVD *legibility* (foreground → navy #1A2138,
+#   WCAG AA) and explicitly scoped OUT restoring hue-distinctness as a
+#   separate additive concern. The desaturation itself is therefore a known,
+#   deliberately-deferred aesthetic condition — NOT a defect. When the audit
+#   detects only this aesthetic shift (no state/category information is lost,
+#   the element remains distinguishable) it must be suppressed as audit noise.
+#   See CVD_KNOWN_HUE_SHIFT_RE below and the SUPPRESSED-CVD exit path.
+#
+# Refs: BLD-969, BLD-952, BLD-956, BLD-939, BLD-1773, BLD-1901, BLD-2464.
 
 set -euo pipefail
 
@@ -65,15 +90,25 @@ Searches the active CableSnap project for an open issue containing the
 exact line `Fingerprint: <hash>`. If one exists, posts a recurrence
 comment on it. Otherwise creates a new issue from --description-file.
 
-If --scenario is provided and that scenario is listed in the isolation-harness
-allowlist (audit-isolation-harness-allowlist.json) and the finding title or
-description matches "near-empty / content missing" keywords, the finding is
-suppressed: no issue is created or commented on (BLD-1773).
+CVD hue-shift suppression (BLD-2464): If the finding title or description
+indicates a CVD-mode (deuteranopia/protanopia/tritanopia) finding that describes
+only a no-information-loss hue shift (coral/orange brand primary desaturates to
+olive/gold-brown, element still distinguishable, no state/category lost — purely
+aesthetic), the finding is suppressed globally: print `SUPPRESSED-CVD <scenario>`
+and exit 0. This is independent of the allowlist (no --scenario gating required).
+See BLD-1901 (deferral decision) and BLD-2464 (this suppression).
+
+Isolation-harness suppression (BLD-1773): If --scenario is provided and that
+scenario is listed in the isolation-harness allowlist
+(audit-isolation-harness-allowlist.json) and the finding title or description
+matches "near-empty / content missing" keywords, the finding is suppressed:
+print `SUPPRESSED <scenario>` and exit 0. No issue is created or commented on.
 
 Exit codes:
   0  Reused an existing issue (printed `RECURRENCE <ID>`),
      created a new one (printed `CREATED <ID>`),
-     or suppressed an isolation-harness false-positive (printed `SUPPRESSED <scenario>`).
+     suppressed an isolation-harness false-positive (printed `SUPPRESSED <scenario>`),
+     or suppressed a CVD no-info-loss hue-shift (printed `SUPPRESSED-CVD <scenario>`).
   2  Bad arguments / missing required flag.
   3  clip.sh failed unexpectedly.
 EOF
@@ -124,6 +159,91 @@ done
 if ! [[ "$FINGERPRINT" =~ ^[0-9a-fA-F]{6,64}$ ]]; then
   echo "fingerprint must be 6-64 hex chars (got: '$FINGERPRINT')" >&2
   exit 2
+fi
+
+# ---------- CVD hue-shift suppression (BLD-2464) ----------
+# If a finding is a CVD-mode finding (deuteranopia/protanopia/tritanopia) AND
+# the title or description self-describes as a no-information-loss hue shift
+# (the brand coral primary desaturates to olive/gold-brown but the element
+# remains distinguishable and no state/category information is lost — purely
+# aesthetic), suppress the finding globally (not scenario-gated).
+#
+# Disposition: BLD-1901 fixed CVD legibility (foreground → navy #1A2138, WCAG
+# AA) and explicitly scoped OUT restoring hue-distinctness as a separate
+# additive concern. The daily audit re-filing the same aesthetic hue-shift as a
+# new defect is audit noise. See BLD-1901 §Scope-Out + §UX-Design CVD note.
+# Suppression path introduced by BLD-2464.
+#
+# Suppression fires when BOTH conditions hold:
+#   1. CVD mode present: title/description mentions deuteranopia, protanopia,
+#      or tritanopia (the CVD-mode field/title from ux-designer).
+#   2. No-info-loss hue shift: title/description matches the coral→olive
+#      aesthetic pattern with explicit "no information lost / still
+#      distinguishable / purely aesthetic" language.
+#
+# The regex is intentionally conservative on condition 2 — it requires BOTH
+# a hue-shift indicator (olive|gold|brown) AND a no-loss signal
+# (distinguishable|no info|no state|no category|purely aesthetic|still
+# readable|still visible|still a button|aesthetic only). This prevents
+# over-suppression of real CVD findings where information IS lost.
+#
+# On match: print `SUPPRESSED-CVD <scenario>` (or `SUPPRESSED-CVD` if no
+# --scenario was passed) and exit 0. No issue created or commented on.
+# This is consistent with the existing `SUPPRESSED <scenario>` contract but
+# uses the `SUPPRESSED-CVD` prefix to distinguish the two suppression paths.
+
+# Regex for CVD-mode findings (case-insensitive). Matches the CVD simulation
+# mode name appearing in the ux-designer's finding title or description.
+CVD_MODE_RE='deuteranopia|protanopia|tritanopia|red.green.*color.blind|color.vision.deficien'
+
+# Regex for the no-information-loss hue-shift pattern (case-insensitive).
+# Requires: (a) an olive/gold/brown hue indicator AND (b) a no-loss signal.
+# This is a two-part match: both must be present. We check them in sequence
+# in is_cvd_no_info_loss_finding() below rather than trying to capture the
+# conjunction in a single regex, which would be unreadable.
+CVD_HUE_INDICATOR_RE='olive|gold.brown|brown.gold|desaturat|turns.*olive|becomes.*olive|olive.*hue|olive.*tone|olive.*tint|coral.*olive|orange.*olive|olive.*color|olive.*colour'
+CVD_NO_LOSS_SIGNAL_RE='no information loss|no info loss|no state.*lost|no category.*lost|still distinguishable|remains distinguishable|purely aesthetic|aesthetic only|still.*button|still.*readable|still.*visible|no loss of information|information.*not lost|does not lose|no data.*lost|aesthet'
+
+is_cvd_finding() {
+  local title="$1"
+  local desc_file="$2"
+
+  if echo "$title" | grep -qiE "$CVD_MODE_RE"; then
+    return 0
+  fi
+  if grep -qiE "$CVD_MODE_RE" "$desc_file" 2>/dev/null; then
+    return 0
+  fi
+  return 1
+}
+
+is_cvd_no_info_loss_finding() {
+  local title="$1"
+  local desc_file="$2"
+
+  # Concatenate title + description body for matching (avoids reading file twice).
+  local combined
+  combined="$(printf '%s\n' "$title"; cat "$desc_file" 2>/dev/null || true)"
+
+  # Both conditions must hold: hue-shift indicator AND no-loss signal.
+  if echo "$combined" | grep -qiE "$CVD_HUE_INDICATOR_RE"; then
+    if echo "$combined" | grep -qiE "$CVD_NO_LOSS_SIGNAL_RE"; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+if is_cvd_finding "$TITLE" "$DESC_FILE"; then
+  if is_cvd_no_info_loss_finding "$TITLE" "$DESC_FILE"; then
+    # Print SUPPRESSED-CVD with scenario if available, else just the tag.
+    if [[ -n "$SCENARIO" ]]; then
+      echo "SUPPRESSED-CVD $SCENARIO"
+    else
+      echo "SUPPRESSED-CVD"
+    fi
+    exit 0
+  fi
 fi
 
 # ---------- isolation-harness suppression (BLD-1773) ----------
