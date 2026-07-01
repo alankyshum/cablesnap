@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { File as EfsFile } from "expo-file-system";
 import { useLayout } from "@/lib/layout";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useCsvImport } from "@/hooks/useCsvImport";
@@ -429,8 +430,7 @@ export default function ImportWorkouts() {
 
     (async () => {
       try {
-        const { File } = await import("expo-file-system");
-        const file = new File(filePath);
+        const file = new EfsFile(filePath);
         const raw = await file.text();
         if (mounted) {
           await parseCsv(raw);

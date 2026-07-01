@@ -23,7 +23,7 @@
  */
 
 import React from 'react';
-import { fireEvent, waitFor, act } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderScreen } from '../helpers/render';
 
 // ---- Router mock ----
@@ -57,10 +57,10 @@ jest.mock('@/lib/layout', () => ({
 
 // ---- File system mock ----
 
-let __mockCsvContent = '';
+const mockFileState = { csvContent: '' };
 
 jest.mock('expo-file-system', () => {
-  const mockText = jest.fn(async () => __mockCsvContent);
+  const mockText = jest.fn(async () => mockFileState.csvContent);
   const MockFile = jest.fn().mockImplementation(() => ({
     text: mockText,
     write: jest.fn().mockResolvedValue(undefined),
@@ -99,6 +99,14 @@ jest.mock('@/lib/db/csv-import', () => ({
 
 jest.mock('@/lib/db/helpers', () => ({
   getDatabase: (...args: unknown[]) => mockGetDatabase(...args),
+}));
+
+// ---- expo-document-picker mock (module-level for babel-jest hoisting) ----
+// mockDocumentPickerGetDocumentAsync uses the allowed mock* prefix so the
+// factory can reference it even after hoisting to the top of the module.
+const mockDocumentPickerGetDocumentAsync = jest.fn();
+jest.mock('expo-document-picker', () => ({
+  getDocumentAsync: (...args: unknown[]) => mockDocumentPickerGetDocumentAsync(...args),
 }));
 
 // ---- Import screen ----
@@ -176,14 +184,26 @@ function setupCleanDb() {
 }
 
 function setCsvContent(csv: string) {
-  __mockCsvContent = csv;
+  mockFileState.csvContent = csv;
 }
 
 // ---- Tests ----
 
 describe('Import Workouts — Acceptance (BLD-2463)', () => {
   beforeEach(() => {
+    mockFileState.csvContent = '';
     jest.clearAllMocks();
+    // Restore MockFile.mockImplementation after clearAllMocks() clears it.
+    // clearAllMocks() resets recorded calls but also clears mockImplementation,
+    // so new File() instances would no longer have a `.text` method.
+    const { File: MockFile } = require('expo-file-system') as {
+      File: jest.Mock & { _mockText: jest.Mock };
+    };
+    MockFile.mockImplementation(() => ({
+      text: MockFile._mockText,
+      write: jest.fn().mockResolvedValue(undefined),
+      uri: 'file:///test/import.csv',
+    }));
     setupCleanDb();
     const useLocalSearchParams = require('expo-router').useLocalSearchParams;
     useLocalSearchParams.mockReturnValue({ filePath: 'file:///test/import.csv' });
@@ -195,7 +215,11 @@ describe('Import Workouts — Acceptance (BLD-2463)', () => {
   it('AC-1: Strong CSV shows format label, workout count, and exercise confidence badge', async () => {
     setCsvContent(makeStrongCsv(3));
 
-    const { findByTestId, findByText } = renderScreen(<ImportWorkouts />);
+    const { findByTestId } = renderScreen(<ImportWorkouts />);
+
+    // Strong exports are always unit-ambiguous — confirm kg to reach preview
+    const confirmBtn = await findByTestId('import-workouts-confirm-unit-btn');
+    fireEvent.press(confirmBtn);
 
     // Format label
     const formatLabel = await findByTestId('import-workouts-format-label');
@@ -204,9 +228,6 @@ describe('Import Workouts — Acceptance (BLD-2463)', () => {
     // Summary line includes workout/set/exercise counts
     const summaryLine = await findByTestId('import-workouts-summary-line');
     expect(summaryLine.props.children).toMatch(/workout/);
-
-    // Exercise row: Bench Press
-    await findByText(/Bench Press/);
 
     // Confidence badge for Bench Press (should be "high match" or "medium match" — exact match is present)
     const confidenceBadge = await findByTestId('import-workouts-confidence-Bench Press');
@@ -264,7 +285,7 @@ describe('Import Workouts — Acceptance (BLD-2463)', () => {
   it('AC-4: Import button triggers progress then shows neutral summary', async () => {
     setCsvContent(makeHevyCsv());
 
-    const { findByTestId, findByText } = renderScreen(<ImportWorkouts />);
+    const { findByTestId } = renderScreen(<ImportWorkouts />);
 
     // Wait for preview
     await findByTestId('import-workouts-import-btn');
@@ -330,7 +351,7 @@ describe('Import Workouts — Acceptance (BLD-2463)', () => {
   it('AC-6a: Empty file → error message shown, no import', async () => {
     setCsvContent('');
 
-    const { findByTestId, findByText } = renderScreen(<ImportWorkouts />);
+    const { findByTestId } = renderScreen(<ImportWorkouts />);
     await findByTestId('import-workouts-error-view');
     const msg = await findByTestId('import-workouts-error-message');
     expect(msg.props.children).toMatch(/empty/i);
@@ -392,8 +413,6 @@ describe('Import Workouts — Acceptance (BLD-2463)', () => {
     // Summary card should NOT appear; we should stay on preview or see no done button
     // (toast.error is called instead)
     await waitFor(() => {
-      const summaryCard = require('@testing-library/react-native')
-        .queryByTestId?.('import-workouts-summary-card');
       // The done button should NOT appear if import failed
       expect(require('@testing-library/react-native').queryByTestId?.('import-workouts-done-btn')).toBeNull();
     }).catch(() => {
@@ -544,10 +563,6 @@ describe('Import Workouts — Acceptance (BLD-2463)', () => {
     await findByTestId('import-workouts-summary-card');
 
     // skippedSets === 0 → skipped count element should NOT appear
-    const skippedEl = (await findByTestId('import-workouts-summary-card').then(
-      () => require('@testing-library/react-native').queryByTestId?.('import-workouts-skipped-count')
-    ));
-    // If no sets were skipped, the element is not rendered
     // Verify via the mock call that skippedSets was 0
     const call = mockImportCsvSessions.mock.results[0];
     if (call && call.type === 'return') {
@@ -579,10 +594,8 @@ describe('Route registration — import-workouts navigation header (BLD-2463)', 
 // ─────────────────────────────────────────────────────────────────────────
 
 describe('pickImportWorkoutsCsv handler (BLD-2463)', () => {
-  const mockDocumentPicker = {
-    getDocumentAsync: jest.fn(),
-  };
-  jest.mock('expo-document-picker', () => mockDocumentPicker);
+  // Uses module-level mockDocumentPickerGetDocumentAsync (declared above jest.mock call)
+  // to avoid the hoisting ReferenceError from referencing an in-describe const.
 
   const mockToast = { error: jest.fn(), info: jest.fn(), success: jest.fn() };
 
@@ -591,14 +604,14 @@ describe('pickImportWorkoutsCsv handler (BLD-2463)', () => {
   });
 
   it('returns null when picker is canceled', async () => {
-    mockDocumentPicker.getDocumentAsync.mockResolvedValueOnce({ canceled: true });
+    mockDocumentPickerGetDocumentAsync.mockResolvedValueOnce({ canceled: true });
     const { pickImportWorkoutsCsv } = require('@/app/(tabs)/_settings-handlers');
     const result = await pickImportWorkoutsCsv({ toast: mockToast });
     expect(result).toBeNull();
   });
 
   it('returns file URI when .csv file selected', async () => {
-    mockDocumentPicker.getDocumentAsync.mockResolvedValueOnce({
+    mockDocumentPickerGetDocumentAsync.mockResolvedValueOnce({
       canceled: false,
       assets: [{ uri: 'file:///test/workout.csv', name: 'workout.csv', size: 1024 }],
     });
@@ -608,7 +621,7 @@ describe('pickImportWorkoutsCsv handler (BLD-2463)', () => {
   });
 
   it('returns null for non-csv file and shows alert', async () => {
-    mockDocumentPicker.getDocumentAsync.mockResolvedValueOnce({
+    mockDocumentPickerGetDocumentAsync.mockResolvedValueOnce({
       canceled: false,
       assets: [{ uri: 'file:///test/data.json', name: 'data.json', size: 512 }],
     });
@@ -618,7 +631,7 @@ describe('pickImportWorkoutsCsv handler (BLD-2463)', () => {
   });
 
   it('returns null when file is over 50MB', async () => {
-    mockDocumentPicker.getDocumentAsync.mockResolvedValueOnce({
+    mockDocumentPickerGetDocumentAsync.mockResolvedValueOnce({
       canceled: false,
       assets: [{ uri: 'file:///test/big.csv', name: 'big.csv', size: 60 * 1024 * 1024 }],
     });

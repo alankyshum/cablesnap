@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Fix: the "Select clips" button in the Form clips header is now reliably tappable on phones** — the header toggle had a 44dp minimum height but no minimum width, so on narrow mobile screens the short "Select" label rendered only ~16px wide, well under the 44dp accessibility touch-target minimum. The button now enforces a 44dp minimum width, giving it a full-size, easy-to-hit tap area regardless of label length. (BLD-2449)
+- **Import your workout history from Strong, Hevy, or FitNotes** — a new Settings → Import Workout History screen reads a CSV export from Strong, Hevy, or FitNotes, matches exercises to your library, and adds past sessions to your log. (BLD-2463)
 
 ## v0.26.51 — 2026-07-01
 <!-- versionCode: 121 -->

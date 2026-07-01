@@ -21,6 +21,7 @@ import type { MatchResult } from "@/lib/exercise-matcher";
 import { importCsvSessions } from "@/lib/db/csv-import";
 import type { CsvImportProgress, CsvImportResult } from "@/lib/db/csv-import";
 import { getAllExercises } from "@/lib/db";
+import { getDatabase } from "@/lib/db/helpers";
 
 export type WeightUnit = "kg" | "lbs";
 
@@ -45,47 +46,12 @@ export function useCsvImport() {
   const [state, setState] = useState<CsvImportState>({ phase: "idle" });
 
   /**
-   * Entry point: parse raw CSV text and advance the state machine.
-   * - If detectedUnit===null → unit_selection phase
-   * - Else → skip to matching/preview
-   */
-  const parseCsv = useCallback(async (rawCsv: string) => {
-    setState({ phase: "parsing" });
-
-    const parsed = parseCsvExport(rawCsv);
-    if ("type" in parsed) {
-      setState({ phase: "error", error: parsed });
-      return;
-    }
-
-    if (parsed.detectedUnit === null) {
-      // Ambiguous units — need user confirmation before we can match
-      setState({ phase: "unit_selection", parsed });
-    } else {
-      // Unit detected — proceed straight to matching
-      const chosenUnit: WeightUnit = parsed.detectedUnit === "lbs" ? "lbs" : "kg";
-      await buildPreview(parsed, chosenUnit);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /**
-   * Called from unit selection screen once the user picks kg or lbs.
-   */
-  const confirmUnit = useCallback(
-    async (unit: WeightUnit) => {
-      if (state.phase !== "unit_selection") return;
-      setState({ phase: "matching", parsed: state.parsed, chosenUnit: unit });
-      await buildPreview(state.parsed, unit);
-    },
-    [state], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
-  /**
    * Build preview: match exercises, compute overlap warning, advance to preview.
+   * Declared before the callbacks that call it to satisfy react-hooks/immutability.
    * @param parsed - raw parse result (weights not yet converted)
    * @param chosenUnit - the unit to convert from (or "kg" for no-op)
    */
-  async function buildPreview(parsed: CsvParseResult, chosenUnit: WeightUnit) {
+  const buildPreview = useCallback(async (parsed: CsvParseResult, chosenUnit: WeightUnit) => {
     setState({ phase: "matching", parsed, chosenUnit });
 
     // Convert weights EXACTLY ONCE — never re-convert in the preview stat pass
@@ -110,7 +76,43 @@ export function useCsvImport() {
       chosenUnit,
       overlapWarning,
     });
-  }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * Entry point: parse raw CSV text and advance the state machine.
+   * - If detectedUnit===null → unit_selection phase
+   * - Else → skip to matching/preview
+   */
+  const parseCsv = useCallback(async (rawCsv: string) => {
+    setState({ phase: "parsing" });
+
+    const parsed = parseCsvExport(rawCsv);
+    if ("type" in parsed) {
+      setState({ phase: "error", error: parsed });
+      return;
+    }
+
+    if (parsed.detectedUnit === null) {
+      // Ambiguous units — need user confirmation before we can match
+      setState({ phase: "unit_selection", parsed });
+    } else {
+      // Unit detected — proceed straight to matching
+      const chosenUnit: WeightUnit = parsed.detectedUnit === "lbs" ? "lbs" : "kg";
+      await buildPreview(parsed, chosenUnit);
+    }
+  }, [buildPreview]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * Called from unit selection screen once the user picks kg or lbs.
+   */
+  const confirmUnit = useCallback(
+    async (unit: WeightUnit) => {
+      if (state.phase !== "unit_selection") return;
+      setState({ phase: "matching", parsed: state.parsed, chosenUnit: unit });
+      await buildPreview(state.parsed, unit);
+    },
+    [state, buildPreview], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   /**
    * Perform the actual import — calls importCsvSessions with the matcher output
@@ -155,7 +157,6 @@ async function checkDateOverlap(sessions: ImportedSession[]): Promise<OverlapWar
   const maxTs = Math.max(...timestamps);
 
   try {
-    const { getDatabase } = await import("@/lib/db/helpers");
     const db = await getDatabase();
     const row = await db.getFirstAsync<{ cnt: number }>(
       `SELECT COUNT(*) as cnt
