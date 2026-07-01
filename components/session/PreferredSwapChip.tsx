@@ -51,7 +51,7 @@ export const PreferredSwapChip = memo(function PreferredSwapChip({
     : `Swap to ${preferredName}`;
 
   const a11yLabel = isSwapped
-    ? `${swappedToName ?? preferredName} swapped to. Tap to undo.`
+    ? `${exerciseName} swapped to ${swappedToName ?? preferredName}. Tap to undo.`
     : `Swap ${exerciseName} to ${preferredName}`;
 
   const a11yHint = isSwapped

@@ -145,12 +145,21 @@ export function useExerciseManagement({
   // BLD-2561: fast-path preferred-swap — applies immediately (no confirm), then Undo.
   const handlePreferredSwap = useCallback(async (exerciseId: string) => {
     if (!id) return;
+    // If this exercise is already in the swapped state (chip shows "Swapped to … · Undo"),
+    // route the press to the undo handler instead of re-entering swap logic.
+    // appliedPreferredSwaps is keyed by the TARGET exercise id — the chip on the target's
+    // card fires onPreferredSwap(targetExerciseId), so this check is correct.
+    // NOTE: handleSwapUndo keeps swapUndoRef alive beyond the 5s toast window (see timer
+    // below), so undo works persistently as long as the chip is visible.
+    if (appliedPreferredSwaps.has(exerciseId)) {
+      await handleSwapUndo();
+      return;
+    }
     const group = groups.find((g) => g.exercise_id === exerciseId);
     if (group && group.sets.every((s) => s.completed)) {
       showWarning("All sets completed — nothing to swap");
       return;
     }
-    // If already swapped (undo path), use the existing handleSwapUndo.
     const preferredTargetId = group?.preferredSubstituteId;
     if (!preferredTargetId) {
       // No preference yet — open the discovery sheet as fallback.
@@ -186,20 +195,16 @@ export function useExerciseManagement({
       });
       showToast(`Swapped to ${preferred.name}`, { action: { label: "Undo", onPress: handleSwapUndo } });
       swapUndoTimer.current = setTimeout(() => {
+        // The 5s timer only expires the toast's live reference — NOT the undo state.
+        // swapUndoRef / preferredSwapTargetIdRef / appliedPreferredSwaps are kept
+        // alive so the persistent chip can still invoke handleSwapUndo after the
+        // toast dismisses. They are cleared in handleSwapUndo itself.
         swapUndoTimer.current = null;
-        swapUndoRef.current = null;
-        // BLD-2561: expire the chip's swapped state when the undo window closes.
-        preferredSwapTargetIdRef.current = null;
-        setAppliedPreferredSwaps((prev) => {
-          const next = new Map(prev);
-          next.delete(preferred.id);
-          return next;
-        });
       }, 5000);
     } catch {
       showError("Failed to apply preferred swap");
     }
-  }, [id, groups, handleSwapOpen, handleSwapUndo, load, startRest, showToast, showWarning, showError]);
+  }, [id, groups, appliedPreferredSwaps, handleSwapOpen, handleSwapUndo, load, startRest, showToast, showWarning, showError]);
 
   // --- Exercise picker ---
   const [pickerOpen, setPickerOpen] = useState(false);
