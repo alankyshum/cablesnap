@@ -43,7 +43,7 @@
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 20+
+- [Node.js](https://nodejs.org/) 22+ (see `.nvmrc`)
 - npm
 - [Expo CLI](https://docs.expo.dev/get-started/installation/) (installed via npx)
 - iOS Simulator + Xcode (macOS) or Android Emulator

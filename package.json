@@ -3,6 +3,9 @@
   "version": "0.26.52",
   "license": "AGPL-3.0-or-later",
   "main": "expo-router/entry",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "changelog:gen": "tsx scripts/generate-changelog.ts",
     "prestart": "npm run changelog:gen",
