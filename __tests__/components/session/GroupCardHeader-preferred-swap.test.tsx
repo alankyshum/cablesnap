@@ -4,6 +4,8 @@
  * AC coverage:
  *   - Chip renders when preferredSubstituteName is set (fast-path present)
  *   - Chip is hidden when preferredSubstituteName is null/undefined (empty-state)
+ *   - Chip renders "Swapped to {name} · Undo" when isPreferredSwapApplied=true
+ *     even when preferredSubstituteName is null (post-swap state on target card)
  *   - Tapping the chip calls onPreferredSwap with the exercise_id (≤1 tap)
  *   - Discovery sheet path is unchanged when no preference exists (regression guard)
  */
@@ -148,5 +150,33 @@ describe("GroupCardHeader — BLD-2561 preferred substitute chip (Row 3a)", () =
     const swapIcons = UNSAFE_queryAllByProps({ name: "swap-horizontal" });
     // The icon-only swap button in the controls cluster is present.
     expect(swapIcons.length).toBeGreaterThan(0);
+  });
+
+  it("renders 'Swapped to {name} · Undo' chip when isPreferredSwapApplied=true even with no preferredSubstituteName (post-swap state on target card)", () => {
+    // After a preferred swap, the original exercise is replaced by the target.
+    // The target card has preferredSubstituteName=null (its own preferred sub)
+    // but isPreferredSwapApplied=true + preferredSwappedToName from in-session state.
+    const { getByText } = render(
+      <GroupCardHeader
+        {...baseProps}
+        preferredSubstituteName={null}
+        isPreferredSwapApplied={true}
+        preferredSwappedToName="Hack Squat"
+        onPreferredSwap={jest.fn()}
+      />,
+    );
+    expect(getByText("Swapped to Hack Squat · Undo")).toBeTruthy();
+  });
+
+  it("chip is hidden when both preferredSubstituteName=null and isPreferredSwapApplied=false (true empty-state)", () => {
+    const { queryByText } = render(
+      <GroupCardHeader
+        {...baseProps}
+        preferredSubstituteName={null}
+        isPreferredSwapApplied={false}
+        onPreferredSwap={jest.fn()}
+      />,
+    );
+    expect(queryByText(/Swap/)).toBeNull();
   });
 });
