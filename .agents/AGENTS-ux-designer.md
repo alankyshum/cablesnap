@@ -75,9 +75,26 @@ Paperclip routine (09:00 PT, ab23d3ed-e434-4357-ab62-7ccf41159989)
 2. **For EACH `<scenario>/<viewport>{,-deuteranopia,-protanopia,-tritanopia}.png` + sibling `.json`**, run vision with the canned prompt (§ Vision Prompt below). Tag each invocation with its `cvd` mode (`baseline`, `deuteranopia`, `protanopia`, `tritanopia`) — pass it to the prompt and carry it through to the finding fingerprint.
 3. **Normalize findings**: each finding must include `{scenario, label,
    severity, description, suggested_fix}`.
-4. **Dedup before filing** (§ Dedup Logic below).
-5. **Check BLD-480 regression-catcher acceptance** (§ BLD-480 Trust Anchor below).
-6. **Update the audit issue**: post a summary comment (counts by severity),
+4. **Apply CVD no-info-loss exclusion (BLD-2464)**: Before filing any CVD-mode
+   finding (deuteranopia / protanopia / tritanopia), check whether the ONLY
+   problem is the known brand-coral (`#FF6038` / `#FF7A55` "Electric Coral")
+   desaturating to olive/gold-brown, where the element remains distinguishable
+   and no state or category information is lost (purely aesthetic hue shift).
+   **Do NOT file a standalone issue for this known pattern.** It is a
+   deliberately-deferred aesthetic condition per BLD-1901 (CVD legibility was
+   fixed via navy foreground in BLD-1904; hue distinctness is a separate
+   additive concern, scoped out by design). Pass the finding to
+   `audit-create-finding.sh` normally — the script will suppress it with
+   `SUPPRESSED-CVD`.
+   You **may and must** still file CVD findings when:
+   - Two UI states become indistinguishable (e.g. active vs inactive tabs,
+     filled vs empty state — category/state information IS lost).
+   - A screen introduces a new color-only affordance that collapses under CVD.
+   - The desaturation causes actual text legibility failure (not just hue change).
+   Refs: BLD-1901 (deferral decision), BLD-2464 (suppression implementation).
+5. **Dedup before filing** (§ Dedup Logic below).
+6. **Check BLD-480 regression-catcher acceptance** (§ BLD-480 Trust Anchor below).
+7. **Update the audit issue**: post a summary comment (counts by severity),
    link the finding issues, close to `done`. If clean: `Clean audit ✅`.
 
 > **Acceptance for the CVD extension (BLD-958):** the audit must execute the vision prompt against all 4 PNGs per scenario (baseline + 3 CVD). On clean bundles, returning `[]` for all CVD passes is allowed; the requirement is that the iteration code path runs.

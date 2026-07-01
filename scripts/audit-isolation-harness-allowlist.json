@@ -29,6 +29,18 @@
       "reason": "Dev-only harness (app/__test__/stack-marker.tsx) renders a single StackMarkerPill (~44px) on a blank padded <View>. The harness intentionally renders sparse to test the pill in isolation without the live MarkerPickerSheet. Its e2e spec (e2e/scenarios/stack-marker.spec.ts) asserts pill visibility and exact text — those assertions are the real regression safety net. Introduced by BLD-1126. False-positive audit findings: BLD-1667, BLD-1766. Suppression introduced by BLD-1773.",
       "introducedBy": "BLD-1126",
       "suppressionTicket": "BLD-1773"
+    },
+    {
+      "scenario": "form-clips",
+      "reason": "Dev-only harness (app/__test__/form-clips.tsx) renders FormLibraryTab in isolation. The component requires a seed object injected via window.__FORM_CLIPS_HARNESS__ by the Playwright spec (page.addInitScript). The audit screenshot is captured without a running Playwright spec, so the seed is absent, window.__FORM_CLIPS_HARNESS__ is undefined, the guard on line 51 of form-clips.tsx returns early, and the component renders null — leaving only the surrounding CTA button visible. The harness intentionally renders sparse during audit; its real regression safety net is the e2e Playwright spec that injects the seed and asserts on FormLibraryTab content. Introduced by BLD-1105/BLD-1123. False-positive audit finding: BLD-2453. Suppression introduced by BLD-2453.",
+      "introducedBy": "BLD-1105",
+      "suppressionTicket": "BLD-2453"
+    },
+    {
+      "scenario": "rest-coach",
+      "reason": "Dev-only harness (app/__test__/rest-coach.tsx) renders ReminderSection's Smart Rest Coach rows (pre-end cue segmented control + show-next-set toggle) in isolation at /__test__/rest-coach. The component content fills only the top ~25% of the 390×844 viewport; the remaining ~75% is blank by design — there is no footer or scroll content. The three toggle rows and the segmented control are the full content of this harness. Its e2e spec (e2e/scenarios/rest-coach.spec.ts) asserts toggle visibility and AC11 disabled-state text — those assertions are the regression safety net. Introduced by BLD-1137. False-positive audit findings: BLD-2454. Suppression introduced by BLD-2454.",
+      "introducedBy": "BLD-1137",
+      "suppressionTicket": "BLD-2454"
     }
   ]
 }

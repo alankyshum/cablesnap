@@ -1,11 +1,12 @@
 /**
  * FormLibraryTab-touch-target.test.tsx
  *
- * BLD-1941: "Select" text link in Form clips header must meet 44dp touch target.
+ * BLD-1941 / BLD-2449: "Select" text link in Form clips header must meet 44dp touch target.
  *
  * Tests:
  * - AC1: The "Select clips" Pressable has minHeight ≥ 44 in its resolved style.
- * - AC2: The "Exit select mode" Pressable has minHeight ≥ 44 in its resolved style.
+ * - AC2: The "Select clips" Pressable has minWidth ≥ 44 in its resolved style (BLD-2449).
+ * - AC3: The "Exit select mode" Pressable has paddingHorizontal to ensure horizontal tap area.
  */
 
 import React from "react";
@@ -76,7 +77,18 @@ describe("FormLibraryTab — Select touch target (BLD-1941)", () => {
     expect(flatStyle.minHeight).toBeGreaterThanOrEqual(44);
   });
 
-  it("AC2: Pressable has paddingHorizontal to ensure adequate horizontal tap area", () => {
+  it("AC2: 'Select clips' button meets 44dp minimum touch target width (BLD-2449)", () => {
+    const { getByLabelText } = render(<FormLibraryTab exerciseId="ex-1" />);
+
+    const selectBtn = getByLabelText("Select clips");
+    const flatStyle = StyleSheet.flatten(selectBtn.props.style ?? {});
+
+    // minWidth must be explicitly set to ≥ 44 so the rendered element is always
+    // at least 44dp wide regardless of text content length (BLD-2449 regression).
+    expect(flatStyle.minWidth).toBeGreaterThanOrEqual(44);
+  });
+
+  it("AC3: Pressable has paddingHorizontal to ensure adequate horizontal tap area", () => {
     const { getByLabelText } = render(<FormLibraryTab exerciseId="ex-1" />);
 
     const selectBtn = getByLabelText("Select clips");
