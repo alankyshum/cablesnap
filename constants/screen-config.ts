@@ -32,6 +32,7 @@ export const SCREEN_CONFIGS: ScreenConfig[] = [
   { name: "settings/backups", options: { headerShown: true, title: "Backups" } },
   { name: "settings/macro-coach", options: { headerShown: true, title: "Macro Coach" } },
   { name: "settings/import-backup", options: { headerShown: true, title: "Import Backup" } },
+  { name: "settings/import-workouts", options: { headerShown: true, title: "Import Workout History" } },
   { name: "tools/index", options: { headerShown: true, title: "Workout Tools" } },
   { name: "tools/plates", options: { headerShown: true, title: "Plate Calculator" } },
   { name: "tools/rm", options: { headerShown: true, title: "1RM Calculator" } },
