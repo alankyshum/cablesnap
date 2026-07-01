@@ -14,6 +14,17 @@
     "missing' findings when the finding's scenario matches an entry here.",
     "All other finding types for these scenarios are still audited normally.",
     "",
+    "Entries may also carry an optional 'expectedDefectRegex' field. When",
+    "present, findings whose title or description match that regex are ALSO",
+    "suppressed for that scenario. This is used for 'expected-defect' anchors",
+    "— scenarios that intentionally reproduce a known visual defect so that",
+    "scripts/regression-smoke.sh (QD#2) can assert the vision pipeline is",
+    "still sensitive to it. The crop/truncation finding on bld-480-prefix is",
+    "the canonical example: the defect is expected and the real safety net is",
+    "regression-smoke.sh asserting directly against the vision API response.",
+    "Suppressing the crop finding at audit-create-finding.sh intake does NOT",
+    "weaken the QD#2 trust anchor.",
+    "",
     "To add a new isolation harness: append one entry below and explain WHY",
     "the scenario is intentionally sparse. Include the BLD ticket that introduced",
     "the harness and a pointer back to BLD-1773 (where this mechanism lives).",
@@ -21,7 +32,7 @@
     "NON-allowlisted scenarios that genuinely render near-empty are NOT suppressed.",
     "The suppression is scoped to the allowlist, not a blanket mute.",
     "",
-    "Refs: BLD-1773, BLD-1767, BLD-1666, BLD-1126."
+    "Refs: BLD-1773, BLD-1767, BLD-1666, BLD-1126, BLD-2460."
   ],
   "isolationHarnesses": [
     {
@@ -41,6 +52,13 @@
       "reason": "Dev-only harness (app/__test__/rest-coach.tsx) renders ReminderSection's Smart Rest Coach rows (pre-end cue segmented control + show-next-set toggle) in isolation at /__test__/rest-coach. The component content fills only the top ~25% of the 390×844 viewport; the remaining ~75% is blank by design — there is no footer or scroll content. The three toggle rows and the segmented control are the full content of this harness. Its e2e spec (e2e/scenarios/rest-coach.spec.ts) asserts toggle visibility and AC11 disabled-state text — those assertions are the regression safety net. Introduced by BLD-1137. False-positive audit findings: BLD-2454. Suppression introduced by BLD-2454.",
       "introducedBy": "BLD-1137",
       "suppressionTicket": "BLD-2454"
+    },
+    {
+      "scenario": "bld-480-prefix",
+      "reason": "This is the intentional BLD-480 pre-fix trust-anchor fixture: it deliberately re-imposes a maxHeight: 200 clamp on MusclesWorkedCard (components/session/summary/__fixtures__/MusclesWorkedCardPreFix.tsx, route app/__fixtures__/bld-480-prefix.tsx) so the vision pipeline has a known-bad crop to detect. Detecting the crop there is a PASS for scripts/regression-smoke.sh (QD#2), which asserts directly against the vision API response and NEVER calls audit-create-finding.sh. Suppressing the crop finding at the audit intake layer does NOT weaken the QD#2 trust anchor. Introduced by BLD-951. False-positive audit findings: BLD-2452. Suppression introduced by BLD-2460. Analogous to BLD-1773 (stack-marker near-empty suppression).",
+      "introducedBy": "BLD-951",
+      "suppressionTicket": "BLD-2460",
+      "expectedDefectRegex": "crop|truncat|clip|maxHeight|cut off|MusclesWorkedCard|body-figure"
     }
   ]
 }
