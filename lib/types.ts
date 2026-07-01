@@ -115,6 +115,10 @@ export type Exercise = {
   max_pulley_pins?: number | null;
   // BLD-1158: per-exercise default tempo (E-B-C-T canonical form). NULL = no default.
   default_tempo?: string | null;
+  // BLD-2561: persisted preferred substitute — single "go-to" replacement.
+  // NULL = no preference set; non-null = exercise id of the preferred target.
+  preferred_substitute_id?: string | null;
+  preferred_substitute_updated_at?: number | null;
 };
 
 export const CATEGORIES: Category[] = [

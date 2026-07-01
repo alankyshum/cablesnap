@@ -9,6 +9,8 @@ import {
   getExerciseById,
   swapExerciseInSession,
   undoSwapInSession,
+  getPreferredSubstitute,
+  setPreferredSubstitute,
 } from "../lib/db";
 import type { Exercise } from "../lib/types";
 import type { ExerciseGroup } from "../components/session/types";
@@ -97,6 +99,70 @@ export function useExerciseManagement({
       showError("Failed to swap exercise");
     }
   }, [id, swapSource, load, startRest, handleSwapUndo]);
+
+  // BLD-2561: "Set as my go-to" — persist preference from the discovery sheet.
+  const handleSetGoTo = useCallback(async (sourceId: string, targetId: string) => {
+    try {
+      await setPreferredSubstitute(sourceId, targetId);
+      // Optimistically update the group's preferredSubstituteId so the chip
+      // appears without waiting for a full session reload.
+      const target = await getExerciseById(targetId);
+      if (target) {
+        setGroups((prev) =>
+          prev.map((g) =>
+            g.exercise_id === sourceId
+              ? { ...g, preferredSubstituteId: targetId, preferredSubstituteName: target.name }
+              : g
+          )
+        );
+      }
+    } catch {
+      // Best-effort: preference not persisted, but the swap already went through.
+    }
+  }, [setGroups]);
+
+  // BLD-2561: fast-path preferred-swap — applies immediately (no confirm), then Undo.
+  const handlePreferredSwap = useCallback(async (exerciseId: string) => {
+    if (!id) return;
+    const group = groups.find((g) => g.exercise_id === exerciseId);
+    if (group && group.sets.every((s) => s.completed)) {
+      showWarning("All sets completed — nothing to swap");
+      return;
+    }
+    // If already swapped (undo path), use the existing handleSwapUndo.
+    const preferredTargetId = group?.preferredSubstituteId;
+    if (!preferredTargetId) {
+      // No preference yet — open the discovery sheet as fallback.
+      handleSwapOpen(exerciseId);
+      return;
+    }
+    try {
+      const preferred = await getPreferredSubstitute(exerciseId);
+      if (!preferred) {
+        // Stale id — fall back to discovery sheet.
+        handleSwapOpen(exerciseId);
+        return;
+      }
+      const modifiedIds = await swapExerciseInSession(id, exerciseId, preferred.id);
+      if (modifiedIds.length === 0) {
+        showWarning("All sets completed — nothing to swap");
+        return;
+      }
+      await load();
+      startRest(preferred.id);
+
+      // Wire undo into the existing swap-undo infra.
+      swapUndoRef.current = { setIds: modifiedIds, originalExerciseId: exerciseId };
+      if (swapUndoTimer.current) clearTimeout(swapUndoTimer.current);
+      showToast(`Swapped to ${preferred.name}`, { action: { label: "Undo", onPress: handleSwapUndo } });
+      swapUndoTimer.current = setTimeout(() => {
+        swapUndoTimer.current = null;
+        swapUndoRef.current = null;
+      }, 5000);
+    } catch {
+      showError("Failed to apply preferred swap");
+    }
+  }, [id, groups, handleSwapOpen, handleSwapUndo, load, startRest, showToast, showWarning, showError]);
 
   // --- Exercise picker ---
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -260,6 +326,8 @@ export function useExerciseManagement({
     swapSheetRef,
     handleSwapOpen,
     handleSwapSelect,
+    handleSetGoTo,
+    handlePreferredSwap,
     pickerOpen,
     setPickerOpen,
     handleAddExercise,

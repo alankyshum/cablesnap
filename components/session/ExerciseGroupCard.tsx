@@ -81,6 +81,14 @@ export type GroupCardProps = {
   onAddSegment?: (setId: string, reps: number) => Promise<void> | void;
   onDeleteSegment?: (segmentId: string, setId: string) => Promise<void> | void;
   onCollapseToNormal?: (setId: string) => Promise<void> | void;
+  /** BLD-2561: resolved preferred substitute name (null = chip hidden). */
+  preferredSubstituteName?: string | null;
+  /** BLD-2561: whether the preferred swap has been applied for this exercise. */
+  isPreferredSwapApplied?: boolean;
+  /** BLD-2561: swapped-to exercise name for undo label. */
+  preferredSwappedToName?: string | null;
+  /** BLD-2561: fast-path tap handler. */
+  onPreferredSwap?: (exerciseId: string) => void;
 };
 
 export const ExerciseGroupCard = memo(function ExerciseGroupCard({
@@ -101,6 +109,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   captureRpe, onRpeChange,
   gymId, onMarkerConfirm, onManualWeightSave,
   onAddSegment, onDeleteSegment, onCollapseToNormal,
+  preferredSubstituteName, isPreferredSwapApplied, preferredSwappedToName, onPreferredSwap,
 }: GroupCardProps) {
   const colors = useThemeColors();
   // BLD-1130 G3: lift `useActiveCalibration` out of `SetRow` (it was previously
@@ -221,6 +230,10 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           isFirst={isFirstReorderable}
           isLast={isLastReorderable}
           showMoveButtons={showMoveButtons}
+          preferredSubstituteName={preferredSubstituteName}
+          isPreferredSwapApplied={isPreferredSwapApplied}
+          preferredSwappedToName={preferredSwappedToName}
+          onPreferredSwap={onPreferredSwap}
         />
         {/* BLD-850: removed tablet 2-col split (regression of BLD-716) — set
             table renders full-width on every breakpoint. */}

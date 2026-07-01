@@ -18,6 +18,7 @@ import {
   updateSetsBatch,
   updateExercisePositions,
   getExerciseNotesBatch,
+  getPreferredSubstitutesBatch,
 } from "../lib/db";
 import { parseTemplateTargetReps } from "../lib/db/templates";
 import type { WorkoutSession, Exercise } from "../lib/types";
@@ -114,12 +115,13 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
     const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
 
-    const [prevCache, exerciseMeta, recentByExercise, exerciseNotes, plateauWindowByExercise] = await Promise.all([
+    const [prevCache, exerciseMeta, recentByExercise, exerciseNotes, plateauWindowByExercise, preferredSubstitutesMap] = await Promise.all([
       getPreviousSetsBatch(exerciseIds, id),
       getExercisesByIds(exerciseIds),
       getRecentExerciseSetsBatch(exerciseIds, 2),
       getExerciseNotesBatch(exerciseIds),
       getPlateauWindowBatch(exerciseIds, 4),
+      getPreferredSubstitutesBatch(exerciseIds),
     ]);
 
     const key = exerciseIds.sort().join(",");
@@ -129,6 +131,15 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
       setMaxes(m);
     }
 
+    // BLD-2561: resolve preferred substitute names for all exercises that have a preference.
+    // The preferred target may not be in the current session, so batch-fetch separately.
+    const preferredTargetIds = [
+      ...new Set(Object.values(preferredSubstitutesMap).filter((v): v is string => v != null)),
+    ];
+    const preferredTargetMeta =
+      preferredTargetIds.length > 0
+        ? await getExercisesByIds(preferredTargetIds)
+        : {};
     const map = new Map<string, ExerciseGroup>();
     for (const s of sets) {
       if (!map.has(s.exercise_id)) {
@@ -151,6 +162,15 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           pinnedNoteBackfill: exerciseNotes[s.exercise_id]?.dismissed ? null : undefined,
           // BLD-1158: exercise default tempo for new-set inheritance (AC1.1).
           defaultTempo: ex?.default_tempo ?? null,
+          // BLD-2561: preferred substitute (null = no preference set).
+          preferredSubstituteId: preferredSubstitutesMap[s.exercise_id] ?? null,
+          preferredSubstituteName: (() => {
+            const targetId = preferredSubstitutesMap[s.exercise_id];
+            if (!targetId) return null;
+            const target = preferredTargetMeta[targetId];
+            // target is null/deleted — chip will stay hidden (null-resolve guard).
+            return target?.name ?? null;
+          })(),
         });
       }
       const prev = prevCache[s.exercise_id]?.find(

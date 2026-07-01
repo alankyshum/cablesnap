@@ -26,6 +26,9 @@ export {
   getExerciseBackfillCandidate,
   getExerciseNotesBatch,
   type BackfillCandidate,
+  getPreferredSubstitute,
+  setPreferredSubstitute,
+  getPreferredSubstitutesBatch,
 } from "./exercises";
 
 export {

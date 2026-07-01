@@ -88,7 +88,9 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       notes_backfill_dismissed_at INTEGER DEFAULT NULL,
       user_rest_seconds INTEGER DEFAULT NULL,
       max_pulley_pins INTEGER DEFAULT NULL,
-      default_tempo TEXT DEFAULT NULL
+      default_tempo TEXT DEFAULT NULL,
+      preferred_substitute_id TEXT DEFAULT NULL,
+      preferred_substitute_updated_at INTEGER DEFAULT NULL
     );
 
     CREATE TABLE IF NOT EXISTS workout_templates (
