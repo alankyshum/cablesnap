@@ -11,8 +11,18 @@
  *
  * If any of these are added, classification flips to YES and psychologist review
  * becomes mandatory before merge.
+ *
+ * CVD accessibility (BLD-2462 / BLD-2458): Each water chip carries a leading
+ * icon so the preset-vs-custom distinction is unambiguous under red-green CVD,
+ * independently of the solid-vs-dashed 1px border colour that desaturates to
+ * olive/gold under deuteranopia/protanopia.
+ * - Preset chips: MaterialCommunityIcons "cup-water" (water glyph).
+ * - Custom chip:  MaterialCommunityIcons "plus".
+ * Icons are decorative (silent to AT) — the parent Pressable owns the label.
+ * Platform-gated a11y props follow the BLD-1994 pattern from PacingCard.tsx.
  */
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { router } from "expo-router";
 import { Text } from "@/components/ui/text";
 import { Progress } from "@/components/ui/progress";
@@ -79,7 +89,20 @@ export function WaterSection({
             ]}
             hitSlop={4}
           >
-            <Text variant="caption" style={{ color: colors.primary }}>
+            {/* Leading icon — decorative (BLD-2462 CVD affordance).
+                The Pressable owns the accessibilityLabel; this icon must NOT
+                create a second accessible node. Platform-gated a11y props
+                follow the BLD-1994 / PacingCard pattern: native-only props
+                are omitted on web to avoid react-native-web DOM warnings. */}
+            <MaterialCommunityIcons
+              name="cup-water"
+              size={14}
+              color={colors.primary}
+              testID={`water-preset-icon-${idx}`}
+              {...(Platform.OS !== "web" ? { accessibilityElementsHidden: true } : {})}
+              {...(Platform.OS !== "web" ? { importantForAccessibility: "no-hide-descendants" as const } : {})}
+            />
+            <Text variant="caption" style={[{ color: colors.primary }, styles.chipLabel]}>
               {`+${formatVolume(amt, unit)}`}
             </Text>
           </Pressable>
@@ -96,7 +119,16 @@ export function WaterSection({
           ]}
           hitSlop={4}
         >
-          <Text variant="caption" style={{ color: colors.primary }}>+ Custom</Text>
+          {/* Leading icon — decorative (BLD-2462 CVD affordance). */}
+          <MaterialCommunityIcons
+            name="plus"
+            size={14}
+            color={colors.primary}
+            testID="water-custom-icon"
+            {...(Platform.OS !== "web" ? { accessibilityElementsHidden: true } : {})}
+            {...(Platform.OS !== "web" ? { importantForAccessibility: "no-hide-descendants" as const } : {})}
+          />
+          <Text variant="caption" style={[{ color: colors.primary }, styles.chipLabel]}>+ Custom</Text>
         </Pressable>
       </View>
     </View>
@@ -116,8 +148,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
+    // Row layout so icon + text sit side-by-side on one line (BLD-2462).
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 4,
   },
   customChip: { borderStyle: "dashed" },
+  // Small leading gap between icon and text label inside a chip.
+  chipLabel: { flexShrink: 1 },
 });
