@@ -29,15 +29,19 @@
 #      separate additive concern after fixing legibility (navy foreground). The
 #      daily audit re-filing the same aesthetic finding is audit noise, not a
 #      defect. Suppressed here per BLD-2464.
-#   1. (BLD-1773) If --scenario is provided and the scenario appears in
+#   1. (BLD-1773 + BLD-2460) If --scenario is provided and the scenario appears in
 #      `audit-isolation-harness-allowlist.json`, AND the finding title or
-#      description matches the near-empty/content-missing regex, the finding
-#      is suppressed: print `SUPPRESSED <scenario>` and exit 0. No issue is
-#      created or commented on. This prevents isolation-harness scenarios from
-#      re-filing daily false-positive "near-empty screen" findings whose
-#      fingerprint changes per-commit (evading the regular dedup check).
-#      Non-allowlisted scenarios that genuinely render near-empty are still
-#      flagged normally — the suppression is allowlist-scoped, not a blanket mute.
+#      description matches either:
+#        (a) the near-empty/content-missing regex (NEAR_EMPTY_RE), OR
+#        (b) the per-entry 'expectedDefectRegex' field in the allowlist
+#            (BLD-2460 — for expected-defect anchor fixtures like bld-480-prefix),
+#      then the finding is suppressed: print `SUPPRESSED <scenario>` and exit 0.
+#      No issue is created or commented on. This prevents isolation-harness
+#      scenarios from re-filing daily false-positive findings whose fingerprint
+#      changes per-commit (evading the regular dedup check).
+#      Entries without 'expectedDefectRegex' (e.g. stack-marker) keep
+#      today's near-empty-only behaviour — no regression for stack-marker.
+#      Non-allowlisted scenarios are never suppressed.
 #   2. Search project issues whose description contains "Fingerprint: <hash>".
 #   3. For each candidate, fetch the full issue and confirm:
 #        - description contains the EXACT case-sensitive substring
@@ -68,7 +72,7 @@
 #   the element remains distinguishable) it must be suppressed as audit noise.
 #   See CVD_KNOWN_HUE_SHIFT_RE below and the SUPPRESSED-CVD exit path.
 #
-# Refs: BLD-969, BLD-952, BLD-956, BLD-939, BLD-1773, BLD-1901, BLD-2464.
+# Refs: BLD-969, BLD-952, BLD-956, BLD-939, BLD-1773, BLD-1901, BLD-2460, BLD-2464.
 
 set -euo pipefail
 
@@ -98,11 +102,12 @@ aesthetic), the finding is suppressed globally: print `SUPPRESSED-CVD <scenario>
 and exit 0. This is independent of the allowlist (no --scenario gating required).
 See BLD-1901 (deferral decision) and BLD-2464 (this suppression).
 
-Isolation-harness suppression (BLD-1773): If --scenario is provided and that
-scenario is listed in the isolation-harness allowlist
+Isolation-harness suppression (BLD-1773 + BLD-2460): If --scenario is provided
+and that scenario is listed in the isolation-harness allowlist
 (audit-isolation-harness-allowlist.json) and the finding title or description
-matches "near-empty / content missing" keywords, the finding is suppressed:
-print `SUPPRESSED <scenario>` and exit 0. No issue is created or commented on.
+matches "near-empty / content missing" keywords OR the allowlist entry's
+'expectedDefectRegex' field (when present), the finding is suppressed:
+no issue is created or commented on.
 
 Exit codes:
   0  Reused an existing issue (printed `RECURRENCE <ID>`),
@@ -246,13 +251,19 @@ if is_cvd_finding "$TITLE" "$DESC_FILE"; then
   fi
 fi
 
-# ---------- isolation-harness suppression (BLD-1773) ----------
+# ---------- isolation-harness suppression (BLD-1773, BLD-2460) ----------
 # If --scenario is provided and the scenario is listed in the isolation-harness
-# allowlist, AND the finding title or description body indicates a "near-empty /
-# content missing" defect, suppress the finding entirely. This prevents
-# dev-only harnesses (e.g. stack-marker) that intentionally render sparse
-# from filing daily false-positive audit findings whose fingerprint changes
-# per-commit (evading the regular dedup check).
+# allowlist, suppress the finding if EITHER:
+#   (a) the finding title or description body indicates a "near-empty /
+#       content missing" defect (NEAR_EMPTY_RE — original BLD-1773 path), OR
+#   (b) the allowlist entry has an 'expectedDefectRegex' field AND the finding
+#       title or description matches that regex (BLD-2460 — for expected-defect
+#       anchor fixtures like bld-480-prefix whose known-bad defect is a crop,
+#       not a near-empty state).
+#
+# Entries without 'expectedDefectRegex' (e.g. stack-marker) keep today's
+# near-empty-only behaviour — no regression for stack-marker.
+# Non-allowlisted scenarios are never suppressed.
 #
 # Regex for near-empty/content-missing findings (case-insensitive). Covers the
 # typical ux-designer phrasings seen in BLD-1667 and BLD-1766:
@@ -281,6 +292,35 @@ is_isolation_harness_scenario() {
   return 1
 }
 
+# Extract the 'expectedDefectRegex' for an allowlisted scenario (BLD-2460).
+# Returns an empty string if the entry has no such field (stack-marker style).
+# Uses python3 for reliable JSON parsing; falls back to empty on any error.
+get_expected_defect_regex() {
+  local scenario="$1"
+  local allowlist_file="$2"
+
+  if [[ ! -f "$allowlist_file" ]]; then
+    echo ""
+    return
+  fi
+
+  python3 - "$scenario" "$allowlist_file" 2>/dev/null <<'PY'
+import json, sys
+scenario = sys.argv[1]
+path     = sys.argv[2]
+try:
+    with open(path) as f:
+        data = json.load(f)
+    for entry in data.get("isolationHarnesses", []):
+        if entry.get("scenario") == scenario:
+            print(entry.get("expectedDefectRegex", ""))
+            sys.exit(0)
+except Exception:
+    pass
+print("")
+PY
+}
+
 is_near_empty_finding() {
   local title="$1"
   local desc_file="$2"
@@ -297,9 +337,35 @@ is_near_empty_finding() {
   return 1
 }
 
+# Check if title or description matches a given regex (case-insensitive).
+# Used for expectedDefectRegex matching (BLD-2460).
+matches_expected_defect_regex() {
+  local title="$1"
+  local desc_file="$2"
+  local regex="$3"
+
+  [[ -z "$regex" ]] && return 1
+
+  if echo "$title" | grep -qiE "$regex"; then
+    return 0
+  fi
+  if grep -qiE "$regex" "$desc_file" 2>/dev/null; then
+    return 0
+  fi
+  return 1
+}
+
 if [[ -n "$SCENARIO" ]]; then
   if is_isolation_harness_scenario "$SCENARIO" "$ALLOWLIST"; then
+    # Path (a): near-empty suppression — original BLD-1773 logic.
     if is_near_empty_finding "$TITLE" "$DESC_FILE"; then
+      echo "SUPPRESSED $SCENARIO"
+      exit 0
+    fi
+    # Path (b): expected-defect suppression — BLD-2460 extension.
+    # Only applies when the allowlist entry has an 'expectedDefectRegex' field.
+    EXPECTED_DEFECT_RE="$(get_expected_defect_regex "$SCENARIO" "$ALLOWLIST")"
+    if matches_expected_defect_regex "$TITLE" "$DESC_FILE" "$EXPECTED_DEFECT_RE"; then
       echo "SUPPRESSED $SCENARIO"
       exit 0
     fi

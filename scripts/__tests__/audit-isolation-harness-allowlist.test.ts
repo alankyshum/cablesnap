@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * BLD-1773 — Tests for the isolation-harness suppression feature in
+ * BLD-1773 + BLD-2460 — Tests for the isolation-harness suppression feature in
  * `scripts/audit-create-finding.sh`.
  *
  * Problem: dev-only isolation harnesses (e.g. stack-marker) intentionally
@@ -11,10 +11,18 @@
  * the QD#3 dedup fingerprint changes per-commit, the same benign finding evades
  * dedup and re-files every audit run.
  *
+ * BLD-2460 extends this to 'expected-defect' anchor fixtures: bld-480-prefix
+ * deliberately re-imposes the BLD-480 maxHeight crop so regression-smoke.sh
+ * (QD#2) can assert the vision pipeline still detects it. The crop finding on
+ * bld-480-prefix is NOT a real defect; suppressing it at intake does not weaken
+ * the QD#2 trust anchor (regression-smoke.sh asserts directly against the
+ * vision API, never via audit-create-finding.sh).
+ *
  * Fix: audit-create-finding.sh accepts --scenario and --allowlist flags. When
  * the scenario is in the isolation-harness allowlist AND the finding matches
- * near-empty/content-missing keywords, the script exits SUPPRESSED with exit
- * code 0 and makes no Paperclip API calls.
+ * near-empty/content-missing keywords (BLD-1773) OR the entry's
+ * expectedDefectRegex (BLD-2460), the script exits SUPPRESSED with exit code 0
+ * and makes no Paperclip API calls.
  *
  * Acceptance criteria (BLD-1773):
  *   AC1. Allowlisted scenario + near-empty finding => SUPPRESSED (no issue, no comment).
@@ -23,6 +31,13 @@
  *   Edge. Missing allowlist file => silently inert (no crash, normal create path).
  *   Edge. No --scenario flag => suppression check skipped (backward-compat).
  *   Edge. Allowlist typo / unknown scenario name => inert (normal create path).
+ *
+ * Acceptance criteria (BLD-2460):
+ *   AC-B1. bld-480-prefix + crop finding (matches expectedDefectRegex) => SUPPRESSED.
+ *   AC-B2. bld-480-prefix + near-empty finding => SUPPRESSED (near-empty branch still fires).
+ *   AC-B3. stack-marker + crop finding (no expectedDefectRegex on entry) => NOT suppressed.
+ *   AC-B4. completed-workout (real, non-allowlisted) + crop finding => NOT suppressed.
+ *   Regression. stack-marker + near-empty finding => still SUPPRESSED (BLD-1773 unchanged).
  */
 import { spawn } from 'child_process';
 import * as http from 'http';
@@ -159,6 +174,39 @@ function writeAllowlist(scenarios: string[]): string {
   return file;
 }
 
+/**
+ * Write an allowlist with a bld-480-prefix entry that includes the
+ * QD#2 crop expectedDefectRegex, matching the production entry in
+ * audit-isolation-harness-allowlist.json (BLD-2460).
+ * Optionally also includes stack-marker (without expectedDefectRegex).
+ */
+function writeAllowlistWithExpectedDefect(
+  includeStackMarker = true,
+): string {
+  const file = path.join(
+    os.tmpdir(),
+    `allowlist-edr-${process.pid}-${Date.now()}.json`,
+  );
+  const entries: object[] = [];
+  if (includeStackMarker) {
+    entries.push({
+      scenario: 'stack-marker',
+      reason: 'Test harness — near-empty only (no expectedDefectRegex)',
+      introducedBy: 'BLD-1126',
+      suppressionTicket: 'BLD-1773',
+    });
+  }
+  entries.push({
+    scenario: 'bld-480-prefix',
+    reason: 'Expected-defect anchor for BLD-480 trust anchor — crop is intentional.',
+    introducedBy: 'BLD-951',
+    suppressionTicket: 'BLD-2460',
+    expectedDefectRegex: 'crop|truncat|clip|maxHeight|cut off|MusclesWorkedCard|body-figure',
+  });
+  fs.writeFileSync(file, JSON.stringify({ isolationHarnesses: entries }, null, 2));
+  return file;
+}
+
 /** Write a description file whose body contains a near-empty phrase. */
 function writeNearEmptyDesc(fp: string, phrase: string): string {
   const file = path.join(os.tmpdir(), `desc-near-empty-${process.pid}-${Date.now()}.md`);
@@ -175,6 +223,16 @@ function writeRegularDesc(fp: string): string {
   fs.writeFileSync(
     file,
     `## UX: touch target too small\n\n**Fingerprint**: \`${fp}\`\n\nThe pill tap target is 32dp, below the 44dp minimum.\n`,
+  );
+  return file;
+}
+
+/** Write a description file whose body contains a crop-defect phrase (QD#2 regex). */
+function writeCropDesc(fp: string, phrase: string): string {
+  const file = path.join(os.tmpdir(), `desc-crop-${process.pid}-${Date.now()}.md`);
+  fs.writeFileSync(
+    file,
+    `## UX: ${phrase}\n\n**Fingerprint**: \`${fp}\`\n\nThe MusclesWorkedCard body-figure is cropped by maxHeight clamp.\n`,
   );
   return file;
 }
@@ -478,6 +536,45 @@ describe('audit-create-finding.sh — BLD-1773 isolation-harness allowlist suppr
       await server.close();
     }
   });
+
+  it('AC1: rest-coach scenario (BLD-2454) + near-empty title => SUPPRESSED', async () => {
+    // rest-coach is a dev-only isolation harness that renders ReminderSection
+    // rows in the top ~25% of the viewport, leaving ~75% blank by design.
+    // Without allowlist suppression, the daily audit re-files a near-empty
+    // finding every run (BLD-2454). Adding it to the allowlist stops that.
+    const fp = '113254aabb77';
+    const allowlist = writeAllowlist(['rest-coach']);
+    const desc = path.join(os.tmpdir(), `desc-rc-${process.pid}-${Date.now()}.md`);
+    fs.writeFileSync(
+      desc,
+      `## UX: rest-coach screen renders near-empty\n\n**Fingerprint**: \`${fp}\`\n\nOnly three toggle switches visible in top-right corner — rest of screen is blank.\n`,
+    );
+    const state: MockState = { issues: [], commentCalls: [], createCalls: [], nextId: 870 };
+    const server = await startMockServer(makeMock(state));
+    try {
+      const r = await runWrapper(
+        [
+          '--fingerprint', fp,
+          '--title', 'UX: rest-coach screen renders near-empty — only top-right controls visible',
+          '--description-file', desc,
+          '--audit-tag', 'audit-2026-07-01-a1735164',
+          '--run-id', 'run-restcoach-suppression',
+          '--scenario', 'rest-coach',
+          '--project-id', '00000000-0000-0000-0000-0000000000aa',
+        ],
+        allowlist,
+        server.url,
+      );
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe('SUPPRESSED rest-coach');
+      expect(state.createCalls).toHaveLength(0);
+      expect(state.commentCalls).toHaveLength(0);
+    } finally {
+      fs.unlinkSync(desc);
+      fs.unlinkSync(allowlist);
+      await server.close();
+    }
+  });
 });
 
 /**
@@ -732,6 +829,245 @@ describe('audit-create-finding.sh — BLD-2464 CVD hue-shift suppression', () =>
       expect(r.status).toBe(0);
       expect(r.stdout.trim()).toBe('SUPPRESSED-CVD');
       expect(state.createCalls).toHaveLength(0);
+      expect(state.commentCalls).toHaveLength(0);
+    } finally {
+      fs.unlinkSync(desc);
+      fs.unlinkSync(allowlist);
+      await server.close();
+    }
+  });
+});
+
+describe('audit-create-finding.sh — BLD-2460 expected-defect suppression (bld-480-prefix)', () => {
+  it('AC-B1: bld-480-prefix + crop finding matching expectedDefectRegex => SUPPRESSED', async () => {
+    // The ux-designer runs vision on bld-480-prefix and gets back a crop finding.
+    // That crop is the EXPECTED defect for the QD#2 trust anchor — suppress it.
+    const fp = '111222333444';
+    const allowlist = writeAllowlistWithExpectedDefect();
+    const desc = writeCropDesc(fp, 'MusclesWorkedCard body-figure cropped by maxHeight clamp');
+    const state: MockState = { issues: [], commentCalls: [], createCalls: [], nextId: 900 };
+    const server = await startMockServer(makeMock(state));
+    try {
+      const r = await runWrapper(
+        [
+          '--fingerprint', fp,
+          '--title', 'UX: MusclesWorkedCard body-figure cropped by maxHeight clamp (bld-480-prefix)',
+          '--description-file', desc,
+          '--audit-tag', 'audit-2026-07-01-aabbcc',
+          '--run-id', 'run-bld2460-test',
+          '--scenario', 'bld-480-prefix',
+          '--project-id', '00000000-0000-0000-0000-0000000000aa',
+        ],
+        allowlist,
+        server.url,
+      );
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe('SUPPRESSED bld-480-prefix');
+      // Critical: NO issue should be created and NO comment posted.
+      expect(state.createCalls).toHaveLength(0);
+      expect(state.commentCalls).toHaveLength(0);
+    } finally {
+      fs.unlinkSync(desc);
+      fs.unlinkSync(allowlist);
+      await server.close();
+    }
+  });
+
+  it('AC-B1: bld-480-prefix + "maxHeight" in description body => SUPPRESSED', async () => {
+    const fp = '222333444555';
+    const allowlist = writeAllowlistWithExpectedDefect();
+    const desc = path.join(os.tmpdir(), `desc-maxh-${process.pid}-${Date.now()}.md`);
+    fs.writeFileSync(
+      desc,
+      `## UX: card cropped\n\n**Fingerprint**: \`${fp}\`\n\nThe card height is limited by a maxHeight constraint that truncates the body-figure.\n`,
+    );
+    const state: MockState = { issues: [], commentCalls: [], createCalls: [], nextId: 910 };
+    const server = await startMockServer(makeMock(state));
+    try {
+      const r = await runWrapper(
+        [
+          '--fingerprint', fp,
+          '--title', 'UX: card cropped (bld-480-prefix)',
+          '--description-file', desc,
+          '--audit-tag', 'audit-2026-07-01-aabbcc',
+          '--run-id', 'run-bld2460-test',
+          '--scenario', 'bld-480-prefix',
+          '--project-id', '00000000-0000-0000-0000-0000000000aa',
+        ],
+        allowlist,
+        server.url,
+      );
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe('SUPPRESSED bld-480-prefix');
+      expect(state.createCalls).toHaveLength(0);
+      expect(state.commentCalls).toHaveLength(0);
+    } finally {
+      fs.unlinkSync(desc);
+      fs.unlinkSync(allowlist);
+      await server.close();
+    }
+  });
+
+  it('AC-B2: bld-480-prefix + near-empty finding (broken fixture render) => SUPPRESSED via NEAR_EMPTY_RE branch', async () => {
+    // If the fixture itself fails to render and produces a near-empty capture,
+    // that should also be suppressed (caught by regression-smoke.sh FAIL, not
+    // by a filed audit issue — per edge-case table in BLD-2460 description).
+    const fp = '333444555666';
+    const allowlist = writeAllowlistWithExpectedDefect();
+    const desc = writeNearEmptyDesc(fp, 'blank screen — fixture failed to render');
+    const state: MockState = { issues: [], commentCalls: [], createCalls: [], nextId: 920 };
+    const server = await startMockServer(makeMock(state));
+    try {
+      const r = await runWrapper(
+        [
+          '--fingerprint', fp,
+          '--title', 'UX: blank screen — fixture failed (bld-480-prefix)',
+          '--description-file', desc,
+          '--audit-tag', 'audit-2026-07-01-aabbcc',
+          '--run-id', 'run-bld2460-test',
+          '--scenario', 'bld-480-prefix',
+          '--project-id', '00000000-0000-0000-0000-0000000000aa',
+        ],
+        allowlist,
+        server.url,
+      );
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe('SUPPRESSED bld-480-prefix');
+      expect(state.createCalls).toHaveLength(0);
+      expect(state.commentCalls).toHaveLength(0);
+    } finally {
+      fs.unlinkSync(desc);
+      fs.unlinkSync(allowlist);
+      await server.close();
+    }
+  });
+
+  it('AC-B3 (regression): stack-marker + crop finding => NOT suppressed (no expectedDefectRegex on entry)', async () => {
+    // stack-marker has no expectedDefectRegex — only near-empty suppression applies.
+    // A crop finding on stack-marker is a real defect and MUST be filed.
+    const fp = '444555666777';
+    const allowlist = writeAllowlistWithExpectedDefect(/* includeStackMarker */ true);
+    const desc = writeCropDesc(fp, 'component cropped by overflow: hidden');
+    const state: MockState = { issues: [], commentCalls: [], createCalls: [], nextId: 930 };
+    const server = await startMockServer(makeMock(state));
+    try {
+      const r = await runWrapper(
+        [
+          '--fingerprint', fp,
+          '--title', 'UX: StackMarkerPill truncated by container overflow (stack-marker)',
+          '--description-file', desc,
+          '--audit-tag', 'audit-2026-07-01-aabbcc',
+          '--run-id', 'run-bld2460-test',
+          '--scenario', 'stack-marker',
+          '--project-id', '00000000-0000-0000-0000-0000000000aa',
+        ],
+        allowlist,
+        server.url,
+      );
+      expect(r.status).toBe(0);
+      // stack-marker has no expectedDefectRegex -> crop is NOT suppressed -> issue created.
+      expect(r.stdout).toMatch(/^CREATED BLD-\d+/);
+      expect(state.createCalls).toHaveLength(1);
+      expect(state.commentCalls).toHaveLength(0);
+    } finally {
+      fs.unlinkSync(desc);
+      fs.unlinkSync(allowlist);
+      await server.close();
+    }
+  });
+
+  it('AC-B3 (regression): stack-marker + near-empty finding => still SUPPRESSED (BLD-1773 unchanged)', async () => {
+    // Confirm that adding bld-480-prefix expectedDefectRegex does NOT break
+    // the existing BLD-1773 near-empty suppression for stack-marker.
+    const fp = '555666777888';
+    const allowlist = writeAllowlistWithExpectedDefect(/* includeStackMarker */ true);
+    const desc = writeNearEmptyDesc(fp, 'near-empty screen');
+    const state: MockState = { issues: [], commentCalls: [], createCalls: [], nextId: 940 };
+    const server = await startMockServer(makeMock(state));
+    try {
+      const r = await runWrapper(
+        [
+          '--fingerprint', fp,
+          '--title', 'UX: near-empty screen (stack-marker)',
+          '--description-file', desc,
+          '--audit-tag', 'audit-2026-07-01-aabbcc',
+          '--run-id', 'run-bld2460-test',
+          '--scenario', 'stack-marker',
+          '--project-id', '00000000-0000-0000-0000-0000000000aa',
+        ],
+        allowlist,
+        server.url,
+      );
+      expect(r.status).toBe(0);
+      expect(r.stdout.trim()).toBe('SUPPRESSED stack-marker');
+      expect(state.createCalls).toHaveLength(0);
+      expect(state.commentCalls).toHaveLength(0);
+    } finally {
+      fs.unlinkSync(desc);
+      fs.unlinkSync(allowlist);
+      await server.close();
+    }
+  });
+
+  it('AC-B4: completed-workout (non-allowlisted) + crop finding => NOT suppressed (real defects always filed)', async () => {
+    // A crop finding on a real production scenario (not an isolation harness)
+    // must always be filed. Suppression is allowlist-scoped only.
+    const fp = '666777888999';
+    const allowlist = writeAllowlistWithExpectedDefect();
+    const desc = writeCropDesc(fp, 'ExerciseCard cropped below fold');
+    const state: MockState = { issues: [], commentCalls: [], createCalls: [], nextId: 950 };
+    const server = await startMockServer(makeMock(state));
+    try {
+      const r = await runWrapper(
+        [
+          '--fingerprint', fp,
+          '--title', 'UX: ExerciseCard cropped below fold (completed-workout)',
+          '--description-file', desc,
+          '--audit-tag', 'audit-2026-07-01-aabbcc',
+          '--run-id', 'run-bld2460-test',
+          '--scenario', 'completed-workout',
+          '--project-id', '00000000-0000-0000-0000-0000000000aa',
+        ],
+        allowlist,
+        server.url,
+      );
+      expect(r.status).toBe(0);
+      // completed-workout is not in allowlist => crop is NOT suppressed => issue created.
+      expect(r.stdout).toMatch(/^CREATED BLD-\d+/);
+      expect(state.createCalls).toHaveLength(1);
+      expect(state.commentCalls).toHaveLength(0);
+    } finally {
+      fs.unlinkSync(desc);
+      fs.unlinkSync(allowlist);
+      await server.close();
+    }
+  });
+
+  it('exact-match guard: bld-480-prefix-extra does NOT match the bld-480-prefix entry', async () => {
+    // Scenario names that are a prefix of an allowlisted entry must NOT be suppressed.
+    const fp = '777888999aaa';
+    const allowlist = writeAllowlistWithExpectedDefect();
+    const desc = writeCropDesc(fp, 'MusclesWorkedCard cropped');
+    const state: MockState = { issues: [], commentCalls: [], createCalls: [], nextId: 960 };
+    const server = await startMockServer(makeMock(state));
+    try {
+      const r = await runWrapper(
+        [
+          '--fingerprint', fp,
+          '--title', 'UX: MusclesWorkedCard cropped (bld-480-prefix-extra)',
+          '--description-file', desc,
+          '--audit-tag', 'audit-2026-07-01-aabbcc',
+          '--run-id', 'run-bld2460-test',
+          '--scenario', 'bld-480-prefix-extra', // NOT in allowlist
+          '--project-id', '00000000-0000-0000-0000-0000000000aa',
+        ],
+        allowlist,
+        server.url,
+      );
+      expect(r.status).toBe(0);
+      // bld-480-prefix-extra is not listed -> no suppression -> issue created.
+      expect(r.stdout).toMatch(/^CREATED BLD-\d+/);
+      expect(state.createCalls).toHaveLength(1);
       expect(state.commentCalls).toHaveLength(0);
     } finally {
       fs.unlinkSync(desc);
