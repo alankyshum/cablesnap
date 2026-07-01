@@ -7,6 +7,10 @@
  *   - maskAllImages: true
  *   - beforeErrorSampling
  *
+ * Also asserts the BLD-2446 localhost/CI event filter is wired in:
+ *   - beforeSend: filterLocalhostEvents
+ *   - import from lib/sentry-localhost-filter
+ *
  * This is a static analysis test — it reads the source file, not
  * executes it. Purpose: catch accidental removal of the privacy gate
  * in code review or refactoring.
@@ -41,5 +45,16 @@ describe("Sentry init — AC12 privacy gate (source snapshot)", () => {
 
   it("imports mediaSurfaceMountCount from lib/media/replay-gate", () => {
     expect(source).toContain("mediaSurfaceMountCount");
+  });
+});
+
+describe("Sentry init — BLD-2446 localhost/CI event filter (source snapshot)", () => {
+  it("imports filterLocalhostEvents from lib/sentry-localhost-filter", () => {
+    expect(source).toContain("filterLocalhostEvents");
+    expect(source).toContain("sentry-localhost-filter");
+  });
+
+  it("wires beforeSend to filterLocalhostEvents", () => {
+    expect(source).toContain("beforeSend: filterLocalhostEvents");
   });
 });

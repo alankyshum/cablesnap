@@ -38,6 +38,7 @@ import { useDatabaseStatus } from "../hooks/useDatabaseStatus";
 import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
 import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
+import { filterLocalhostEvents } from '@/lib/sentry-localhost-filter';
 
 Sentry.init({
   dsn: 'https://c61278ad2a774c2e586454f017d4b86f@o4511267124215808.ingest.us.sentry.io/4511267125133312',
@@ -48,6 +49,13 @@ Sentry.init({
 
   // Enable Logs
   enableLogs: true,
+
+  // BLD-2446: Drop CI/dev events whose url tag resolves to a local host
+  // (localhost, 127.0.0.1, 0.0.0.0 — any port). Real iOS/Android users
+  // never hit these hosts. Filtering on URL host (not environment tag)
+  // because the environment tag is forgeable by misconfigured CI.
+  // Fail-open: events with no url tag or an unparseable URL are sent.
+  beforeSend: filterLocalhostEvents,
 
   // AC12 (BLD-1092): replaysSessionSampleRate set to 0 — no random session
   // replays. Error replays remain (gated below). Trade-off: session-sampled
