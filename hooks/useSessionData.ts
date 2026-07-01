@@ -168,8 +168,10 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
             const targetId = preferredSubstitutesMap[s.exercise_id];
             if (!targetId) return null;
             const target = preferredTargetMeta[targetId];
-            // target is null/deleted — chip will stay hidden (null-resolve guard).
-            return target?.name ?? null;
+            // Return null when target is missing (not in DB) OR soft-deleted
+            // (deleted_at != null). Chip stays hidden in both cases.
+            if (!target || target.deleted_at != null) return null;
+            return target.name;
           })(),
         });
       }

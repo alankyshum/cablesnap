@@ -124,6 +124,7 @@ export default function ActiveSession() {
     swapSource, setSwapSource, swapSheetRef,
     handleSwapOpen, handleSwapSelect,
     handleSetGoTo, handlePreferredSwap,
+    appliedPreferredSwaps,
     pickerOpen, setPickerOpen,
     handleAddExercise, handlePickExercise,
     handleDeleteExercise,
@@ -505,10 +506,12 @@ export default function ActiveSession() {
       onDeleteSegment={handleDeleteSegment}
       onCollapseToNormal={handleCollapseToNormal}
       preferredSubstituteName={group.preferredSubstituteName ?? null}
+      isPreferredSwapApplied={appliedPreferredSwaps.has(group.exercise_id)}
+      preferredSwappedToName={appliedPreferredSwaps.get(group.exercise_id)?.targetName ?? null}
       onPreferredSwap={handlePreferredSwap}
     />
     );
-  }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal, handlePreferredSwap]);
+  }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal, handlePreferredSwap, appliedPreferredSwaps]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />

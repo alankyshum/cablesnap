@@ -269,12 +269,15 @@ function GroupCardHeaderInner({
         </View>
 
         {/* Row 3a: BLD-2561 preferred substitute fast-path chip.
-            Renders ONLY when a resolved preferred name exists. Placed between
-            the icon row (Row 2) and the Last/Next row (Row 3) following the
-            pinnedNotePreview placement pattern (ux-designer ruling). */}
-        {preferredSubstituteName ? (
+            Renders when:
+              (a) a resolved preferred name exists (idle + swap-ready state), OR
+              (b) a preferred swap was just applied in this session (swapped+undo state)
+                  — even if the target exercise itself has no preferred substitute.
+            Placed between the icon row (Row 2) and the Last/Next row (Row 3)
+            following the pinnedNotePreview placement pattern (ux-designer ruling). */}
+        {(preferredSubstituteName || isPreferredSwapApplied) ? (
           <PreferredSwapChip
-            preferredName={preferredSubstituteName}
+            preferredName={preferredSubstituteName ?? preferredSwappedToName ?? ""}
             exerciseName={group.name}
             isSwapped={isPreferredSwapApplied}
             swappedToName={preferredSwappedToName}

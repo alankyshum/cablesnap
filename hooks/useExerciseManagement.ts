@@ -45,6 +45,16 @@ export function useExerciseManagement({
   const swapUndoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swapUndoRef = useRef<{ setIds: string[]; originalExerciseId: string } | null>(null);
 
+  // BLD-2561: ephemeral in-session preferred-swap state.
+  // Maps targetExerciseId → { targetName } so the chip on the target's card
+  // can render the "Swapped to {name} · Undo" state after a fast-path swap.
+  // This is cleared on undo (toast or chip press) and on normal swap-undo.
+  const [appliedPreferredSwaps, setAppliedPreferredSwaps] = useState<
+    Map<string, { targetName: string }>
+  >(new Map());
+  // Tracks the target exercise id of the last preferred-swap so handleSwapUndo can clear it.
+  const preferredSwapTargetIdRef = useRef<string | null>(null);
+
   const handleSwapOpen = useCallback(async (exerciseId: string) => {
     const group = groups.find((g) => g.exercise_id === exerciseId);
     if (group && group.sets.every((s) => s.completed)) {
@@ -65,6 +75,17 @@ export function useExerciseManagement({
       if (swapUndoTimer.current) {
         clearTimeout(swapUndoTimer.current);
         swapUndoTimer.current = null;
+      }
+      // BLD-2561: clear the applied preferred swap chip state on undo.
+      const targetId = preferredSwapTargetIdRef.current;
+      if (targetId) {
+        preferredSwapTargetIdRef.current = null;
+        setAppliedPreferredSwaps((prev) => {
+          if (!prev.has(targetId)) return prev;
+          const next = new Map(prev);
+          next.delete(targetId);
+          return next;
+        });
       }
       await load();
     } catch {
@@ -153,11 +174,27 @@ export function useExerciseManagement({
 
       // Wire undo into the existing swap-undo infra.
       swapUndoRef.current = { setIds: modifiedIds, originalExerciseId: exerciseId };
+      // BLD-2561: record target id so handleSwapUndo can clear the chip state.
+      preferredSwapTargetIdRef.current = preferred.id;
       if (swapUndoTimer.current) clearTimeout(swapUndoTimer.current);
+      // BLD-2561: record the in-session applied state so the chip on the target's
+      // card can render "Swapped to {name} · Undo" immediately after load().
+      setAppliedPreferredSwaps((prev) => {
+        const next = new Map(prev);
+        next.set(preferred.id, { targetName: preferred.name });
+        return next;
+      });
       showToast(`Swapped to ${preferred.name}`, { action: { label: "Undo", onPress: handleSwapUndo } });
       swapUndoTimer.current = setTimeout(() => {
         swapUndoTimer.current = null;
         swapUndoRef.current = null;
+        // BLD-2561: expire the chip's swapped state when the undo window closes.
+        preferredSwapTargetIdRef.current = null;
+        setAppliedPreferredSwaps((prev) => {
+          const next = new Map(prev);
+          next.delete(preferred.id);
+          return next;
+        });
       }, 5000);
     } catch {
       showError("Failed to apply preferred swap");
@@ -328,6 +365,7 @@ export function useExerciseManagement({
     handleSwapSelect,
     handleSetGoTo,
     handlePreferredSwap,
+    appliedPreferredSwaps,
     pickerOpen,
     setPickerOpen,
     handleAddExercise,
