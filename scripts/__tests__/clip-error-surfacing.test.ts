@@ -224,6 +224,89 @@ describe('clip.sh — BLD-846 error surfacing', () => {
     });
   });
 
+  describe('BLD-2510 — checkout-issue expectedStatuses field', () => {
+    it('sends expectedStatuses array in POST body by default', async () => {
+      let capturedBody: string | undefined;
+      const server = await startMockServer((req, res) => {
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', () => {
+          capturedBody = body;
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ id: 'issue-1', status: 'todo' }));
+        });
+      });
+      try {
+        const r = await runClip(['checkout-issue', 'BLD-99'], server.url);
+        expect(r.status).toBe(0);
+        // Verify the body was sent and contains expectedStatuses
+        expect(capturedBody).toBeDefined();
+        const parsed = JSON.parse(capturedBody!);
+        expect(parsed).toHaveProperty('agentId');
+        expect(parsed).toHaveProperty('expectedStatuses');
+        expect(Array.isArray(parsed.expectedStatuses)).toBe(true);
+        expect(parsed.expectedStatuses.length).toBeGreaterThan(0);
+        // Default must include the common actionable statuses
+        expect(parsed.expectedStatuses).toContain('todo');
+        expect(parsed.expectedStatuses).toContain('in_progress');
+        expect(parsed.expectedStatuses).toContain('in_review');
+        expect(parsed.expectedStatuses).toContain('blocked');
+        expect(parsed.expectedStatuses).toContain('backlog');
+      } finally {
+        await server.close();
+      }
+    });
+
+    it('honours --expected-status flags when provided', async () => {
+      let capturedBody: string | undefined;
+      const server = await startMockServer((req, res) => {
+        let body = '';
+        req.on('data', (c) => (body += c));
+        req.on('end', () => {
+          capturedBody = body;
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ id: 'issue-1', status: 'in_review' }));
+        });
+      });
+      try {
+        const r = await runClip(
+          ['checkout-issue', 'BLD-99', '--expected-status', 'in_review', '--expected-status', 'in_progress'],
+          server.url,
+        );
+        expect(r.status).toBe(0);
+        expect(capturedBody).toBeDefined();
+        const parsed = JSON.parse(capturedBody!);
+        expect(parsed.expectedStatuses).toEqual(['in_review', 'in_progress']);
+      } finally {
+        await server.close();
+      }
+    });
+
+    it('400 on missing expectedStatuses surfaces the validation error (regression guard)', async () => {
+      // Simulates the pre-BLD-2510 server rejecting a body with no expectedStatuses.
+      // After the fix, clip.sh always sends the field, so a real server should no
+      // longer 400. But if something regresses (e.g. jq missing), the error must
+      // still surface on stderr rather than being silently swallowed.
+      const server = await startMockServer((_req, res) => {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            error: 'Validation error',
+            details: [{ path: ['expectedStatuses'], message: 'Required' }],
+          }),
+        );
+      });
+      try {
+        const r = await runClip(['checkout-issue', 'BLD-99'], server.url);
+        expect(r.status).not.toBe(0);
+        expect(r.stderr).toContain('400');
+        expect(r.stderr).toContain('expectedStatuses');
+      } finally {
+        await server.close();
+      }
+    });
+  });
+
   describe('exit code propagation', () => {
     it('the failure is detectable under `set -e`', async () => {
       const server = await startMockServer((_req, res) => {

@@ -188,12 +188,45 @@ case "$cmd" in
     ;;
 
   checkout-issue)
+    # BLD-2510: The server now requires an `expectedStatuses` array in the
+    # checkout POST body. Without it the server returns:
+    #   HTTP 400 {"error":"Validation error","details":[{"path":["expectedStatuses"],"message":"Required"}]}
+    #
+    # Usage:
+    #   checkout-issue <ID> [--expected-status S] [--expected-status S ...] [run-id]
+    #
+    # --expected-status (repeatable): add a status to the expected-statuses
+    #   filter. Defaults to the full set of actionable statuses so that a
+    #   bare `checkout-issue BLD-N` still succeeds regardless of the issue's
+    #   current status (matching the pre-BLD-2510 behaviour).
     issue_id="$1"; shift
-    run_id="${1:-$(python3 -c 'import uuid; print(uuid.uuid4())' 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "manual-$(date +%s)")}"
+    # Parse optional --expected-status flags; collect remaining positional
+    # arg as run_id.
+    expected_statuses=()
+    remaining_args=()
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --expected-status) expected_statuses+=("$2"); shift 2;;
+        *) remaining_args+=("$1"); shift;;
+      esac
+    done
+    # Default: all non-terminal actionable statuses (mirrors agent heartbeat
+    # expectations — agents never need to check out a done/cancelled issue).
+    if [[ ${#expected_statuses[@]} -eq 0 ]]; then
+      expected_statuses=("backlog" "todo" "in_progress" "in_review" "blocked")
+    fi
+    # Build JSON array for expectedStatuses.
+    expected_statuses_json=$(printf '%s\n' "${expected_statuses[@]}" | jq -R . | jq -sc .)
+    run_id="${remaining_args[0]:-$(python3 -c 'import uuid; print(uuid.uuid4())' 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "manual-$(date +%s)")}"
     # Route through api() so 4xx/5xx bodies surface (BLD-846).
+    # BLD-2510: include expectedStatuses in the body — required by the server.
+    checkout_body=$(jq -n \
+      --arg agentId "$AGENT" \
+      --argjson expectedStatuses "$expected_statuses_json" \
+      '{agentId: $agentId, expectedStatuses: $expectedStatuses}')
     api POST "/issues/$issue_id/checkout" \
       -H "X-Paperclip-Run-Id: $run_id" \
-      -d "{\"agentId\":\"$AGENT\"}" | jq_or_cat '.'
+      -d "$checkout_body" | jq_or_cat '.'
     echo "Run ID: $run_id" >&2
     ;;
 
@@ -424,7 +457,11 @@ ISSUES:
   create-issue --title T [--description D] [--status S] [--priority P] [--goal-id G]
   update-issue <ID> [--title T] [--status S] [--priority P] [--comment C]
   comment-issue <ID> --body TEXT [--reopen]
-  checkout-issue <ID> [run-id]
+  checkout-issue <ID> [--expected-status S] ... [run-id]
+                    Checkout an issue. --expected-status (repeatable) restricts
+                    checkout to issues in the given status(es). Default: all
+                    actionable statuses (backlog, todo, in_progress, in_review,
+                    blocked). BLD-2510: required by server since 2026-07-01.
   release-issue <ID>
 
 GOALS:
