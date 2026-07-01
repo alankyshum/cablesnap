@@ -10,6 +10,7 @@ import { FlowCard, difficultyBadge, type MetaBadge, type FlowCardMenuItem } from
 import type { TemplateReadiness } from "../../lib/recovery-readiness";
 import type { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
+import Masonry from "@/components/ui/Masonry";
 
 import { formatDurationEstimate, formatSpokenDuration } from "../../lib/format";
 
@@ -90,7 +91,7 @@ export function TemplatesList({ colors, templates, counts, durationEstimates, st
           <Button variant="outline" onPress={() => router.push("/template/create")} style={styles.emptyBtn} accessibilityLabel="Create your first template" label="Create Template" />
         </View>
       ) : (
-        <View style={styles.flowList}>
+        <Masonry gap={12}>
           {templates.map((item) => {
             const meta = starterMeta(item.id);
             const isStarter = !!meta || !!item.is_starter;
@@ -110,14 +111,13 @@ export function TemplatesList({ colors, templates, counts, durationEstimates, st
                 menuItems={menuItems} />
             );
           })}
-        </View>
+        </Masonry>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flowList: { flexDirection: "row", flexWrap: "wrap", gap: 12, alignItems: "flex-start" },
   section: { marginBottom: 20 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 4 },
