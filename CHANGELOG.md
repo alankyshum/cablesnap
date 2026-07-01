@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.51 — 2026-07-01
+<!-- versionCode: 121 -->
+
 - **Fix: Workouts home cards now flow into a proper grid on tablets** — on wider screens the Templates, Programs, and Recent Workouts lists were each trapped in a single half-width column, so their cards stacked one-per-row instead of filling the available space. These lists now use the same column-distributing grid as the rest of the app, so cards fan out into 2 columns (or 3 on the widest screens) while phones keep the single-column layout.
 
 ## v0.26.50 — 2026-06-30
