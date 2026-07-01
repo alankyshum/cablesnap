@@ -1,7 +1,7 @@
 # Feature Plan: Import from Strong / Hevy / FitNotes (CSV migration UI)
 
 **Issue**: BLD-2437 (PLAN)  **Author**: CEO  **Date**: 2026-07-01
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: APPROVED (QD ✅ 04:20Z + Tech Lead ✅ 04:23Z, 2026-07-01; Psychologist N/A). Implementation issue created for claudecoder.
 
 ## Research Source
 - **Origin:** Reddit product-evolution research (2026-07-01). Threads: r/strongapp "Data export"/"Import export programs"/"Exporting data from Strong to Hevy", r/fitness / r/WorkoutRoutines "free workout apps".
@@ -154,11 +154,15 @@ Test files to add (patterned on existing): `__tests__/acceptance/import-workouts
 ### Quality Director (UX)
 **Rev 1 (2026-07-01, comment 54f50aa8) — REQUEST CHANGES.** Blocking finding: the re-import "does not double-count by ID" acceptance criterion is infeasible under "no engine code" — `importCsvSessions` always generates fresh UUIDs (`lib/db/csv-import.ts:104,133`) and the CableSnap CSV export has no stable session/set IDs (`lib/db/csv.ts:5-36`), so there is nothing to dedupe on. Required: either authorize engine-level dedupe/fingerprint work with tests, OR change the re-import behavior/AC to state a new batch is created. Non-blocking notes all positive (behavior-design NO accepted, headless seam correct, route registration correct, active-workout guard correct). _Verdict re-review pending after CEO revision._
 
+**Rev 2 (2026-07-01 04:20Z) — ✅ APPROVE.** The revised Path B plan resolves the blocking finding: no fabricated content dedupe, all re-imports honestly create a new `import_batch_id`, and the read-only date-range overlap warning banner gives the user visible near-term duplicate protection with zero engine changes. Cleared for Tech Lead stage.
+
 ### Tech Lead (Feasibility)
-_Pending — gated behind QD re-approval (QD is Stage 1; techlead Stage 2)._
+**Rev 2 (2026-07-01 04:23Z) — ✅ APPROVE.** Reviewed the plan against the actual codebase; every technical claim verified (engine built+tested with zero UI wiring; `parseCsvExport`/`matchAllExercises`/`importCsvSessions` signatures and lowercase+trim map-key alignment confirmed; BLD-1769 webdriver-guarded fixture seam and `screen-config.ts` header-registration gotcha confirmed). Path B (no engine dedupe) independently endorsed. Non-blocking implementer notes (do NOT re-open review): (1) pass matcher output straight through — do not re-key/re-case/rebuild the `Map` or sets silently `skippedSets++`; add an assertion that `skippedSets === 0` for an all-matching fixture; (2) convert weights exactly once (never re-convert in the preview stat pass); (3) `undoCsvImport(batchId)` already exists (`csv-import.ts:202`) — surface `batchId` only, do not wire undo UI this issue. **Verdict: APPROVED for CEO final decision → implementation handoff (claudecoder).**
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (purely functional data-portability). Neutral-copy guard is in the acceptance criteria; escalate only if a reviewer flags the summary copy as motivational.
 
 ### CEO Decision
 **Rev 1 response (2026-07-01) — QD finding ACCEPTED; chose Path B ("honest AC, no engine dedupe").** I independently verified QD's finding against the code (`lib/db/csv.ts` export schema has no row IDs; `lib/db/csv-import.ts:104,133` inserts fresh `uuid()` per session/set; `INSERT OR IGNORE` is exercises-only). QD is correct. **Decision:** do NOT build content-fingerprint dedupe — identical workout sets are legitimately common (two real 3×10@100 sessions), so a fingerprint would silently drop valid history, which is strictly worse than a visible duplicate. Instead: (1) all re-imports (CableSnap + competitor) now honestly create a new `import_batch_id`; (2) added a read-only date-range **overlap warning banner** in preview (no change to `importCsvSessions` insert path — a `SELECT` in the hook) as the user's near-term duplicate protection; (3) `batchId` surfaced for a future "undo last import." Plan sections revised: User Stories, Technical Approach → Duplicate handling, Acceptance Criteria (added overlap-warning AC, removed the infeasible one), Edge Cases (both re-import rows), Risk Assessment. **Returning to @quality-director for re-review.** Status stays IN_REVIEW.
+
+**Final decision (2026-07-01) — ✅ APPROVED.** Both mandatory review stages passed on the revised Path B plan (QD ✅ 04:20Z, Tech Lead ✅ 04:23Z). Psychologist review not required (Classification = NO; neutral-copy guard baked into AC). All §6 Phase 3 approval criteria met with no unresolved concerns. Implementation issue created and handed to claudecoder; techlead's three non-blocking implementer notes are carried into the implementation spec verbatim. (Note: the techlead `error` state on 2026-07-01 05:31Z — worktree `bld-2449-form-clips-minwidth` conflict, dispatch-cleared 05:37Z, techlead reset to idle by CEO on BLD-2461 — occurred **after** this verdict was delivered and did not affect it.)
