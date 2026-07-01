@@ -1,9 +1,11 @@
 /**
- * BLD-1033: Recent Workout cards cropped on tablet rows
+ * BLD-1033: Recent Workout cards cropped on tablet rows.
  *
- * Regression test: Animated.View wrapper must have alignSelf:'flex-start' so
- * each card sizes to its own content rather than stretching to the tallest
- * sibling in the flex-wrap row.
+ * Superseded by the Masonry migration: the list now renders inside a
+ * column-distributing <Masonry> instead of a flex-wrap row, so each card
+ * lives in its own independent column and must STRETCH to fill that column
+ * width (alignSelf:'stretch'). The old flex-wrap crop (which required
+ * alignSelf:'flex-start') can no longer occur.
  */
 
 jest.mock("expo-router", () => ({ useRouter: () => ({ push: jest.fn() }) }));
@@ -78,7 +80,7 @@ describe("RecentWorkoutsList", () => {
     expect(getByText(/No workouts yet/)).toBeTruthy();
   });
 
-  it("animatedCard wrapper has alignSelf flex-start to prevent tablet row crop (BLD-1033)", () => {
+  it("animatedCard wrapper stretches to fill its Masonry column (BLD-1033, superseded by Masonry migration)", () => {
     const { StyleSheet } = require("react-native");
     const { toJSON } = render(
       <RecentWorkoutsList
@@ -89,20 +91,24 @@ describe("RecentWorkoutsList", () => {
       />,
     );
 
-    // Walk the JSON tree looking for a node with alignSelf: 'flex-start'
+    // Walk the JSON tree looking for a card wrapper that stretches to its
+    // column. The card must NOT pin to flex-start (that would leave it at its
+    // 280px intrinsic width instead of filling the Masonry column).
     type JsonNode = { props?: { style?: unknown }; children?: JsonNode[] | string[] | null };
-    function hasAlignSelfFlexStart(node: JsonNode | string | null): boolean {
+    function findAlignSelf(node: JsonNode | string | null, value: string): boolean {
       if (!node || typeof node === "string") return false;
       if (node.props?.style) {
         const flat = StyleSheet.flatten(node.props.style);
-        if (flat?.alignSelf === "flex-start") return true;
+        if (flat?.alignSelf === value) return true;
       }
       if (Array.isArray(node.children)) {
-        return (node.children as Array<JsonNode | string>).some((child) => hasAlignSelfFlexStart(child));
+        return (node.children as Array<JsonNode | string>).some((child) => findAlignSelf(child, value));
       }
       return false;
     }
 
-    expect(hasAlignSelfFlexStart(toJSON() as JsonNode | string | null)).toBe(true);
+    const tree = toJSON() as JsonNode | string | null;
+    expect(findAlignSelf(tree, "stretch")).toBe(true);
+    expect(findAlignSelf(tree, "flex-start")).toBe(false);
   });
 });
