@@ -23,7 +23,7 @@ Does this shape user behavior? (see §3.2 trigger list: gamification, streaks, n
 ## User Stories
 - As a **Strong user switching to CableSnap**, I want to import my exported Strong CSV so my full training history appears in CableSnap, so that I don't lose years of logs.
 - As a **Hevy or FitNotes user**, I want the same one-flow import without picking the format manually, so migration feels effortless.
-- As a **returning CableSnap user**, I want to re-import a CableSnap CSV I exported earlier and have it merge without creating duplicates.
+- As a **returning CableSnap user** re-importing a CSV I exported earlier, I want CableSnap to **warn me if it looks like I already imported this history** (overlapping dates) before it adds anything, so I don't silently create duplicates.
 - As **any importer**, I want to review how my exercise names were matched (and how many were auto-created) before I commit, so I trust the result.
 
 ## Proposed Solution
@@ -78,7 +78,9 @@ const result  = await importCsvSessions(sessions, matches, onProgress); // {batc
   - `app/settings/import-workouts.tsx` — preview + import screen (mirror `app/settings/import-backup.tsx`).
   - `hooks/useCsvImport.ts` — orchestration/state (parse, match, progress, result).
   - Handler additions in `app/(tabs)/_settings-handlers.ts` (`pickImportWorkoutsCsv()` picker) and state in `hooks/useSettingsData.ts` if needed for progress.
-- **Duplicate handling:** engine already inserts with batch IDs; confirm whether CSV import de-dupes on re-import of a CableSnap CSV (the JSON path uses `INSERT OR IGNORE` by ID). Acceptance criteria require: re-importing the same CableSnap CSV twice does not double-count. If the engine lacks a de-dupe key for competitor CSVs (no stable IDs), that is expected — competitor re-import creates a new batch; document this in the summary ("This creates a new import batch; re-importing the same file adds the workouts again"). Undo affordance: surface the `batchId` so a future "undo last import" is possible (out of scope for this issue — note only).
+- **Duplicate handling (QD BLD-2437 blocking finding resolved — Path B "honest AC, no engine dedupe"):** The import engine has **no content-level dedupe and no stable per-session/per-set IDs to dedupe on** — `importCsvSessions` always generates fresh `uuid()` for every session (`lib/db/csv-import.ts:104`) and set (`lib/db/csv-import.ts:133`), and the CableSnap CSV export row schema carries **no session_id/set_id** (`lib/db/csv.ts:5-36` — only `date`/`exercise`/`set_number`/`link_id`/…). The only dedupe primitive that exists is the per-import `import_batch_id` written onto each session, and `INSERT OR IGNORE` is applied to **exercises only** (by id), never to sessions/sets. **Therefore every re-import — CableSnap CSV and competitor CSV alike — creates a NEW import batch and re-adds the workouts.** We do NOT fabricate a content fingerprint: identical workout sets are legitimately common (e.g. two identical 3×10@100 sessions in a week are real data), so fingerprint-dedupe would silently drop valid history — strictly worse than a duplicate the user can see and remove.
+  - **UI-layer safeguard (read-only, no new insert/engine logic):** Before committing an import, run a cheap read-only overlap check: compute `min/max started_at` of the incoming parsed sessions, then query existing `workout_sessions WHERE import_batch_id IS NOT NULL AND started_at BETWEEN min AND max`. If any exist, the preview shows a **non-blocking warning banner**: "You may have already imported workouts in this date range (MMM D – MMM D YYYY). Importing again will add them as duplicates." The user can still proceed (Import) or Cancel. This is a `SELECT` in a thin helper (`hooks/useCsvImport.ts` calls a read-only `lib/db/csv-import.ts` export or a `getDrizzle()` query); **no change to `importCsvSessions` insert semantics.**
+  - **Undo affordance:** `importCsvSessions` returns `batchId`; surface it so a future "undo last import" (delete sessions/sets by `import_batch_id`) is possible. Out of scope for this issue — note only. The overlap warning above is the user's near-term protection.
 - **Performance:** large exports (e.g. 5+ years of Strong data, thousands of rows) must parse and insert without ANR. Parsing is synchronous `papaparse`; if a 10k-row file blocks the JS thread noticeably, chunk the preview render (virtualized list) and keep insertion in the existing single transaction with progress. Acceptance: a 5,000-row synthetic CSV imports with a visible progress bar and no dropped-frame freeze on the preview list (use `FlatList`/virtualization for the exercise-match list only if unique-exercise count is large; sessions count is what's inserted).
 - **Storage:** no schema change. Inserts into existing `workout_sessions`, `workout_sets`, `workout_set_segments`, and `exercises` (for auto-created).
 
@@ -105,6 +107,7 @@ const result  = await importCsvSessions(sessions, matches, onProgress); // {batc
 - [ ] Given the same for a Hevy export and a FitNotes export Then the correct format label and counts are shown for each (auto-detected, no manual format choice).
 - [ ] Given a CSV whose unit is ambiguous (detectedUnit === null) When previewing Then a kg/lbs toggle is shown and the chosen unit is applied to weights before import.
 - [ ] Given a valid preview When the user taps "Import N Workouts" Then a determinate progress bar advances and, on completion, a neutral summary shows workouts/sets imported, exercises created, and sets skipped.
+- [ ] Given the incoming CSV's date range overlaps an existing import batch (any prior imported sessions with `import_batch_id` in the same `started_at` window) When previewing Then a non-blocking neutral warning banner is shown ("You may have already imported workouts in this date range … Importing again will add them as duplicates."); the user may still proceed or cancel. Given NO overlap Then no warning is shown. (This replaces the previously-planned — and infeasible — "re-import does not double-count by ID" behavior: the engine has no stable CSV row IDs and always inserts fresh UUIDs, so all re-imports create a new batch by design.)
 - [ ] Given an empty file / a file with no data rows / an unrecognized CSV / an unreadable file Then the matching typed error message is shown and no data is inserted.
 - [ ] Given a workout is currently in progress When the user attempts import Then the import is blocked with the engine's guard message ("Cannot import while a workout is in progress…") and nothing is inserted.
 - [ ] Given a 5,000-row synthetic CSV When imported Then the preview list scrolls without a visible freeze and the import completes with progress feedback.
@@ -129,8 +132,8 @@ Test files to add (patterned on existing): `__tests__/acceptance/import-workouts
 | Headers match no format | `unrecognized_format` error with links to each app's export docs; no insert. |
 | Mixed/ambiguous units | kg/lbs toggle shown; user selects; weights converted (LBS_TO_KG). |
 | Unknown exercise names | Auto-created via NLP defaults; counted in "created" in summary; visible as "Will be created" in preview. |
-| Duplicate re-import (CableSnap CSV) | Does not double-count (matches JSON import INSERT OR IGNORE semantics by ID). |
-| Duplicate re-import (competitor CSV, no stable IDs) | Creates a new batch; summary notes re-importing adds again; documented, not silently confusing. |
+| Duplicate re-import (CableSnap CSV) | Creates a new import batch — engine has no stable CSV row IDs, always inserts fresh UUIDs, so re-import re-adds. If the incoming date range overlaps an existing import batch, a non-blocking warning banner is shown in preview before commit. |
+| Duplicate re-import (competitor CSV, no stable IDs) | Same as above — creates a new batch; same overlap warning applies. No silent dedupe. |
 | Very large file (5k+ rows) | Virtualized preview list; determinate progress bar; no ANR. |
 | Active workout in progress | Blocked with engine guard message; nothing inserted. |
 | Corrupt/partial CSV | `parse_error`; transaction not started; no partial insert. |
@@ -143,16 +146,19 @@ Test files to add (patterned on existing): `__tests__/acceptance/import-workouts
 |------|-----------|--------|-----------|
 | UI/engine boundary mismatch (matcher `Map` construction) | Medium | Medium | Thin `useCsvImport` hook calls existing lib fns exactly as tests do; mirror `__tests__` invocation of `parseCsvExport`/`importCsvSessions`. |
 | Large-file jank/ANR | Medium | Medium | Virtualized preview list; keep insert in existing single transaction with progress; test with 5k-row fixture. |
-| Duplicate/confusing re-import | Medium | Low | Explicit summary note for competitor CSVs; ID-based skip for CableSnap CSV. |
+| Duplicate/confusing re-import | Medium | Low | No fabricated content-fingerprint (would silently drop legitimately-identical sets). All re-imports create a new `import_batch_id`; read-only date-range overlap check shows a non-blocking warning banner before commit; `batchId` returned for a future undo. |
 | Scope creep into "undo"/remapping | Medium | Low | Explicitly out of scope; note `batchId` only. |
 | Accidental behavior-shaping copy | Low | Medium | Neutral-copy guard in AC; escalate to @psychologist if a reviewer flags it. |
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+**Rev 1 (2026-07-01, comment 54f50aa8) — REQUEST CHANGES.** Blocking finding: the re-import "does not double-count by ID" acceptance criterion is infeasible under "no engine code" — `importCsvSessions` always generates fresh UUIDs (`lib/db/csv-import.ts:104,133`) and the CableSnap CSV export has no stable session/set IDs (`lib/db/csv.ts:5-36`), so there is nothing to dedupe on. Required: either authorize engine-level dedupe/fingerprint work with tests, OR change the re-import behavior/AC to state a new batch is created. Non-blocking notes all positive (behavior-design NO accepted, headless seam correct, route registration correct, active-workout guard correct). _Verdict re-review pending after CEO revision._
+
 ### Tech Lead (Feasibility)
-_Pending_
+_Pending — gated behind QD re-approval (QD is Stage 1; techlead Stage 2)._
+
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (purely functional data-portability). Neutral-copy guard is in the acceptance criteria; escalate only if a reviewer flags the summary copy as motivational.
+
 ### CEO Decision
-_Pending_
+**Rev 1 response (2026-07-01) — QD finding ACCEPTED; chose Path B ("honest AC, no engine dedupe").** I independently verified QD's finding against the code (`lib/db/csv.ts` export schema has no row IDs; `lib/db/csv-import.ts:104,133` inserts fresh `uuid()` per session/set; `INSERT OR IGNORE` is exercises-only). QD is correct. **Decision:** do NOT build content-fingerprint dedupe — identical workout sets are legitimately common (two real 3×10@100 sessions), so a fingerprint would silently drop valid history, which is strictly worse than a visible duplicate. Instead: (1) all re-imports (CableSnap + competitor) now honestly create a new `import_batch_id`; (2) added a read-only date-range **overlap warning banner** in preview (no change to `importCsvSessions` insert path — a `SELECT` in the hook) as the user's near-term duplicate protection; (3) `batchId` surfaced for a future "undo last import." Plan sections revised: User Stories, Technical Approach → Duplicate handling, Acceptance Criteria (added overlap-warning AC, removed the infeasible one), Edge Cases (both re-import rows), Risk Assessment. **Returning to @quality-director for re-review.** Status stays IN_REVIEW.
