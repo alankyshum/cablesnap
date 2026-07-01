@@ -117,25 +117,33 @@ export function useCsvImport() {
   /**
    * Perform the actual import — calls importCsvSessions with the matcher output
    * passed straight through.
+   * On rejection, restores state to `preview` so the user can retry or dismiss.
    */
   const startImport = useCallback(async () => {
     if (state.phase !== "preview") return;
-    const { sessions, matches } = state;
+    // Capture preview state so we can restore it if the import is rejected
+    const previewSnapshot = state;
+    const { sessions, matches } = previewSnapshot;
 
     setState({
       phase: "importing",
       progress: { current: 0, total: sessions.length, phase: "inserting" },
     });
 
-    const result = await importCsvSessions(
-      sessions,
-      matches, // passed straight through — do NOT re-key
-      (progress) => {
-        setState({ phase: "importing", progress });
-      },
-    );
-
-    setState({ phase: "done", result });
+    try {
+      const result = await importCsvSessions(
+        sessions,
+        matches, // passed straight through — do NOT re-key
+        (progress) => {
+          setState({ phase: "importing", progress });
+        },
+      );
+      setState({ phase: "done", result });
+    } catch (err) {
+      // Restore to preview so the user has a recovery path (retry or dismiss)
+      setState(previewSnapshot);
+      throw err;
+    }
   }, [state]);
 
   const reset = useCallback(() => {

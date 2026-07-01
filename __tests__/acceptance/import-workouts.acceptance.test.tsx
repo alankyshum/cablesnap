@@ -400,7 +400,7 @@ describe('Import Workouts — Acceptance (BLD-2463)', () => {
       new Error('Cannot import while a workout is in progress. Please finish or discard your current workout first.'),
     );
 
-    const { findByTestId } = renderScreen(<ImportWorkouts />);
+    const { findByTestId, queryByTestId } = renderScreen(<ImportWorkouts />);
     await findByTestId('import-workouts-import-btn');
 
     const importBtn = await findByTestId('import-workouts-import-btn');
@@ -410,14 +410,46 @@ describe('Import Workouts — Acceptance (BLD-2463)', () => {
       expect(mockImportCsvSessions).toHaveBeenCalled();
     });
 
-    // Summary card should NOT appear; we should stay on preview or see no done button
-    // (toast.error is called instead)
+    // After rejection: progress bar must NOT remain visible — user must have a recovery path
     await waitFor(() => {
-      // The done button should NOT appear if import failed
-      expect(require('@testing-library/react-native').queryByTestId?.('import-workouts-done-btn')).toBeNull();
-    }).catch(() => {
-      // The session should not be "done" state
+      expect(queryByTestId('import-workouts-progress-bar')).toBeNull();
     });
+
+    // The done button should NOT appear if import failed
+    await waitFor(() => {
+      expect(queryByTestId('import-workouts-done-btn')).toBeNull();
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // AC-7b: Rejected import returns to preview — progress bar gone, import btn back
+  // ─────────────────────────────────────────────────────────────────────────
+  it('AC-7b: Rejected import — progress bar not rendered, import button restored for retry', async () => {
+    setCsvContent(makeHevyCsv());
+
+    // Any rejection (guard, DB error, etc.) must not strand the user on the importing screen
+    mockImportCsvSessions.mockRejectedValueOnce(
+      new Error('Cannot import while a workout is in progress.'),
+    );
+
+    const { findByTestId, queryByTestId } = renderScreen(<ImportWorkouts />);
+    await findByTestId('import-workouts-import-btn');
+
+    fireEvent.press(await findByTestId('import-workouts-import-btn'));
+
+    await waitFor(() => {
+      expect(mockImportCsvSessions).toHaveBeenCalled();
+    });
+
+    // CRITICAL: the importing progress UI must NOT be visible after a rejected import
+    await waitFor(() => {
+      expect(queryByTestId('import-workouts-progress-bar')).toBeNull();
+    }, { timeout: 3000 });
+
+    // The user should be returned to the preview so they can retry or dismiss
+    await waitFor(() => {
+      expect(queryByTestId('import-workouts-import-btn')).not.toBeNull();
+    }, { timeout: 3000 });
   });
 
   // ─────────────────────────────────────────────────────────────────────────
