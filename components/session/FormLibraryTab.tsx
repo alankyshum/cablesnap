@@ -652,6 +652,7 @@ const styles = StyleSheet.create({
   countBadgeText: { fontSize: fontSizes.xs, fontWeight: "700" },
   selectTogglePressable: {
     minHeight: 44,
+    minWidth: 44,
     paddingHorizontal: 8,
     justifyContent: "center",
     alignItems: "center",
