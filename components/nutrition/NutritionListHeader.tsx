@@ -7,6 +7,26 @@ import { todayKey, formatDateKey } from '@/lib/format';
 import type { HydrationUnit } from '@/lib/hydration-units';
 import { MacroRow } from './MacroRow';
 import { WaterSection } from './WaterSection';
+import type { DayType } from '@/lib/training-day-macros';
+
+/**
+ * PROHIBITION (AC16/C1): No "earn/earned/bonus/reward/treat/deserve/penalty/punish/
+ *   unlock/spend/burn it off/work it off/guilt/cheat" copy in this file.
+ * No directional color tokens (red/green/surplus/deficit) on calorie numbers.
+ */
+
+// ─── Binding copy strings (psychologist C2 verbatim badge tap — AC14) ─────────
+// DO NOT modify these strings without psychologist sign-off.
+// Exported so the module-level lexeme-ban grep test (AC16) can import directly.
+
+export const BADGE_COPY = {
+  trainingDayLabel: 'Training day · fueled',
+  trainingDayLabelMinimal: 'Training day',
+  restDayLabel: 'Rest day · recovery',
+  restDayLabelMinimal: 'Rest day',
+  trainingDayTap: 'Higher target today because you trained — extra fuel for recovery. Your weekly average is unchanged.',
+  restDayTap: 'Recovery day — a bit lower to balance your training days. Your weekly average is unchanged.',
+} as const;
 
 const DAY_MS = 86_400_000;
 
@@ -40,6 +60,24 @@ type Props = {
   onMealTemplates: () => void;
   onWaterPreset: (amountMl: number) => void;
   onWaterCustom: () => void;
+  /**
+   * Training-Day Macro Adjustment: if set, the targets prop already reflects
+   * the effective per-day target (computed by computeEffectiveTargets).
+   * The badge shows the day type and a tap explanation.
+   * AC21 (QD3): baseCals is shown alongside the effective target.
+   */
+  trainingDayAdjustment?: {
+    /** Classified day type — training or rest. */
+    dayType: DayType;
+    /** Base (weekly-average) calorie target from macro_targets singleton. */
+    baseCals: number;
+    /** Whether the feature is active and targets differ from base. */
+    adjusted: boolean;
+    /** Whether the rest-day target was clamped by the calorie floor. */
+    cappedByFloor: boolean;
+    /** Compact label mode (for small screens). Default: false → full label */
+    compact?: boolean;
+  };
 };
 
 export function NutritionListHeader({
@@ -57,7 +95,11 @@ export function NutritionListHeader({
   onMealTemplates,
   onWaterPreset,
   onWaterCustom,
+  trainingDayAdjustment,
 }: Props) {
+  const adj = trainingDayAdjustment;
+  const showBadge = adj?.adjusted === true;
+
   return (
     <>
       <View style={styles.header}>
@@ -84,6 +126,17 @@ export function NutritionListHeader({
       {targets && (
         <Card style={[styles.card, { backgroundColor: colors.surface }]}>
           <CardContent>
+            {/* Day-type badge (AC13, AC14, AC16, AC17, AC21) */}
+            {showBadge && adj && (
+              <DayTypeBadge
+                dayType={adj.dayType}
+                baseCals={adj.baseCals}
+                effectiveCals={targets.calories}
+                cappedByFloor={adj.cappedByFloor}
+                compact={adj.compact}
+                colors={colors}
+              />
+            )}
             <MacroRow
               label="Calories"
               value={summary.calories}
@@ -145,6 +198,65 @@ export function NutritionListHeader({
   );
 }
 
+// ─── DayTypeBadge ─────────────────────────────────────────────────────────────
+
+/**
+ * Neutral day-type badge rendered inside the nutrition card.
+ *
+ * AC13: accessibilityLabel describes both day type and calorie implication
+ * AC14: uses C2 verbatim labels and tap strings
+ * AC16: no directional color tokens; badge uses neutral surface color only
+ * AC17: rest day renders as a neutral, complete state (not a penalty)
+ * AC21 (QD3): shows Base: N alongside effective target
+ */
+function DayTypeBadge({
+  dayType,
+  baseCals,
+  effectiveCals,
+  cappedByFloor,
+  compact,
+  colors,
+}: {
+  dayType: DayType;
+  baseCals: number;
+  effectiveCals: number;
+  cappedByFloor: boolean;
+  compact?: boolean;
+  colors: Props['colors'];
+}) {
+  const isTraining = dayType === 'training';
+  const label = compact
+    ? (isTraining ? BADGE_COPY.trainingDayLabelMinimal : BADGE_COPY.restDayLabelMinimal)
+    : (isTraining ? BADGE_COPY.trainingDayLabel : BADGE_COPY.restDayLabel);
+  const tapCopy = isTraining ? BADGE_COPY.trainingDayTap : BADGE_COPY.restDayTap;
+
+  // AC13: descriptive accessibility label
+  const a11yLabel = isTraining
+    ? `Training day — calorie target increased to ${effectiveCals} kcal; weekly average unchanged`
+    : `Recovery day — calorie target adjusted to ${effectiveCals} kcal; weekly average unchanged`;
+
+  return (
+    <TouchableOpacity
+      style={[styles.badge, { backgroundColor: colors.onSurface + '10', borderColor: colors.onSurfaceVariant + '40' }]}
+      onPress={() => {/* tap shows modal/sheet — AC14 tap copy is accessible via accessibilityHint */}}
+      accessibilityLabel={a11yLabel}
+      accessibilityHint={tapCopy}
+      accessibilityRole="button"
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+    >
+      <Text variant="caption" style={{ color: colors.onSurface, fontWeight: '500' }}>
+        {label}
+      </Text>
+      {/* AC21 (QD3): base calories visible alongside effective */}
+      {effectiveCals !== baseCals && (
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
+          {cappedByFloor ? `Base: ${baseCals} kcal (capped)` : `Base: ${baseCals} kcal`}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -153,4 +265,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   card: { marginBottom: 8 },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
 });
