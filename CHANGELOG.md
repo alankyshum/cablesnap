@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Fixed blank month labels in the Progress tab date carousels** — the monthly report header and calendar month labels relied on `toLocaleDateString`, which returns an empty string on React Native's Hermes engine (no bundled Intl/ICU data), so the month name rendered blank. Month labels now use a deterministic, locale-independent name table and always display correctly (e.g. "July 2026"). (BLD-2584)
+- **Fixed a blank white square in the Progress tab** — the list/calendar view-mode toggle in the Progress tab rendered emoji glyphs that don't display on all platforms (notably web), leaving an empty bordered button. The toggle now uses proper vector icons and always shows a visible calendar/list affordance. (BLD-2583)
 
 ## v0.26.52 — 2026-07-01
 <!-- versionCode: 122 -->
