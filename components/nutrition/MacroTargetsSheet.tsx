@@ -12,6 +12,18 @@ import {
   type NutritionProfile,
 } from "../../lib/nutrition-calc";
 import { fontSizes } from "@/constants/design-tokens";
+import { getAllSettings as getTrainingDaySettings } from "../../lib/db/training-day-settings";
+
+/**
+ * PROHIBITION (AC16/C1): No "earn/earned/bonus/reward/treat/deserve/penalty/punish/
+ *   unlock/spend/burn it off/work it off/guilt/cheat" copy in this file.
+ * No directional color tokens on calorie values.
+ *
+ * AC14 / C2 verbatim manual-editor helper — wording may NOT change without psych sign-off.
+ * Layout (color, size, placement) may vary.
+ */
+const TRAINING_DAY_HELPER_TEXT =
+  "This is your base target. Training-day fueling is applied on top — manage it in Settings › Training-Day Macros.";
 
 type Props = { visible: boolean; onClose: () => void };
 
@@ -23,6 +35,11 @@ export function MacroTargetsSheet({ visible, onClose }: Props) {
   const [fat, setFat] = useState("65");
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<NutritionProfile | null>(null);
+  /**
+   * AC14: Show the C2 verbatim helper when the Training-Day Macros feature is enabled.
+   * Default null (unknown) → render nothing until loaded; false → hidden; true → shown.
+   */
+  const [trainingDayEnabled, setTrainingDayEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -40,6 +57,12 @@ export function MacroTargetsSheet({ visible, onClose }: Props) {
         if (__DEV__) console.warn("[MacroTargetsSheet] corrupt nutrition_profile, resetting");
         setProfile(null);
       }
+    });
+    // AC14: load training-day feature state to determine whether to show the helper
+    getTrainingDaySettings().then((s) => {
+      setTrainingDayEnabled(s.enabled);
+    }).catch(() => {
+      setTrainingDayEnabled(false); // safe default — don't show on error
     });
   }, [visible]);
 
@@ -92,6 +115,22 @@ export function MacroTargetsSheet({ visible, onClose }: Props) {
           </Text>
         </TouchableOpacity>
 
+        {/* AC14 / C2: feature-aware helper — shown ONLY when Training-Day Macros is ON */}
+        {trainingDayEnabled === true && (
+          <View
+            style={[styles.helperBanner, { backgroundColor: colors.onSurface + "0D" }]}
+            accessibilityRole="text"
+          >
+            <Text
+              variant="caption"
+              style={{ color: colors.onSurfaceVariant }}
+              accessibilityLabel={TRAINING_DAY_HELPER_TEXT}
+            >
+              {TRAINING_DAY_HELPER_TEXT}
+            </Text>
+          </View>
+        )}
+
         <Input label="Calories" value={calories} onChangeText={setCalories} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel="Calories" />
         <Input label="Protein (g)" value={protein} onChangeText={setProtein} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel="Protein" />
         <Input label="Carbs (g)" value={carbs} onChangeText={setCarbs} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel="Carbs" />
@@ -123,6 +162,7 @@ export function MacroTargetsSheet({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
   container: { gap: 4 },
   profileCta: { padding: 12, borderRadius: 8, marginBottom: 8 },
+  helperBanner: { padding: 10, borderRadius: 6, marginBottom: 4 },
   input: { marginBottom: 4 },
   saveBtn: { marginTop: 8, paddingVertical: 12, borderRadius: 8, alignItems: "center" },
   resetBtn: { marginTop: 4, paddingVertical: 12, borderRadius: 8, alignItems: "center", borderWidth: 1 },
