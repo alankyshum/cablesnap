@@ -36,6 +36,7 @@ import StrengthLevelsCard from "./StrengthLevelsCard";
 import ActiveGoalsCard from "./ActiveGoalsCard";
 import WorkoutEmptyState from "./WorkoutEmptyState";
 import { fontSizes } from "@/constants/design-tokens";
+import { CalendarDays, List } from "lucide-react-native";
 
 let cachedWeekStart: number | null = null;
 function getWeekStartDay(): number {
@@ -140,9 +141,11 @@ export default function WorkoutSegment() {
         viewMode === "list" ? "Switch to calendar view" : "Switch to list view"
       }
     >
-      <Text style={{ color: colors.onSurface, fontSize: fontSizes.base }}>
-        {viewMode === "list" ? "📅" : "📋"}
-      </Text>
+      {viewMode === "list" ? (
+        <CalendarDays size={20} color={colors.onSurface} />
+      ) : (
+        <List size={20} color={colors.onSurface} />
+      )}
     </Pressable>
   );
 
