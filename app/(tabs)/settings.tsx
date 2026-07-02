@@ -46,6 +46,7 @@ import {
   type BackupCategoryName,
 } from '@/lib/db';
 import { getEnabled as getMacroCoachEnabled } from '@/lib/db/macro-coach-settings';
+import { getEnabled as getTrainingDayMacrosEnabled } from '@/lib/db/training-day-settings';
 import { useQueryClient } from '@tanstack/react-query';
 
 /**
@@ -77,10 +78,12 @@ export default function Settings() {
   const [importCategories, setImportCategories] = useState<BackupCategoryName[]>([]);
   const [importCategoryCounts, setImportCategoryCounts] = useState<Partial<Record<BackupCategoryName, number>>>({});
   const [macroCoachEnabled, setMacroCoachEnabled] = useState<boolean | null>(null);
+  const [trainingDayMacrosEnabled, setTrainingDayMacrosEnabled] = useState<boolean | null>(null);
   const appVersion = Constants.expoConfig?.version ?? '0.0.0';
 
   useEffect(() => {
     getMacroCoachEnabled().then(setMacroCoachEnabled).catch(() => setMacroCoachEnabled(false));
+    getTrainingDayMacrosEnabled().then(setTrainingDayMacrosEnabled).catch(() => setTrainingDayMacrosEnabled(false));
   }, []);
 
   const {
@@ -281,6 +284,20 @@ export default function Settings() {
             }
             accessibilityLabel="Open Adaptive Macro Coach settings"
             onPress={() => router.push('/settings/macro-coach')}
+          />
+          <Separator style={styles.tileDivider} />
+          <SettingsLinkRow
+            colors={colors}
+            title="Training-Day Macros"
+            caption={
+              trainingDayMacrosEnabled === null
+                ? ''
+                : trainingDayMacrosEnabled
+                  ? 'On — different targets on training vs rest days'
+                  : 'Off — tap to set up'
+            }
+            accessibilityLabel="Open Training-Day Macro Adjustment settings"
+            onPress={() => router.push('/settings/training-day-macros')}
           />
           <Separator style={styles.tileDivider} />
           <HydrationCard colors={colors} toast={toast} bareContent />
