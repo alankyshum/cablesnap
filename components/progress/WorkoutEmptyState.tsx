@@ -55,6 +55,7 @@ export default function WorkoutEmptyState({ onStart }: Props) {
         accessibilityLabel="Start your first workout"
         label="Start a workout"
         style={styles.cta}
+        testID="progress-empty-cta"
       />
     </View>
   );
