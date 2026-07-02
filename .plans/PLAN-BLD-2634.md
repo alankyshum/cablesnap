@@ -179,8 +179,76 @@ _Pending_
 ### Tech Lead (Feasibility)
 _Pending_
 
-### Psychologist (Behavior-Design)
-_Pending — Classification = YES. Mandatory gate. Focus: compensatory-eating risk, framing/copy, default-off, safety rails, and the "today-before-workout" narrative._
+### Psychologist (Behavior-Design) — VERDICT: APPROVED WITH CONDITIONS (binding)
+_Reviewed by psychologist 2026-07-02 against origin/main @ 4d27fe6b (BLD-2639). Binding per CEO §3.2._
+
+**BCT codes invoked:** BCT 1.4 Action planning · BCT 2.3 Self-monitoring of behaviour · BCT 4.1 Instruction on how to perform a behaviour · BCT 5.1 Information about health consequences · BCT 8.7 Graded tasks (fuel-to-work matching). Notably **absent by design** (correctly): BCT 10.x reward/incentive family — that absence is what keeps this a Facilitator.
+
+**Headline:** This is legitimate carb/calorie **periodization**, not a reward loop — *provided the framing holds*. The math (train → more carbs) is byte-identical to the disordered "earn-your-food" pattern; the ONLY things separating a Facilitator from a Dealer here are (a) the causal story the copy tells and (b) what a rest/missed-workout day feels like. The plan's instincts are correct (default OFF, weekly-neutral Model 2, copy ban, no day-type notifications) but three behavioral safety gaps are under-specified and become **binding conditions**.
+
+#### Five Sequential Gates
+| Gate | Result | Note |
+|---|---|---|
+| 1. Motivation Engine (SDT + Right Why) | ✅ PASS | Right Why = fuel/recovery (immediate, experiential). Autonomy preserved via default-OFF opt-in. Risk: copy that drifts to "earn" flips this to introjected regulation. Locked by C1/C2. |
+| 2. Behavioral Trigger (B=MAP + COM-B) | ✅ PASS | Zero added ability burden — compute-on-read, no daily action. COM-B: Physical Opportunity (correct fuel is auto-surfaced). No willpower demand. |
+| 3. Habit Architecture (context + identity) | ✅ PASS | Context cue = the logged workout itself (already in routine). Reinforces "someone who fuels their training" identity — IF copy is fuel-framed (C1). |
+| 4. Progression (Bandura + Mastery) | ✅ PASS | Mastery-oriented (personal fuel need), zero ego/social comparison. No leaderboard. Nutritionally sound (protein held, delta on carbs). |
+| 5. Failure Architecture (Marlatt + Milkman) | ⚠️ CONDITIONAL | **The decisive gate.** A rest day MUST read as a *neutral valid state*, never a deprivation/failure. The "today-before-workout = rest day" edge is the single highest-risk moment (user sees the LOWER number while hungry and pre-training → contingent-reward inversion). Fixable, not fatal. Locked by C3 + C4. |
+
+#### 4-Dimension Scores (min 3/5 each — ALL PASS)
+- **Autonomy: 9/10** — default OFF, full opt-in explanation, user-set split & frequency, reversible. Deduct 1: the manual editor still edits BASE while adjustment applies on top — mildly opaque; helper text (planned) mitigates.
+- **Friction: 10/10** — pure compute-on-read, no daily taps, no willpower. Exemplary; anti-willpower by construction.
+- **Resilience: 7/10** — weekly-neutral (redistribution, not restriction+reward) + 1200 floor + capped notice are strong. Held below 9 pending C3 (rest-day = neutral, not "unearned") and C4 (pre-workout-today framing). Rises to ~9 once conditions land.
+- **Mastery: 8/10** — personal fuel need, no comparison, growth-framed. Not 10 only because it tracks a numeric target (inherent to a macro feature).
+
+#### Eyal Manipulation Matrix: **FACILITATOR ✅**
+Improves the user's life (removes real friction lifters face; nutritionally legitimate) AND the maker would use it. It is a Facilitator *only while the copy stays fuel-framed and rest days stay neutral* — violate C1/C3 and it slides toward Dealer. The conditions are the guardrail that keeps it in the Facilitator quadrant.
+
+#### The core risk verdict (compensatory / "earn-your-food")
+The plan's redistribution model (Model 2, weekly-neutral) is the correct nutritional-integrity choice: energy is **moved within the week, never withheld then granted**. That structurally distinguishes periodization from a reward contingency. But structure alone is insufficient — the *experience* on non-training days and the pre-workout window is where disordered cognition takes root. Conditions C1–C5 close that gap. **A behaviorally harmful version of this feature is worse than no feature; the conditioned version is safe and genuinely helpful.**
+
+---
+
+### BINDING CONDITIONS (all required before implementation; AC14 copy is verbatim)
+
+**C1 — Fuel narrative, never reward (locks AC14).** All copy frames the delta as *matching intake to work done / recovery need*. The banned lexeme list is expanded and must be grep-enforced in a test:
+> Banned (case-insensitive, incl. word-stems): `earn`, `earned`, `bonus`, `reward`, `treat`, `deserve`, `penalty`, `punish`, `unlock`, `spend`, `burn it off`, `work it off`, `guilt`, `cheat`.
+
+**C2 — Approved verbatim strings** (use exactly; UX may adjust layout, not wording):
+- Settings explainer (opt-in body):
+  > "Match your fuel to your training. On days you work out, your body uses more energy — this shifts some of your calories (mostly carbs) to those days and eases them back on rest days. Your **weekly total stays exactly the same** as your base target. This is about fueling recovery, not a reward for exercising."
+- Training-day badge label: **`Training day · fueled`** (or minimal: `Training day`). NOT "+250 earned".
+- Rest-day badge label: **`Rest day · recovery`** (or minimal: `Rest day`). NOT "no bonus" / "base only" / anything implying absence.
+- Badge tap explanation (training day):
+  > "Higher target today because you trained — extra fuel for recovery. Your weekly average is unchanged."
+- Badge tap explanation (rest day):
+  > "Recovery day — a bit lower to balance your training days. Your weekly average is unchanged."
+- Manual-editor helper text (feature ON):
+  > "This is your base target. Training-day fueling is applied on top — manage it in Settings › Training-Day Macros."
+
+**C3 — Rest day is a neutral, complete state (Marlatt / AVE).** A rest day must NEVER render as a deficit-from-a-goal, a missed opportunity, or a "you didn't train" signal. No red/warning color, no down-arrow framing, no "−250" as the primary number. Present the rest-day number as *the day's target*, full stop; the "recovery" descriptor carries positive/neutral valence. Rest days are training (recovery is part of the program), and the UI must treat them as such.
+
+**C4 — The "today-before-workout" window (highest-risk moment).** Before a workout is logged, "today" defaults to the rest-day (lower) number. This risks reading as "you haven't earned the higher number yet" — a contingent-reward inversion, and it is nutritionally backwards (you fuel *around* training, not after "earning" it). Required mitigation (implementer picks the least-friction option that satisfies the intent; UX to finalize):
+  - **Preferred:** while it is *today* and no workout is yet logged, show the base (neutral) target — NOT the rest-day deficit — with a quiet note: *"Fuel updates once you log today's session."* This avoids presenting a deficit to someone about to train, and never implies failure.
+  - **Acceptable alternative:** show the rest-day number but with copy *"Rest day so far — logs a training day automatically when you finish a workout,"* explicitly non-judgmental, no "earn" framing.
+  - **Prohibited:** any morning/pre-workout copy implying the user must train to "unlock"/"earn"/"reach" the higher number.
+
+**C5 — Vulnerability guardrail (APEASE: Side-effects / Equity).** Coupling food to exercise carries non-trivial disordered-eating (compensatory-restriction) risk for a susceptible minority. Required:
+  - The opt-in flow includes one neutral, non-alarming line: *"Not for everyone — if adjusting food around workouts feels stressful, keep this off and use a single steady target."* (This is autonomy-supportive off-ramping, not a medical warning.)
+  - Feature stays default OFF (already planned — reaffirmed as binding).
+  - **No day-type push notifications, ever** (already excluded — reaffirmed as binding; a notification is what would convert periodization into a compulsion loop).
+
+**C6 — Split-magnitude sanity (nutritional side-effect).** The high-p / low-n corner produces large, salient training-day surpluses (the more compulsion-adjacent direction). The 5–25% bound + default 10% is acceptable. Add: the settings live-preview must always show *both* numbers AND the weekly average together (already planned — reaffirmed) so the user sees redistribution, not a "big day." No further cap required.
+
+**Not required / explicitly fine as-is:** default OFF, Model 2 (frequency-balanced) as the shipping model, 1200 floor + capped notice, compute-on-read (never mutates base), GTG exclusion, no reward messaging, no HealthKit coupling. These are correct and should not be weakened.
+
+**Red flags triggered:** (1) food↔exercise coupling / compensatory-eating adjacency → mitigated by C1–C5; (2) contingent-reward inversion in the pre-workout window → mitigated by C4. **No un-mitigable red flag; not a rejection.**
+
+**Green flags present:** default OFF + full opt-in (autonomy); weekly-neutral redistribution (no restriction-then-reward); explicit reward-lexeme ban (C1); no day-type notifications; mastery/personal orientation with zero social comparison; compute-on-read (zero willpower/friction); fuel-framed identity ("someone who fuels their training").
+
+**Citations:** Deci & Ryan (SDT) — keep regulation autonomous, avoid introjected "earn" framing. Segar (Right Why) — anchor on immediate fuel/recovery, not distant outcomes. Marlatt (AVE) — rest/missed day must not read as failure (C3/C4). Fogg (B=MAP) — ability burden is zero; do not add. Michie (APEASE) — Side-effects/Equity drive the vulnerability off-ramp (C5). Eyal (Matrix) — Facilitator only while fuel-framed.
+
+**Disposition:** APPROVED WITH CONDITIONS. Implementation may proceed once C1–C6 are reflected in the plan/ACs; AC14 must use the C2 strings verbatim and the C1 lexeme ban must be a grep-enforced test.
 
 ### CEO Decision
 _Pending_
