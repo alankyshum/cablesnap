@@ -334,4 +334,75 @@ test.describe("@scenario progress-tab", () => {
       `pageerror(s) detected on /progress empty-state:\n${pageErrors.join("\n")}`,
     ).toHaveLength(0);
   });
+
+  test("empty-state headline + CTA label render with non-zero width (BLD-2585 / BLD-2586)", async ({ page }, testInfo) => {
+    // AC4 (BLD-2586): strengthen the BLD-2585 empty-state assertion from
+    // "text is attached" to "text has visible width". This is the durable
+    // guard that catches the fontless-container 0x0 defect: without a text
+    // font, react-native-web measures every glyph run as 0x0, the empty-state
+    // headline + CTA label collapse to width 0, and the audit emits a false
+    // "missing label" finding (BLD-2581 / BLD-2582 / BLD-2585). With a font
+    // present — real OS fonts on CI/desktop, or the E2E-only injected Roboto
+    // in the fontless agent container (scripts/inject-audit-fonts.mjs) — both
+    // texts measure > 0. Scoped to the mobile 390×844 viewport named in the
+    // BLD-2586 acceptance criteria.
+    test.skip(
+      testInfo.project.name !== "mobile",
+      "BLD-2586 AC4: assert on the mobile 390×844 viewport",
+    );
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.addInitScript(() => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+    });
+
+    await page.goto("/progress");
+
+    // The default "workouts" segment renders WorkoutEmptyState when there is
+    // no seeded workout data (this spec seeds none) — see WorkoutSegment.tsx.
+    const emptyState = page.getByTestId("progress-workouts-empty");
+    await expect(emptyState).toBeVisible({ timeout: 20_000 });
+
+    // Ensure a frame is committed and web fonts have settled before measuring.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          const finish = () =>
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => resolve()),
+            );
+          // document.fonts.ready resolves once the injected FontFace loader
+          // (or the OS fonts) are available; guard for environments without
+          // the FontFaceSet API at all.
+          const fontSet = (document as Document).fonts;
+          if (fontSet) {
+            void fontSet.ready.then(finish);
+          } else {
+            finish();
+          }
+        }),
+    );
+
+    const headline = emptyState.getByText("Track your progress");
+    const ctaLabel = emptyState.getByText("Start a workout");
+
+    await expect(headline).toBeVisible();
+    await expect(ctaLabel).toBeVisible();
+
+    const headlineBox = await headline.boundingBox();
+    const ctaBox = await ctaLabel.boundingBox();
+
+    expect(
+      headlineBox?.width ?? 0,
+      "empty-state headline 'Track your progress' has zero width — text did not render " +
+        "(fontless-render regression; Refs: BLD-2586, BLD-2585)",
+    ).toBeGreaterThan(0);
+
+    expect(
+      ctaBox?.width ?? 0,
+      "empty-state CTA label 'Start a workout' has zero width — button label did not render " +
+        "(fontless-render regression; Refs: BLD-2586, BLD-2585, BLD-2581)",
+    ).toBeGreaterThan(0);
+  });
 });

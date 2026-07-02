@@ -100,6 +100,18 @@ function buildSandbox(opts: {
   );
   fs.chmodSync(path.join(dir, "scripts", "install-playwright-browsers.sh"), 0o755);
 
+  // Stub inject-audit-fonts.mjs — daily-audit.sh's build_static_bundle invokes
+  // it after `expo export` to make text render in the fontless audit container
+  // (BLD-2586). The real injector reads e2e/assets/fonts/audit-latin.woff2 and
+  // patches dist/index.html; neither is relevant to the set-e ordering this
+  // test exercises. A no-op stub keeps daily-audit's control flow intact
+  // without shipping the font fixture into the sandbox.
+  fs.writeFileSync(
+    path.join(dir, "scripts", "inject-audit-fonts.mjs"),
+    "#!/usr/bin/env node\nconsole.error('[inject-audit-fonts-stub] noop');\n",
+  );
+  fs.chmodSync(path.join(dir, "scripts", "inject-audit-fonts.mjs"), 0o755);
+
   // Stub regression-smoke.sh — honors SMOKE_EXIT_CODE; writes to FINDINGS_OUT
   const smokeStub = `#!/usr/bin/env bash
 set -u
