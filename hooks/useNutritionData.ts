@@ -8,7 +8,7 @@ import {
 } from "../lib/db";
 import type { DailyLog, MacroTargets, Meal, WaterLog } from "../lib/types";
 import { MEALS, MEAL_LABELS } from "../lib/types";
-import { formatDateKey } from "../lib/format";
+import { formatDateKey, todayKey } from "../lib/format";
 import type { HydrationUnit } from "../lib/hydration-units";
 import { useToast } from "../components/ui/bna-toast";
 import {
@@ -78,12 +78,22 @@ async function fetchWeightKg(): Promise<number> {
 /**
  * Training-Day Macro Adjustment state shape.
  * Passed directly to NutritionListHeader.trainingDayAdjustment.
+ *
+ * AC18 / C4: When the displayed day is TODAY and no qualifying workout is yet logged,
+ * `pendingNote` is set to the C4 verbatim string and the targets shown are BASE (not lowered).
+ * When pendingNote is present, dayType is not applicable — render as a neutral 'pending' state.
  */
 export type TrainingDayAdjustmentState = {
   dayType: EffectiveTargets["dayType"];
   baseCals: number;
   adjusted: boolean;
   cappedByFloor: boolean;
+  /**
+   * C4 / AC18: Set to the verbatim "Fuel updates once you log today's session" string
+   * when the displayed day is today AND no qualifying workout is logged yet.
+   * When set, targets reflect BASE (not lowered), and the badge renders as neutral/pending.
+   */
+  pendingNote?: string;
 } | null;
 
 export function useNutritionData() {
@@ -141,7 +151,11 @@ export function useNutritionData() {
     // AC8:   per-day navigation — computed from `date` (the currently displayed day).
     // AC9:   post-workout refresh — useFocusEffect triggers load() on screen re-focus,
     //        so if a workout is logged and user returns to nutrition, this re-classifies.
-    // AC18:  today before workout → wasWorkoutDay() returns false → base/neutral target.
+    // AC18 / C4: today before workout → show BASE target (NOT lowered rest target).
+    //   Three-case logic:
+    //     1. TODAY + not-yet-worked-out → BASE target + pendingNote (C4)
+    //     2. TODAY + workout logged     → training-day (higher) target
+    //     3. PAST day + no workout      → rest-day (lower) target  (AC3 preserved)
     if (t !== null) {
       try {
         const tdSettings = await getTrainingDaySettings();
@@ -150,32 +164,54 @@ export function useNutritionData() {
             wasWorkoutDay(ds),
             fetchWeightKg(),
           ]);
+
+          // AC18 / C4: distinguish today-before-workout from genuine past rest day
+          const isToday = (ds === todayKey());
+          const isTodayPreWorkout = isToday && !isWorkoutDay;
+
           const base: PureMacroTargets = {
             calories: t.calories,
             protein: t.protein,
             carbs: t.carbs,
             fat: t.fat,
           };
-          const effective = computeEffectiveTargets(base, isWorkoutDay, {
-            splitPercent: tdSettings.splitPercent,
-            trainingDaysPerWeek: tdSettings.trainingDaysPerWeek,
-          }, weightKg);
 
-          // Set the effective targets as the displayed targets
-          // (the DB macro_targets row remains unchanged — AC12a, AC7)
-          setTargets({
-            ...t,
-            calories: effective.calories,
-            protein: effective.protein,
-            carbs: effective.carbs,
-            fat: effective.fat,
-          });
-          setTrainingDayAdjustment({
-            dayType: effective.dayType,
-            baseCals: t.calories,
-            adjusted: effective.adjusted,
-            cappedByFloor: effective.cappedByFloor,
-          });
+          if (isTodayPreWorkout) {
+            // C4: show BASE/neutral target — NOT the lowered rest-day target.
+            // "Earn-your-food" contingency inversion is forbidden by the psychologist gate.
+            // The user has not yet trained; we do not pre-commit them to a reduced target.
+            setTargets(t); // base unchanged (AC12a)
+            setTrainingDayAdjustment({
+              dayType: "rest", // kept for type compat; pendingNote signals the UI to show neutral
+              baseCals: t.calories,
+              adjusted: false, // targets not yet adjusted — still at base
+              cappedByFloor: false,
+              // C4 verbatim note (AC14 / approved plan):
+              pendingNote: "Fuel updates once you log today's session",
+            });
+          } else {
+            // Normal case: training day (higher) OR genuine past rest day (lower — AC3)
+            const effective = computeEffectiveTargets(base, isWorkoutDay, {
+              splitPercent: tdSettings.splitPercent,
+              trainingDaysPerWeek: tdSettings.trainingDaysPerWeek,
+            }, weightKg);
+
+            // Set the effective targets as the displayed targets
+            // (the DB macro_targets row remains unchanged — AC12a, AC7)
+            setTargets({
+              ...t,
+              calories: effective.calories,
+              protein: effective.protein,
+              carbs: effective.carbs,
+              fat: effective.fat,
+            });
+            setTrainingDayAdjustment({
+              dayType: effective.dayType,
+              baseCals: t.calories,
+              adjusted: effective.adjusted,
+              cappedByFloor: effective.cappedByFloor,
+            });
+          }
         } else {
           // Feature disabled — show raw base targets, clear any previous badge state
           setTargets(t);

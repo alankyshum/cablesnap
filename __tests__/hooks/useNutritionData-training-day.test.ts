@@ -7,7 +7,8 @@
  *   AC12a — no write to macro_targets (compute-on-read, base row unchanged)
  *   AC12b — coherent narrative: trainingDayAdjustment prop emitted for NutritionListHeader
  *   AC15  — CI green: all tests pass
- *   AC18  — today-before-workout: when wasWorkoutDay=false, base/neutral target shown
+ *   AC18  — today-before-workout: when wasWorkoutDay=false AND today, BASE target shown (C4)
+ *   AC3   — genuine PAST rest day: lowered rest-day target + dayType='rest' (preserved)
  */
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -50,6 +51,44 @@ jest.mock("../../lib/db/training-day-workout", () => ({
   wasWorkoutDay: (...a: unknown[]) => mockWasWorkoutDay(...a),
 }));
 
+// ─── todayKey mock — controls what "today" is during tests ────────────────────
+//
+// The hook imports `todayKey` from lib/format to determine if the displayed
+// date is today (AC18 / C4 check). We pin both the system clock (via fake timers)
+// AND mock `todayKey()` to ensure the displayed date matches "today" deterministically
+// regardless of when the test suite runs.
+//
+// NOTE: jest.mock() is hoisted, so we use a literal timestamp (not a const) inside it.
+// 1782993600000 === 2026-07-02T12:00:00.000Z
+
+// MOCK_TODAY: the date the fake clock is pinned to (used in comments only — assertions
+// check numeric/boolean values, not date strings).
+const MOCK_TODAY = "2026-07-02"; // eslint-disable-line @typescript-eslint/no-unused-vars
+// 2026-07-02T12:00:00.000Z
+const MOCK_TODAY_TIMESTAMP = 1782993600000;
+
+beforeAll(() => {
+  // Pin system clock to MOCK_TODAY_TIMESTAMP so that `new Date()` in the hook
+  // and `formatDateKey(date.getTime())` all resolve to MOCK_TODAY.
+  jest.useFakeTimers();
+  jest.setSystemTime(MOCK_TODAY_TIMESTAMP);
+});
+
+afterAll(() => {
+  jest.useRealTimers();
+});
+
+jest.mock("../../lib/format", () => {
+  const actual = jest.requireActual<typeof import("../../lib/format")>("../../lib/format");
+  return {
+    ...actual,
+    // todayKey() must match what formatDateKey(MOCK_TODAY_TIMESTAMP) returns.
+    // Use the real formatDateKey with a literal timestamp to avoid hoisting issues.
+    todayKey: () => actual.formatDateKey(1782993600000),
+    formatDateKey: actual.formatDateKey,
+  };
+});
+
 jest.mock("expo-router", () => ({
   router: { setParams: jest.fn() },
   useFocusEffect: jest.fn(),
@@ -89,7 +128,7 @@ describe("useNutritionData — Training-Day Macro Adjustment wiring", () => {
     jest.clearAllMocks();
     mockGetMacroTargets.mockResolvedValue(BASE_TARGETS);
     mockGetAllSettings.mockResolvedValue(TRAINING_SETTINGS);
-    mockWasWorkoutDay.mockResolvedValue(false); // default: rest day
+    mockWasWorkoutDay.mockResolvedValue(false); // default: not a workout day
     mockGetLatestBodyWeight.mockResolvedValue({ id: "bw1", weight: 80, date: "2026-07-01" });
   });
 
@@ -115,34 +154,76 @@ describe("useNutritionData — Training-Day Macro Adjustment wiring", () => {
     expect(result.current.targets!.calories).toBeGreaterThan(BASE_TARGETS.calories);
   });
 
-  // ── AC18: today before workout → base/neutral target ─────────────────────
+  // ── AC18 / C4: today before workout → BASE/neutral target (NOT lowered) ──────
 
-  it("AC18: when wasWorkoutDay=false (today before workout), shows base/neutral target", async () => {
+  it("AC18/C4: today + no workout logged → shows BASE target (NOT lowered rest target)", async () => {
+    // wasWorkoutDay=false AND displayed day is today (MOCK_TODAY) → C4 pending path
     mockWasWorkoutDay.mockResolvedValue(false);
+    const { result } = renderHook(() => useNutritionData());
+    // The hook initialises date = new Date(); todayKey() returns MOCK_TODAY.
+    // formatDateKey(Date.now()) should match MOCK_TODAY for this to trigger C4 path.
+    // We mock todayKey() → MOCK_TODAY above; formatDateKey is the real impl, so
+    // ds === todayKey() will be true when Date.now() maps to MOCK_TODAY.
+    // To make this stable, override formatDateKey for the displayed date too.
+    await act(async () => { await result.current.load(); });
+
+    const adj = result.current.trainingDayAdjustment;
+    expect(adj).not.toBeNull();
+    // C4: targets must be BASE (not lowered)
+    expect(result.current.targets!.calories).toBe(BASE_TARGETS.calories);
+    // C4 note must be surfaced
+    expect(adj!.pendingNote).toBe("Fuel updates once you log today's session");
+    // adjusted must be false — no adjustment applied yet
+    expect(adj!.adjusted).toBe(false);
+  });
+
+  it("AC18/C4: today + workout logged → training-day (higher) target, no pendingNote", async () => {
+    mockWasWorkoutDay.mockResolvedValue(true);
     const { result } = renderHook(() => useNutritionData());
     await act(async () => { await result.current.load(); });
 
     const adj = result.current.trainingDayAdjustment;
     expect(adj).not.toBeNull();
-    expect(adj!.dayType).toBe("rest");
-    // Rest day: targets.calories < base (Model 2)
-    expect(result.current.targets!.calories).toBeLessThan(BASE_TARGETS.calories);
+    // Workout logged today → training-day (higher) target
+    expect(result.current.targets!.calories).toBeGreaterThan(BASE_TARGETS.calories);
+    expect(adj!.dayType).toBe("training");
+    expect(adj!.pendingNote).toBeUndefined();
   });
 
-  it("AC18: once wasWorkoutDay becomes true (workout logged), targets update to training value", async () => {
-    // First load: rest day
+  it("AC18: once wasWorkoutDay becomes true (workout logged), targets update to training value (AC9)", async () => {
+    // First load: today, no workout → base/pending
     mockWasWorkoutDay.mockResolvedValue(false);
     const { result } = renderHook(() => useNutritionData());
     await act(async () => { await result.current.load(); });
-    const restCals = result.current.targets!.calories;
+    const pendingCals = result.current.targets!.calories;
+    expect(pendingCals).toBe(BASE_TARGETS.calories); // base during pending window
 
     // Second load (workout logged, AC9 refocus simulation): training day
     mockWasWorkoutDay.mockResolvedValue(true);
     await act(async () => { await result.current.load(); });
     const trainingCals = result.current.targets!.calories;
 
-    expect(trainingCals).toBeGreaterThan(restCals);
+    expect(trainingCals).toBeGreaterThan(pendingCals);
     expect(result.current.trainingDayAdjustment!.dayType).toBe("training");
+    expect(result.current.trainingDayAdjustment!.pendingNote).toBeUndefined();
+  });
+
+  // ── AC3: genuine PAST rest day → lowered target (preserved) ──────────────
+
+  it("AC3 control: genuine PAST rest day (wasWorkoutDay=false, not today) → lowered rest-day target", async () => {
+    mockWasWorkoutDay.mockResolvedValue(false);
+    const { result } = renderHook(() => useNutritionData());
+    // Navigate to a past day before loading
+    act(() => { result.current.prev(); }); // moves date back 1 day to MOCK_PAST
+    await act(async () => { await result.current.load(); });
+
+    const adj = result.current.trainingDayAdjustment;
+    expect(adj).not.toBeNull();
+    // Past day + no workout → genuine rest day (NOT pending)
+    expect(adj!.dayType).toBe("rest");
+    expect(adj!.pendingNote).toBeUndefined();
+    // Rest-day target must be LOWER than base (AC3 preserved)
+    expect(result.current.targets!.calories).toBeLessThan(BASE_TARGETS.calories);
   });
 
   // ── AC8: per-day navigation ────────────────────────────────────────────────
@@ -173,7 +254,7 @@ describe("useNutritionData — Training-Day Macro Adjustment wiring", () => {
 
   // ── AC12b: coherent narrative — trainingDayAdjustment emitted ─────────────
 
-  it("AC12b: trainingDayAdjustment is non-null when feature enabled + adjusted", async () => {
+  it("AC12b: trainingDayAdjustment is non-null when feature enabled + workout logged", async () => {
     mockWasWorkoutDay.mockResolvedValue(true);
     const { result } = renderHook(() => useNutritionData());
     await act(async () => { await result.current.load(); });
