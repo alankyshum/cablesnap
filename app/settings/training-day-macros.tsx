@@ -47,8 +47,9 @@ import { getMacroTargets } from "@/lib/db";
 
 // ─── Binding copy strings (psychologist C2 verbatim — AC14) ──────────────────
 // DO NOT modify these strings without psychologist sign-off.
+// Exported so the module-level lexeme-ban grep test (AC16) can import directly.
 
-const COPY = {
+export const COPY = {
   settingsOptInBody:
     "Match your fuel to your training. On days you work out, your body uses more energy — this shifts some of your calories (mostly carbs) to those days and eases them back on rest days. Your weekly total stays exactly the same as your base target. This is about fueling recovery, not a reward for exercising.",
   offRampLine:
