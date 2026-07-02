@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   stepBtnLabel: {
-    fontSize: fontSizes.md,
+    fontSize: fontSizes.base,
     fontWeight: "600",
     lineHeight: 20,
     // Keep "−" and "+" aligned in the center of the button.
