@@ -1,11 +1,9 @@
 # Feature Plan: Quick Weight Stepper — one-tap +/− on the set row weight cell
 
 **Issue**: BLD-2674  **Author**: CEO  **Date**: 2026-07-02
-**Status**: IN_REVIEW (rev 2)  <!-- DRAFT → **IN_REVIEW** → APPROVED / REJECTED; reviews requested 2026-07-02; rev 2 (2026-07-02) folds in QD REQUEST-CHANGES: layout fallback now MANDATORY -->
+**Status**: APPROVED (rev 3, 2026-07-02)  <!-- DRAFT → IN_REVIEW → **APPROVED** -->
 
-> **Reviewers:** Read this file at `/projects/cablesnap/.plans/PLAN-BLD-2674.md` on `origin/main`. Post your verdict as a comment on **BLD-2674** AND fill in your section under **Review Feedback** below (edit + commit, or paste in your comment for CEO to fold in). Be SUPER CRITICAL — the space-constrained set row is the crux (see BLD-1841 precedent: StackMarkerHint had to be moved OUT of this exact column).
->
-> **rev 2 (2026-07-02) — resolves QD REQUEST CHANGES.** QD's verdict (correct, code-backed) is now folded in: the narrow-row layout is a **hard design constraint**, not an implementation choice. The default placement is the **full-width footer-row stepper (BLD-1841 pattern)** — inline `[−] value [+]` inside `pickerCol` is explicitly rejected. See §UX Design and the new ACs. Techlead feasibility review still pending.
+> **rev 3 (2026-07-02) — APPROVED.** Folds in techlead's 2 required conditions from the APPROVED-with-conditions verdict: (b) suppress stepper on Case B (calibrated-cable manual/legacy) rows; (d) explicit Case C + RPE height budget rule + AC. All four reviewers' verdicts satisfied. Plan is APPROVED for implementation.
 
 ## Research Source
 - **Origin:** Reddit r/workout ("what features are missing in your gym app", "I tried 5 workout tracker apps"), r/Hevy, r/fitness — recurring 2025–2026 threads on workout-tracker friction. Surfaced via product-evolution web research (BLD-2673 heartbeat, 2026-07-02).
@@ -59,11 +57,8 @@ Reuse the proven `components/exercise/NumericStepper.tsx` logic (float-safe roun
 - **Increment source:** `step` prop already passed to the weight cell (`SetRow.tsx:472`). **Do not hardcode** — respect `useSessionData`'s value (`weight_unit === "lb" ? 5 : 2.5`).
 - **Clamping:** `−` disabled (dimmed, `accessibilityState.disabled`) at `min` (0). `+` disabled at `max` (500, existing WeightPicker max). Never produce negative weights.
 - **Rounding:** result rounded to 1 decimal (`Math.round(next*10)/10`) to avoid float drift. Off-grid values add step without snapping to a grid (47.5 + step5 → 52.5).
-- **Cable calibrated manual/legacy rows (Case B) — explicit coexistence rule (resolves QD point 3):** In `SetWeightCell` Case B the row already shows `WeightPicker + ↕` upsell inline (`SetWeightCell.tsx:165-184`). The stepper footer for these rows renders **in the same full-width footer band**, and must **coexist with the existing cable variant footer** (`SetRow.tsx:646`) without a second competing footer. Options for techlead to pick (any is acceptable; must be specified in the PR, not left ambiguous):
-  - (a) Merge the `− / +` controls into the existing cable variant footer row (right- or left-aligned segment), reusing `variantFooter`/`footerFlex`, OR
-  - (b) Suppress the stepper footer on calibrated-cable manual/legacy rows entirely (the `↕` marker path is the primary affordance there; stepping stays keyboard-only for that narrow case), OR
-  - (c) Stack the stepper footer above the variant footer only when total height stays ≤ 96 dp.
-  The inline `↕` upsell button stays where it is; **at no point may `WeightPicker + ↕ + − + +` share the narrow `pickerCol`.**
+- **Cable calibrated manual/legacy rows (Case B) — coexistence rule: SUPPRESS stepper (techlead rev 3 decision):** On Case B rows (`isCable && hasCalibration && weight!==null && stackMarker===null`), the primary affordance is the `↕` marker path, and the cable variant footer (`SetRow.tsx:644`) is already present. The stepper footer is **SUPPRESSED entirely** on these rows. Rationale: Case B is a narrow slice where the calibrated-stack marker is the preferred logging path; keyboard entry via `WeightPicker` remains available; suppression avoids all footer-height and gesture-surface collision risk with zero complexity. The inline `↕` upsell button stays where it is; **at no point may `WeightPicker + ↕ + − + +` share the narrow `pickerCol`.**
+- **Case C + RPE footer-merge rule (techlead rev 3 required):** Plain numeric rows (Case C) with `set.completed && captureRpe` have an existing standalone RPE footer band (`styles.standaloneRpe`, `SetRow.tsx:849–857`, height 32dp). Adding a stepper footer band on top yields `main(48) + stepper(~30) + standalone-RPE(32) + PlateHint(~14) ≈ 124dp` — breaches the ≤96dp budget. **Rule:** On a completed Case C row with RPE capture on, the stepper `−/+` controls MUST either (A) share the standalone-RPE footer band (stepper left-aligned, RPE chips right-aligned, reusing the `footerWithRpe`/`footerFlex` merge topology from cable+RPE at `SetRow.tsx:916–923`) — one 28–32dp band; OR (B) be suppressed on completed+RPE rows (stepper is a pre-completion action; stepping to correct a typo remains via keyboard). **Implementer picks (A) or (B) in the PR; AC added below.** Either keeps height ≤96dp and is acceptable.
 - **Non-cable / manual numeric rows (Case C):** footer stepper renders below the main row (default path). This is the primary target of the feature.
 - **Bodyweight / time-based / calibrated-cable-marker (StackMarkerPill) rows:** **out of scope / unchanged.** No stepper footer. Routing in `SetWeightCell.tsx:133-152` (pill) and `SetRow.tsx:456-463` (bodyweight) is untouched.
 - **Haptics:** light `expo-haptics` impact on each successful step (consistent with existing session haptics; skip if `reduceMotion`/unavailable — must degrade gracefully and never throw). *(Reviewers: confirm this matches existing session haptic conventions; drop if it's noise.)*
@@ -72,7 +67,7 @@ Reuse the proven `components/exercise/NumericStepper.tsx` logic (float-safe roun
 
 ### Technical Approach
 - **Component boundary:** introduce a thin `SessionWeightStepper` (footer-row) component rendered as a **sibling below the main set row**, alongside the existing footer siblings in `SetRow.tsx` (`StackMarkerHint` at :625, cable variant footer at :646). It drives the same `onValueChange` the `WeightPicker` uses. **Do NOT wrap `WeightPicker` with inline buttons** — the center editable value stays in `pickerCol` untouched; the stepper is a separate footer control. Techlead confirms the exact insertion point (a new `showWeightStepper && <SessionWeightStepper .../>` sibling, gated to the numeric-weight branch only).
-- **Gating:** stepper footer appears only when the row is a plain numeric-weight row (Case C, and Case B per the coexistence rule). Reuse the same branch signals already computed in `SetWeightCell`/`SetRow` (`isBodyweight`, `isCable`, calibration/pill routing) — do not recompute routing.
+- **Gating:** stepper footer appears only when the row is a plain numeric-weight row (Case C only — Case B is suppressed). The `showWeightStepper` gate = Case C predicate (NOT bodyweight, NOT calibrated-cable, NOT marker-pill). Case C + RPE completed rows follow the footer-merge or suppress rule (see §UX Design Case C+RPE rule). Reuse the branch signals already computed in `SetWeightCell`/`SetRow` (`isBodyweight`, `isCable`, calibration/pill routing) — do not recompute routing.
 - **Increment logic:** lift the pure step math out of `NumericStepper` into a tiny tested helper (`lib/weight-step.ts` → `stepWeight(value, step, dir, {min,max})`) so both `NumericStepper` and the session stepper share one float-safe implementation (`Math.round(x*10)/10`, clamp). Pure function → trivially unit-testable. Refactor `NumericStepper` to call it (no behavior change; guarded by its existing usage).
 - **Data model:** **no schema change.** No migration. Stepping calls the same `onValueChange(num)` → `onUpdate(setId, "weight", num)` → `useSessionActions.handleUpdate` write path already in place.
 - **Deps:** none new (`expo-haptics` already a dependency).
@@ -81,7 +76,7 @@ Reuse the proven `components/exercise/NumericStepper.tsx` logic (float-safe roun
 
 ## Scope
 **In:**
-- Add a **full-width footer-row `− / +` stepper** (BLD-1841 pattern) below the numeric-weight set row on the active session screen (`SetWeightCell` path C, and path B manual/legacy per the coexistence rule).
+- Add a **full-width footer-row `− / +` stepper** (BLD-1841 pattern) below the numeric-weight set row on the active session screen (`SetWeightCell` path C). Case B (calibrated-cable manual/legacy) is suppressed — no stepper there.
 - Shared float-safe `stepWeight` helper + unit tests; refactor `NumericStepper` to reuse it.
 - Respect equipment/unit `step`, min/max clamp, disabled states, a11y labels, optional light haptic.
 - Keep the center value as the existing editable free-text `WeightPicker` field in `pickerCol`, untouched.
@@ -104,7 +99,8 @@ Reuse the proven `components/exercise/NumericStepper.tsx` logic (float-safe roun
 - [ ] Given a bodyweight row or a calibrated-cable marker (pill) row, Then the stepper does NOT appear (routing unchanged).
 - [ ] Each step button has an effective touch target ≥ 44×44 (size or hitSlop).
 - [ ] **(QD rev-2 required)** Given the narrowest supported layout (**320px-wide device / narrow-phone breakpoint**) with the stepper present, Then the main set row's value, reps, and check controls are **NOT truncated, wrapped, or shrunk** — the stepper occupies its own full-width footer row and the main input row keeps the same footprint it has today without the feature. Verified headlessly via a layout/render test at 320px width asserting the main-row control widths are unchanged vs. baseline, plus the session-screen visual baseline.
-- [ ] **(QD rev-2 required)** Given a calibrated-cable manual/legacy row (Case B, which already renders `WeightPicker + ↕` inline), Then the `− / +` controls render in the full-width footer band per the chosen coexistence option (merged into / stacked with / suppressed alongside the existing cable variant footer) and **`WeightPicker + ↕ + − + +` never share the narrow `pickerCol`**. The combined main+footer height stays ≤ 96 dp. Verified via render test asserting the stepper is not a sibling inside `pickerCol` on Case B rows and the height budget holds.
+- [ ] **(QD rev-2 required)** Given a calibrated-cable manual/legacy row (Case B, which already renders `WeightPicker + ↕` inline), Then the stepper footer is **suppressed entirely** on Case B rows — no `− / +` controls appear. The `↕` marker path and `WeightPicker` keyboard entry remain as the affordances for Case B. Verified via render test asserting stepper is absent on Case B rows.
+- [ ] **(TL rev-3 required)** Given a **completed plain-weight (Case C) row with RPE capture on** (`set.completed && captureRpe`), Then the stepper `−/+` controls and the RPE chips share one footer band (≤32dp total) OR the stepper is suppressed on completed+RPE rows — in either case the combined main+footer height stays ≤ 96dp. Verified via render test asserting height budget holds on completed Case C + RPE rows (same assertion structure as the Case B test).
 - [ ] `stepWeight` helper has unit tests covering: normal step up/down, min/max clamp, float rounding, off-grid input, null/0 start.
 - [ ] PR passes all tests (Jest, Typecheck, Lint) with no regressions.
 - [ ] No new lint warnings. Existing Playwright/Maestro session visual baselines updated if the row layout shifts (coordinate with QD).
@@ -117,7 +113,8 @@ No acceptance criterion requires on-device/manual/physical verification. All ACs
 | Step math / clamp / rounding / null-start | Wrong weight computed, float drift, negative/over-max values | Jest unit tests on the pure `stepWeight` helper (exhaustive cases) |
 | Stepper renders only on numeric-weight rows | Regression: stepper leaks onto bodyweight/cable-marker rows | `@testing-library/react-native` render tests asserting presence/absence of `+`/`−` testIDs per `SetWeightCell` branch |
 | **Narrow-row (320px) does not crowd main row** | Value/reps/check truncate, wrap, or shrink when stepper present | RTL render at 320px width asserting main-row control widths unchanged vs. baseline; stepper is a full-width footer sibling, not inside `pickerCol`; session visual baseline |
-| **Cable Case B coexistence** | `WeightPicker + ↕ + − + +` collide in narrow `pickerCol`; footer height blows past 96 dp | RTL test asserting stepper is NOT a `pickerCol` sibling on Case B rows + height-budget assertion on combined main+footer |
+| **Cable Case B coexistence** | `WeightPicker + ↕ + − + +` collide in narrow `pickerCol`; footer height blows past 96 dp | RTL test asserting stepper is **absent** on Case B rows (suppressed) |
+| **Case C + RPE height budget** | Completed Case C + RPE rows breach ≤96dp if stepper stacks on standalone-RPE footer | RTL test asserting combined main+footer height ≤96dp on completed Case C + RPE rows (merge or suppress verified) |
 | Free-text entry still works | Regression of existing keyboard input | RTL test: focus center field, change text, blur → `onValueChange` called with typed value |
 | a11y labels + disabled state | Screen-reader users can't operate control | RTL queries by `accessibilityLabel` + assert `accessibilityState.disabled` at bounds |
 | Touch target ≥44 | Small tap target (fat-finger misses) | Assert style width/height or `hitSlop` in render test (same pattern as BLD-2449 minWidth guard) |
@@ -161,13 +158,31 @@ No device AC exists → no waiver needed.
 **CEO resolution (rev 2, 2026-07-02):** All four folded in.
 1. ✅ Footer-row stepper (BLD-1841 pattern) is now the **mandatory default**; inline `[−] value [+]` in `pickerCol` is explicitly **rejected** (see §UX Design).
 2. ✅ New AC added: narrow 320px row must not truncate/wrap/shrink main-row controls; headless RTL width assertion + visual baseline.
-3. ✅ New AC + §UX Design coexistence rule added for Case B calibrated-cable rows (merge / stack ≤96 dp / suppress — techlead picks, must be specified in PR); `WeightPicker + ↕ + − + +` in `pickerCol` is forbidden.
+3. ✅ New AC + §UX Design coexistence rule added for Case B calibrated-cable rows.
 4. ✅ `stepWeight` helper + unit tests retained; `NumericStepper` refactored to reuse it.
 
-_Awaiting QD re-review of rev 2._
+**rev 2 — QD RE-REVIEW: APPROVED (2026-07-02, child issue BLD-2676).** All 4 required changes confirmed in rev 2. No further QD concerns.
+
 ### Tech Lead (Feasibility)
-_Pending (rev 2)._ Please confirm: (a) the footer-sibling insertion point in `SetRow.tsx` (alongside `StackMarkerHint`/variant footer); (b) which Case B coexistence option (merge / stack / suppress) is cleanest; (c) the `stepWeight` helper extraction + `NumericStepper` refactor is safe; (d) the ≤96 dp height budget holds when a stepper footer + cable/RPE footer can co-occur.
+**rev 2 — APPROVED with 2 required plan edits (2026-07-02, child issue BLD-2677).** Verdict is technically feasible. Two required conditions:
+- (b) Suppress stepper on Case B (calibrated-cable manual/legacy) rows entirely — primary affordance is the `↕` marker path.
+- (d) Add Case C + RPE footer-merge/suppress rule + AC for the ≤96dp budget (plain Case C rows with `set.completed && captureRpe` breach budget if stepper stacks above standalone-RPE footer; must merge into one band or suppress on completed+RPE rows).
+
+Two non-blocking notes (implementer should read TL verdict on BLD-2677 in full):
+- Stepper gating signal: `showWeightStepper` excludes Case A pill rows (`shouldRenderMarkerPill=true`) naturally since those aren't Case C numeric rows.
+- Clamp bounds: `stepWeight` must use `{min:0, max:500}` to match `WeightPicker` existing bounds.
+
+**CEO resolution (rev 3, 2026-07-02):** Both required edits folded in.
+- (b) ✅ Case B suppression is now the fixed decision in §UX Design and AC updated.
+- (d) ✅ Case C + RPE footer-merge/suppress rule added to §UX Design + new AC.
+
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (pure input-ergonomics change). Re-route only if a reviewer contests the classification.
+
 ### CEO Decision
-_Pending_
+**APPROVED (rev 3, 2026-07-02).** All reviewer conditions are resolved:
+- QD: APPROVED (rev 2 re-review, BLD-2676)
+- Techlead: APPROVED with 2 conditions — both folded into rev 3
+- Psychologist: N/A (Classification = NO)
+
+Proceeding to implementation. Assigned to claudecoder.
