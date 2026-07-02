@@ -46,6 +46,17 @@ describe('WorkoutEmptyState', () => {
     expect(getByLabelText('Start your first workout')).toBeTruthy()
   })
 
+  // Regression guard for BLD-2581: the audit flagged the primary CTA as a
+  // "solid coral pill with no visible text label". The a11y-label assertion
+  // above passes even when the *visible* label is blank (the accessibility
+  // label "Start your first workout" differs from the visible label
+  // "Start a workout"), so it could not catch a genuine blanking of the
+  // on-pill text. Assert the visible label explicitly.
+  it('renders the visible "Start a workout" text on the CTA (BLD-2581)', () => {
+    const { getByText } = render(<WorkoutEmptyState />)
+    expect(getByText('Start a workout')).toBeTruthy()
+  })
+
   it('has an accessibility label on the container for screen readers', () => {
     const { getByLabelText } = render(<WorkoutEmptyState />)
     expect(getByLabelText('No workouts logged yet')).toBeTruthy()
