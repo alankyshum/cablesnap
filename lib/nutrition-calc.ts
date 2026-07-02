@@ -47,7 +47,7 @@ const GOAL_ADJUSTMENTS: Record<Goal, number> = {
   bulk: 300,
 };
 
-const CALORIE_FLOOR = 1200;
+export const CALORIE_FLOOR = 1200;
 const PROTEIN_PER_KG = 2.2;
 const FAT_PERCENT = 0.25;
 
