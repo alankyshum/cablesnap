@@ -40,4 +40,9 @@ export type ExerciseGroup = {
   // BLD-1158: exercise-level default tempo (E-B-C-T canonical). Used by
   // addSet/addSetsBatch to inherit tempo on new sets (AC1.1).
   defaultTempo?: string | null;
+  // BLD-2561: preferred substitute exercise id (resolved to name at load time).
+  // NULL = no preference set. Used to show/hide the fast-path swap chip.
+  preferredSubstituteId?: string | null;
+  /** Resolved name of the preferred substitute; null when id is null or deleted. */
+  preferredSubstituteName?: string | null;
 };

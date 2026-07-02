@@ -47,6 +47,12 @@ export const exercises = sqliteTable("exercises", {
   max_pulley_pins: integer("max_pulley_pins"),
   // BLD-1158: per-exercise default tempo (E-B-C-T notation). NULL = no default.
   default_tempo: text("default_tempo"),
+  // BLD-2561: persisted preferred substitute — a single "go-to" replacement for
+  // this exercise when its station is occupied. NULL = no preference set.
+  // Column-pair mirrors BLD-1028 notes/notes_updated_at precedent.
+  // A separate table is only warranted for ranked/multiple preferences (out of scope v1).
+  preferred_substitute_id: text("preferred_substitute_id"),
+  preferred_substitute_updated_at: integer("preferred_substitute_updated_at"),
 });
 
 export const workoutTemplates = sqliteTable("workout_templates", {

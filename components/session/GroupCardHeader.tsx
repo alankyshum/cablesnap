@@ -10,6 +10,7 @@ import { PinnedExerciseNoteEditor } from "./PinnedExerciseNoteEditor";
 import { BackfillNoteSuggestion } from "./BackfillNoteSuggestion";
 import { LastNextRow } from "./LastNextRow";
 import { SuggestionExplainerModal } from "./SuggestionExplainerModal";
+import { PreferredSwapChip } from "./PreferredSwapChip";
 import type { SetWithMeta, ExerciseGroup } from "./types";
 import type { TrainingMode } from "../../lib/types";
 import type { Suggestion } from "../../lib/rm";
@@ -72,6 +73,14 @@ export type GroupCardHeaderProps = {
   onApplyBreakThrough?: (exerciseId: string, updates: { id: string; weight: number | null; reps: number | null }[]) => Promise<void>;
   /** BLD-1122: weight unit for break-through confirmation labels */
   unit?: "kg" | "lb";
+  /** BLD-2561: resolved preferred substitute name (null = chip hidden). */
+  preferredSubstituteName?: string | null;
+  /** BLD-2561: whether this exercise has already been swapped to its preferred in this session. */
+  isPreferredSwapApplied?: boolean;
+  /** BLD-2561: name of the exercise that was swapped to (for post-swap undo label). */
+  preferredSwappedToName?: string | null;
+  /** BLD-2561: fast-path tap — apply preferred substitute immediately (no confirm). */
+  onPreferredSwap?: (exerciseId: string) => void;
 };
 
 // eslint-disable-next-line complexity
@@ -112,6 +121,10 @@ function GroupCardHeaderInner({
   plateauHint,
   onApplyBreakThrough,
   unit,
+  preferredSubstituteName,
+  isPreferredSwapApplied,
+  preferredSwappedToName,
+  onPreferredSwap,
 }: GroupCardHeaderProps) {
   // BLD-560: dev-only render counter for memoization regression detection.
   // Metro strips the require + call-site in prod via __DEV__ DCE (matches the
@@ -254,6 +267,23 @@ function GroupCardHeaderInner({
             </Pressable>
           </View>
         </View>
+
+        {/* Row 3a: BLD-2561 preferred substitute fast-path chip.
+            Renders when:
+              (a) a resolved preferred name exists (idle + swap-ready state), OR
+              (b) a preferred swap was just applied in this session (swapped+undo state)
+                  — even if the target exercise itself has no preferred substitute.
+            Placed between the icon row (Row 2) and the Last/Next row (Row 3)
+            following the pinnedNotePreview placement pattern (ux-designer ruling). */}
+        {(preferredSubstituteName || isPreferredSwapApplied) ? (
+          <PreferredSwapChip
+            preferredName={preferredSubstituteName ?? preferredSwappedToName ?? ""}
+            exerciseName={group.name}
+            isSwapped={isPreferredSwapApplied}
+            swappedToName={preferredSwappedToName}
+            onPress={() => onPreferredSwap?.(eid)}
+          />
+        ) : null}
 
         {/* Row 3: Last | Next */}
         {showLastNextRow && (

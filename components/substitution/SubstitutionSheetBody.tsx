@@ -1,6 +1,7 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { MUSCLE_LABELS } from "../../lib/types";
@@ -25,6 +26,10 @@ type Props = {
   emptyMessage: string | null;
   noMuscleData: boolean;
   onSelect: (exercise: Exercise) => void;
+  /** BLD-2561: whether "Set as my go-to" is toggled on. */
+  setAsGoTo?: boolean;
+  /** BLD-2561: callback to toggle the go-to preference checkbox. */
+  onToggleSetAsGoTo?: () => void;
 };
 
 export function SubstitutionSheetBody(props: Props) {
@@ -39,6 +44,8 @@ export function SubstitutionSheetBody(props: Props) {
     emptyMessage,
     noMuscleData,
     onSelect,
+    setAsGoTo = false,
+    onToggleSetAsGoTo,
   } = props;
   const colors = useThemeColors();
 
@@ -99,6 +106,31 @@ export function SubstitutionSheetBody(props: Props) {
         />
       )}
 
+      {/* BLD-2561: "Set as my go-to" toggle.
+          Shown whenever the caller provides onToggleSetAsGoTo — only the
+          session substitution path wires this prop; library/template views
+          leave it undefined and the toggle is hidden. */}
+      {onToggleSetAsGoTo != null && (
+        <Pressable
+          onPress={onToggleSetAsGoTo}
+          hitSlop={8}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: setAsGoTo }}
+          accessibilityLabel={`Set as my go-to for ${sourceExercise.name}`}
+          accessibilityHint="When on, your choice will be saved as the preferred substitute for next time."
+          style={styles.goToRow}
+        >
+          <MaterialCommunityIcons
+            name={setAsGoTo ? "checkbox-marked" : "checkbox-blank-outline"}
+            size={22}
+            color={setAsGoTo ? colors.primary : colors.onSurfaceVariant}
+          />
+          <Text style={[styles.goToLabel, { color: colors.onSurface }]}>
+            Set as my go-to for {sourceExercise.name}
+          </Text>
+        </Pressable>
+      )}
+
       {emptyMessage ? (
         <View style={styles.emptyState}>
           <Text
@@ -144,5 +176,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  // BLD-2561: go-to toggle row
+  goToRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    minHeight: 44,
+  },
+  goToLabel: {
+    fontSize: 14,
+    flex: 1,
   },
 });

@@ -35,6 +35,9 @@ function mapRow(row: ExerciseRow): Exercise {
     max_pulley_pins: row.max_pulley_pins ?? undefined,
     // BLD-1158: per-exercise default tempo.
     default_tempo: row.default_tempo ?? undefined,
+    // BLD-2561: persisted preferred substitute.
+    preferred_substitute_id: row.preferred_substitute_id ?? undefined,
+    preferred_substitute_updated_at: row.preferred_substitute_updated_at ?? undefined,
   };
 }
 
@@ -442,6 +445,86 @@ export async function getExerciseNotesBatch(
   const result: Record<string, { notes: string | null; dismissed: boolean }> = {};
   for (const r of rows) {
     result[r.id] = { notes: r.notes, dismissed: r.notes_backfill_dismissed_at != null };
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLD-2561: Preferred substitute — single "go-to" replacement per exercise
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the resolved preferred-substitute Exercise for the given source
+ * exercise, or null when:
+ *   - no preference is set (preferred_substitute_id IS NULL), or
+ *   - the target exercise has been deleted (deleted_at IS NOT NULL), or
+ *   - the target exercise no longer exists in the library.
+ *
+ * When a stale ID is detected (preference set but target missing/deleted),
+ * the stale preference is eagerly cleared from the source exercise so the
+ * chip stays hidden on subsequent renders.
+ */
+export async function getPreferredSubstitute(
+  sourceExerciseId: string,
+): Promise<Exercise | null> {
+  const db = await getDrizzle();
+  const source = await db.select()
+    .from(exercises)
+    .where(eq(exercises.id, sourceExerciseId))
+    .get() as unknown as ExerciseRow | undefined;
+  if (!source?.preferred_substitute_id) return null;
+
+  const target = await db.select()
+    .from(exercises)
+    .where(eq(exercises.id, source.preferred_substitute_id))
+    .get() as unknown as ExerciseRow | undefined;
+
+  // Target missing or soft-deleted — clear the stale preference eagerly.
+  if (!target || target.deleted_at != null) {
+    await db.update(exercises)
+      .set({ preferred_substitute_id: null, preferred_substitute_updated_at: null })
+      .where(eq(exercises.id, sourceExerciseId));
+    return null;
+  }
+
+  return mapRow(target);
+}
+
+/**
+ * Persists a preferred-substitute choice on the source exercise.
+ * Pass null as targetExerciseId to clear an existing preference.
+ */
+export async function setPreferredSubstitute(
+  sourceExerciseId: string,
+  targetExerciseId: string | null,
+): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(exercises)
+    .set({
+      preferred_substitute_id: targetExerciseId,
+      preferred_substitute_updated_at: targetExerciseId != null ? Date.now() : null,
+    })
+    .where(eq(exercises.id, sourceExerciseId));
+}
+
+/**
+ * Batch-fetch preferred_substitute_id for a list of source exercise IDs.
+ * Returns a map of sourceId → targetId | null.
+ * Used at session load time to populate ExerciseGroup.preferredSubstituteId.
+ */
+export async function getPreferredSubstitutesBatch(
+  exerciseIds: string[],
+): Promise<Record<string, string | null>> {
+  if (exerciseIds.length === 0) return {};
+  const rows = await query<{ id: string; preferred_substitute_id: string | null }>(
+    `SELECT id, preferred_substitute_id
+     FROM exercises
+     WHERE id IN (${exerciseIds.map(() => "?").join(",")})`,
+    exerciseIds,
+  );
+  const result: Record<string, string | null> = {};
+  for (const r of rows) {
+    result[r.id] = r.preferred_substitute_id ?? null;
   }
   return result;
 }

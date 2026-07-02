@@ -9,6 +9,8 @@ import {
   getExerciseById,
   swapExerciseInSession,
   undoSwapInSession,
+  getPreferredSubstitute,
+  setPreferredSubstitute,
 } from "../lib/db";
 import type { Exercise } from "../lib/types";
 import type { ExerciseGroup } from "../components/session/types";
@@ -43,6 +45,16 @@ export function useExerciseManagement({
   const swapUndoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swapUndoRef = useRef<{ setIds: string[]; originalExerciseId: string } | null>(null);
 
+  // BLD-2561: ephemeral in-session preferred-swap state.
+  // Maps targetExerciseId → { targetName } so the chip on the target's card
+  // can render the "Swapped to {name} · Undo" state after a fast-path swap.
+  // This is cleared on undo (toast or chip press) and on normal swap-undo.
+  const [appliedPreferredSwaps, setAppliedPreferredSwaps] = useState<
+    Map<string, { targetName: string }>
+  >(new Map());
+  // Tracks the target exercise id of the last preferred-swap so handleSwapUndo can clear it.
+  const preferredSwapTargetIdRef = useRef<string | null>(null);
+
   const handleSwapOpen = useCallback(async (exerciseId: string) => {
     const group = groups.find((g) => g.exercise_id === exerciseId);
     if (group && group.sets.every((s) => s.completed)) {
@@ -63,6 +75,17 @@ export function useExerciseManagement({
       if (swapUndoTimer.current) {
         clearTimeout(swapUndoTimer.current);
         swapUndoTimer.current = null;
+      }
+      // BLD-2561: clear the applied preferred swap chip state on undo.
+      const targetId = preferredSwapTargetIdRef.current;
+      if (targetId) {
+        preferredSwapTargetIdRef.current = null;
+        setAppliedPreferredSwaps((prev) => {
+          if (!prev.has(targetId)) return prev;
+          const next = new Map(prev);
+          next.delete(targetId);
+          return next;
+        });
       }
       await load();
     } catch {
@@ -97,6 +120,91 @@ export function useExerciseManagement({
       showError("Failed to swap exercise");
     }
   }, [id, swapSource, load, startRest, handleSwapUndo]);
+
+  // BLD-2561: "Set as my go-to" — persist preference from the discovery sheet.
+  const handleSetGoTo = useCallback(async (sourceId: string, targetId: string) => {
+    try {
+      await setPreferredSubstitute(sourceId, targetId);
+      // Optimistically update the group's preferredSubstituteId so the chip
+      // appears without waiting for a full session reload.
+      const target = await getExerciseById(targetId);
+      if (target) {
+        setGroups((prev) =>
+          prev.map((g) =>
+            g.exercise_id === sourceId
+              ? { ...g, preferredSubstituteId: targetId, preferredSubstituteName: target.name }
+              : g
+          )
+        );
+      }
+    } catch {
+      // Best-effort: preference not persisted, but the swap already went through.
+    }
+  }, [setGroups]);
+
+  // BLD-2561: fast-path preferred-swap — applies immediately (no confirm), then Undo.
+  const handlePreferredSwap = useCallback(async (exerciseId: string) => {
+    if (!id) return;
+    // If this exercise is already in the swapped state (chip shows "Swapped to … · Undo"),
+    // route the press to the undo handler instead of re-entering swap logic.
+    // appliedPreferredSwaps is keyed by the TARGET exercise id — the chip on the target's
+    // card fires onPreferredSwap(targetExerciseId), so this check is correct.
+    // NOTE: handleSwapUndo keeps swapUndoRef alive beyond the 5s toast window (see timer
+    // below), so undo works persistently as long as the chip is visible.
+    if (appliedPreferredSwaps.has(exerciseId)) {
+      await handleSwapUndo();
+      return;
+    }
+    const group = groups.find((g) => g.exercise_id === exerciseId);
+    if (group && group.sets.every((s) => s.completed)) {
+      showWarning("All sets completed — nothing to swap");
+      return;
+    }
+    const preferredTargetId = group?.preferredSubstituteId;
+    if (!preferredTargetId) {
+      // No preference yet — open the discovery sheet as fallback.
+      handleSwapOpen(exerciseId);
+      return;
+    }
+    try {
+      const preferred = await getPreferredSubstitute(exerciseId);
+      if (!preferred) {
+        // Stale id — fall back to discovery sheet.
+        handleSwapOpen(exerciseId);
+        return;
+      }
+      const modifiedIds = await swapExerciseInSession(id, exerciseId, preferred.id);
+      if (modifiedIds.length === 0) {
+        showWarning("All sets completed — nothing to swap");
+        return;
+      }
+      await load();
+      startRest(preferred.id);
+
+      // Wire undo into the existing swap-undo infra.
+      swapUndoRef.current = { setIds: modifiedIds, originalExerciseId: exerciseId };
+      // BLD-2561: record target id so handleSwapUndo can clear the chip state.
+      preferredSwapTargetIdRef.current = preferred.id;
+      if (swapUndoTimer.current) clearTimeout(swapUndoTimer.current);
+      // BLD-2561: record the in-session applied state so the chip on the target's
+      // card can render "Swapped to {name} · Undo" immediately after load().
+      setAppliedPreferredSwaps((prev) => {
+        const next = new Map(prev);
+        next.set(preferred.id, { targetName: preferred.name });
+        return next;
+      });
+      showToast(`Swapped to ${preferred.name}`, { action: { label: "Undo", onPress: handleSwapUndo } });
+      swapUndoTimer.current = setTimeout(() => {
+        // The 5s timer only expires the toast's live reference — NOT the undo state.
+        // swapUndoRef / preferredSwapTargetIdRef / appliedPreferredSwaps are kept
+        // alive so the persistent chip can still invoke handleSwapUndo after the
+        // toast dismisses. They are cleared in handleSwapUndo itself.
+        swapUndoTimer.current = null;
+      }, 5000);
+    } catch {
+      showError("Failed to apply preferred swap");
+    }
+  }, [id, groups, appliedPreferredSwaps, handleSwapOpen, handleSwapUndo, load, startRest, showToast, showWarning, showError]);
 
   // --- Exercise picker ---
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -260,6 +368,9 @@ export function useExerciseManagement({
     swapSheetRef,
     handleSwapOpen,
     handleSwapSelect,
+    handleSetGoTo,
+    handlePreferredSwap,
+    appliedPreferredSwaps,
     pickerOpen,
     setPickerOpen,
     handleAddExercise,

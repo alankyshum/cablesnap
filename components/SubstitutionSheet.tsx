@@ -21,6 +21,12 @@ type Props = {
   allExercises: Exercise[];
   onSelect: (exercise: Exercise) => void;
   onDismiss: () => void;
+  /**
+   * BLD-2561: called when the user picks a candidate with "Set as my go-to"
+   * enabled. The caller is responsible for persisting the preference via
+   * setPreferredSubstitute. Only invoked when the toggle is ON at confirm-time.
+   */
+  onSetGoTo?: (sourceId: string, targetId: string) => void;
 };
 
 export default function SubstitutionSheet({
@@ -29,11 +35,14 @@ export default function SubstitutionSheet({
   allExercises,
   onSelect,
   onDismiss,
+  onSetGoTo,
 }: Props) {
   const colors = useThemeColors();
   const snapPoints = useMemo(() => ["50%", "90%"], []);
   const [equipmentFilter, setEquipmentFilter] = useState<Equipment | null>(null);
   const [query, setQuery] = useState<string>("");
+  // BLD-2561: "Set as my go-to" toggle state. Resets when the sheet closes.
+  const [setAsGoTo, setSetAsGoTo] = useState(false);
 
   const scored = useMemo(() => {
     if (!sourceExercise) return [];
@@ -80,11 +89,19 @@ export default function SubstitutionSheet({
         return;
       }
 
+      // BLD-2561: capture toggle state at confirm-time (closure over setAsGoTo).
+      const capturedSetAsGoTo = setAsGoTo;
+
       const doSwap = () => {
+        // BLD-2561: persist preference if "Set as my go-to" was toggled on.
+        if (capturedSetAsGoTo && onSetGoTo) {
+          onSetGoTo(sourceExercise.id, exercise.id);
+        }
         onSelect(exercise);
         sheetRef.current?.close();
         setEquipmentFilter(null);
         setQuery("");
+        setSetAsGoTo(false);
       };
 
       if (Platform.OS === "web") {
@@ -102,12 +119,13 @@ export default function SubstitutionSheet({
         );
       }
     },
-    [sourceExercise, onSelect, sheetRef]
+    [sourceExercise, onSelect, sheetRef, setAsGoTo, onSetGoTo]
   );
 
   const handleClose = useCallback(() => {
     setEquipmentFilter(null);
     setQuery("");
+    setSetAsGoTo(false);
     onDismiss();
   }, [onDismiss]);
 
@@ -164,6 +182,8 @@ export default function SubstitutionSheet({
           emptyMessage={emptyMessage}
           noMuscleData={noMuscleData}
           onSelect={handleSelect}
+          setAsGoTo={setAsGoTo}
+          onToggleSetAsGoTo={() => setSetAsGoTo((v) => !v)}
         />
       )}
     </BottomSheet>

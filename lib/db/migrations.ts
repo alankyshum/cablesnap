@@ -93,6 +93,10 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "exercises", "max_pulley_pins", "INTEGER DEFAULT NULL");
   // BLD-1158: per-exercise default tempo (E-B-C-T canonical form). NULL = no default.
   await addColumnIfMissing(database, "exercises", "default_tempo", "TEXT DEFAULT NULL");
+  // BLD-2561: persisted preferred substitute — single go-to replacement per exercise.
+  // Column-pair mirrors BLD-1028 notes/notes_updated_at; avoids join on session render path.
+  await addColumnIfMissing(database, "exercises", "preferred_substitute_id", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "exercises", "preferred_substitute_updated_at", "INTEGER DEFAULT NULL");
   // workout_templates table
   await addColumnIfMissing(database, "workout_templates", "is_starter", "INTEGER DEFAULT 0");
   await addColumnIfMissing(database, "workout_templates", "source", "TEXT DEFAULT NULL");
