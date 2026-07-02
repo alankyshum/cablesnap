@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.53 — 2026-07-02
+<!-- versionCode: 123 -->
+
 - **Fixed blank month labels in the Progress tab date carousels** — the monthly report header and calendar month labels relied on `toLocaleDateString`, which returns an empty string on React Native's Hermes engine (no bundled Intl/ICU data), so the month name rendered blank. Month labels now use a deterministic, locale-independent name table and always display correctly (e.g. "July 2026"). (BLD-2584)
 - **Fixed a blank white square in the Progress tab** — the list/calendar view-mode toggle in the Progress tab rendered emoji glyphs that don't display on all platforms (notably web), leaving an empty bordered button. The toggle now uses proper vector icons and always shows a visible calendar/list affordance. (BLD-2583)
 - **Quick exercise substitution — preferred swaps for occupied stations** — you can now save a "go-to" substitute for any exercise. When your usual station is taken, a one-tap chip on the session card swaps to your saved alternative instantly — no sheet, no confirmation dialog. Set a preference from the substitution sheet at any time via the "Set as my go-to for {exercise}" toggle. After a swap, an Undo affordance restores the original exercise. (BLD-2561)
