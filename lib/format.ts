@@ -2,6 +2,14 @@ import { toDisplay } from "./units";
 
 export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
+// Hardcoded month names — intentionally avoids Date.prototype.toLocaleDateString()
+// because the Hermes JS engine (React Native) ships without Intl/ICU data, causing
+// that API to return an empty string for the month portion of the output.
+export const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+] as const;
+
 export function formatDuration(seconds: number | null | undefined): string {
   if (!seconds) return "-";
   const h = Math.floor(seconds / 3600);

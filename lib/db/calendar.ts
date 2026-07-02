@@ -1,6 +1,7 @@
 import { and, sql, isNotNull, gte, lt, eq } from "drizzle-orm";
 import { query, getDrizzle } from "./helpers";
 import { workoutSessions, workoutSets, exercises } from "./schema";
+import { MONTH_NAMES } from "@/lib/format";
 
 // --- Types ---
 
@@ -265,8 +266,7 @@ export function getWeekDayLabels(weekStartDay: number): string[] {
 }
 
 export function formatMonthYear(year: number, month: number): string {
-  const date = new Date(year, month, 1);
-  return date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  return `${MONTH_NAMES[month]} ${year}`;
 }
 
 export function dateToISO(year: number, month: number, day: number): string {
