@@ -592,35 +592,72 @@ describe("SetRow — 320px narrow layout guard (BLD-2674 AC QD-required)", () =>
   });
 });
 
-// ─── NumericStepper no-op refactor guard ─────────────────────────────────────
+// ─── NumericStepper refactor characterization guard ──────────────────────────
 
-describe("NumericStepper — no-op refactor parity (BLD-2674)", () => {
+describe("NumericStepper — stepWeight refactor characterization (BLD-2674)", () => {
   /**
-   * These tests pin the characterization of NumericStepper's rounding + clamp
-   * behavior before the stepWeight extraction. They verify that the refactored
-   * NumericStepper (which now calls stepWeight) produces identical values to
-   * the original inline logic (Math.round((value ± step)*10)/10 + clamp).
+   * These tests characterize NumericStepper's behavior after the stepWeight
+   * extraction refactor. Note: the refactor is NOT strictly behavior-preserving
+   * at off-grid values within one step above min. The old inline guard was:
+   *
+   *   const next = Math.round((value - step) * 10) / 10;
+   *   if (next >= min) onValueChange(next);  // silent no-call if below min
+   *
+   * The new guard calls stepWeight which clamps to min and fires onValueChange
+   * if the clamped value differs from the current value:
+   *
+   *   const next = stepWeight(value, step, -1, { min, max }); // clamps to min
+   *   if (next !== value) onValueChange(next);                // fires if clamped
+   *
+   * Divergence example: value=1, step=2.5, min=0
+   *   OLD: next = Math.round((1-2.5)*10)/10 = -1.5 → -1.5 < 0 → NO CALL
+   *   NEW: stepWeight(1, 2.5, -1, {min:0}) = Math.max(0, -1.5) = 0 → CALLS onValueChange(0)
+   *
+   * The new behavior is CORRECT (clamp-to-bound beats silently dead button).
+   * These tests document the actual contract callers can rely on.
    */
 
-  // We test stepWeight directly (it's the shared core) and verify the boundary
-  // values that NumericStepper callers depend on.
-  it("parity: stepWeight mirrors old Math.round((value + step)*10)/10 at 10 + 2.5", () => {
+  // ── Values well above min (identical in old and new) ──────────────────────
+
+  it("increment 10 by step 2.5 → 12.5 (identical to old)", () => {
     const { stepWeight } = require("../../../lib/weight-step");
     expect(stepWeight(10, 2.5, 1, { min: 0, max: 9999 })).toBe(12.5);
   });
 
-  it("parity: stepWeight mirrors old decrement at 10 - 5", () => {
+  it("decrement 10 by step 5 → 5 (identical to old)", () => {
     const { stepWeight } = require("../../../lib/weight-step");
     expect(stepWeight(10, 5, -1, { min: 0, max: 9999 })).toBe(5);
   });
 
-  it("parity: decrement at min(0) → 0, not negative", () => {
+  it("decrement at min(0) → 0 (identical to old — value already at min, no change)", () => {
     const { stepWeight } = require("../../../lib/weight-step");
     expect(stepWeight(0, 2.5, -1, { min: 0, max: 9999 })).toBe(0);
   });
 
-  it("parity: increment at max(9999) → 9999, not exceeded", () => {
+  it("increment at max(9999) → 9999 (identical to old — value already at max)", () => {
     const { stepWeight } = require("../../../lib/weight-step");
     expect(stepWeight(9999, 1, 1, { min: 0, max: 9999 })).toBe(9999);
+  });
+
+  // ── Divergent cases: off-grid value within one step above min ─────────────
+  // NEW behavior: clamps to min and fires. OLD behavior: silently no-call.
+  // The new behavior is intentionally better — documents the contract change.
+
+  it("divergent: value=1, step=2.5, min=0 → clamps to 0 (new: fires; old: silent no-call)", () => {
+    const { stepWeight } = require("../../../lib/weight-step");
+    // stepWeight returns 0 (clamped), which !== 1, so NumericStepper calls onValueChange(0)
+    expect(stepWeight(1, 2.5, -1, { min: 0, max: 9999 })).toBe(0);
+  });
+
+  it("divergent: value=2.5, step=5, min=0 → clamps to 0 (new: fires; old: silent no-call)", () => {
+    const { stepWeight } = require("../../../lib/weight-step");
+    // 2.5 - 5 = -2.5 → clamp to 0; fires onValueChange(0)
+    expect(stepWeight(2.5, 5, -1, { min: 0, max: 9999 })).toBe(0);
+  });
+
+  it("divergent: value=2, step=5, min=1 → clamps to 1 (new: fires; old: silent no-call)", () => {
+    const { stepWeight } = require("../../../lib/weight-step");
+    // 2 - 5 = -3 → clamp to 1; fires onValueChange(1)
+    expect(stepWeight(2, 5, -1, { min: 1, max: 9999 })).toBe(1);
   });
 });

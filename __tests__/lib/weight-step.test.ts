@@ -117,22 +117,43 @@ describe("stepWeight", () => {
     expect(stepWeight(497.5, 2.5, 1, opts)).toBe(500);
   });
 
-  // ── NumericStepper parity (characterization guard, no-op refactor) ────────
-  // These tests match the EXACT values NumericStepper computed inline
-  // (Math.round((value + step)*10)/10) before the stepWeight refactor.
-  it("parity: increment 10 by step 2.5 → 12.5", () => {
+  // ── NumericStepper refactor characterization (BLD-2674) ──────────────────
+  // The stepWeight extraction changes NumericStepper behavior at off-grid values
+  // within one step above min. Old inline guard silently skipped onValueChange
+  // when next < min; new guard clamps to min and fires. These tests document the
+  // actual contract — not claimed "no-op parity".
+
+  it("characterization: increment 10 by step 2.5 → 12.5 (unchanged from old)", () => {
     expect(stepWeight(10, 2.5, 1, { min: 0 })).toBe(12.5);
   });
 
-  it("parity: decrement 10 by step 5 → 5", () => {
+  it("characterization: decrement 10 by step 5 → 5 (unchanged from old)", () => {
     expect(stepWeight(10, 5, -1, { min: 0 })).toBe(5);
   });
 
-  it("parity: value at min — decrement does NOT go below min", () => {
+  it("characterization: value at min — decrement clamps to min (unchanged from old)", () => {
     expect(stepWeight(0, 2.5, -1, { min: 0 })).toBe(0);
   });
 
-  it("parity: value at max 9999 — increment does NOT exceed max 9999", () => {
+  it("characterization: value at max 9999 — increment clamps to max (unchanged from old)", () => {
     expect(stepWeight(9999, 1, 1, { min: 0, max: 9999 })).toBe(9999);
+  });
+
+  // ── Divergent: off-grid value within one step above min ───────────────────
+  // NEW: clamps to min and returns min (callers can check next !== value to fire).
+  // OLD (NumericStepper inline): next < min guard → no call. New is intentionally better.
+
+  it("divergent: value=1, step=2.5, min=0 → clamps to 0", () => {
+    // Old: Math.round((1-2.5)*10)/10 = -1.5 → guarded, no-call
+    // New: stepWeight(1, 2.5, -1, {min:0}) = max(0,-1.5) = 0 → caller fires
+    expect(stepWeight(1, 2.5, -1, { min: 0 })).toBe(0);
+  });
+
+  it("divergent: value=2.5, step=5, min=0 → clamps to 0", () => {
+    expect(stepWeight(2.5, 5, -1, { min: 0 })).toBe(0);
+  });
+
+  it("divergent: value=2, step=5, min=1 → clamps to 1", () => {
+    expect(stepWeight(2, 5, -1, { min: 1 })).toBe(1);
   });
 });
