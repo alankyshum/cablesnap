@@ -100,6 +100,18 @@ build_static_bundle() {
     echo "[daily-audit] ERROR: static export produced no dist/index.html — aborting." >&2
     exit 1
   fi
+
+  # BLD-2586: the agent-runtime container has NO system text fonts
+  # (/usr/share/fonts absent, fontconfig absent), so Chromium measures every
+  # sans/serif text run as 0x0 and ALL app text vanishes from audit
+  # screenshots — a whole class of false "missing text/label" findings
+  # (BLD-2581 / BLD-2582 / BLD-2585). Inject an E2E-only Roboto WOFF2 into the
+  # served dist/index.html as a blocking FontFace loader so text renders. This
+  # is a NO-OP on any host that already has /usr/share/fonts (e.g. CI), so it
+  # never alters font-equipped runs. The shipped app bundle is untouched (the
+  # font lives under e2e/, never in public/ or the app import graph).
+  echo "[daily-audit] injecting E2E-only audit text font (fontless-container fix, BLD-2586)…"
+  node scripts/inject-audit-fonts.mjs
 }
 
 run_scenarios() {

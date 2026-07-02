@@ -83,6 +83,16 @@ jobs:
         # Metro cold-start in CI (BLD-517).
         run: npx expo export -p web --dev --no-minify
 
+      - name: Inject E2E-only audit text font (fontless-container fix, BLD-2586)
+        # No-op here: ubuntu-latest already has /usr/share/fonts (installed by
+        # `playwright install --with-deps` above), so the injector's
+        # font-presence probe short-circuits and dist/index.html is left
+        # byte-for-byte unchanged. The step exists so the CI and agent-runtime
+        # audit paths stay symmetric; the real effect is in the fontless agent
+        # container (scripts/daily-audit.sh), where text would otherwise render
+        # 0x0 (BLD-2581 / BLD-2582 / BLD-2585 false-positive class).
+        run: node scripts/inject-audit-fonts.mjs
+
       - name: Run scenario captures (mobile viewport)
         env:
           CI: 'true'

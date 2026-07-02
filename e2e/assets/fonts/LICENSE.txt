@@ -1,0 +1,43 @@
+audit-latin.woff2 — E2E visual-audit text font (NOT shipped in the app)
+=======================================================================
+
+Font:      Roboto (Latin subset), Regular / weight 400
+Format:    WOFF2
+Source:    Google Fonts — Roboto v51
+           https://fonts.googleapis.com/css2?family=Roboto:wght@400&display=swap
+File URL:  https://fonts.gstatic.com/s/roboto/v51/KFOMCnqEu92Fr1ME7kSn66aGLdTylUAMQXC89YmC2DPNWubEbVmUiAo.woff2
+           (the "latin" unicode-range subset, U+0000-00FF + common punctuation)
+sha256:    425c0713a8176f92273d378599c7eac57de7fafabd4bd0ed457b70eb8f80d371
+Retrieved: 2026-07-02 (BLD-2586)
+
+License:   Apache License 2.0
+           https://github.com/googlefonts/roboto/blob/main/LICENSE
+           Roboto is distributed under Apache-2.0, which permits
+           redistribution, including of subsetted binaries, provided the
+           license text is retained (this file).
+
+Why this file exists (BLD-2586)
+-------------------------------
+The visual-audit harness runs Chromium in a *fontless* agent-runtime
+container (no /usr/share/fonts, no fontconfig). With no system text font,
+Chromium measures every sans/serif text run as 0x0, so ALL app text
+vanishes from audit screenshots and the audit emits a whole class of false
+"missing text/label" findings.
+
+scripts/inject-audit-fonts.mjs base64-inlines THIS file into the served
+dist/index.html as a blocking FontFace() loader, aliased to the concrete
+family names in react-native-web's default font stack
+(-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial),
+so text renders and the audit can validate it.
+
+IMPORTANT — this font is E2E-ONLY and is NEVER shipped in the app:
+  * It lives under e2e/ (not under public/ or assets/), so `expo export`
+    does not bundle it.
+  * It is never imported by app code.
+  * The injector is gated behind a font-presence probe: it is a no-op on
+    any host that already has /usr/share/fonts (e.g. CI's ubuntu-latest),
+    so CI audit screenshots are byte-for-byte unchanged.
+
+To refresh this asset, re-download the latin-subset WOFF2 from the Google
+Fonts css2 URL above (send a modern-browser User-Agent so woff2 is served),
+update the File URL + sha256 here, and re-run the E2E audit-font spec.
