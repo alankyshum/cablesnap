@@ -35,7 +35,14 @@
 //      re-measure when fonts arrive later — proven in BLD-2585) → text stays
 //      0x0. So we rewrite the entry `<script src="/_expo/static/js/…">` to an
 //      inert type the browser parses but never runs, and the loader clones it
-//      back into an executable `<script src>` ONLY after `document.fonts.ready`.
+//      back into an executable `<script src>` ONLY after BOTH
+//      `document.fonts.ready` AND the DOM is available. The DOM gate matters
+//      because the loader runs in `<head>` while `document.readyState` is
+//      still `"loading"`; the data-URI FontFace loads have no network hop, so
+//      fonts can become ready before the parser reaches the parked entry
+//      `<script>` in `<body>` — un-parking then would find nothing and leave
+//      the page permanently blank. So boot() is deferred to `DOMContentLoaded`
+//      whenever the document is still parsing.
 //      react-native-web therefore literally cannot measure text until the audit
 //      font is loaded.
 //
@@ -166,6 +173,17 @@ function buildFontFaceStyle(dataUri) {
 // react-native-web therefore cannot mount — and cannot measure text — until
 // the audit font is loaded. If FontFace is unsupported we still un-park the
 // entry so the page is never permanently blank (graceful degradation).
+//
+// CRITICAL (BLD-2586 second review): boot() MUST also wait for the DOM.
+// This loader is injected in <head>, so it runs while
+// `document.readyState === "loading"` and BEFORE the parser has reached the
+// parked entry `<script>` tags in <body>. The data-URI FontFace loads have no
+// network round-trip, so `document.fonts.ready` (and the unsupported-FontFace
+// early path) can resolve while the body is still unparsed — at which point
+// `querySelectorAll('script[type=PARK]')` returns an EMPTY NodeList, nothing
+// is un-parked, and the app is permanently blank. So every boot path funnels
+// through bootWhenDomReady(), which defers boot() to `DOMContentLoaded` while
+// the document is still loading and runs it immediately once parsing is done.
 function buildLoader(dataUri) {
   const families = JSON.stringify(FAMILIES);
   const loader =
@@ -186,17 +204,28 @@ function buildLoader(dataUri) {
     `document.head.appendChild(s);` +
     `})(parked[i]);}` +
     `}` +
+    // Gate boot() on DOM availability. The loader runs in <head>, so the parked
+    // entry <script> tags in <body> may not be parsed yet; booting now would
+    // querySelectorAll an empty set and leave the page blank forever. When the
+    // document is still parsing, defer to DOMContentLoaded (one-shot); once
+    // parsing is complete, boot synchronously.
+    `function bootWhenDomReady(){` +
+    `if(document.readyState==="loading"){` +
+    `document.addEventListener("DOMContentLoaded",boot,{once:true});` +
+    `}else{boot();}` +
+    `}` +
     // No FontFace API (or already-font-equipped host that we force-patched):
-    // don't hang the page — boot immediately.
-    `if(typeof FontFace==="undefined"||!document.fonts){boot();return;}` +
+    // don't hang the page — un-park as soon as the DOM is ready.
+    `if(typeof FontFace==="undefined"||!document.fonts){bootWhenDomReady();return;}` +
     `Promise.all(FAMS.map(function(f){` +
     `try{var ff=new FontFace(f,'url("'+URI+'") format("woff2")',{weight:"100 900"});` +
     `return ff.load().then(function(l){document.fonts.add(l);}).catch(function(){});` +
     `}catch(e){return Promise.resolve();}` +
     `})).then(function(){return document.fonts.ready;})` +
     // Boot after fonts settle whether the load resolved or rejected — a failed
-    // font must not permanently block the app from mounting.
-    `.then(boot,boot);` +
+    // font must not permanently block the app from mounting. bootWhenDomReady
+    // additionally ensures the parked body tags exist before we query them.
+    `.then(bootWhenDomReady,bootWhenDomReady);` +
     `})();`;
 
   return `<script id="audit-font-loader">${loader}</script>`;

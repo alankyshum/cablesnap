@@ -30,6 +30,15 @@
  *         document.fonts.ready, and boots on font failure too (never blank).
  *   AC-h. The emitted loader IIFE is syntactically valid JS.
  *   AC-i. A dist with no entry bundle hard-errors (no silent no-fix build).
+ *   AC-j. boot() is gated on DOM availability (bootWhenDomReady), never called
+ *         directly from the font promise — the loader runs in <head> while the
+ *         body (and its parked entry <script>) is unparsed, and the data-URI
+ *         FontFace loads resolve without a network hop, so booting off the font
+ *         promise alone would querySelectorAll an empty set and leave the page
+ *         permanently blank (BLD-2586 second review).
+ *   AC-k. Behavioral proof: with a synchronous-resolving FontFace and
+ *         readyState="loading", the emitted loader does NOT un-park until
+ *         DOMContentLoaded fires, then un-parks exactly the entry bundle.
  *
  * Strategy mirrors daily-audit-set-e-ordering.test.ts: drive the REAL script
  * via spawnSync against temp fixtures, assert on exit code + emitted HTML.
@@ -235,12 +244,153 @@ describe("inject-audit-fonts.mjs — BLD-2586 fontless-container text fix", () =
       // …preserves execution order (async=false)…
       expect(loader).toContain("s.async=false");
       // …and crucially chains boot AFTER document.fonts.ready resolves (or
-      // rejects — boot is passed as BOTH handlers so a font failure still boots
-      // rather than leaving the page permanently blank).
+      // rejects — bootWhenDomReady is passed as BOTH handlers so a font failure
+      // still boots rather than leaving the page permanently blank).
       expect(loader).toContain("document.fonts.ready");
-      expect(loader).toMatch(/\.then\(\s*boot\s*,\s*boot\s*\)/);
-      // Graceful fallback: if FontFace is unsupported, boot immediately.
-      expect(loader).toMatch(/FontFace==="undefined"[\s\S]*?boot\(\);\s*return/);
+      expect(loader).toMatch(
+        /\.then\(\s*bootWhenDomReady\s*,\s*bootWhenDomReady\s*\)/,
+      );
+      // Graceful fallback: if FontFace is unsupported, still un-park (via the
+      // DOM-ready gate) rather than hanging the page.
+      expect(loader).toMatch(
+        /FontFace==="undefined"[\s\S]*?bootWhenDomReady\(\);\s*return/,
+      );
+    } finally {
+      cleanup(dist);
+    }
+  });
+
+  // BLD-2586 SECOND review (blocking): the loader runs in <head> while
+  // document.readyState === "loading", BEFORE the parser reaches the parked
+  // entry <script> tags in <body>. The data-URI FontFace loads have no network
+  // hop, so fonts can become ready while the body is still unparsed. If boot()
+  // were called directly from the font promise (or the FontFace-unsupported
+  // path) at that moment, querySelectorAll would return an empty NodeList,
+  // nothing would un-park, and the page would stay permanently blank. These
+  // tests pin that boot() is gated on DOM availability, not just font
+  // readiness.
+  it("AC-j: boot() is gated on DOM availability, never called directly from the font promise", () => {
+    const dist = makeDist();
+    try {
+      runInjector(dist);
+      const html = readIndex(dist);
+      const loader = html.match(
+        /<script id="audit-font-loader">([\s\S]*?)<\/script>/,
+      )![1];
+
+      // A bootWhenDomReady() indirection exists and it is what waits on
+      // DOMContentLoaded when the document is still parsing.
+      expect(loader).toContain("function bootWhenDomReady()");
+      expect(loader).toContain('document.readyState==="loading"');
+      expect(loader).toMatch(
+        /addEventListener\(\s*"DOMContentLoaded"\s*,\s*boot\s*,\s*\{\s*once\s*:\s*true\s*\}\s*\)/,
+      );
+
+      // The font promise chain must hand off to bootWhenDomReady, NOT to boot
+      // directly — that is the whole fix. Assert there is no `.then(boot` /
+      // `.then( boot` promise wiring that would bypass the DOM gate.
+      expect(loader).not.toMatch(/\.then\(\s*boot\b/);
+      // Likewise the FontFace-unsupported early path must go through the gate,
+      // not call boot() directly.
+      expect(loader).not.toMatch(/\|\|\s*!document\.fonts\)\s*\{\s*boot\(\)/);
+    } finally {
+      cleanup(dist);
+    }
+  });
+
+  it("AC-k: emitted loader actually defers un-parking until DOMContentLoaded when the document is still loading", () => {
+    // Behavioral proof (not just source-shape): execute the real emitted loader
+    // in a JSDOM-like harness where document.readyState starts as "loading" and
+    // FontFace/document.fonts resolve SYNCHRONOUSLY (worst case for the race).
+    // The parked entry <script> is added to the DOM only AFTER the loader has
+    // run — mimicking the parser reaching <body> after <head>. Un-parking must
+    // not happen until we fire DOMContentLoaded.
+    const dist = makeDist();
+    try {
+      runInjector(dist);
+      const html = readIndex(dist);
+      const loaderSrc = html.match(
+        /<script id="audit-font-loader">([\s\S]*?)<\/script>/,
+      )![1];
+
+      // Drive the loader through a real node child process with a tiny DOM
+      // shim so we don't need jsdom. The shim records appended <script src>
+      // elements (the un-park action) and lets us control readyState +
+      // DOMContentLoaded timing.
+      const harness = `
+        const appended = [];
+        let readyState = "loading";
+        const dclListeners = [];
+        const parkedSrc = "/_expo/static/js/web/entry-abc.js";
+        // The parked tag does NOT exist yet when the loader runs (head parsed,
+        // body not). It is added just before we flush microtasks / DCL.
+        let parkedTag = null;
+        function makeParkedTag() {
+          return {
+            getAttribute: (k) =>
+              k === "data-audit-entry-src" ? parkedSrc : null,
+            crossOrigin: "",
+          };
+        }
+        global.document = {
+          get readyState() { return readyState; },
+          fonts: {
+            _ready: Promise.resolve(),
+            get ready() { return this._ready; },
+            add() {},
+          },
+          addEventListener(type, cb) {
+            if (type === "DOMContentLoaded") dclListeners.push(cb);
+          },
+          querySelectorAll(sel) {
+            // Only the parked entry tag matches, and only once it "exists".
+            if (sel.includes("x-audit-parked-entry") && parkedTag) return [parkedTag];
+            return [];
+          },
+          createElement() {
+            const el = { src: "", async: true, crossOrigin: "" };
+            return el;
+          },
+          head: { appendChild(el) { appended.push(el.src); } },
+        };
+        global.FontFace = function () {
+          return {
+            load() { return Promise.resolve({}); }, // synchronous resolve
+          };
+        };
+        // Run the emitted loader.
+        ${loaderSrc}
+        // Give the (already-resolved) font promise chain a chance to run. If the
+        // loader were buggy (booting straight off the font promise), it would
+        // querySelectorAll now — but the parked tag doesn't exist yet, so it
+        // would append NOTHING and the app would be blank forever.
+        setTimeout(() => {
+          const bootedEarly = appended.length;
+          // NOW the parser "reaches" <body>: the parked tag appears and DCL fires.
+          parkedTag = makeParkedTag();
+          readyState = "interactive";
+          dclListeners.forEach((cb) => cb());
+          setTimeout(() => {
+            const bootedAfterDcl = appended.length;
+            // Correct behavior: nothing un-parked before DCL, exactly the entry
+            // bundle un-parked after DCL.
+            if (bootedEarly !== 0) {
+              console.error("FAIL: un-parked BEFORE DOMContentLoaded (race):", appended);
+              process.exit(3);
+            }
+            if (bootedAfterDcl !== 1 || appended[0] !== parkedSrc) {
+              console.error("FAIL: entry bundle not un-parked after DCL:", appended);
+              process.exit(4);
+            }
+            console.log("OK");
+          }, 0);
+        }, 0);
+      `;
+      const tmp = path.join(dist, "loader-dom-harness.mjs");
+      fs.writeFileSync(tmp, harness, "utf8");
+      const r = spawnSync("node", [tmp], { encoding: "utf8", timeout: 30_000 });
+      expect(r.stderr + r.stdout).toContain("OK");
+      expect(r.status).toBe(0);
     } finally {
       cleanup(dist);
     }
