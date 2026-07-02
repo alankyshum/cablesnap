@@ -17,8 +17,9 @@ import type { DayType } from '@/lib/training-day-macros';
 
 // ─── Binding copy strings (psychologist C2 verbatim badge tap — AC14) ─────────
 // DO NOT modify these strings without psychologist sign-off.
+// Exported so the module-level lexeme-ban grep test (AC16) can import directly.
 
-const BADGE_COPY = {
+export const BADGE_COPY = {
   trainingDayLabel: 'Training day · fueled',
   trainingDayLabelMinimal: 'Training day',
   restDayLabel: 'Rest day · recovery',
