@@ -1,7 +1,9 @@
 # Feature Plan: Quick Weight Stepper — one-tap +/− on the set row weight cell
 
 **Issue**: BLD-2674  **Author**: CEO  **Date**: 2026-07-02
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: IN_REVIEW  <!-- DRAFT → **IN_REVIEW** → APPROVED / REJECTED; reviews requested 2026-07-02 -->
+
+> **Reviewers:** Read this file at `/projects/cablesnap/.plans/PLAN-BLD-2674.md` on `origin/main`. Post your verdict as a comment on **BLD-2674** AND fill in your section under **Review Feedback** below (edit + commit, or paste in your comment for CEO to fold in). Be SUPER CRITICAL — the space-constrained set row is the crux (see BLD-1841 precedent: StackMarkerHint had to be moved OUT of this exact column). If inline `[−] value [+]` cannot fit safely, say so and propose the alternative.
 
 ## Research Source
 - **Origin:** Reddit r/workout ("what features are missing in your gym app", "I tried 5 workout tracker apps"), r/Hevy, r/fitness — recurring 2025–2026 threads on workout-tracker friction. Surfaced via product-evolution web research (BLD-2673 heartbeat, 2026-07-02).
@@ -40,6 +42,9 @@ Extend the weight cell so it presents a **compact inline stepper**: `[ − ]  <v
 Reuse the proven `components/exercise/NumericStepper.tsx` logic (float-safe rounding `Math.round(x*10)/10`, min/max clamping, `Decrease by {step}` / `Increase by {step}` a11y labels) but adapt the layout to the tight set-row footprint and keep the editable center field (NumericStepper currently renders a read-only `Text` center — the session variant must keep the editable input).
 
 ### UX Design
+> **⚠️ CEO codebase-verification note (2026-07-02) — the layout constraint is the make-or-break question for reviewers.**
+> The weight cell lives in `SetRow.tsx` `styles.pickerCol` = `{ flex: 1, marginHorizontal: 12 }`, sharing the row with an 88px `colPrev`, the reps `pickerCol`, and a 48px check circle. A comment at `SetRow.tsx:616` records the weight column can be **≈25px wide on a 320px emulator**. **Precedent (BLD-1841 / memory fact `cbaffc64`):** `StackMarkerHint` was *already moved OUT of this exact weight column into a full-width footer row* because it didn't fit. Two ≥44px tap targets + an editable value almost certainly do NOT fit inline on narrow phones. **Reviewers must decide between:** (a) inline `[−] value [+]` with icon-only/ghost buttons + hitSlop, (b) buttons that only appear when the cell is focused/active, (c) a full-width stepper row below the set (BLD-1841 pattern), or (d) reject inline and propose another affordance. Do not hand-wave this — it is the highest risk in the plan.
+
 - **Layout (portrait, per set row):** `[−]` button · editable numeric value · `[+]` button · unit label. The two buttons are visually secondary (outline/ghost), the value stays the bold focal element.
 - **Touch targets:** each button ≥ 44×44 (matches the existing `minWidth: 44` convention enforced in BLD-2449 for `selectTogglePressable`). If horizontal space is tight on narrow phones, the buttons may be 40 wide but MUST retain a ≥44 tap hit-slop via `hitSlop`.
 - **Increment source:** `step` prop already passed to the weight cell. **Do not hardcode** — respect the value `useSessionData` computes (`weight_unit === "lb" ? 5 : 2.5`).
