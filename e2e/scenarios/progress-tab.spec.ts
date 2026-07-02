@@ -214,4 +214,124 @@ test.describe("@scenario progress-tab", () => {
       "React crash overlay must not be attached on progress screen (Refs: BLD-2074, BLD-2078)",
     ).not.toBeAttached({ timeout: 3_000 });
   });
+
+  test("empty-state CTA label is rendered, opaque, and legible (BLD-2585)", async ({
+    page,
+  }, testInfo) => {
+    // Regression lock for BLD-2581/BLD-2585: the workouts empty-state primary
+    // CTA ("Start a workout") was flagged as a coral pill with no visible text.
+    // Root cause was an audit-harness artifact — chromium-headless-shell in the
+    // fontless agent container measures EVERY text run as 0×0 (no system fonts),
+    // so the label collapsed. The app code was proven correct.
+    //
+    // These assertions therefore lock the two failure modes that would make the
+    // pill *genuinely* blank on a real device, WITHOUT depending on the harness
+    // being able to shape glyphs (so they pass in both the fontless agent
+    // container AND the font-provisioned CI runner):
+    //   1. the CTA element renders (pill present + visible + opaque, opacity≠0)
+    //      — guards the reanimated opacity/scale race hypothesis;
+    //   2. the label text node is present with a resolved color that is neither
+    //      transparent nor equal to the pill background — guards color==bg.
+    // Deliberately NO `boundingBox width > 0` assertion: that would be flaky in
+    // the exact fontless environment that produced the original finding.
+    test.skip(
+      testInfo.project.name !== "mobile",
+      "BLD-2585: assert on the 390×844 audit surface only",
+    );
+
+    const pageErrors: string[] = [];
+    page.on("pageerror", (err) => pageErrors.push(err.message));
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.addInitScript(() => {
+      (window as unknown as Record<string, unknown>).__SKIP_ONBOARDING__ = true;
+    });
+
+    // No scenario seed → the progress screen renders its workouts empty-state.
+    await page.goto("/progress");
+
+    const emptyState = page.getByTestId("progress-workouts-empty");
+    await expect(
+      emptyState,
+      "workouts empty-state must mount when no workouts are seeded",
+    ).toBeVisible({ timeout: 20_000 });
+
+    // Let any entry animation settle to its resting frame.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          void document.documentElement.offsetHeight;
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => setTimeout(resolve, 300)),
+          );
+        }),
+    );
+
+    const cta = page.getByTestId("progress-empty-cta");
+    await expect(cta, "empty-state CTA must be attached").toBeAttached({
+      timeout: 5_000,
+    });
+    await expect(cta, "empty-state CTA must be visible").toBeVisible();
+
+    // (1) Neither the CTA nor any ancestor may rest at opacity 0 — this is the
+    // "reanimated opacity race" the ticket flagged. Walk the ancestor chain and
+    // assert the multiplied opacity is non-zero.
+    const effectiveOpacity = await cta.evaluate((el) => {
+      let o = 1;
+      let cur: Element | null = el;
+      while (cur) {
+        const v = parseFloat(getComputedStyle(cur).opacity || "1");
+        if (!Number.isNaN(v)) o *= v;
+        cur = cur.parentElement;
+      }
+      return o;
+    });
+    expect(
+      effectiveOpacity,
+      "CTA effective (cumulative) opacity must be > 0 — a resting opacity of 0 is the invisible-text failure mode",
+    ).toBeGreaterThan(0);
+
+    // (2) The label text node must exist with a legible color: present, not
+    // transparent, and not equal to the pill's own background color.
+    const label = page.getByText("Start a workout", { exact: true });
+    await expect(
+      label,
+      "CTA label text node must be present in the DOM",
+    ).toBeAttached({ timeout: 5_000 });
+
+    const colorInfo = await label.first().evaluate((el) => {
+      const cs = getComputedStyle(el as Element);
+      // nearest ancestor with a non-transparent background = the pill
+      let bg = "rgba(0, 0, 0, 0)";
+      let cur: Element | null = el.parentElement;
+      while (cur) {
+        const b = getComputedStyle(cur).backgroundColor;
+        if (b && b !== "rgba(0, 0, 0, 0)" && b !== "transparent") {
+          bg = b;
+          break;
+        }
+        cur = cur.parentElement;
+      }
+      return { color: cs.color, opacity: cs.opacity, bg };
+    });
+
+    expect(colorInfo.color, "label color must be set").toBeTruthy();
+    expect(
+      colorInfo.color.replace(/\s/g, ""),
+      "label color must not be fully transparent",
+    ).not.toBe("rgba(0,0,0,0)");
+    expect(colorInfo.opacity, "label's own opacity must not be 0").not.toBe(
+      "0",
+    );
+    expect(
+      colorInfo.color.replace(/\s/g, ""),
+      "label color must differ from the pill background (else it is invisible)",
+    ).not.toBe(colorInfo.bg.replace(/\s/g, ""));
+
+    // Crash guard parity with the rest of this spec.
+    expect(
+      pageErrors,
+      `pageerror(s) detected on /progress empty-state:\n${pageErrors.join("\n")}`,
+    ).toHaveLength(0);
+  });
 });
