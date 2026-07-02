@@ -8,6 +8,7 @@ import * as FileSystem from "expo-file-system";
 import { getMonthlyReport, getBodySettings } from "@/lib/db";
 import type { MonthlyReportData } from "@/lib/db";
 import type { BodySettings } from "@/lib/types";
+import { MONTH_NAMES } from "@/lib/format";
 
 // ─── Constants ─────────────────────────────────────────────────────
 
@@ -16,8 +17,7 @@ export const MAX_MONTHS_BACK = 12;
 // ─── Helpers ───────────────────────────────────────────────────────
 
 export function formatMonthLabel(year: number, monthIndex: number): string {
-  const d = new Date(year, monthIndex, 1);
-  return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  return `${MONTH_NAMES[monthIndex]} ${year}`;
 }
 
 export function formatVolume(vol: number): string {

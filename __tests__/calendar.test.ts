@@ -149,8 +149,24 @@ describe("getWeekDayLabels", () => {
 // --- formatMonthYear ---
 
 describe("formatMonthYear", () => {
-  it("formats April 2026 (locale-tolerant year check)", () => {
-    expect(formatMonthYear(2026, 3)).toContain("2026");
+  it("formats April 2026 with full month name", () => {
+    expect(formatMonthYear(2026, 3)).toBe("April 2026");
+  });
+
+  it("formats January (month 0)", () => {
+    expect(formatMonthYear(2025, 0)).toBe("January 2025");
+  });
+
+  it("formats December (month 11)", () => {
+    expect(formatMonthYear(2025, 11)).toBe("December 2025");
+  });
+
+  it("returns a non-empty label for all 12 month indices", () => {
+    for (let m = 0; m < 12; m++) {
+      const label = formatMonthYear(2026, m);
+      expect(label.length).toBeGreaterThan(0);
+      expect(label).toContain("2026");
+    }
   });
 });
 
