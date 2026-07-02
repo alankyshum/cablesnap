@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Training-Day Macro Adjustment — calorie cycling for lifters** — CableSnap can now automatically show a higher calorie target on days you train and a lower one on rest days, while keeping your weekly total exactly equal to your base target. The feature is off by default; enable it in Settings › Training-Day Macros, where you can set your split percentage and training days per week and preview both day-type targets. The day-type badge on the nutrition screen shows `Training day · fueled` or `Rest day · recovery` and taps to explain the adjustment. No reward framing — this is fuel/recovery periodisation, not earning calories. (BLD-2641)
 
 ## v0.26.53 — 2026-07-02
 <!-- versionCode: 123 -->

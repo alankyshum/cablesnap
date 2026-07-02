@@ -4,18 +4,31 @@ import {
   getDailyLogs, getDailySummary, getMacroTargets, deleteDailyLog, addDailyLog,
   getDailyTotalMl, getWaterLogsForDate,
   addWaterLog, deleteWaterLog, updateWaterLog,
-  getAppSetting,
+  getAppSetting, getLatestBodyWeight,
 } from "../lib/db";
 import type { DailyLog, MacroTargets, Meal, WaterLog } from "../lib/types";
 import { MEALS, MEAL_LABELS } from "../lib/types";
-import { formatDateKey } from "../lib/format";
+import { formatDateKey, todayKey } from "../lib/format";
 import type { HydrationUnit } from "../lib/hydration-units";
 import { useToast } from "../components/ui/bna-toast";
+import {
+  computeEffectiveTargets,
+  type EffectiveTargets,
+  type PureMacroTargets,
+} from "../lib/training-day-macros";
+import {
+  getAllSettings as getTrainingDaySettings,
+} from "../lib/db/training-day-settings";
+import { wasWorkoutDay } from "../lib/db/training-day-workout";
+import { migrateProfile, convertToMetric } from "../lib/nutrition-calc";
+import { safeParse } from "../lib/safe-parse";
+import type { NutritionProfile } from "../lib/nutrition-calc";
 
 const DAY_MS = 86_400_000;
 
 const DEFAULT_GOAL_ML = 2000;
 const DEFAULT_PRESETS_ML: [number, number, number] = [250, 500, 750];
+const DEFAULT_WEIGHT_KG = 75;
 
 function parseGoal(raw: string | null): number {
   if (!raw) return DEFAULT_GOAL_ML;
@@ -33,6 +46,56 @@ function parseUnit(raw: string | null): HydrationUnit {
   return raw === "fl_oz" ? "fl_oz" : "ml";
 }
 
+/** Fetch the user's body weight in kg for macro computation. */
+async function fetchWeightKg(): Promise<number> {
+  // Prefer latest body_weight log
+  try {
+    const bw = await getLatestBodyWeight();
+    if (bw && bw.weight > 0) return bw.weight;
+  } catch {
+    // fall through to profile
+  }
+  // Fallback: nutrition_profile.weight (converted to kg)
+  try {
+    const saved = await getAppSetting("nutrition_profile");
+    if (saved) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const raw = safeParse<Record<string, unknown> | null>(saved, null, "useNutritionData.weightKg") as any;
+      if (raw) {
+        const profile = migrateProfile(raw) as NutritionProfile;
+        const { weight_kg } = convertToMetric(
+          profile.weight, profile.weightUnit, profile.height, profile.heightUnit
+        );
+        if (weight_kg > 0) return weight_kg;
+      }
+    }
+  } catch {
+    // fall through to default
+  }
+  return DEFAULT_WEIGHT_KG;
+}
+
+/**
+ * Training-Day Macro Adjustment state shape.
+ * Passed directly to NutritionListHeader.trainingDayAdjustment.
+ *
+ * AC18 / C4: When the displayed day is TODAY and no qualifying workout is yet logged,
+ * `pendingNote` is set to the C4 verbatim string and the targets shown are BASE (not lowered).
+ * When pendingNote is present, dayType is not applicable — render as a neutral 'pending' state.
+ */
+export type TrainingDayAdjustmentState = {
+  dayType: EffectiveTargets["dayType"];
+  baseCals: number;
+  adjusted: boolean;
+  cappedByFloor: boolean;
+  /**
+   * C4 / AC18: Set to the verbatim "Fuel updates once you log today's session" string
+   * when the displayed day is today AND no qualifying workout is logged yet.
+   * When set, targets reflect BASE (not lowered), and the badge renders as neutral/pending.
+   */
+  pendingNote?: string;
+} | null;
+
 export function useNutritionData() {
   const [date, setDate] = useState(new Date());
   const [logs, setLogs] = useState<DailyLog[]>([]);
@@ -43,6 +106,12 @@ export function useNutritionData() {
   const [waterGoalMl, setWaterGoalMl] = useState(DEFAULT_GOAL_ML);
   const [waterUnit, setWaterUnit] = useState<HydrationUnit>("ml");
   const [waterPresetsMl, setWaterPresetsMl] = useState<[number, number, number]>(DEFAULT_PRESETS_ML);
+  /**
+   * Training-Day Macro Adjustment (AC8, AC9, AC12a, AC12b, AC18):
+   * Non-null when the feature is enabled and the displayed date has been classified.
+   * Set to null when feature is disabled → NutritionListHeader shows no badge.
+   */
+  const [trainingDayAdjustment, setTrainingDayAdjustment] = useState<TrainingDayAdjustmentState>(null);
   const { info, error } = useToast();
   const deleted = useRef<{ log: DailyLog; timer: ReturnType<typeof setTimeout> } | null>(null);
   const [addSheetVisible, setAddSheetVisible] = useState(false);
@@ -65,7 +134,7 @@ export function useNutritionData() {
       getAppSetting("hydration.preset_2_ml"),
       getAppSetting("hydration.preset_3_ml"),
     ]);
-    setLogs(l); setSummary(s); setTargets(t);
+    setLogs(l); setSummary(s);
     setWaterTotalMl(wTot);
     setWaterEntries(wEntries);
     setWaterGoalMl(parseGoal(wGoal));
@@ -75,6 +144,89 @@ export function useNutritionData() {
       parsePreset(p2, DEFAULT_PRESETS_ML[1]),
       parsePreset(p3, DEFAULT_PRESETS_ML[2]),
     ]);
+
+    // ── Training-Day Macro Adjustment ──────────────────────────────────
+    // AC12a: NEVER writes to macro_targets — compute-on-read only.
+    // AC7:   macro_targets base is stored unchanged; we derive per-day effective here.
+    // AC8:   per-day navigation — computed from `date` (the currently displayed day).
+    // AC9:   post-workout refresh — useFocusEffect triggers load() on screen re-focus,
+    //        so if a workout is logged and user returns to nutrition, this re-classifies.
+    // AC18 / C4: today before workout → show BASE target (NOT lowered rest target).
+    //   Three-case logic:
+    //     1. TODAY + not-yet-worked-out → BASE target + pendingNote (C4)
+    //     2. TODAY + workout logged     → training-day (higher) target
+    //     3. PAST day + no workout      → rest-day (lower) target  (AC3 preserved)
+    if (t !== null) {
+      try {
+        const tdSettings = await getTrainingDaySettings();
+        if (tdSettings.enabled) {
+          const [isWorkoutDay, weightKg] = await Promise.all([
+            wasWorkoutDay(ds),
+            fetchWeightKg(),
+          ]);
+
+          // AC18 / C4: distinguish today-before-workout from genuine past rest day
+          const isToday = (ds === todayKey());
+          const isTodayPreWorkout = isToday && !isWorkoutDay;
+
+          const base: PureMacroTargets = {
+            calories: t.calories,
+            protein: t.protein,
+            carbs: t.carbs,
+            fat: t.fat,
+          };
+
+          if (isTodayPreWorkout) {
+            // C4: show BASE/neutral target — NOT the lowered rest-day target.
+            // "Earn-your-food" contingency inversion is forbidden by the psychologist gate.
+            // The user has not yet trained; we do not pre-commit them to a reduced target.
+            setTargets(t); // base unchanged (AC12a)
+            setTrainingDayAdjustment({
+              dayType: "rest", // kept for type compat; pendingNote signals the UI to show neutral
+              baseCals: t.calories,
+              adjusted: false, // targets not yet adjusted — still at base
+              cappedByFloor: false,
+              // C4 verbatim note (AC14 / approved plan):
+              pendingNote: "Fuel updates once you log today's session",
+            });
+          } else {
+            // Normal case: training day (higher) OR genuine past rest day (lower — AC3)
+            const effective = computeEffectiveTargets(base, isWorkoutDay, {
+              splitPercent: tdSettings.splitPercent,
+              trainingDaysPerWeek: tdSettings.trainingDaysPerWeek,
+            }, weightKg);
+
+            // Set the effective targets as the displayed targets
+            // (the DB macro_targets row remains unchanged — AC12a, AC7)
+            setTargets({
+              ...t,
+              calories: effective.calories,
+              protein: effective.protein,
+              carbs: effective.carbs,
+              fat: effective.fat,
+            });
+            setTrainingDayAdjustment({
+              dayType: effective.dayType,
+              baseCals: t.calories,
+              adjusted: effective.adjusted,
+              cappedByFloor: effective.cappedByFloor,
+            });
+          }
+        } else {
+          // Feature disabled — show raw base targets, clear any previous badge state
+          setTargets(t);
+          setTrainingDayAdjustment(null);
+        }
+      } catch {
+        // On any error in the adjustment path, fall back to showing base targets
+        // without crashing the nutrition screen (AC5 / defensive programming).
+        setTargets(t);
+        setTrainingDayAdjustment(null);
+      }
+    } else {
+      setTargets(t);
+      setTrainingDayAdjustment(null);
+    }
   }, [date]);
 
   useFocusEffect(
@@ -150,5 +302,7 @@ export function useNutritionData() {
     // hydration
     waterTotalMl, waterEntries, waterGoalMl, waterUnit, waterPresetsMl,
     addWater, deleteWater, updateWater,
+    // Training-Day Macro Adjustment (AC8, AC9, AC12b)
+    trainingDayAdjustment,
   };
 }

@@ -52,6 +52,7 @@ export default function Nutrition() {
     waterUnit,
     waterPresetsMl,
     addWater,
+    trainingDayAdjustment,
   } = useNutritionData();
 
   const coach = useMacroCoach();
@@ -111,6 +112,7 @@ export default function Nutrition() {
               onMealTemplates={() => setTemplatesVisible(true)}
               onWaterPreset={(amt) => addWater(amt)}
               onWaterCustom={() => setWaterSheetVisible(true)}
+              trainingDayAdjustment={trainingDayAdjustment ?? undefined}
             />
             {showCoachCard && (
               <MacroCoachCard
