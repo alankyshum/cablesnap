@@ -65,6 +65,8 @@ type Props = {
    * the effective per-day target (computed by computeEffectiveTargets).
    * The badge shows the day type and a tap explanation.
    * AC21 (QD3): baseCals is shown alongside the effective target.
+   * AC18/C4: when pendingNote is set, the day is TODAY before a workout is logged —
+   *   targets are BASE (not lowered), badge renders as neutral/pending state.
    */
   trainingDayAdjustment?: {
     /** Classified day type — training or rest. */
@@ -77,6 +79,12 @@ type Props = {
     cappedByFloor: boolean;
     /** Compact label mode (for small screens). Default: false → full label */
     compact?: boolean;
+    /**
+     * C4 / AC18: Set to the verbatim "Fuel updates once you log today's session"
+     * string when TODAY + no qualifying workout is logged yet.
+     * When set, targets are BASE and the badge renders as neutral/pending.
+     */
+    pendingNote?: string;
   };
 };
 
@@ -99,6 +107,7 @@ export function NutritionListHeader({
 }: Props) {
   const adj = trainingDayAdjustment;
   const showBadge = adj?.adjusted === true;
+  const showPendingNote = adj?.pendingNote != null;
 
   return (
     <>
@@ -134,6 +143,13 @@ export function NutritionListHeader({
                 effectiveCals={targets.calories}
                 cappedByFloor={adj.cappedByFloor}
                 compact={adj.compact}
+                colors={colors}
+              />
+            )}
+            {/* AC18/C4: today-before-workout pending note — neutral state, not lowered target */}
+            {showPendingNote && adj?.pendingNote && (
+              <PendingNote
+                note={adj.pendingNote}
                 colors={colors}
               />
             )}
@@ -257,6 +273,34 @@ function DayTypeBadge({
   );
 }
 
+// ─── PendingNote ─────────────────────────────────────────────────────────────
+
+/**
+ * AC18/C4: Renders the neutral "pending" note when today's workout hasn't been logged.
+ * Targets remain at BASE — this note signals that fueling will update once trained.
+ *
+ * PROHIBITION (AC16/C1): No reward/penalty lexemes. No directional color tokens.
+ */
+function PendingNote({
+  note,
+  colors,
+}: {
+  note: string;
+  colors: Props['colors'];
+}) {
+  return (
+    <View
+      style={[styles.pendingNote, { backgroundColor: colors.onSurface + '08', borderColor: colors.onSurfaceVariant + '30' }]}
+      accessibilityLabel={note}
+      accessibilityRole="text"
+    >
+      <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+        {note}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
@@ -268,6 +312,14 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  pendingNote: {
     alignSelf: 'flex-start',
     borderWidth: 1,
     borderRadius: 12,
