@@ -3,6 +3,9 @@ import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
+// BLD-2674: shared float-safe step helper. Extracted so both NumericStepper
+// (goal forms) and SessionWeightStepper (session rows) use the same logic.
+import { stepWeight } from "@/lib/weight-step";
 
 type Props = {
   value: number;
@@ -17,13 +20,13 @@ export default function NumericStepper({ value, onValueChange, min, step, unit, 
   const colors = useThemeColors();
 
   const decrement = () => {
-    const next = Math.round((value - step) * 10) / 10;
-    if (next >= min) onValueChange(next);
+    const next = stepWeight(value, step, -1, { min, max });
+    if (next !== value) onValueChange(next);
   };
 
   const increment = () => {
-    const next = Math.round((value + step) * 10) / 10;
-    if (next <= max) onValueChange(next);
+    const next = stepWeight(value, step, 1, { min, max });
+    if (next !== value) onValueChange(next);
   };
 
   return (
