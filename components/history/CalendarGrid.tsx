@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" },
   cell: { alignItems: "center", justifyContent: "center", marginVertical: 2, minHeight: MIN_TOUCH_TARGET },
   dots: { flexDirection: "row", gap: 3, position: "absolute", bottom: 4 },
-  dot: { width: 5, height: 5, borderRadius: radii.sm },
+  dot: { width: 7, height: 7, borderRadius: radii.pill },
   /** CVD-safe luminance affordance: dark outline makes unselected dots distinguishable
    *  without relying on the coral hue alone (WCAG 1.4.1). Applied only when !isSel. */
   dotBorder: { borderWidth: 1.5 },
