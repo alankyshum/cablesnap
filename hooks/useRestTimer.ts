@@ -3,14 +3,9 @@ import { AppState, type AppStateStatus } from "react-native";
 import {
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
-  withSequence,
-  withDelay,
   interpolateColor,
   useReducedMotion,
 } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
-import { play as playAudio } from "../lib/audio";
 import {
   getRestSecondsForExercise,
   getAppSetting,
@@ -28,23 +23,29 @@ import type { RestSource } from "../lib/rest-resolver";
 import { setUserRestSeconds, restResolverBreadcrumb } from "../lib/rest-resolver";
 import * as Sentry from "@sentry/react-native";
 import {
-  isAvailable,
-  requestPermission,
-  scheduleRestComplete,
   cancelRestComplete,
-  schedulePreEndCue,
   presentLiveRestCountdown,
   cancelAllRestNotifications,
   type NextSetPreview,
 } from "../lib/notifications";
 import { sessionBreadcrumb } from "../lib/session-breadcrumbs";
-
-/**
- * Interval between live countdown shade updates (ms).
- * 15s is frequent enough for human perception during a rest and minimises
- * shade churn vs the previous 5s cadence (BLD-1208).
- */
-const LIVE_COUNTDOWN_TICK_MS = 15_000;
+import {
+  DEFAULT_REST_SECONDS,
+  REST_DEFAULT_SECONDS_KEY,
+  ACTIVE_REST_TIMER_KEY,
+  sanitizeRestSeconds,
+  parsePersistedRestTimerState,
+  startLiveCountdownLoop,
+  rescheduleResumeNotifications,
+  isPresetRestSource,
+  scheduleRestNotifications,
+  type PersistedRestTimerState,
+} from "./rest-timer-state";
+import {
+  fireRestCompleteFeedback,
+  playRestTickSound,
+  runRestStartFlash,
+} from "./rest-timer-feedback";
 
 export type SetContext = {
   exerciseId: string;
@@ -63,64 +64,6 @@ type UseRestTimerOptions = {
   sessionId: string | undefined;
   colors: { primaryContainer: string; primary: string };
 };
-
-type PersistedRestTimerState = {
-  sessionId: string;
-  endTimestamp: number;
-  durationSeconds: number;
-  breakdown: RestBreakdown;
-  /** BLD-1137: replaces legacy notificationId. Migration: if notificationIds missing, read notificationId as complete. */
-  notificationIds: { preEnd?: string | null; complete?: string | null; liveOngoing?: string | null };
-  previewSnapshot: NextSetPreview;
-  isLastSet: boolean;
-  cueSeconds: number;
-  liveEnabled: boolean;
-  /** @deprecated Legacy field — migrated to notificationIds.complete on read */
-  notificationId?: string | null;
-};
-
-const DEFAULT_REST_SECONDS = 30;
-const REST_DEFAULT_SECONDS_KEY = "rest_timer_default_seconds";
-const ACTIVE_REST_TIMER_KEY = "rest_timer_active_state";
-
-function sanitizeRestSeconds(value: string | null): number {
-  const parsed = value == null ? Number.NaN : parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_REST_SECONDS;
-}
-
-function parsePersistedRestTimerState(value: string | null): PersistedRestTimerState | null {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value) as Partial<PersistedRestTimerState>;
-    if (
-      typeof parsed.sessionId !== "string"
-      || typeof parsed.endTimestamp !== "number"
-      || typeof parsed.durationSeconds !== "number"
-    ) {
-      return null;
-    }
-    // BLD-1137: Migration — if notificationIds missing, read legacy notificationId as complete.
-    let notificationIds: PersistedRestTimerState["notificationIds"] = {};
-    if (parsed.notificationIds && typeof parsed.notificationIds === "object") {
-      notificationIds = parsed.notificationIds;
-    } else if (typeof parsed.notificationId === "string" || parsed.notificationId === null) {
-      notificationIds = { complete: parsed.notificationId };
-    }
-    return {
-      sessionId: parsed.sessionId,
-      endTimestamp: parsed.endTimestamp,
-      durationSeconds: parsed.durationSeconds,
-      breakdown: parsed.breakdown ?? defaultBreakdown(parsed.durationSeconds),
-      notificationIds,
-      previewSnapshot: parsed.previewSnapshot ?? null,
-      isLastSet: typeof parsed.isLastSet === "boolean" ? parsed.isLastSet : false,
-      cueSeconds: typeof parsed.cueSeconds === "number" ? parsed.cueSeconds : 10,
-      liveEnabled: typeof parsed.liveEnabled === "boolean" ? parsed.liveEnabled : false,
-    };
-  } catch {
-    return null;
-  }
-}
 
 // eslint-disable-next-line max-lines-per-function -- BLD-1137: Smart Rest Coach adds cold-start resume + 3-id scheduling, pushing past 400 lines. Extracting sub-hooks would fragment tightly-coupled timer state.
 export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
@@ -218,76 +161,18 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     preview: NextSetPreview = null,
     isLastSet: boolean = false,
   ) => {
-    if (!sessionId || seconds <= 0) return;
-    try {
-      const masterEnabled = await getAppSetting("rest_notification_enabled");
-      if (masterEnabled === "false") return;
-      if (!isAvailable()) return;
-      const granted = await requestPermission();
-      if (!granted) return;
-
-      // BLD-1137 Smart Rest Coach behavior is now hardcoded — the per-setting
-      // controls were removed from the UI. Defaults: 5s pre-end cue, live
-      // countdown on (Android-only; presentLiveRestCountdown is a no-op on iOS),
-      // and next-set preview always shown.
-      const cueSeconds = 5;
-      const liveEnabled = true;
-      const effectivePreview: NextSetPreview = preview;
-
-      const ids: PersistedRestTimerState["notificationIds"] = {};
-
-      // Schedule pre-end cue (if cueSeconds > 0 AND rest is long enough)
-      if (Number.isFinite(cueSeconds) && cueSeconds > 0 && seconds > cueSeconds + 2) {
-        const preEndId = await schedulePreEndCue(
-          seconds - cueSeconds,
-          effectivePreview,
-          isLastSet,
-          cueSeconds,
-          sessionId,
-        );
-        ids.preEnd = preEndId;
-      }
-
-      // Schedule rest-complete
-      const completeId = await scheduleRestComplete(seconds, sessionId, effectivePreview, isLastSet);
-      ids.complete = completeId;
-
-      // Start live countdown on Android (no-op on iOS)
-      if (liveEnabled) {
-        const liveId = await presentLiveRestCountdown(seconds, effectivePreview, sessionId);
-        ids.liveOngoing = liveId;
-        if (liveId) {
-          stopLiveCountdownInterval();
-          // Self-correcting setTimeout chain to avoid setInterval drift (AC4 ±500ms)
-          const scheduleNext = () => {
-            if (endAtRef.current == null) return;
-            const remaining = Math.max(0, Math.floor((endAtRef.current - Date.now()) / 1000));
-            if (remaining <= 0) {
-              stopLiveCountdownInterval();
-              return;
-            }
-            void presentLiveRestCountdown(remaining, effectivePreview, sessionId).catch(() => {});
-            liveCountdownIntervalRef.current = setTimeout(scheduleNext, LIVE_COUNTDOWN_TICK_MS) as unknown as ReturnType<typeof setInterval>;
-          };
-          liveCountdownIntervalRef.current = setTimeout(scheduleNext, LIVE_COUNTDOWN_TICK_MS) as unknown as ReturnType<typeof setInterval>;
-        }
-      }
-
-      notificationIdsRef.current = ids;
-      persistActiveTimerState({
-        sessionId,
-        endTimestamp,
-        durationSeconds: seconds,
-        breakdown: nextBreakdown,
-        notificationIds: ids,
-        previewSnapshot: effectivePreview,
-        isLastSet,
-        cueSeconds: Number.isFinite(cueSeconds) ? cueSeconds : 10,
-        liveEnabled,
-      });
-    } catch {
-      // Non-critical — timer still works without notification
-    }
+    notificationIdsRef.current = await scheduleRestNotifications({
+      sessionId: sessionId ?? "",
+      seconds,
+      endTimestamp,
+      nextBreakdown,
+      preview,
+      isLastSet,
+      endAtRef,
+      intervalRef: liveCountdownIntervalRef,
+      stopInterval: stopLiveCountdownInterval,
+      persist: persistActiveTimerState,
+    });
   }, [persistActiveTimerState, sessionId, stopLiveCountdownInterval]);
 
   // BLD-553: extracted tick so we can pause/restart the 1Hz interval on
@@ -399,7 +284,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
           // AC2b: bypass resolveRestSeconds for history/pinned — their seconds are
           // already the user's actual rest value; re-multiplying is double-counting.
           // Clamp to [15, 600] (resolver-side bounds), NOT legacy [10, 360].
-          if (inputs.source.kind === "history" || inputs.source.kind === "pinned") {
+          if (isPresetRestSource(inputs.source.kind)) {
             const secs = Math.min(600, Math.max(15, inputs.source.seconds));
             runTimer(secs, defaultBreakdown(secs), preview, isLastSet);
             return;
@@ -463,7 +348,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       // Guard 3: not the triggering set
       if (restSetIdRef.current !== setId) return;
       // Guard 4: history/pinned sources must not be re-multiplied
-      if (restSource?.kind === "history" || restSource?.kind === "pinned") return;
+      if (isPresetRestSource(restSource?.kind)) return;
 
       // Debounce — only the final tap within 250 ms drives the recompute.
       if (recomputeDebounceRef.current) clearTimeout(recomputeDebounceRef.current);
@@ -482,7 +367,7 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
 
           // Double-check source hasn't changed to history/pinned between the
           // debounce delay and now.
-          if (inputs.source.kind === "history" || inputs.source.kind === "pinned") return;
+          if (isPresetRestSource(inputs.source.kind)) return;
 
           const newBreakdown = resolveRestSeconds(inputs);
           const newTotal = newBreakdown.totalSeconds;
@@ -593,35 +478,18 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
         // BLD-1137: Cold-start resume — re-start live countdown if needed.
         if (restoredState.liveEnabled && AppState.currentState === "active") {
           void presentLiveRestCountdown(remaining, restoredState.previewSnapshot, sessionId).catch(() => {});
-          const scheduleNext = () => {
-            if (endAtRef.current == null) return;
-            const rem = Math.max(0, Math.floor((endAtRef.current - Date.now()) / 1000));
-            if (rem <= 0) { stopLiveCountdownInterval(); return; }
-            void presentLiveRestCountdown(rem, restoredState.previewSnapshot, sessionId).catch(() => {});
-            liveCountdownIntervalRef.current = setTimeout(scheduleNext, LIVE_COUNTDOWN_TICK_MS) as unknown as ReturnType<typeof setInterval>;
-          };
-          liveCountdownIntervalRef.current = setTimeout(scheduleNext, LIVE_COUNTDOWN_TICK_MS) as unknown as ReturnType<typeof setInterval>;
+          startLiveCountdownLoop({
+            endAtRef,
+            intervalRef: liveCountdownIntervalRef,
+            preview: restoredState.previewSnapshot,
+            sessionId,
+            stop: stopLiveCountdownInterval,
+          });
         }
 
-        // BLD-1137: AC12 — Re-schedule OS notifications lost on Android force-kill or device restart.
-        // scheduleNotificationAsync uses stable identifiers so duplicate calls replace-in-place safely.
+        // BLD-1137: AC12 — re-arm OS notifications + resume 1Hz ticking on cold start.
         if (AppState.currentState === "active") {
-          void scheduleRestComplete(remaining, sessionId, restoredState.previewSnapshot, restoredState.isLastSet).catch(() => {});
-          if (
-            restoredState.cueSeconds > 0
-            && remaining > restoredState.cueSeconds + 2
-          ) {
-            void schedulePreEndCue(
-              remaining - restoredState.cueSeconds,
-              restoredState.previewSnapshot,
-              restoredState.isLastSet,
-              restoredState.cueSeconds,
-              sessionId,
-            ).catch(() => {});
-          }
-        }
-
-        if (AppState.currentState === "active") {
+          rescheduleResumeNotifications(restoredState, remaining, sessionId);
           startRestInterval();
         }
       } catch {
@@ -670,62 +538,17 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   // Haptic + audio feedback on rest timer completion and countdown
   useEffect(() => {
     if (prevRest.current > 0 && rest === 0) {
-      // Check user settings before firing haptics/audio
-      Promise.all([
-        getAppSetting("rest_timer_vibrate"),
-        getAppSetting("rest_timer_sound"),
-      ]).then(([vibrateSetting, soundSetting]) => {
-        const shouldVibrate = vibrateSetting !== "false";
-        const shouldSound = soundSetting !== "false";
-
-        if (shouldVibrate) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          const t1 = setTimeout(() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-          }, 300);
-          const t2 = setTimeout(() => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-          }, 600);
-          restHapticTimers.current = [t1, t2];
-        }
-
-        if (shouldSound) {
-          playAudio("complete");
-        }
-      });
+      fireRestCompleteFeedback(restHapticTimers);
     }
 
-    // BLD-611: one-shot start-flash on rest start (0 → positive). Single
-    // attention pulse on the timer chip in the session header. Honors OS
-    // Reduce Motion via a static tint hold (no opacity flicker, no cycles).
-    // Constraints: total ≤ 700 ms, single cycle ≥ 300 ms, accent palette only
-    // (interpolates primaryContainer ↔ primary). WCAG 2.3.1 (no strobe).
+    // BLD-611: one-shot start-flash on rest start (0 → positive).
     if (prevRest.current === 0 && rest > 0) {
-      if (reduceMotion) {
-        // Static tint hold: brief fade-in to peak, hold ~200 ms, fade back.
-        // No flicker — symmetric ease via withTiming endpoints.
-        // eslint-disable-next-line react-hooks/immutability
-        restFlash.value = withSequence(
-          withTiming(1, { duration: 100 }),
-          withDelay(200, withTiming(0, { duration: 100 })),
-        );
-      } else {
-        // Single pulse: rise to peak, return to baseline. ~650 ms total,
-        // one cycle, ≥300 ms total — within WCAG flash budget.
-        // eslint-disable-next-line react-hooks/immutability
-        restFlash.value = withSequence(
-          withTiming(1, { duration: 300 }),
-          withTiming(0, { duration: 350 }),
-        );
-      }
+      // eslint-disable-next-line react-hooks/immutability
+      runRestStartFlash(restFlash, reduceMotion);
     }
 
     if (rest > 0 && rest <= 3) {
-      getAppSetting("rest_timer_sound").then((soundSetting) => {
-        if (soundSetting !== "false") {
-          playAudio("tick");
-        }
-      });
+      playRestTickSound();
     }
 
     prevRest.current = rest;
