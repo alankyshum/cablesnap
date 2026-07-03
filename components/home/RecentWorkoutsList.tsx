@@ -3,6 +3,8 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
 import { rpeColor, rpeText } from "@/lib/rpe";
+import { formatIntensity } from "@/lib/intensity";
+import { useIntensityMode } from "@/hooks/useIntensityMode";
 import { formatDuration, formatDateShort } from "@/lib/format";
 import Masonry from "@/components/ui/Masonry";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,8 @@ type Props = {
 
 export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPEs }: Props) {
   const router = useRouter();
+  // BLD-2701: display RPE badges in user's chosen intensity unit.
+  const intensityMode = useIntensityMode();
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -35,7 +39,8 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
         <Masonry gap={12}>
           {sessions.map((item, index) => {
             const rpe = avgRPEs[item.id];
-            const rpeStr = rpe != null ? ` · RPE ${Math.round(rpe * 10) / 10}` : "";
+            const formattedIntensity = rpe != null ? formatIntensity(Math.round(rpe * 10) / 10, intensityMode) : "";
+            const rpeStr = formattedIntensity ? ` · ${formattedIntensity}` : "";
             return (
               <Animated.View key={item.id} entering={FadeInDown.delay(index * 60).duration(300)} style={styles.animatedCard}>
                 <Pressable
@@ -51,7 +56,7 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
                     </Text>
                     {rpe != null && (
                       <View style={[styles.rpeTag, { backgroundColor: rpeColor(rpe) }]}>
-                        <Text style={{ color: rpeText(rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>RPE {Math.round(rpe * 10) / 10}</Text>
+                        <Text style={{ color: rpeText(rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>{formattedIntensity}</Text>
                       </View>
                     )}
                   </View>

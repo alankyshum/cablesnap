@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import type { WorkoutSet } from "@/lib/types";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { formatIntensity } from "@/lib/intensity";
+import { useIntensityMode } from "@/hooks/useIntensityMode";
 
 type SetGroup = {
   name: string;
@@ -16,6 +18,8 @@ type Props = {
 };
 
 export default function SetsCard({ grouped, colors }: Props) {
+  // BLD-2701: Read intensity mode so set badges render in user's chosen unit.
+  const intensityMode = useIntensityMode();
   return (
     <Card style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}>
       <CardContent>
@@ -54,7 +58,7 @@ export default function SetsCard({ grouped, colors }: Props) {
                     variant="caption"
                     style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
                   >
-                    RPE {set.rpe}
+                    {formatIntensity(set.rpe, intensityMode)}
                   </Text>
                 )}
               </View>

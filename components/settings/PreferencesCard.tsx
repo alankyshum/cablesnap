@@ -16,6 +16,9 @@ import {
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
 import { markRpeCaptureNudgeSeen } from "@/lib/db/achievements";
+import { invalidateIntensityMode } from "@/hooks/useIntensityMode";
+import { useQueryClient } from "@tanstack/react-query";
+import type { IntensityMode } from "@/lib/intensity";
 
 type Props = {
   colors: ThemeColors;
@@ -37,6 +40,7 @@ export default function PreferencesCard({
   bareContent = false,
 }: Props) {
   const [soundTooltipVisible, setSoundTooltipVisible] = useState(false);
+  const queryClient = useQueryClient();
 
   // Intelligent Rest Timer (BLD-531) settings — adaptive rest defaults ON
   // (`!== "false"`). Breakdown chip defaults OFF (BLD-616) — explicit "true"
@@ -47,6 +51,9 @@ export default function PreferencesCard({
 
   // BLD-1110: Live RPE capture — default OFF (opt-in via Settings).
   const [captureRpe, setCaptureRpeState] = useState(false);
+
+  // BLD-2701: Intensity scale — "rpe" | "rir". Default "rpe" (backward-compatible).
+  const [intensityMode, setIntensityModeState] = useState<IntensityMode>("rpe");
 
   // BLD-1114: Pulley pin tracking — default ON (opt-out via Settings).
   const [pulleyPinTracking, setPulleyPinTrackingState] = useState(true);
@@ -77,7 +84,8 @@ export default function PreferencesCard({
       getAppSetting("feedback.setComplete.audio"),
       getAppSetting("session.pulleyPinTracking"),
       getTempoCoachEnabled(),
-    ]).then(([adaptive, show, warmup, captureRpeSetting, scHaptic, scAudio, pulleyPin, tempoCoach]) => {
+      getAppSetting("session.intensityMode"),
+    ]).then(([adaptive, show, warmup, captureRpeSetting, scHaptic, scAudio, pulleyPin, tempoCoach, intensityModeSetting]) => {
       if (cancelled) return;
       setAdaptiveRest(adaptive !== "false");
       setShowBreakdown(show === "true");
@@ -88,6 +96,7 @@ export default function PreferencesCard({
       setAudioEverInteracted(scAudio != null);
       setPulleyPinTrackingState(pulleyPin !== "false");
       setTempoCoachEnabledState(tempoCoach);
+      setIntensityModeState(intensityModeSetting === "rir" ? "rir" : "rpe");
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -116,6 +125,18 @@ export default function PreferencesCard({
     catch { toast.error("Failed to save RPE capture setting"); }
     // AC9: if the user enables captureRpe via Settings, suppress the nudge banner forever.
     if (val) { markRpeCaptureNudgeSeen().catch(() => {}); }
+  };
+
+  // BLD-2701: Update intensity scale preference and invalidate the react-query cache
+  // so all surfaces (home, history, progress, session) re-render immediately.
+  const updateIntensityMode = async (mode: IntensityMode) => {
+    setIntensityModeState(mode);
+    try {
+      await setAppSetting("session.intensityMode", mode);
+      invalidateIntensityMode(queryClient);
+    } catch {
+      toast.error("Failed to save intensity scale setting");
+    }
   };
 
   const updateSetCompleteHaptic = async (val: boolean) => {
@@ -242,6 +263,65 @@ export default function PreferencesCard({
         />
       </View>
 
+      {/* BLD-2701: Intensity scale — RPE | RIR segmented control.
+          Shown-disabled (not hidden) when RPE capture is OFF (Q1 decision). */}
+      <View style={[styles.intensityScaleRow, !captureRpe && styles.rowDisabled]}>
+        <View style={{ flex: 1 }}>
+          <Text
+            variant="body"
+            style={{ color: captureRpe ? colors.onSurface : colors.onSurfaceVariant, fontSize: fontSizes.sm }}
+          >
+            Intensity scale
+          </Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs, marginTop: 2, lineHeight: 16 }}>
+            {captureRpe
+              ? "RIR = reps left in reserve. RPE = 10 − RIR."
+              : "Enable \"Capture set RPE\" above to use this setting."}
+          </Text>
+        </View>
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Intensity scale"
+          style={[styles.segmentedControl, { borderColor: colors.outline }]}
+          testID="pref-intensity-scale-control"
+        >
+          {(["rpe", "rir"] as const).map((mode) => {
+            const isSelected = intensityMode === mode;
+            return (
+              <Pressable
+                key={mode}
+                onPress={() => captureRpe && updateIntensityMode(mode)}
+                disabled={!captureRpe}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected, disabled: !captureRpe }}
+                accessibilityLabel={mode.toUpperCase()}
+                testID={`pref-intensity-scale-${mode}`}
+                style={[
+                  styles.segmentedOption,
+                  { borderColor: colors.outline },
+                  isSelected && { backgroundColor: colors.primary },
+                  !captureRpe && styles.segmentedOptionDisabled,
+                ]}
+              >
+                <Text
+                  style={{
+                    fontSize: fontSizes.xs,
+                    fontWeight: "600",
+                    color: isSelected
+                      ? colors.onPrimary ?? "#fff"
+                      : captureRpe
+                        ? colors.onSurface
+                        : colors.onSurfaceVariant,
+                  }}
+                >
+                  {mode.toUpperCase()}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
       {/* BLD-1114: Pulley pin tracking */}
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
@@ -335,4 +415,10 @@ const styles = StyleSheet.create({
   labelWithIcon: { flexDirection: "row", alignItems: "center" },
   tooltipText: { fontSize: fontSizes.xs, padding: 10, borderRadius: 6, marginBottom: 8, lineHeight: 18 },
   helperRow: { marginTop: -4, marginBottom: 8, lineHeight: 18 },
+  // BLD-2701: Intensity scale segmented control styles
+  intensityScaleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  rowDisabled: { opacity: 0.5 },
+  segmentedControl: { flexDirection: "row", borderWidth: 1, borderRadius: 8, overflow: "hidden" },
+  segmentedOption: { paddingHorizontal: 14, paddingVertical: 7, alignItems: "center", justifyContent: "center" },
+  segmentedOptionDisabled: {},
 });

@@ -238,7 +238,8 @@ describe("FTA decomposition structural tests", () => {
     // BLD-1151: bumped 640 → 650 for compare-view hook wiring (useCompareFromPlayer + FormClipsPlayer props + renderCompareView call).
     // BLD-1158b: bumped 650 → 720 for Tempo Coach state + CoachOverlay render + SetOptionsSheet coach props.
     // BLD-2561: bumped 720 → 722 for appliedPreferredSwaps prop wiring in GroupCardHeader render.
-    ["app/session/[id].tsx", 722, "session main file"],
+    // BLD-2701: bumped 722 → 728 for useIntensityMode hook + intensityMode prop wiring to ExerciseGroupCard.
+    ["app/session/[id].tsx", 728, "session main file"],
     ["components/SubstitutionSheet.tsx", 260, "substitution sheet main file"],
     ["app/progress/achievements.tsx", 200, "achievements main file"],
     ["components/ShareCard.tsx", 200, "share card main file"],
