@@ -1,4 +1,24 @@
 /* eslint-disable complexity */
+/**
+ * CalendarGrid — month calendar for workout history.
+ *
+ * CVD accessibility (BLD-2721, protanopia / BLD-2707, deuteranopia):
+ *   The original design used only colour (coral primary / opacity tinted bg)
+ *   to distinguish workout days, scheduled days, and rest days. Under
+ *   protanopia the orange/coral accent collapses to grey, making the states
+ *   indistinguishable. This fix adds non-colour structural cues so states
+ *   are distinguishable in pure greyscale:
+ *
+ *   • Workout dot (count 1-2)  → filled circle WITH an outline ring
+ *                                (borderWidth: 1, borderColor)
+ *   • Scheduled hollow dot     → hollow circle (transparent fill + border ring)
+ *   • Rest / empty             → no dot (unchanged)
+ *   • Count badge (≥ 3)        → numeric text glyph — already CVD-safe
+ *
+ *   Filled-vs-hollow is a shape encoding that survives any colour vision mode,
+ *   including full achromatopsia (greyscale). The outline ring on the filled
+ *   workout dot also separates it visually from the cell background.
+ */
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { GestureDetector, type GestureType } from "react-native-gesture-handler";
@@ -70,6 +90,13 @@ export default function CalendarGrid({
       : isScheduled && isFuture ? `${day} ${monthLabel(year, month)}, scheduled: ${scheduleEntry.template_name}`
       : `${day} ${monthLabel(year, month)}, rest day`;
 
+    // CVD non-colour encoding (BLD-2721):
+    //   dotColor:      fill colour for workout dots (colour-only hint)
+    //   dotBorderColor: outline ring colour — present on ALL states that have a dot
+    //                   so the ring itself is the structural signal (not the fill)
+    const dotColor = isSel ? colors.onPrimary : colors.primary;
+    const dotBorderColor = isSel ? colors.onPrimary : colors.primary;
+
     return (
       <Pressable key={key} ref={isSel ? selectedCellRef : undefined} onPress={() => onTapDay(key)} accessibilityLabel={label} accessibilityRole="button"
         style={[styles.cell, {
@@ -78,18 +105,55 @@ export default function CalendarGrid({
           backgroundColor: cellBg,
         }]}>
         <Text variant="caption" style={{ color: isSel ? colors.onPrimary : colors.onBackground, fontSize: fontSizes.sm * scale }}>{day}</Text>
+
+        {/* Workout markers — filled dot + outline ring (CVD-safe: shape encoding) */}
         {count > 0 && (
-          <View style={styles.dots}>
+          <View style={styles.dots} testID={`cal-day-${key}-workout`}>
             {count >= 3 ? (
+              /* Count badge: numeric glyph — already CVD-safe, no shape change needed */
               <View style={[styles.countBadge, { backgroundColor: isSel ? colors.onPrimary : colors.primary }]}>
                 <Text style={[styles.countBadgeText, { color: isSel ? colors.primary : colors.onPrimary }]}>{count}</Text>
               </View>
             ) : (
               <>
-                <View style={[styles.dot, { backgroundColor: isSel ? colors.onPrimary : colors.primary }]} />
-                {count > 1 && <View style={[styles.dot, { backgroundColor: isSel ? colors.onPrimary : colors.primary }]} />}
+                {/* CVD fix: dot has both fill AND borderWidth ring so it reads as
+                    a distinct shape (ringed circle) in grayscale. */}
+                <View
+                  testID={`cal-dot-${key}-0`}
+                  style={[styles.dot, {
+                    backgroundColor: dotColor,
+                    borderWidth: 1,
+                    borderColor: dotBorderColor,
+                  }]}
+                />
+                {count > 1 && (
+                  <View
+                    testID={`cal-dot-${key}-1`}
+                    style={[styles.dot, {
+                      backgroundColor: dotColor,
+                      borderWidth: 1,
+                      borderColor: dotBorderColor,
+                    }]}
+                  />
+                )}
               </>
             )}
+          </View>
+        )}
+
+        {/* Scheduled hollow dot — hollow circle (transparent fill + border ring).
+            Only rendered when no workouts logged. Distinguishable from workout dots
+            (filled) and rest days (no dot) in pure grayscale. */}
+        {count === 0 && isScheduled && (
+          <View style={styles.dots} testID={`cal-day-${key}-scheduled`}>
+            <View
+              testID={`cal-dot-${key}-scheduled`}
+              style={[styles.dot, {
+                backgroundColor: "transparent",
+                borderWidth: 1,
+                borderColor: isSel ? colors.onPrimary : colors.primary,
+              }]}
+            />
           </View>
         )}
       </Pressable>
