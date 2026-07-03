@@ -3,6 +3,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { Stack } from "expo-router";
@@ -12,6 +13,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useAchievements } from "@/hooks/useAchievements";
 import type { AchievementItem } from "@/hooks/useAchievements";
 import { AchievementBadge } from "@/components/achievements/AchievementBadge";
+import { fontSizes } from "@/constants/design-tokens";
 
 const CATEGORY_LABELS: Record<AchievementCategory, string> = {
   consistency: "Consistency",
@@ -50,7 +52,12 @@ export default function AchievementsScreen() {
       <>
         <Stack.Screen options={{ title: "Achievements" }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <Text variant="heading" style={{ marginBottom: 8 }}>⚠️</Text>
+          <MaterialCommunityIcons
+            name="alert-circle"
+            size={36}
+            color={colors.onSurfaceVariant}
+            style={{ marginBottom: 8 }}
+          />
           <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
             {error}
           </Text>
@@ -64,7 +71,12 @@ export default function AchievementsScreen() {
       <>
         <Stack.Screen options={{ title: "Achievements" }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <Text variant="heading" style={{ marginBottom: 8 }}>🏆</Text>
+          <MaterialCommunityIcons
+            name="trophy"
+            size={36}
+            color={colors.onSurfaceVariant}
+            style={{ marginBottom: 8 }}
+          />
           <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
             Complete your first workout to start earning achievements!
           </Text>
@@ -90,15 +102,25 @@ export default function AchievementsScreen() {
               <View style={styles.header}>
                 <Card style={{ width: "100%", backgroundColor: colors.surface }}>
                   <CardContent style={{ alignItems: "center", gap: 8 }}>
-                    <Text variant="heading" style={{ color: colors.onSurface, fontSize: 36 }}>
-                      {current.icon}
-                    </Text>
-                    <Text
-                      variant="title"
-                      style={{ color: colors.onSurface, fontWeight: "700" }}
-                    >
-                      {current.icon} {current.name}
-                    </Text>
+                    <MaterialCommunityIcons
+                      name={current.iconName}
+                      size={36}
+                      color={colors.onSurface}
+                    />
+                    <View style={styles.levelTitleRow}>
+                      <MaterialCommunityIcons
+                        name={current.iconName}
+                        size={fontSizes.lg}
+                        color={colors.onSurface}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text
+                        variant="title"
+                        style={{ color: colors.onSurface, fontWeight: "700" }}
+                      >
+                        {current.name}
+                      </Text>
+                    </View>
                     <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
                       Level {current.level}
                     </Text>
@@ -112,9 +134,19 @@ export default function AchievementsScreen() {
                             ]}
                           />
                         </View>
-                        <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-                          {achievementsFromCurrent} / {achievementsNeeded} more achievements to reach {next.icon} {next.name}
-                        </Text>
+                        <View style={styles.nextLevelCaption}>
+                          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                            {achievementsFromCurrent} / {achievementsNeeded} more achievements to reach{" "}
+                          </Text>
+                          <MaterialCommunityIcons
+                            name={next.iconName}
+                            size={fontSizes.sm}
+                            color={colors.onSurfaceVariant}
+                          />
+                          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                            {" "}{next.name}
+                          </Text>
+                        </View>
                       </>
                     ) : (
                       <Text variant="body" style={{ color: colors.primary, fontWeight: "600" }}>
@@ -180,4 +212,6 @@ const styles = StyleSheet.create({
   gridItem: { width: "31%", minWidth: 100 },
   progressTrack: { width: "100%", height: 8, borderRadius: 4, overflow: "hidden" as const },
   progressFill: { height: "100%", borderRadius: 4 },
+  levelTitleRow: { flexDirection: "row", alignItems: "center" },
+  nextLevelCaption: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", justifyContent: "center" },
 });

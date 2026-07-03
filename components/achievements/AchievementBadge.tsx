@@ -1,5 +1,6 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
@@ -37,13 +38,26 @@ export function AchievementBadge({ item }: { item: AchievementItem }) {
     >
       <CardContent style={styles.badgeContent}>
         <View style={styles.iconContainer}>
-          <Text style={[styles.icon, !item.earned && styles.iconLocked]}>
-            {item.icon}
-          </Text>
+          <MaterialCommunityIcons
+            name={item.iconName}
+            size={typography.statValue.fontSize}
+            color={textColor}
+            style={!item.earned ? styles.iconLocked : undefined}
+          />
           {item.earned ? (
-            <Text style={styles.checkOverlay}>✅</Text>
+            <MaterialCommunityIcons
+              name="check-circle"
+              size={fontSizes.sm}
+              color={colors.primary}
+              style={styles.checkOverlay}
+            />
           ) : (
-            <Text style={styles.lockOverlay}>🔒</Text>
+            <MaterialCommunityIcons
+              name="lock"
+              size={fontSizes.sm}
+              color={colors.onSurfaceVariant}
+              style={styles.lockOverlay}
+            />
           )}
         </View>
         <Text
@@ -101,9 +115,6 @@ const styles = StyleSheet.create({
     position: "relative",
     marginBottom: 4,
   },
-  icon: {
-    fontSize: typography.statValue.fontSize,
-  },
   iconLocked: {
     opacity: 0.4,
   },
@@ -111,13 +122,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: -4,
     right: -8,
-    fontSize: fontSizes.sm,
   },
   lockOverlay: {
     position: "absolute",
     bottom: -4,
     right: -8,
-    fontSize: fontSizes.sm,
   },
   badgeName: {
     fontWeight: "700",

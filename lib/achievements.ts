@@ -1,6 +1,31 @@
 // Achievement definitions and pure evaluation logic.
 // No side effects — all evaluation operates on a pre-built AchievementContext.
 
+// Narrow union of MaterialCommunityIcons names used by achievements.
+// This is intentionally a string-literal union (not the full glyphMap) to keep
+// this pure-logic module free of the icon component dependency while still
+// providing compile-time typo detection.
+export type AchievementIconName =
+  | "run-fast"
+  | "fire"
+  | "arm-flex"
+  | "weight-lifter"
+  | "crown"
+  | "flash"
+  | "star-four-points"
+  | "chart-line"
+  | "target"
+  | "trophy"
+  | "weight"
+  | "diamond-stone"
+  | "earth"
+  | "nutrition"
+  | "food-apple"
+  | "camera"
+  | "scale-bathroom"
+  | "ruler-square"
+  | "sprout";
+
 export type AchievementCategory =
   | "consistency"
   | "strength"
@@ -30,7 +55,10 @@ export type AchievementDef = {
   name: string;
   description: string;
   category: AchievementCategory;
+  /** @deprecated Use iconName for rendering. Kept for accessibility back-compat. */
   icon: string;
+  /** MaterialCommunityIcons name — use this for rendering to avoid tofu on web. */
+  iconName: AchievementIconName;
   evaluate: (ctx: AchievementContext) => AchievementEvalResult;
 };
 
@@ -148,6 +176,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Complete your first workout",
     category: "consistency",
     icon: "🏃",
+    iconName: "run-fast",
     evaluate: (ctx) => countProgress(ctx.totalWorkouts, 1),
   },
   {
@@ -156,6 +185,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Complete 5 workouts",
     category: "consistency",
     icon: "🔥",
+    iconName: "fire",
     evaluate: (ctx) => countProgress(ctx.totalWorkouts, 5),
   },
   {
@@ -164,6 +194,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Complete 25 workouts",
     category: "consistency",
     icon: "💪",
+    iconName: "arm-flex",
     evaluate: (ctx) => countProgress(ctx.totalWorkouts, 25),
   },
   {
@@ -172,6 +203,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Complete 100 workouts",
     category: "consistency",
     icon: "🏋️",
+    iconName: "weight-lifter",
     evaluate: (ctx) => countProgress(ctx.totalWorkouts, 100),
   },
   {
@@ -180,6 +212,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Complete 500 workouts",
     category: "consistency",
     icon: "👑",
+    iconName: "crown",
     evaluate: (ctx) => countProgress(ctx.totalWorkouts, 500),
   },
   {
@@ -188,6 +221,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Maintain a 7-day workout streak",
     category: "consistency",
     icon: "⚡",
+    iconName: "flash",
     evaluate: (ctx) => {
       const streak = consecutiveDayStreak(ctx.workoutDates);
       return countProgress(streak, 7);
@@ -199,6 +233,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "4 consecutive weeks with 3+ sessions each",
     category: "consistency",
     icon: "🌟",
+    iconName: "star-four-points",
     evaluate: (ctx) => hasMonthlyGrind(ctx.workoutDates),
   },
 
@@ -209,6 +244,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Hit your first personal record",
     category: "strength",
     icon: "📈",
+    iconName: "chart-line",
     evaluate: (ctx) => countProgress(ctx.prCount, 1),
   },
   {
@@ -217,6 +253,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Hit 10 personal records",
     category: "strength",
     icon: "🎯",
+    iconName: "target",
     evaluate: (ctx) => countProgress(ctx.prCount, 10),
   },
   {
@@ -225,6 +262,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Hit 50 personal records",
     category: "strength",
     icon: "🏆",
+    iconName: "trophy",
     evaluate: (ctx) => countProgress(ctx.prCount, 50),
   },
 
@@ -235,6 +273,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Lift 1,000 kg in a single session",
     category: "volume",
     icon: "🪨",
+    iconName: "weight",
     evaluate: (ctx) => countProgress(ctx.maxSessionVolume, 1000),
   },
   {
@@ -243,6 +282,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Lift 10,000 kg in a single session",
     category: "volume",
     icon: "💎",
+    iconName: "diamond-stone",
     evaluate: (ctx) => countProgress(ctx.maxSessionVolume, 10000),
   },
   {
@@ -251,6 +291,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Accumulate 100,000 kg lifetime volume",
     category: "volume",
     icon: "🌍",
+    iconName: "earth",
     evaluate: (ctx) => countProgress(ctx.lifetimeVolume, 100000),
   },
 
@@ -261,6 +302,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Log nutrition for 7 consecutive days",
     category: "nutrition",
     icon: "🥗",
+    iconName: "nutrition",
     evaluate: (ctx) => {
       const streak = consecutiveDayStreak(ctx.nutritionDays);
       return countProgress(streak, 7);
@@ -272,6 +314,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Log nutrition for 30 consecutive days",
     category: "nutrition",
     icon: "🍎",
+    iconName: "food-apple",
     evaluate: (ctx) => {
       const streak = consecutiveDayStreak(ctx.nutritionDays);
       return countProgress(streak, 30);
@@ -285,6 +328,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Take your first progress photo",
     category: "body",
     icon: "📸",
+    iconName: "camera",
     evaluate: (ctx) => countProgress(ctx.progressPhotoCount, 1),
   },
   {
@@ -293,6 +337,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Log body weight 10 times",
     category: "body",
     icon: "⚖️",
+    iconName: "scale-bathroom",
     evaluate: (ctx) => countProgress(ctx.bodyWeightCount, 10),
   },
   {
@@ -301,6 +346,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     description: "Log body measurements 5 times",
     category: "body",
     icon: "📐",
+    iconName: "ruler-square",
     evaluate: (ctx) => countProgress(ctx.bodyMeasurementCount, 5),
   },
 ];
@@ -330,17 +376,20 @@ export function evaluateAchievements(
 export type UserLevel = {
   level: number;
   name: string;
+  /** @deprecated Use iconName for rendering. Kept for accessibility back-compat. */
   icon: string;
+  /** MaterialCommunityIcons name — use this for rendering to avoid tofu on web. */
+  iconName: AchievementIconName;
   minAchievements: number;
 };
 
 export const USER_LEVELS: UserLevel[] = [
-  { level: 1, name: "Beginner", icon: "🌱", minAchievements: 0 },
-  { level: 2, name: "Regular", icon: "🏃", minAchievements: 3 },
-  { level: 3, name: "Committed", icon: "💪", minAchievements: 6 },
-  { level: 4, name: "Athlete", icon: "🔥", minAchievements: 10 },
-  { level: 5, name: "Elite", icon: "⚡", minAchievements: 14 },
-  { level: 6, name: "Legend", icon: "👑", minAchievements: 18 },
+  { level: 1, name: "Beginner", icon: "🌱", iconName: "sprout", minAchievements: 0 },
+  { level: 2, name: "Regular", icon: "🏃", iconName: "run-fast", minAchievements: 3 },
+  { level: 3, name: "Committed", icon: "💪", iconName: "arm-flex", minAchievements: 6 },
+  { level: 4, name: "Athlete", icon: "🔥", iconName: "fire", minAchievements: 10 },
+  { level: 5, name: "Elite", icon: "⚡", iconName: "flash", minAchievements: 14 },
+  { level: 6, name: "Legend", icon: "👑", iconName: "crown", minAchievements: 18 },
 ];
 
 export function getUserLevel(earnedCount: number): {
