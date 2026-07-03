@@ -197,4 +197,59 @@ describe("ScrollableTabs (BLD-849)", () => {
     });
     expect(queryByTestId("scrollable-tabs-trailing-fade")).toBeNull();
   });
+
+  // ── CVD legibility (BLD-2729) ─────────────────────────────────────────────
+  // Protanopia / deuteranopia both shift the primary hue to yellow-olive,
+  // making the underline indicator's color alone insufficient to signal the
+  // active state.  The non-hue treatment: active label uses fontWeight "700"
+  // while inactive labels use "400".  This test guards against regression.
+
+  it('active tab label has fontWeight "700" and inactive labels have fontWeight "400" (BLD-2729 CVD fix)', () => {
+    const { UNSAFE_getAllByType } = render(
+      <ScrollableTabs
+        value="workouts"
+        onValueChange={() => {}}
+        buttons={FIVE_TABS}
+      />,
+    );
+
+    // react-native Text elements that are direct children of the tab Pressables.
+    // We need to inspect the style prop for fontWeight.
+    // UNSAFE_getAllByType(Text) may include the Text from trailing-fade etc.
+    // Filter to tab text nodes by checking their style directly.
+    const { Text } = require("react-native");
+    const textNodes = UNSAFE_getAllByType(Text) as Array<{ props: { style?: Record<string, unknown> | Array<Record<string, unknown>>; children?: unknown } }>;
+
+    // Helper to resolve fontWeight from a possibly-array style prop.
+    const getFontWeight = (style: unknown): string | undefined => {
+      if (!style) return undefined;
+      const styles = Array.isArray(style) ? style : [style];
+      for (const s of styles.reverse()) {
+        if (s && typeof s === "object" && "fontWeight" in s) {
+          return s.fontWeight as string;
+        }
+      }
+      return undefined;
+    };
+
+    // Tab labels are the text nodes whose children match a tab label string.
+    const tabLabels = FIVE_TABS.map((t) => t.label);
+    const tabTextNodes = textNodes.filter(
+      (n) => typeof n.props.children === "string" && tabLabels.includes(n.props.children),
+    );
+
+    expect(tabTextNodes).toHaveLength(FIVE_TABS.length);
+
+    for (const node of tabTextNodes) {
+      const label = node.props.children as string;
+      const weight = getFontWeight(node.props.style);
+      if (label === "Workouts") {
+        // active tab
+        expect(weight).toBe("700");
+      } else {
+        // inactive tabs
+        expect(weight).toBe("400");
+      }
+    }
+  });
 });

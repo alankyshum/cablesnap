@@ -64,8 +64,13 @@ const FADE_WIDTH = 32;
 const TAB_PADDING_H = 16;
 /** Gap between tabs. */
 const TAB_GAP = 4;
-/** Underline thickness. */
-const UNDERLINE_HEIGHT = 2;
+/** Underline thickness.
+ * 3px instead of 2px: the extra pixel makes the active-state indicator
+ * legible under red-green CVD (protanopia / deuteranopia) where the
+ * primary hue shifts to yellow-olive. The indicator is still a thin
+ * design-language underline, not a heavy bar. (BLD-2729)
+ */
+const UNDERLINE_HEIGHT = 3;
 /** Animation duration for the underline indicator (ms). */
 const INDICATOR_DURATION_MS = 220;
 
@@ -231,7 +236,12 @@ export function ScrollableTabs({
                 <Text
                   style={{
                     fontSize: FONT_SIZE - 2,
-                    fontWeight: isActive ? "600" : "400",
+                    // Active tab uses weight "700" (bold) while inactive uses "400"
+                    // (regular). The two-step weight contrast (700 vs 400) is a
+                    // non-hue-dependent active-state signal that remains legible
+                    // under protanopia / deuteranopia where the primary color
+                    // shifts to yellow-olive. (BLD-2729)
+                    fontWeight: isActive ? "700" : "400",
                     color: isActive ? activeColor : inactiveColor,
                     textAlign: "center",
                   }}
