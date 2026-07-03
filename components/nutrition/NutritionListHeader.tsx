@@ -189,24 +189,28 @@ export function NutritionListHeader({
               onPresetPress={onWaterPreset}
               onCustomPress={onWaterCustom}
             />
-            <Text
-              variant="caption"
-              style={{ color: colors.primary, marginTop: 8 }}
+            <TouchableOpacity
               onPress={onEditTargets}
               accessibilityLabel="Edit macro targets"
               accessibilityRole="link"
+              style={styles.linkRow}
             >
-              Edit Targets →
-            </Text>
-            <Text
-              variant="caption"
-              style={{ color: colors.primary, marginTop: 4 }}
+              <Text variant="caption" style={{ color: colors.primary }}>
+                Edit Targets
+              </Text>
+              <MaterialCommunityIcons name="chevron-right" size={14} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
               onPress={onMealTemplates}
               accessibilityLabel="View meal templates"
               accessibilityRole="link"
+              style={[styles.linkRow, { marginTop: 4 }]}
             >
-              Meal Templates →
-            </Text>
+              <Text variant="caption" style={{ color: colors.primary }}>
+                Meal Templates
+              </Text>
+              <MaterialCommunityIcons name="chevron-right" size={14} color={colors.primary} />
+            </TouchableOpacity>
           </CardContent>
         </Card>
       )}
@@ -326,5 +330,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     marginBottom: 8,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
   },
 });
