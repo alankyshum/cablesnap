@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Clip library grid now shows equal gutters on both sides** — the right clip card in the 2-column form library grid was flush to the screen edge due to a react-native-web layout quirk. Both columns now have symmetric ~12px gutters, matching the left inset. (BLD-2741)
 - **Accessibility: Pacing segments now visually distinct under color vision deficiency** — the session summary pacing bar and legend previously relied solely on color to differentiate Working (coral), Rest (blue), and Other (grey) segments, making them indistinguishable for red-green CVD users. Working segments now display a horizontal-dash texture and Other segments a dot/stipple texture, so all three segments are mutually distinguishable in grayscale, under deuteranopia, and under protanopia. No segment colors, labels, or pacing math were changed. (BLD-2713, BLD-2714, BLD-2725)
 
 ## v0.26.54 — 2026-07-03
