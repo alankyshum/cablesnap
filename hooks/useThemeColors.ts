@@ -100,6 +100,12 @@ export function useThemeColors() {
     heatmapMid: t.heatmapMid,
     heatmapHigh: t.heatmapHigh,
     heatmapBorder: t.heatmapBorder,
+
+    // Workout-frequency heatmap accent (BLD-2719).
+    // Must be a blue/purple hue so the opacity ramp remains distinguishable
+    // under red-green CVD (deuteranopia / protanopia). Do NOT use the primary
+    // coral here — it collapses to grey-olive under deuteranopia simulation.
+    heatmapFrequency: t.blue,
   };
 }
 
