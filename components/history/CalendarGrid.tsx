@@ -90,12 +90,13 @@ export default function CalendarGrid({
       : isScheduled && isFuture ? `${day} ${monthLabel(year, month)}, scheduled: ${scheduleEntry.template_name}`
       : `${day} ${monthLabel(year, month)}, rest day`;
 
-    // CVD non-colour encoding (BLD-2721):
+    // CVD non-colour encoding (BLD-2721, BLD-2742):
     //   dotColor:      fill colour for workout dots (colour-only hint)
-    //   dotBorderColor: outline ring colour — present on ALL states that have a dot
-    //                   so the ring itself is the structural signal (not the fill)
+    //   dotBorderColor: outline ring colour — high-contrast luminance border (WCAG 1.4.1)
+    //                   Applied ONLY for unselected dots (isSel=false).
+    //                   Selected cells already have full-contrast bg (primary), no CVD border needed.
     const dotColor = isSel ? colors.onPrimary : colors.primary;
-    const dotBorderColor = isSel ? colors.onPrimary : colors.primary;
+    const dotBorderColor = colors.onBackground;
 
     return (
       <Pressable key={key} ref={isSel ? selectedCellRef : undefined} onPress={() => onTapDay(key)} accessibilityLabel={label} accessibilityRole="button"
@@ -125,20 +126,20 @@ export default function CalendarGrid({
                     a distinct shape (ringed circle) in grayscale. */}
                 <View
                   testID={`cal-dot-${key}-0`}
-                  style={[styles.dot, {
-                    backgroundColor: dotColor,
-                    borderWidth: 1,
-                    borderColor: dotBorderColor,
-                  }]}
+                  style={[
+                    styles.dot,
+                    { backgroundColor: dotColor },
+                    !isSel && { borderWidth: 1, borderColor: dotBorderColor },
+                  ]}
                 />
                 {count > 1 && (
                   <View
                     testID={`cal-dot-${key}-1`}
-                    style={[styles.dot, {
-                      backgroundColor: dotColor,
-                      borderWidth: 1,
-                      borderColor: dotBorderColor,
-                    }]}
+                    style={[
+                      styles.dot,
+                      { backgroundColor: dotColor },
+                      !isSel && { borderWidth: 1, borderColor: dotBorderColor },
+                    ]}
                   />
                 )}
               </>
