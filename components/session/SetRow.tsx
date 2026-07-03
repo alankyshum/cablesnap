@@ -339,11 +339,13 @@ export const SetRow = memo(function SetRow({
   //     (TL required condition (d))
   //   Bodyweight: no stepper (isBodyweight guard + pickerCol renders BodyweightModifierChip)
   //   Duration: no stepper (weight irrelevant)
-  const isCaseBRow = isCable && hasCalibration; // manual/legacy cable row
+  //   Cable (any variant): SUPPRESS — cable rows use stack marker / manual weight UI;
+  //     both calibrated (Case B) and uncalibrated rows show StackMarkerHint instead.
+  //     BLD-2688: widen gate from !isCaseBRow (calibrated-cable only) to !isCable (all cable).
   const isCompletedWithRpe = set.completed && captureRpe;
   const showWeightStepper =
     !isBodyweight &&
-    !isCaseBRow &&
+    !isCable &&
     !isDurationMode &&
     !isCompletedWithRpe;
 

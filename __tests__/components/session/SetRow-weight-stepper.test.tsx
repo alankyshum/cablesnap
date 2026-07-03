@@ -1,5 +1,6 @@
 /**
  * BLD-2674 — SessionWeightStepper acceptance tests.
+ * BLD-2688 — Gate fix: all cable rows (calibrated + uncalibrated) suppress stepper.
  *
  * Covers all plan ACs headlessly:
  *  - Case C (plain numeric): stepper renders; tap + / tap − changes value
@@ -13,6 +14,7 @@
  *  - tap target ≥ 44 effective via style or hitSlop
  *  - bodyweight row → stepper absent
  *  - Case B (calibrated cable) row → stepper absent
+ *  - uncalibrated cable row → stepper absent (BLD-2688)
  *  - completed + RPE → stepper absent (suppress option B)
  *  - SetRow renders stepper testID on a Case C row
  *  - 320px layout guard: stepper is a sibling footer, not inside pickerCol
@@ -491,9 +493,10 @@ describe("SetRow — weight stepper gating (BLD-2674)", () => {
     expect(queryByTestId("set-1-weight-stepper")).toBeNull();
   });
 
-  it("uncalibrated cable row (Case C): stepper DOES render", () => {
-    // isCable + no calibrations = uncalibrated cable → stepper should appear
-    const { getByTestId } = render(
+  it("uncalibrated cable row: stepper does NOT render (BLD-2688 — all cable suppressed)", () => {
+    // BLD-2688: gate widened from !isCaseBRow (calibrated-cable only) to !isCable (all cable).
+    // Uncalibrated cable rows render StackMarkerHint, not the weight stepper.
+    const { queryByTestId } = render(
       <SetRow
         {...baseProps({
           equipment: "cable" as Equipment,
@@ -503,7 +506,7 @@ describe("SetRow — weight stepper gating (BLD-2674)", () => {
         })}
       />
     );
-    expect(getByTestId("set-1-weight-stepper")).toBeTruthy();
+    expect(queryByTestId("set-1-weight-stepper")).toBeNull();
   });
 
   it("duration mode row: stepper does NOT render", () => {
