@@ -382,6 +382,41 @@ export async function cancelAll(): Promise<void> {
   await mod.cancelAllScheduledNotificationsAsync();
 }
 
+/**
+ * Fire an immediate local notification so the user can confirm notifications
+ * actually reach their device (permissions granted, channel/sound wired up).
+ * Returns true if the notification was scheduled, false if unavailable or on error.
+ */
+export async function sendTestNotification(): Promise<boolean> {
+  const mod = getModule();
+  if (!mod) return false;
+  try {
+    if (Platform.OS === "android") {
+      await ensureRestChannelsRegistered();
+    }
+    await mod.scheduleNotificationAsync({
+      identifier: "test-notification",
+      content: {
+        title: "CableSnap test 🔔",
+        body: "Notifications are working. You're all set!",
+        sound: REST_COMPLETE_SOUND,
+        data: { type: "test" },
+        ...(Platform.OS === "android"
+          ? { channelId: REST_COMPLETE_CHANNEL, priority: mod.AndroidNotificationPriority?.MAX ?? "max" }
+          : {}),
+      },
+      trigger: {
+        type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: 1,
+        repeats: false,
+      },
+    } as Parameters<typeof mod.scheduleNotificationAsync>[0]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function handleResponse(
   response: { notification: { request: { content: { data?: unknown } } } },
   navigate: (path: string, params?: Record<string, string>) => void,

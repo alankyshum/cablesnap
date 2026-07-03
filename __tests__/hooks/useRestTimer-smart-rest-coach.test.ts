@@ -41,14 +41,11 @@ jest.mock("../../lib/notifications", () => ({
   cancelAllRestNotifications: (...args: unknown[]) => mockCancelAllRestNotifications(...args),
 }));
 
-// Default settings: master ON, cue=10s, live=false (avoid Platform.OS checks)
+// Default settings: master ON, sound/vibrate default true where needed
 const mockGetAppSetting = jest.fn((key: string): Promise<string> => {
   const defaults: Record<string, string> = {
     rest_notification_enabled: "true",
     rest_adaptive_enabled: "false",
-    rest_timer_pre_end_cue_seconds: "10",
-    rest_timer_live_countdown: "false",
-    rest_timer_show_next_set_preview: "false",
   };
   return Promise.resolve(defaults[key] ?? null) as Promise<string>;
 });
@@ -155,14 +152,11 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
   });
 
   describe("AC2 — Pre-end cue scheduling", () => {
-    it("schedules pre-end cue when cueSeconds=10 and rest=60s (60 > 10+2)", async () => {
+    it("schedules pre-end cue when cueSeconds is hardcoded to 5 and rest=60s (60 > 5+2)", async () => {
       mockGetAppSetting.mockImplementation((key: string) => {
         const map: Record<string, string> = {
           rest_notification_enabled: "true",
           rest_adaptive_enabled: "false",
-          rest_timer_pre_end_cue_seconds: "10",
-          rest_timer_live_countdown: "false",
-          rest_timer_show_next_set_preview: "false",
         };
         return Promise.resolve(map[key] ?? null);
       });
@@ -179,49 +173,20 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
       });
 
       expect(mockSchedulePreEndCue).toHaveBeenCalledWith(
-        50, // 60 - 10
-        null, // no preview (showNextSet=false)
+        55, // 60 - 5
+        null, // no preview
         false, // isLastSet=false
-        10, // cueSeconds
+        5, // cueSeconds (hardcoded 5)
         "sess-1",
       );
     });
 
     it("does NOT schedule pre-end cue when rest duration <= cueSeconds+2 (AC3)", async () => {
-      mockGetRestSeconds.mockResolvedValueOnce(5); // 5 <= 10+2
+      mockGetRestSeconds.mockResolvedValueOnce(5); // 5 <= 5+2 (7s safety threshold)
       mockGetAppSetting.mockImplementation((key: string) => {
         const map: Record<string, string> = {
           rest_notification_enabled: "true",
           rest_adaptive_enabled: "false",
-          rest_timer_pre_end_cue_seconds: "10",
-          rest_timer_live_countdown: "false",
-          rest_timer_show_next_set_preview: "false",
-        };
-        return Promise.resolve(map[key] ?? null);
-      });
-
-      const { result } = renderHook(() => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { useRestTimer } = require("../../hooks/useRestTimer");
-        return useRestTimer(defaultOptions);
-      });
-
-      await act(async () => {
-        await result.current.startRest("exercise-1");
-        await flushPromises();
-      });
-
-      expect(mockSchedulePreEndCue).not.toHaveBeenCalled();
-    });
-
-    it("does NOT schedule pre-end cue when cueSeconds=0 (off)", async () => {
-      mockGetAppSetting.mockImplementation((key: string) => {
-        const map: Record<string, string> = {
-          rest_notification_enabled: "true",
-          rest_adaptive_enabled: "false",
-          rest_timer_pre_end_cue_seconds: "0",
-          rest_timer_live_countdown: "false",
-          rest_timer_show_next_set_preview: "false",
         };
         return Promise.resolve(map[key] ?? null);
       });
@@ -247,9 +212,6 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
         const map: Record<string, string> = {
           rest_notification_enabled: "true",
           rest_adaptive_enabled: "false",
-          rest_timer_pre_end_cue_seconds: "10",
-          rest_timer_live_countdown: "false",
-          rest_timer_show_next_set_preview: "false",
         };
         return Promise.resolve(map[key] ?? null);
       });
@@ -302,16 +264,12 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
     });
   });
 
-  // BLD-1137: covers AC4 from PLAN-BLD-1137.md
   describe("AC4 — Live countdown timing", () => {
-    it("AC4 — presentLiveRestCountdown called immediately (within 1s) when liveEnabled=true", async () => {
+    it("AC4 — presentLiveRestCountdown called immediately (within 1s) since live countdown is hardcoded to ON", async () => {
       mockGetAppSetting.mockImplementation((key: string) => {
         const map: Record<string, string> = {
           rest_notification_enabled: "true",
           rest_adaptive_enabled: "false",
-          rest_timer_pre_end_cue_seconds: "10",
-          rest_timer_live_countdown: "true",
-          rest_timer_show_next_set_preview: "false",
         };
         return Promise.resolve(map[key] ?? null);
       });
@@ -331,12 +289,12 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
       // (no timer delay on the initial call — satisfies "within 1s of startRest()")
       expect(mockPresentLiveRestCountdown).toHaveBeenCalledWith(
         60, // full rest duration on first call
-        null, // no preview (showNextSet=false)
+        null, // no preview
         "sess-1",
       );
     });
 
-    it("AC4 — re-presents live countdown on the 5s chain (fake timer advancement)", async () => {
+    it("AC4 — re-presents live countdown on the 5s chain (fake timer advancement) since live countdown is hardcoded to ON", async () => {
       // AC4 requires re-presentation every 5s ±500ms until cancellation.
       // Use fake timers to advance past the first 5s interval and assert a second call.
       jest.useFakeTimers();
@@ -345,9 +303,6 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
           const map: Record<string, string> = {
             rest_notification_enabled: "true",
             rest_adaptive_enabled: "false",
-            rest_timer_pre_end_cue_seconds: "10",
-            rest_timer_live_countdown: "true",
-            rest_timer_show_next_set_preview: "false",
           };
           return Promise.resolve(map[key] ?? null);
         });
@@ -386,94 +341,7 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
     });
   });
 
-  // BLD-1137: covers AC9 from PLAN-BLD-1137.md
   describe("AC9 — Settings persistence across cold restart", () => {
-    it("AC9 — rest_timer_live_countdown=true read from getAppSetting starts live countdown", async () => {
-      mockGetAppSetting.mockImplementation((key: string) => {
-        const map: Record<string, string> = {
-          rest_notification_enabled: "true",
-          rest_adaptive_enabled: "false",
-          rest_timer_pre_end_cue_seconds: "10",
-          rest_timer_live_countdown: "true", // persisted "true"
-          rest_timer_show_next_set_preview: "false",
-        };
-        return Promise.resolve(map[key] ?? null);
-      });
-
-      const { result } = renderHook(() => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { useRestTimer } = require("../../hooks/useRestTimer");
-        return useRestTimer(defaultOptions);
-      });
-
-      await act(async () => {
-        await result.current.startRest("exercise-1");
-        await flushPromises();
-      });
-
-      // Hook must have read rest_timer_live_countdown from getAppSetting
-      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
-      // And applied it — live countdown was presented
-      expect(mockPresentLiveRestCountdown).toHaveBeenCalled();
-    });
-
-    it("AC9 — rest_timer_live_countdown=false read from getAppSetting suppresses live countdown", async () => {
-      mockGetAppSetting.mockImplementation((key: string) => {
-        const map: Record<string, string> = {
-          rest_notification_enabled: "true",
-          rest_adaptive_enabled: "false",
-          rest_timer_pre_end_cue_seconds: "10",
-          rest_timer_live_countdown: "false", // persisted "false"
-          rest_timer_show_next_set_preview: "false",
-        };
-        return Promise.resolve(map[key] ?? null);
-      });
-
-      const { result } = renderHook(() => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { useRestTimer } = require("../../hooks/useRestTimer");
-        return useRestTimer(defaultOptions);
-      });
-
-      await act(async () => {
-        await result.current.startRest("exercise-1");
-        await flushPromises();
-      });
-
-      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
-      expect(mockPresentLiveRestCountdown).not.toHaveBeenCalled();
-    });
-
-    it("AC9 — rest_timer_pre_end_cue_seconds and rest_timer_show_next_set_preview are read from getAppSetting", async () => {
-      mockGetAppSetting.mockImplementation((key: string) => {
-        const map: Record<string, string> = {
-          rest_notification_enabled: "true",
-          rest_adaptive_enabled: "false",
-          rest_timer_pre_end_cue_seconds: "15",
-          rest_timer_live_countdown: "false",
-          rest_timer_show_next_set_preview: "true",
-        };
-        return Promise.resolve(map[key] ?? null);
-      });
-
-      const { result } = renderHook(() => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { useRestTimer } = require("../../hooks/useRestTimer");
-        return useRestTimer(defaultOptions);
-      });
-
-      await act(async () => {
-        await result.current.startRest("exercise-1");
-        await flushPromises();
-      });
-
-      // All new BLD-1137 settings must be read from the persistence layer (getAppSetting)
-      // so they survive cold restarts (process kill → re-launch reads fresh from DB).
-      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_pre_end_cue_seconds");
-      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_show_next_set_preview");
-      expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
-    });
-
     it("AC9 — rest_timer_sound and rest_timer_vibrate are read from getAppSetting when rest completes", async () => {
       // These two settings control haptic/audio feedback on timer completion.
       // They are read inside a useEffect triggered when rest goes from >0 to 0,
@@ -485,9 +353,6 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
           const map: Record<string, string> = {
             rest_notification_enabled: "true",
             rest_adaptive_enabled: "false",
-            rest_timer_pre_end_cue_seconds: "0", // skip pre-end cue (1s < cue+2)
-            rest_timer_live_countdown: "false",
-            rest_timer_show_next_set_preview: "false",
             rest_timer_sound: "true",
             rest_timer_vibrate: "true",
           };
@@ -527,23 +392,15 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
       }
     });
 
-    it("AC9 — write→restart→read round-trip: hook reads persisted live_countdown, sound, and vibrate on fresh mount", async () => {
-      // Simulates the full cold-restart persistence contract for all three sound/vibrate settings:
-      // 1. Write settings to an in-memory store (representing AsyncStorage / DB write before kill)
-      // 2. Configure getAppSetting to read from that store (simulating cold-start re-launch)
-      // 3. Mount a fresh hook instance (fresh component = fresh cold start) with 1s timer
-      // 4. Advance timer to completion — sound/vibrate keys are read on timer completion
-      // 5. Verify all three keys were read from the persistence layer
-
+    it("AC9 — write→restart→read round-trip: hook reads persisted sound and vibrate on fresh mount", async () => {
       jest.useFakeTimers();
       try {
-        // Step 1: Persist all three settings before process kill
+        // Step 1: Persist settings before process kill
         const settingsStore: Record<string, string> = {};
         mockSetAppSetting.mockImplementation((key: string, value: string) => {
           settingsStore[key] = value;
           return Promise.resolve();
         });
-        await mockSetAppSetting("rest_timer_live_countdown", "true");
         await mockSetAppSetting("rest_timer_sound", "true");
         await mockSetAppSetting("rest_timer_vibrate", "true");
 
@@ -552,8 +409,6 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
           const defaults: Record<string, string> = {
             rest_notification_enabled: "true",
             rest_adaptive_enabled: "false",
-            rest_timer_pre_end_cue_seconds: "0", // skip pre-end cue for 1s timer
-            rest_timer_show_next_set_preview: "false",
           };
           return Promise.resolve(settingsStore[key] ?? defaults[key] ?? null) as Promise<string>;
         });
@@ -582,13 +437,10 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
           await Promise.resolve();
         });
 
-        // Step 5: All three persisted settings were read from the persistence layer (getAppSetting)
-        // These must survive cold restart — if they were hardcoded, this assertion would pass
-        // regardless of what was written to the store.
-        expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_live_countdown");
+        // Step 5: Persisted settings were read from the persistence layer (getAppSetting)
         expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_sound");
         expect(mockGetAppSetting).toHaveBeenCalledWith("rest_timer_vibrate");
-        // live countdown was applied from the persisted "true" value
+        // live countdown was applied as it is hardcoded to true
         expect(mockPresentLiveRestCountdown).toHaveBeenCalled();
       } finally {
         jest.useRealTimers();
@@ -597,10 +449,9 @@ describe("useRestTimer BLD-1137: Smart Rest Coach", () => {
     });
   });
 
-  // BLD-1137: covers AC12 from PLAN-BLD-1137.md
   describe("AC12 — Cold-start resume of live countdown", () => {
     it("AC12 — presentLiveRestCountdown called on mount when persisted state has liveEnabled=true and time remaining", async () => {
-      const futureTimestamp = Date.now() + 55_000; // 55s remaining > cueSeconds(10) + 2
+      const futureTimestamp = Date.now() + 55_000; // 55s remaining > cueSeconds(5) + 2
       const activeState = JSON.stringify({
         sessionId: "sess-1",
         endTimestamp: futureTimestamp,

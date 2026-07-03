@@ -877,11 +877,6 @@ describe("BLD-1137 Smart Rest Coach source contracts", () => {
       "Resting · 1:30 remaining",
       "Resting…",
       // Settings UI labels (key strings from ReminderSection)
-      "Pre-end cue",
-      "Live countdown",
-      "Show next set",
-      "Enable rest-timer notifications to use these.",
-      "Shows your next exercise and target on the lock screen.",
       "Get notified when rest is done while using other apps.",
     ];
 

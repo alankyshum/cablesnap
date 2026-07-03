@@ -226,15 +226,13 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       const granted = await requestPermission();
       if (!granted) return;
 
-      // Read BLD-1137 settings
-      const [cueSecondsRaw, liveRaw] = await Promise.all([
-        getAppSetting("rest_timer_pre_end_cue_seconds"),
-        getAppSetting("rest_timer_live_countdown"),
-      ]);
-      const cueSeconds = cueSecondsRaw != null ? parseInt(cueSecondsRaw, 10) : 10;
-      const liveEnabled = liveRaw !== "false"; // default true on Android, ignored on iOS
-      const showPreview = (await getAppSetting("rest_timer_show_next_set_preview")) === "true";
-      const effectivePreview: NextSetPreview = showPreview ? preview : null;
+      // BLD-1137 Smart Rest Coach behavior is now hardcoded — the per-setting
+      // controls were removed from the UI. Defaults: 5s pre-end cue, live
+      // countdown on (Android-only; presentLiveRestCountdown is a no-op on iOS),
+      // and next-set preview always shown.
+      const cueSeconds = 5;
+      const liveEnabled = true;
+      const effectivePreview: NextSetPreview = preview;
 
       const ids: PersistedRestTimerState["notificationIds"] = {};
 

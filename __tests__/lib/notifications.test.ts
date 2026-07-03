@@ -284,6 +284,23 @@ describe("notifications", () => {
     });
   });
 
+  describe("sendTestNotification", () => {
+    it("schedules an immediate test notification and returns true", async () => {
+      expect(await notifications.sendTestNotification()).toBe(true);
+      const call = (Notifications.scheduleNotificationAsync as jest.Mock).mock.calls[0][0];
+      expect(call.identifier).toBe("test-notification");
+      expect(call.content.title).toBe("CableSnap test 🔔");
+      expect(call.content.body).toContain("Notifications are working");
+      expect(call.content.data.type).toBe("test");
+      expect(call.trigger).toMatchObject({ type: "timeInterval", seconds: 1 });
+    });
+
+    it("returns false when scheduleNotificationAsync rejects", async () => {
+      (Notifications.scheduleNotificationAsync as jest.Mock).mockRejectedValueOnce(new Error("fail"));
+      expect(await notifications.sendTestNotification()).toBe(false);
+    });
+  });
+
   describe("cancelRestComplete", () => {
     it("cancels a specific scheduled notification", async () => {
       await notifications.cancelRestComplete("notif-123");
