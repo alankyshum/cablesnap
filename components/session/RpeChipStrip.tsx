@@ -1,10 +1,13 @@
 /**
- * RpeChipStrip — 4-chip RPE selector rendered under completed sets (BLD-1110).
+ * RpeChipStrip — 4-chip RPE/RIR selector rendered under completed sets (BLD-1110).
+ * BLD-2701: Mode-aware — chips relabel/re-value based on intensityMode prop.
  *
  * Props: controlled component — parent manages value and onChange.
- * Chips: Easy (6), Moderate (7.5), Hard (9), Max (10).
- * Long-press → RpeSheet (precise picker, 6.0–10.0 in 0.5 steps).
+ * Chips: Easy (6), Moderate (7.5), Hard (9), Max (10) in RPE scale.
+ * In RIR mode: same stored values (6, 7.5, 9, 10) but displayed as 4 RIR, 2.5 RIR, 1 RIR, 0 RIR.
+ * Long-press → RpeSheet (precise picker, 6.0–10.0 or 4.0–0.0 RIR steps).
  *
+ * INVARIANT: onChange always emits the RPE-scale value (6–10), regardless of mode.
  * Accessibility: radiogroup + per-chip radio role with selected state.
  * Reduced motion: disables slide-in animation.
  */
@@ -17,22 +20,50 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { fontSizes } from "@/constants/design-tokens";
 import { rpeColor, rpeText } from "@/lib/rpe";
+import { rpeToRir } from "@/lib/intensity";
+import type { IntensityMode } from "@/lib/intensity";
 import { RpeSheet } from "./RpeSheet";
 
+// Chip definitions use RPE values for storage; display labels are computed per mode.
 const RPE_CHIPS = [
-  { label: "Easy", value: 6, a11yLabel: "RPE 6, easy" },
-  { label: "Moderate", value: 7.5, a11yLabel: "RPE 7.5, moderate" },
-  { label: "Hard", value: 9, a11yLabel: "RPE 9, hard" },
-  { label: "Max", value: 10, a11yLabel: "RPE 10, max effort" },
+  { label: "Easy", value: 6 },
+  { label: "Moderate", value: 7.5 },
+  { label: "Hard", value: 9 },
+  { label: "Max", value: 10 },
 ] as const;
 
 const A11Y_HINT = "Long press to enter a precise value.";
+
+/**
+ * Build per-chip a11y label from the current mode.
+ * RPE mode: "RPE 9, hard" | RIR mode: "1 RIR, hard"
+ */
+function chipA11yLabel(chip: { label: string; value: number }, mode: IntensityMode): string {
+  const qualLabel = chip.label.toLowerCase();
+  if (mode === "rpe") {
+    return `RPE ${chip.value}, ${qualLabel}`;
+  }
+  const rir = rpeToRir(chip.value);
+  return `${rir} RIR, ${qualLabel}`;
+}
+
+/**
+ * Build the short numeric annotation shown on each chip (alongside qualitative label).
+ * Not currently rendered as separate text — preserved for future use.
+ */
+export function chipAnnotation(rpeValue: number, mode: IntensityMode): string {
+  if (mode === "rpe") return `RPE ${rpeValue}`;
+  const rir = rpeToRir(rpeValue);
+  return `${rir} RIR`;
+}
 
 export type RpeChipStripProps = {
   value: number | null;
   onChange: (v: number | null) => void;
   disabled?: boolean;
   setId: string;
+  /** BLD-2701: Active intensity display mode. Defaults to "rpe". */
+  intensityMode?: IntensityMode;
 };
 
 export const RpeChipStrip = memo(function RpeChipStrip({
@@ -40,6 +71,7 @@ export const RpeChipStrip = memo(function RpeChipStrip({
   onChange,
   disabled = false,
   setId,
+  intensityMode = "rpe",
 }: RpeChipStripProps) {
   const colors = useThemeColors();
   const reduceMotion = useReducedMotion();
@@ -47,7 +79,7 @@ export const RpeChipStrip = memo(function RpeChipStrip({
 
   const handleChipPress = useCallback((chipValue: number) => {
     if (disabled) return;
-    // Toggle off if same chip tapped
+    // Toggle off if same chip tapped; always emits RPE-scale value
     onChange(value === chipValue ? null : chipValue);
   }, [disabled, value, onChange]);
 
@@ -63,13 +95,18 @@ export const RpeChipStrip = memo(function RpeChipStrip({
 
   const entering = reduceMotion ? undefined : FadeIn.duration(150);
 
+  // Build the container a11y label in the active mode
+  const containerA11yLabel = intensityMode === "rpe"
+    ? `RPE for set ${setId}`
+    : `Reps in reserve for set ${setId}`;
+
   return (
     <>
       <Animated.View
         entering={entering}
         style={styles.strip}
         accessibilityRole="radiogroup"
-        accessibilityLabel={`RPE for set ${setId}`}
+        accessibilityLabel={containerA11yLabel}
       >
         {RPE_CHIPS.map((chip) => {
           const selected = value === chip.value;
@@ -81,7 +118,7 @@ export const RpeChipStrip = memo(function RpeChipStrip({
               onPress={() => handleChipPress(chip.value)}
               onLongPress={handleLongPress}
               accessibilityRole="radio"
-              accessibilityLabel={chip.a11yLabel}
+              accessibilityLabel={chipA11yLabel(chip, intensityMode)}
               accessibilityHint={A11Y_HINT}
               accessibilityState={{ selected, disabled }}
               style={[
@@ -107,6 +144,7 @@ export const RpeChipStrip = memo(function RpeChipStrip({
         sheetRef={sheetRef}
         initialValue={value}
         onDone={handleSheetDone}
+        intensityMode={intensityMode}
       />
     </>
   );
