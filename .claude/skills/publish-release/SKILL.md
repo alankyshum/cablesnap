@@ -13,6 +13,25 @@ Deterministic, repeatable steps to publish a new version of CableSnap.
 Every version bump touches exactly 3 files + 1 tag + 1 GitHub Release,
 then GitHub Actions builds the APK and deploys to the F-Droid repo.
 
+## Preferred Release Flow: Automated CI Release
+
+The preferred and automated release path is via the GitHub Actions `scheduled-release.yml` workflow, which runs automatically every 12 hours or can be triggered manually. Local compilation/build is a fallback.
+
+1. **Populate CHANGELOG.md**: Add user-facing changes to the `## Unreleased` section of `CHANGELOG.md` at the repo root.
+2. **Commit & Push**: Commit the `CHANGELOG.md` edits to `main` and push to `origin/main`.
+3. **Trigger Workflow**: Run the workflow immediately using the GitHub CLI:
+   ```bash
+   gh workflow run scheduled-release.yml
+   ```
+4. **CI Automation**: The pipeline will automatically:
+   - Verify `## Unreleased` is populated (gates release if empty)
+   - Compute and apply version & versionCode bumps across files (`package.json`, `app.config.ts`, metadata)
+   - Regenerate changelog artifacts and F-Droid sidecars
+   - Run unit and emulator smoke tests
+   - Build and sign production-quality APKs
+   - Commit and push the version bump back to `main`
+   - Publish the GitHub Release and deploy to F-Droid repo
+
 ## Release Signing (Automated in CI, BLD-484 / BLD-485)
 
 Since BLD-485, release APKs are signed by the `scheduled-release.yml` CI
@@ -120,6 +139,10 @@ git branch --show-current
 ```
 
 STOP if any check fails. Fix issues before proceeding.
+
+## Manual Fallback Release Flow (Local)
+
+Use this flow if you need to build and release manually from your local machine.
 
 ## Step 1: Determine the New Version
 
