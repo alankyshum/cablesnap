@@ -25,6 +25,23 @@ export function useThemeColors() {
     onSecondaryContainer: t.foreground,
 
     // Tertiary (mapped to orange/warning tones)
+    //
+    // BLD-2715 — Tritanopia audit (2026-07-03, completed-workout)
+    //
+    // Under tritanopia CVD simulation, the warm-cream background (#FFF0D1) shifts
+    // to a pink/salmon tone (#FEDEDF) and the brown text (#5C3D00) shifts to a dark
+    // reddish tone (#5A1A1C).  Despite this visual shift, the WCAG 2.1 AA 4.5:1
+    // contrast requirement is met in *all* CVD modes:
+    //
+    //   Normal vision:  8.78:1   (PASS)
+    //   Tritanopia:    10.46:1   (PASS — contrast improves under the shift)
+    //   Deuteranopia:   7.71:1   (PASS)
+    //   Protanopia:     8.02:1   (PASS)
+    //
+    // The same pair is used inverted for dark mode (identical ratios by symmetry).
+    // A regression guard lives in __tests__/theme/tertiary-contrast.test.ts.
+    //
+    // Do NOT change these values without re-running the CVD contrast verification.
     tertiary: t.orange,
     tertiaryContainer: isDark ? "#5C3D00" : "#FFF0D1",
     onTertiaryContainer: isDark ? "#FFF0D1" : "#5C3D00",
