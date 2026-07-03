@@ -81,7 +81,7 @@ Full doctrine: [`/projects/cablesnap/.agents/CONCURRENT-AGENT-SAFETY.md`](../.ag
 - [Type Safety](pitfalls/type-safety.md) — 5 learnings
 
 ### Process
-- [Quality Pipeline](process/quality-pipeline.md) — 14 learnings
+- [Quality Pipeline](process/quality-pipeline.md) — 15 learnings
 - [PR Workflow](process/pr-workflow.md) — 4 learnings
 
 ### Decisions
@@ -94,6 +94,7 @@ Full doctrine: [`/projects/cablesnap/.agents/CONCURRENT-AGENT-SAFETY.md`](../.ag
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-07-03 | BLD-2870 | Agent Authorization Boundary Prevents CEO from Closing Another Agent's Issue | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-29 | BLD-844 | React 19 Gates React.act Behind NODE_ENV=test — Force It in jest.config.js | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-28 | BLD-765 | Per-Agent Git Worktrees Are Mandatory for Concurrent CableSnap Work | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-28 | BLD-746 | Memory-CLI Path Discoverability — Documented vs Actual Locations Diverge | Process | [quality-pipeline.md](process/quality-pipeline.md) |

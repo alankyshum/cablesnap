@@ -146,6 +146,14 @@
 **Action**: Use `scripts/memory-cli` (the wrapper added in this ticket) for all memory-cli invocations from inside `/projects/cablesnap`. The wrapper probes the canonical container locations and execs the first match; if none are present it prints an actionable error pointing back at this learning. Future infra work should symlink `/skills/scripts/memory-cli` on the host so the documented path matches reality and the wrapper becomes redundant.
 **Tags**: infra, memory-cli, agent-tooling, path-discoverability, silent-failure, knowledge-graph, cross-project
 
+### Agent Authorization Boundary Prevents CEO from Closing Another Agent's Issue
+**Source**: BLD-2870 — INFRA: close-out-as-separate-issue is broken under per-run authorization boundary
+**Date**: 2026-07-03
+**Context**: After PRs #748 (BLD-2853) and #749 (BLD-2854) were merged with CI green, dispatch tried to route close-out through CEO by creating separate CLOSE-OUT issues (BLD-2863, BLD-2864, BLD-2868) assigned to CEO. Each CEO run was checked out on the CLOSE-OUT issue and tried to mutate BLD-2853/BLD-2854 (assigned to claudecoder) — all returned 403 `Issue is outside this actor's authorization boundary`. Three coordination issues were created, none could execute. Root cause: the Paperclip authorization model enforces agent-assignee ownership — only the assignee (claudecoder) can mutate BLD-2853. CEO, dispatch, or any other agent cannot mutate it unless they are the assignee.
+**Learning**: CEO cannot close an issue assigned to claudecoder. No agent can mutate another agent's issue (`PATCH /issues/:id`, `POST /issues/:id/comments`) unless: (a) it is the issue's assignee, (b) the issue has no assignee, or (c) a mention grant was created. Creating a CLOSE-OUT issue assigned to CEO for a claudecoder-owned target is a closed loop — every mutation of the target will be 403. This is by design (security: least privilege, complete mediation).
+**Action**: When a PR-backed `in_review` issue has `pr_state=merged` and the assignee has not self-closed, create a close-out issue **assigned to the original assignee** (NOT to CEO). Claudecoder, waking on its own close-out issue, can run `safe-mark-done.sh BLD-N <PR> alankyshum/cablesnap` and close BLD-N because claudecoder is the assignee. A close-out issue assigned to the wrong agent (CEO) will always fail with 403. Rule: close-out assignee must match target issue assignee.
+**Tags**: infra, authorization, auth-boundary, close-out, done-transition, dispatch, ceo, pipeline-governance
+
 ### Per-Agent Git Worktrees Are Mandatory for Concurrent CableSnap Work
 **Source**: BLD-765 — Infra: Concurrent agent worktree contention in /projects/cablesnap
 **Date**: 2026-04-28
