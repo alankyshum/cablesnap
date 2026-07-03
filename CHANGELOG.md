@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.54 — 2026-07-03
+<!-- versionCode: 124 -->
+
 - **Quick Weight Stepper — one-tap +/− to adjust set weight without opening the keyboard** — the active-session set row now shows a full-width `−` / `+` footer strip for plain-weight exercises. Tapping `+` or `−` increments or decrements the weight by the exercise step (e.g. 2.5 kg) and saves immediately, without summoning the numeric keyboard. Bodyweight rows, duration rows, and all cable rows (which use the stack-marker / manual-weight UI) are unaffected. (BLD-2674)
 - **Training-Day Macro Adjustment — calorie cycling for lifters** — CableSnap can now automatically show a higher calorie target on days you train and a lower one on rest days, while keeping your weekly total exactly equal to your base target. The feature is off by default; enable it in Settings › Training-Day Macros, where you can set your split percentage and training days per week and preview both day-type targets. The day-type badge on the nutrition screen shows `Training day · fueled` or `Rest day · recovery` and taps to explain the adjustment. No reward framing — this is fuel/recovery periodisation, not earning calories. (BLD-2641)
 - **Weight stepper no longer clamps to the boundary on a near-edge tap** — pressing − (or +) when the step would cross below the minimum (or above the maximum) now does nothing instead of snapping to the bound. (BLD-2688)

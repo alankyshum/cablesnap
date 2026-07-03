@@ -1,0 +1,2 @@
+- **Quick Weight Stepper — one-tap +/− to adjust set weight without opening the keyboard** — the active-session set row now shows a full-width `−` / `+` footer strip for plain-weight exercises. Tapping `+` or `−` increments or decrements the weight by the exercise step (e.g. 2.5 kg) and saves immediately, without summoning the numeric keyboard. Bodyweight rows, duration rows, and all cable rows (which use the stack-marker / manual-weight UI) are unaffected.
+…see in-app release notes
