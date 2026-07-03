@@ -54,6 +54,60 @@ jobs:
       - name: Run vocab consistency audit
         run: bash scripts/audit-vocab.sh
 
+  scenario-gate-pr:
+    name: Playwright scenario gate (mobile, assert-only)
+    # Run on every PR and push-to-main as a fast advisory gate.
+    # The heavy `capture` job stays cron-only (visual capture + CVD).
+    # AC6: advisory only — do NOT add to branch protection required checks until
+    # Phase 2 (≥50 PR runs + ≥98% pass rate observed). BLD-2861.
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    concurrency:
+      group: scenario-gate-pr-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Export web bundle (dev mode for scenario seed hook)
+        run: npx expo export -p web --dev --no-minify
+
+      - name: Run scenario assertions (mobile only, no visual diff)
+        # SCENARIO_ASSERT_ONLY=1 skips toHaveScreenshot() in adaptive-rest.spec.ts
+        # while keeping all DOM/IA assertions and pageerror/react-crash-overlay guards.
+        # All other specs in e2e/scenarios/ run unchanged (they have no toHaveScreenshot).
+        # AC2: crash guards + structural DOM assertions still execute.
+        env:
+          CI: 'true'
+          E2E_USE_STATIC: '1'
+          SCENARIO_ASSERT_ONLY: '1'
+        run: |
+          npx playwright test \
+            'e2e/scenarios/[^_]*.spec.ts' \
+            --project=mobile
+
+      - name: Upload Playwright report on failure
+        # AC5: failure artifacts so red runs are actionable, not noisy.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario-gate-pr-report-${{ github.run_id }}
+          path: playwright-report
+          retention-days: 7
+
   capture:
     name: Capture scenario screenshots
     # Only run the heavy screenshot capture on schedule or manual dispatch,

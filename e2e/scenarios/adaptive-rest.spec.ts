@@ -242,15 +242,21 @@ test.describe("@scenario adaptive-rest", () => {
       // margin while remaining well below a real color-token change (>>12%).
       // Root cause: environmental font-rendering drift on CI runners — NOT a
       // code change. Ref: BLD-2615. Do NOT tighten back to a low maxDiffPixels.
-      await expect(toolbar).toHaveScreenshot(`${name}.png`, {
-        maxDiffPixelRatio: 0.12,
-        threshold: 0.2,
-        mask: [
-          page.locator('[data-testid="rest-countdown-text"]'),
-          page.locator('[data-testid="elapsed-time"]'),
-          page.locator('[data-testid="elapsed-remaining"]'),
-        ],
-      });
+      //
+      // SCENARIO_ASSERT_ONLY=1: skip the visual pixel-diff on PR-time scenario-gate
+      // runs (BLD-2861). All DOM/IA assertions above still run unconditionally.
+      // The screenshot capture stays active on cron (`capture` job, no env var).
+      if (!process.env.SCENARIO_ASSERT_ONLY) {
+        await expect(toolbar).toHaveScreenshot(`${name}.png`, {
+          maxDiffPixelRatio: 0.12,
+          threshold: 0.2,
+          mask: [
+            page.locator('[data-testid="rest-countdown-text"]'),
+            page.locator('[data-testid="elapsed-time"]'),
+            page.locator('[data-testid="elapsed-remaining"]'),
+          ],
+        });
+      }
     });
   }
 });
