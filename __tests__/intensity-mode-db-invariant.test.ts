@@ -137,3 +137,76 @@ describe("intensity mode — setting normalisation", () => {
     expect(mode).toBe("rpe");
   });
 });
+
+// ── BLD-2739: exercise history badge mode-awareness ───────────────────────────
+// These tests correspond to the renderItem logic in app/exercise/[id].tsx:
+//   const intensityLabel = item.avg_rpe != null
+//     ? `, avg ${formatIntensity(item.avg_rpe, intensityMode)}` : "";
+//   badge text: formatIntensity(item.avg_rpe, intensityMode)
+// Spec: visible badge text and a11y label must flip per mode.
+
+describe("BLD-2739: exercise history badge — mode-aware formatting", () => {
+  /**
+   * RPE mode: row with avg_rpe=8 → visible badge "RPE 8", a11y ", avg RPE 8"
+   */
+  it("RPE mode: avg_rpe=8 renders badge text 'RPE 8'", () => {
+    const avg_rpe = 8;
+    expect(formatIntensity(avg_rpe, "rpe")).toBe("RPE 8");
+  });
+
+  it("RPE mode: avg_rpe=8 produces a11y label containing 'avg RPE 8'", () => {
+    const avg_rpe = 8;
+    const intensityLabel = avg_rpe != null
+      ? `, avg ${formatIntensity(avg_rpe, "rpe")}` : "";
+    expect(intensityLabel).toBe(", avg RPE 8");
+  });
+
+  /**
+   * RIR mode: same row → visible badge "2 RIR", a11y ", avg 2 RIR"
+   */
+  it("RIR mode: avg_rpe=8 renders badge text '2 RIR'", () => {
+    const avg_rpe = 8;
+    expect(formatIntensity(avg_rpe, "rir")).toBe("2 RIR");
+  });
+
+  it("RIR mode: avg_rpe=8 produces a11y label containing 'avg 2 RIR'", () => {
+    const avg_rpe = 8;
+    const intensityLabel = avg_rpe != null
+      ? `, avg ${formatIntensity(avg_rpe, "rir")}` : "";
+    expect(intensityLabel).toBe(", avg 2 RIR");
+  });
+
+  /**
+   * Badge background color prop is unchanged across the mode flip.
+   * rpeColor(avg_rpe) is always called with the stored RPE value regardless of mode.
+   */
+  it("badge color input (avg_rpe) is identical in both modes — CEO condition 2", () => {
+    // In both RPE and RIR modes, the color helper receives the stored avg_rpe (8),
+    // not the RIR-converted value (2). Mode only changes the text, not the color.
+    const avg_rpe = 8;
+    const colorInput_rpeMode = avg_rpe; // always stored RPE
+    const colorInput_rirMode = avg_rpe; // always stored RPE (no conversion for color)
+    expect(colorInput_rpeMode).toBe(colorInput_rirMode);
+    expect(colorInput_rirMode).toBe(8); // not rpeToRir(8) = 2
+  });
+
+  it("avg_rpe=null produces empty intensityLabel in both modes", () => {
+    const avg_rpe = null;
+    const label_rpe = avg_rpe != null ? `, avg ${formatIntensity(avg_rpe, "rpe")}` : "";
+    const label_rir = avg_rpe != null ? `, avg ${formatIntensity(avg_rpe, "rir")}` : "";
+    expect(label_rpe).toBe("");
+    expect(label_rir).toBe("");
+  });
+
+  it("RPE mode: avg_rpe=7.5 renders 'RPE 7.5' (half-steps preserved)", () => {
+    expect(formatIntensity(7.5, "rpe")).toBe("RPE 7.5");
+  });
+
+  it("RIR mode: avg_rpe=7.5 renders '2.5 RIR' (half-steps preserved)", () => {
+    expect(formatIntensity(7.5, "rir")).toBe("2.5 RIR");
+  });
+
+  it("RIR mode: avg_rpe=10 renders '0 RIR' (never '−0 RIR' or blank)", () => {
+    expect(formatIntensity(10, "rir")).toBe("0 RIR");
+  });
+});

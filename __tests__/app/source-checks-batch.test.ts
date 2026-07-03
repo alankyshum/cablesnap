@@ -1039,3 +1039,130 @@ describe("semantic difficulty colors", () => {
     expect(semantic.advanced).toBeDefined();
   });
 });
+
+// ── BLD-2737: active-session intensity mode propagation ──────────
+// Integration path contract: app/session/[id].tsx must read intensityMode
+// from useIntensityMode() and thread it down to ExerciseGroupCard so that
+// live-session RpeChipStrip and RpeSheet honour the user's mode setting.
+// Without this wiring, live logging chips stay in default RPE even when
+// the user selected RIR in Settings.
+
+describe("BLD-2737: active-session intensityMode propagation", () => {
+  const sessionSrc = readSrc("app/session/[id].tsx");
+  const groupCardSrc = readSrc("components/session/ExerciseGroupCard.tsx");
+  const groupSetTableSrc = readSrc("components/session/ExerciseGroupSetTable.tsx");
+  const setRowSrc = readSrc("components/session/SetRow.tsx");
+
+  // 1. The session screen imports and calls useIntensityMode (the react-query hook).
+  it("session screen imports useIntensityMode hook", () => {
+    expect(sessionSrc).toMatch(/import\s*\{[^}]*useIntensityMode[^}]*\}\s*from/);
+  });
+
+  it("session screen calls useIntensityMode() to get intensityMode", () => {
+    expect(sessionSrc).toMatch(/const\s+intensityMode\s*=\s*useIntensityMode\(\)/);
+  });
+
+  // 2. intensityMode is passed to ExerciseGroupCard in the render callback.
+  it("session screen passes intensityMode prop to ExerciseGroupCard", () => {
+    expect(sessionSrc).toMatch(/intensityMode\s*=\s*\{intensityMode\}/);
+  });
+
+  // 3. intensityMode is included in the renderExerciseGroup useCallback deps.
+  it("intensityMode is in the renderExerciseGroup useCallback dependency array", () => {
+    // The dep array must contain intensityMode as a standalone dep
+    expect(sessionSrc).toMatch(/\bintensityMode\b[,\]]/);
+  });
+
+  // 4. ExerciseGroupCard accepts and forwards intensityMode to ExerciseGroupSetTable.
+  it("ExerciseGroupCard declares intensityMode prop", () => {
+    expect(groupCardSrc).toMatch(/intensityMode\s*\??\s*:/);
+  });
+
+  it("ExerciseGroupCard passes intensityMode to ExerciseGroupSetTable", () => {
+    expect(groupCardSrc).toMatch(/intensityMode\s*=\s*\{intensityMode\}/);
+  });
+
+  // 5. ExerciseGroupSetTable accepts and forwards intensityMode to SetRow.
+  it("ExerciseGroupSetTable declares intensityMode prop", () => {
+    expect(groupSetTableSrc).toMatch(/intensityMode\s*\??\s*:/);
+  });
+
+  it("ExerciseGroupSetTable passes intensityMode to SetRow", () => {
+    expect(groupSetTableSrc).toMatch(/intensityMode\s*=\s*\{intensityMode\}/);
+  });
+
+   // 6. SetRow accepts intensityMode (and passes it to RpeChipStrip / RpeSheet).
+  it("SetRow declares intensityMode prop", () => {
+    expect(setRowSrc).toMatch(/intensityMode\s*\??\s*:/);
+  });
+});
+
+// ── BLD-2739: exercise history mode-awareness (Fix 1) ────────────────────────
+// app/exercise/[id].tsx renderItem must use formatIntensity + useIntensityMode
+// so history badges and a11y labels flip per mode (not hardcode "RPE").
+
+describe("BLD-2739 Fix 1: exercise history mode-awareness — source contract", () => {
+  const exerciseDetailSrc = readSrc("app/exercise/[id].tsx");
+
+  it("imports formatIntensity from lib/intensity", () => {
+    expect(exerciseDetailSrc).toMatch(/import\s*\{[^}]*formatIntensity[^}]*\}\s*from/);
+    expect(exerciseDetailSrc).toContain("lib/intensity");
+  });
+
+  it("imports useIntensityMode hook", () => {
+    expect(exerciseDetailSrc).toMatch(/import\s*\{[^}]*useIntensityMode[^}]*\}\s*from/);
+    expect(exerciseDetailSrc).toContain("hooks/useIntensityMode");
+  });
+
+  it("calls useIntensityMode() to get intensityMode in ExerciseDetail", () => {
+    expect(exerciseDetailSrc).toMatch(/const\s+intensityMode\s*=\s*useIntensityMode\(\)/);
+  });
+
+  it("renders badge text via formatIntensity (not hardcoded 'RPE ')", () => {
+    // The badge Text must call formatIntensity, not contain a hardcoded "RPE " literal
+    expect(exerciseDetailSrc).toContain("formatIntensity(item.avg_rpe, intensityMode)");
+  });
+
+  it("does NOT contain hardcoded 'RPE ' render string in renderItem", () => {
+    // grep-gate: no raw 'RPE ' string in visible badge render
+    // (a11y copy must also use formatIntensity, not raw avg_rpe)
+    const hardcodedRpeInBadge = /RPE \$\{Math\.round\(item\.avg_rpe/.test(exerciseDetailSrc);
+    expect(hardcodedRpeInBadge).toBe(false);
+  });
+
+  it("a11y label uses formatIntensity (not hardcoded 'avg RPE' string)", () => {
+    // The intensityLabel variable must use formatIntensity, not a static 'avg RPE' concat
+    expect(exerciseDetailSrc).toMatch(/avg\s+\$\{formatIntensity\(/);
+    // Must NOT still have the old hardcoded 'avg RPE' pattern
+    expect(exerciseDetailSrc).not.toMatch(/avg RPE \$\{Math\.round/);
+  });
+
+  it("badge color (rpeColor/rpeText) stays keyed on stored avg_rpe value (mode-invariant)", () => {
+    // Color helpers are fed avg_rpe directly — not a converted RIR value.
+    // Verify rpeColor and rpeText are still called with item.avg_rpe.
+    expect(exerciseDetailSrc).toContain("rpeColor(item.avg_rpe)");
+    expect(exerciseDetailSrc).toContain("rpeText(item.avg_rpe)");
+  });
+});
+
+// ── BLD-2739: chip visible annotation mode-flip (Fix 2) ─────────────────────
+// RpeChipStrip must render chipAnnotation() as visible text (not just a11y).
+
+describe("BLD-2739 Fix 2: RpeChipStrip chip visible annotation — source contract", () => {
+  const chipStripSrc = readSrc("components/session/RpeChipStrip.tsx");
+
+  it("chipAnnotation() is exported from RpeChipStrip", () => {
+    expect(chipStripSrc).toMatch(/export\s+function\s+chipAnnotation/);
+  });
+
+  it("chipAnnotation() is rendered (called in JSX, not just defined)", () => {
+    // The annotation text must appear in the render path, not only in its definition.
+    expect(chipStripSrc).toMatch(/\{chipAnnotation\(chip\.value,\s*intensityMode\)\}/);
+  });
+
+  it("comment no longer says 'Not currently rendered' (annotation is now rendered)", () => {
+    // The old comment said "Not currently rendered as separate text".
+    // Now that it IS rendered, that comment must be gone.
+    expect(chipStripSrc).not.toContain("Not currently rendered as separate text");
+  });
+});

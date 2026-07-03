@@ -188,3 +188,133 @@ describe("RpeChipStrip — RIR mode (BLD-2701)", () => {
     expect(onChange).toHaveBeenCalledWith(null);
   });
 });
+
+// ── BLD-2739 Fix 2: visible numeric annotation per chip ──────────
+
+describe("RpeChipStrip — visible chip numeric annotation (BLD-2739)", () => {
+  /**
+   * Each chip must render the numeric annotation as visible text alongside the qualitative label.
+   * RPE mode: Hard chip shows "RPE 9" below "Hard".
+   * RIR mode: Hard chip shows "1 RIR" below "Hard".
+   */
+  it("RPE mode: Hard chip renders visible annotation 'RPE 9'", () => {
+    const { getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rpe" />
+    );
+    // testID="chip-annotation-9" is on the annotation Text for Hard (RPE value 9)
+    const annotation = getByTestId("chip-annotation-9");
+    expect(annotation.props.children).toBe("RPE 9");
+  });
+
+  it("RPE mode: Easy chip renders visible annotation 'RPE 6'", () => {
+    const { getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rpe" />
+    );
+    const annotation = getByTestId("chip-annotation-6");
+    expect(annotation.props.children).toBe("RPE 6");
+  });
+
+  it("RPE mode: Max chip renders visible annotation 'RPE 10'", () => {
+    const { getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rpe" />
+    );
+    const annotation = getByTestId("chip-annotation-10");
+    expect(annotation.props.children).toBe("RPE 10");
+  });
+
+  it("RPE mode: Moderate chip renders visible annotation 'RPE 7.5'", () => {
+    const { getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rpe" />
+    );
+    const annotation = getByTestId("chip-annotation-7.5");
+    expect(annotation.props.children).toBe("RPE 7.5");
+  });
+
+  it("RIR mode: Hard chip renders visible annotation '1 RIR'", () => {
+    const { getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rir" />
+    );
+    const annotation = getByTestId("chip-annotation-9");
+    expect(annotation.props.children).toBe("1 RIR");
+  });
+
+  it("RIR mode: Easy chip renders visible annotation '4 RIR'", () => {
+    const { getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rir" />
+    );
+    const annotation = getByTestId("chip-annotation-6");
+    expect(annotation.props.children).toBe("4 RIR");
+  });
+
+  it("RIR mode: Max chip renders visible annotation '0 RIR'", () => {
+    const { getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rir" />
+    );
+    const annotation = getByTestId("chip-annotation-10");
+    expect(annotation.props.children).toBe("0 RIR");
+  });
+
+  it("RIR mode: Moderate chip renders visible annotation '2.5 RIR'", () => {
+    const { getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rir" />
+    );
+    const annotation = getByTestId("chip-annotation-7.5");
+    expect(annotation.props.children).toBe("2.5 RIR");
+  });
+
+  /**
+   * Both qualitative label AND numeric annotation render together per chip.
+   * Ensures both text elements are present in the chip.
+   */
+  it("Hard chip (RPE mode): renders both qualitative 'Hard' and annotation 'RPE 9'", () => {
+    const { getByText, getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rpe" />
+    );
+    expect(getByText("Hard")).toBeTruthy();
+    expect(getByTestId("chip-annotation-9").props.children).toBe("RPE 9");
+  });
+
+  it("Hard chip (RIR mode): renders both qualitative 'Hard' and annotation '1 RIR'", () => {
+    const { getByText, getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rir" />
+    );
+    expect(getByText("Hard")).toBeTruthy();
+    expect(getByTestId("chip-annotation-9").props.children).toBe("1 RIR");
+  });
+
+  /**
+   * Annotation flips when mode changes — all 4 chips update simultaneously.
+   * This verifies the mode prop is threaded to chipAnnotation() for every chip.
+   */
+  it("all 4 chip annotations flip together when mode changes rpe→rir", () => {
+    const { rerender, getByTestId } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rpe" />
+    );
+    // Verify RPE mode
+    expect(getByTestId("chip-annotation-6").props.children).toBe("RPE 6");
+    expect(getByTestId("chip-annotation-9").props.children).toBe("RPE 9");
+
+    // Switch to RIR mode
+    rerender(
+      <RpeChipStrip setId="s1" value={null} onChange={jest.fn()} intensityMode="rir" />
+    );
+    // All annotations must now be in RIR
+    expect(getByTestId("chip-annotation-6").props.children).toBe("4 RIR");
+    expect(getByTestId("chip-annotation-7.5").props.children).toBe("2.5 RIR");
+    expect(getByTestId("chip-annotation-9").props.children).toBe("1 RIR");
+    expect(getByTestId("chip-annotation-10").props.children).toBe("0 RIR");
+  });
+
+  /**
+   * onChange STILL emits RPE-scale value when a chip with a visible RIR annotation is pressed.
+   * Combined regression: visible label changed BUT emitted value did not.
+   */
+  it("RIR mode: pressing Hard chip (shows '1 RIR') still fires onChange(9) — CEO condition 1", () => {
+    const onChange = jest.fn();
+    const { getByText } = render(
+      <RpeChipStrip setId="s1" value={null} onChange={onChange} intensityMode="rir" />
+    );
+    fireEvent.press(getByText("Hard"));
+    expect(onChange).toHaveBeenCalledWith(9); // RPE 9, not RIR 1
+  });
+});
