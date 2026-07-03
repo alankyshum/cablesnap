@@ -558,9 +558,10 @@ function ClipThumbnail({ clip, selectMode, selected, onPress, onLongPress, onRep
             <Text style={styles.thumbDuration}>{Math.round(clip.duration_ms / 1000)}s</Text>
           )}
         </View>
+        {/* BLD-2724: dark fill on unselected so dot is visible on light card bg */}
         {selectMode && (
-          <View style={[styles.checkOverlay, selected && { backgroundColor: colors.primary }]}>
-            {selected && <MaterialCommunityIcons name="check" size={14} color="#fff" />}
+          <View style={[styles.checkOverlay, selected ? { backgroundColor: colors.primary } : styles.checkOverlayUnselected]}>
+            {selected && <MaterialCommunityIcons name="check" size={16} color="#fff" />}
           </View>
         )}
       </Pressable>
@@ -647,11 +648,7 @@ const styles = StyleSheet.create({
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerTitle: { fontSize: fontSizes.base, fontWeight: "600" },
-  countBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
+  countBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
   countBadgeText: { fontSize: fontSizes.xs, fontWeight: "700" },
   selectTogglePressable: {
     minHeight: 44,
@@ -669,10 +666,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radii.md,
   },
-  recordCTADisabled: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-  },
+  recordCTADisabled: { backgroundColor: "transparent", borderWidth: 1 },
   recordCTAText: { fontSize: fontSizes.xs, fontWeight: "600" },
   recordHelperBanner: {
     marginHorizontal: 16,
@@ -748,18 +742,20 @@ const styles = StyleSheet.create({
   },
   thumbDate: { color: "white", fontSize: 10 },
   thumbDuration: { color: "rgba(255,255,255,0.8)", fontSize: 10 },
+  // BLD-2724: 22→24px; dark fill for unselected state on light card bg.
   checkOverlay: {
     position: "absolute",
     top: 6,
     right: 6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: "white",
     alignItems: "center",
     justifyContent: "center",
   },
+  checkOverlayUnselected: { backgroundColor: "rgba(0,0,0,0.45)" },
   overflowBtn: {
     position: "absolute",
     top: 4,
