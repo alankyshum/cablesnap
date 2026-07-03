@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.55 — 2026-07-03
+<!-- versionCode: 125 -->
+
 - **Improved readability of instructional text in clip library** — the helper text describing how to record exercises in the clip library was rendered in a low-contrast grey (#6B7280, ~4.3:1) that fell below the WCAG AA 4.5:1 threshold. The text now uses the primary on-surface colour (~13.6:1 contrast) with a tinted banner background for distinct visual weight. (BLD-2723)
 - **Form-clip select indicator is now legible on light card backgrounds** — the selection circle on each clip card in select mode was rendered as a small gray outline that blended into the card background. The indicator is now slightly larger (24 px) and the unselected state shows a dark semi-transparent fill so the circle is visible against any card color. (BLD-2724)
 - **Fixed illegible info icon in Estimated Pacing card** — the expand info button previously used a raw Unicode circled-i glyph (U+24D8) that rendered as an empty tofu box on web. It is now drawn with a bundled vector icon and displays correctly on all platforms. (BLD-2709)
