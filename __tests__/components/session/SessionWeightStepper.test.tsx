@@ -445,9 +445,10 @@ describe("SetRow — SessionWeightStepper gate (BLD-2674)", () => {
     expect(queryByLabelText("Increase by 2.5")).toBeNull();
   });
 
-  it("Cable without calibration (uncalibrated cable = Case C): stepper IS PRESENT", () => {
-    // No stacks passed = no calibration = isCaseBRow=false → stepper shows
-    const { getByLabelText } = render(
+  it("Cable without calibration (uncalibrated cable): stepper ABSENT (BLD-2688 — all cable suppressed)", () => {
+    // BLD-2688: gate widened from !isCaseBRow (calibrated-cable only) to !isCable (all cable).
+    // No stacks = no calibration, but cable rows never show the stepper now.
+    const { queryByLabelText } = render(
       <SetRow
         {...baseProps({
           equipment: "cable" as Equipment,
@@ -457,8 +458,8 @@ describe("SetRow — SessionWeightStepper gate (BLD-2674)", () => {
         })}
       />
     );
-    expect(getByLabelText("Decrease by 2.5")).toBeTruthy();
-    expect(getByLabelText("Increase by 2.5")).toBeTruthy();
+    expect(queryByLabelText("Decrease by 2.5")).toBeNull();
+    expect(queryByLabelText("Increase by 2.5")).toBeNull();
   });
 
   it("Case C stepper + 320px layout: weight testID present and unchanged (stepper is footer sibling)", () => {
