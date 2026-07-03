@@ -37,6 +37,7 @@ import {
   View,
 } from "react-native";
 import Svg, { Circle, Defs, Pattern, Rect } from "react-native-svg";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -394,7 +395,7 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
               hitSlop={8}
               style={styles.infoButton}
             >
-              <Text style={{ color: colors.primary, fontSize: 16 }}>ⓘ</Text>
+              <MaterialCommunityIcons name="information-outline" size={16} color={colors.primary} />
             </Pressable>
           </View>
 
