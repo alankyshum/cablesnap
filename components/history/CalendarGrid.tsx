@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" },
   cell: { alignItems: "center", justifyContent: "center", marginVertical: 2, minHeight: MIN_TOUCH_TARGET },
   dots: { flexDirection: "row", gap: 3, position: "absolute", bottom: 4 },
-  dot: { width: 5, height: 5, borderRadius: radii.sm },
+  dot: { width: 7, height: 7, borderRadius: radii.pill },
   countBadge: { minWidth: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },
   countBadgeText: { fontSize: fontSizes.xs, fontWeight: "700", textAlign: "center" },
 });
