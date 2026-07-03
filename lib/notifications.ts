@@ -29,6 +29,16 @@ function getModule(): ExpoNotifications | null {
   }
 }
 
+/**
+ * Android-only notification content extras: route to the rest-complete channel
+ * at MAX priority so the watch bridge mirrors it (BLD-1262). No-op on iOS/web.
+ */
+function androidContentExtras(mod: ExpoNotifications) {
+  return Platform.OS === "android"
+    ? { channelId: REST_COMPLETE_CHANNEL, priority: mod.AndroidNotificationPriority?.MAX ?? "max" }
+    : {};
+}
+
 export const isAvailable = (): boolean => getModule() !== null;
 
 // ─── BLD-1137: Smart Rest Coach ─────────────────────────────────────────────
@@ -391,9 +401,8 @@ export async function sendTestNotification(): Promise<boolean> {
   const mod = getModule();
   if (!mod) return false;
   try {
-    if (Platform.OS === "android") {
-      await ensureRestChannelsRegistered();
-    }
+    // No-op on iOS/web; registers the MAX-importance rest-complete channel on Android.
+    await ensureRestChannelsRegistered();
     await mod.scheduleNotificationAsync({
       identifier: "test-notification",
       content: {
@@ -401,9 +410,7 @@ export async function sendTestNotification(): Promise<boolean> {
         body: "Notifications are working. You're all set!",
         sound: REST_COMPLETE_SOUND,
         data: { type: "test" },
-        ...(Platform.OS === "android"
-          ? { channelId: REST_COMPLETE_CHANNEL, priority: mod.AndroidNotificationPriority?.MAX ?? "max" }
-          : {}),
+        ...androidContentExtras(mod),
       },
       trigger: {
         type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL,
@@ -553,9 +560,7 @@ export async function scheduleRestComplete(
         data: { sessionId, type: "rest_complete" },
         // MAX priority + HIGH channel so the watch bridge (Wear OS Companion /
         // OnePlus OHealth) mirrors this to the paired watch (BLD-1262).
-        ...(Platform.OS === "android"
-          ? { channelId: REST_COMPLETE_CHANNEL, priority: mod.AndroidNotificationPriority?.MAX ?? "max" }
-          : {}),
+        ...androidContentExtras(mod),
       },
       trigger: {
         type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL,
