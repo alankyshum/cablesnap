@@ -11,7 +11,6 @@ export function useSummaryActions(id: string | undefined) {
   const { toast } = useToast();
   const [rating, setRating] = useState<number | null>(null);
   const [notesText, setNotesText] = useState("");
-  const [notesExpanded, setNotesExpanded] = useState(false);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -86,7 +85,6 @@ export function useSummaryActions(id: string | undefined) {
   return {
     rating, setRating,
     notesText, setNotesText,
-    notesExpanded, setNotesExpanded,
     templateModalVisible, setTemplateModalVisible,
     templateName, setTemplateName,
     saving,

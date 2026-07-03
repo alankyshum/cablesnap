@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { BackHandler, Pressable, Share, StyleSheet, TextInput, View, FlatList } from "react-native";
+import { BackHandler, Share, StyleSheet, View, FlatList } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../../lib/layout";
@@ -94,7 +95,6 @@ function Summary() {
       sessionRef.current = session;
       actions.setRating(session.rating ?? null);
       actions.setNotesText(session.notes ?? "");
-      actions.setNotesExpanded(!!(session.notes && session.notes.length > 0));
     }
   }, [session, actions]);
 
@@ -179,8 +179,6 @@ function Summary() {
             unit={unit}
             rating={actions.rating}
             onRatingChange={actions.handleRatingChange}
-            notesExpanded={actions.notesExpanded}
-            setNotesExpanded={actions.setNotesExpanded}
             notesText={actions.notesText}
             setNotesText={actions.setNotesText}
             onNotesSave={actions.handleNotesSave}
@@ -240,7 +238,7 @@ function Summary() {
 
 /* ── Header sub-component ── */
 
-function SummaryHeader({ colors, session, duration, durationSpokenText, completedCount, setsBreakdown, volumeDisplay, unit, rating, onRatingChange, notesExpanded, setNotesExpanded, notesText, setNotesText, onNotesSave }: {
+function SummaryHeader({ colors, session, duration, durationSpokenText, completedCount, setsBreakdown, volumeDisplay, unit, rating, onRatingChange, notesText, setNotesText, onNotesSave }: {
   colors: ReturnType<typeof useThemeColors>;
   session: { completed_at?: number | null; name?: string | null; duration_seconds?: number | null; edited_at?: number | null };
   duration: string;
@@ -251,8 +249,6 @@ function SummaryHeader({ colors, session, duration, durationSpokenText, complete
   unit: string;
   rating: number | null;
   onRatingChange: (r: number | null) => void;
-  notesExpanded: boolean;
-  setNotesExpanded: (v: boolean) => void;
   notesText: string;
   setNotesText: (v: string) => void;
   onNotesSave: () => void;
@@ -300,17 +296,25 @@ function SummaryHeader({ colors, session, duration, durationSpokenText, complete
       {session.completed_at && (
         <Card style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}>
           <CardContent>
-            <Pressable onPress={() => setNotesExpanded(!notesExpanded)} style={styles.notesHeader} accessibilityRole="button" accessibilityLabel="Session notes" accessibilityHint="Double tap to add notes about this workout" accessibilityState={{ expanded: notesExpanded }}>
+            <View style={styles.notesHeader}>
               <MaterialCommunityIcons name="note-edit-outline" size={20} color={colors.primary} />
               <Text variant="subtitle" style={{ color: colors.onSurface, marginLeft: 8, flex: 1 }}>Session notes</Text>
-              <MaterialCommunityIcons name={notesExpanded ? "chevron-up" : "chevron-down"} size={20} color={colors.onSurfaceVariant} />
-            </Pressable>
-            {notesExpanded && (
-              <View style={{ marginTop: 8 }}>
-                <TextInput value={notesText} onChangeText={(t) => setNotesText(t.slice(0, 500))} onBlur={onNotesSave} placeholder="Add notes about this workout..." placeholderTextColor={colors.onSurfaceDisabled} multiline maxLength={500} style={[styles.notesInput, { color: colors.onSurface, backgroundColor: colors.surfaceVariant, borderColor: colors.outline }]} accessibilityLabel="Session notes" />
-                <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "right", marginTop: 4 }}>{notesText.length}/500</Text>
-              </View>
-            )}
+            </View>
+            <Input
+              type="textarea"
+              variant="outline"
+              rows={5}
+              placeholder="Add notes about this workout..."
+              placeholderTextColor={colors.onSurfaceVariant}
+              value={notesText}
+              onChangeText={(t) => setNotesText(t.slice(0, 500))}
+              onBlur={onNotesSave}
+              maxLength={500}
+              textAlignVertical="top"
+              inputStyle={{ ...styles.notesInput, color: colors.onSurface }}
+              accessibilityLabel="Session notes"
+            />
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "right", marginTop: 4 }}>{notesText.length}/500</Text>
           </CardContent>
         </Card>
       )}
@@ -327,6 +331,6 @@ const styles = StyleSheet.create({
   stat: { flex: 1 },
   statInner: { alignItems: "center", paddingVertical: 8 },
   section: { marginBottom: 16 },
-  notesHeader: { flexDirection: "row", alignItems: "center", minHeight: 48 },
-  notesInput: { borderWidth: 1, borderRadius: 8, padding: 12, minHeight: 80, textAlignVertical: "top", fontSize: fontSizes.sm },
+  notesHeader: { flexDirection: "row", alignItems: "center", minHeight: 40, marginBottom: 8 },
+  notesInput: { fontSize: fontSizes.lg, lineHeight: 24, minHeight: 140 },
 });
