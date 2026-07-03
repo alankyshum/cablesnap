@@ -115,6 +115,39 @@ jobs:
         # usage predictable on the GitHub-hosted runner.
         run: npm test -- --ci --runInBand
 
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    # BLD-2854: Coverage ratchet — enforce the coverageThreshold.global floor
+    # defined in jest.config.js. Scoped to the same collectCoverageFrom set
+    # (app/, lib/, components/) but run --runInBand (same as the jest job above)
+    # and with NODE_OPTIONS to avoid OOM (per BLD-2482 memory-aware fix).
+    # If this job OOMs or times out, narrow collectCoverageFrom in jest.config.js
+    # to lib/+hooks/ (pure-logic dirs) and document the scope change here.
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Coverage
+        # --ci disables watch/snapshot-write; --runInBand keeps memory usage
+        # predictable (mirrors jest job). --coverageReporters=text-summary
+        # avoids writing html/lcov artifacts to disk (saves ~50 MB, speeds
+        # up job). coverageThreshold enforcement is in jest.config.js — Jest
+        # exits non-zero if any metric drops below its floor.
+        run: npm run test:coverage -- --ci --runInBand --coverageReporters=text-summary
+        env:
+          NODE_OPTIONS: --experimental-sqlite
+
   android-lint:
     name: Backup XML validation
     runs-on: ubuntu-latest

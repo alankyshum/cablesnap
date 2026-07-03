@@ -136,4 +136,25 @@ module.exports = {
     '!**/*.d.ts',
     '!**/node_modules/**'
   ],
+  // BLD-2854: Coverage ratchet — floor at 1-2 pts below the measured baseline
+  // so the build is green immediately while preventing silent coverage erosion.
+  //
+  // Measured baseline on 2026-07-03 (432 suites, 5306 tests, all pass):
+  //   Statements : 61.68%  (10666 / 17290)
+  //   Branches   : 57.20%  ( 7078 / 12373)
+  //   Functions  : 54.93%  ( 2316 /  4216)
+  //   Lines      : 62.80%  ( 9711 / 15462)
+  //
+  // Floor = baseline − 2 pts (rounds down to nearest integer for stability).
+  // To raise the floor: run `npm run test:coverage`, check the new summary
+  // numbers, bump each value here 1 pt below the new measurement, commit.
+  // Never lower these values — that defeats the ratchet.
+  coverageThreshold: {
+    global: {
+      statements: 59,
+      branches: 55,
+      functions: 52,
+      lines: 60,
+    },
+  },
 };
