@@ -21,12 +21,16 @@ export default function NumericStepper({ value, onValueChange, min, step, unit, 
 
   const decrement = () => {
     const next = stepWeight(value, step, -1, { min, max });
-    if (next !== value) onValueChange(next);
+    // Restore original >= min guard: stepWeight clamps to min, so explicitly
+    // re-check to preserve the same guard semantics as pre-refactor main.
+    if (next >= min && next !== value) onValueChange(next);
   };
 
   const increment = () => {
     const next = stepWeight(value, step, 1, { min, max });
-    if (next !== value) onValueChange(next);
+    // Restore original <= max guard: stepWeight clamps to max, so explicitly
+    // re-check to preserve the same guard semantics as pre-refactor main.
+    if (next <= max && next !== value) onValueChange(next);
   };
 
   return (
