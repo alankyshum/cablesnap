@@ -1,4 +1,5 @@
 import { StyleSheet, View } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ export default function AchievementsCard({ achievements, colors }: Props) {
     >
       <CardContent>
         <View style={styles.sectionHeader}>
-          <Text style={{ fontSize: fontSizes.xl }}>🏆</Text>
+          <MaterialCommunityIcons name="trophy" size={fontSizes.xl} color={colors.onTertiaryContainer} />
           <Text
             variant="title"
             style={{ color: colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
@@ -35,7 +36,12 @@ export default function AchievementsCard({ achievements, colors }: Props) {
         </View>
         {displayed.map((a) => (
           <View key={a.id} style={styles.row}>
-            <Text style={{ fontSize: fontSizes.lg, marginRight: 8 }}>{a.icon}</Text>
+            <MaterialCommunityIcons
+              name={a.iconName}
+              size={fontSizes.lg}
+              color={colors.onTertiaryContainer}
+              style={{ marginRight: 8 }}
+            />
             <View style={{ flex: 1 }}>
               <Text
                 variant="body"

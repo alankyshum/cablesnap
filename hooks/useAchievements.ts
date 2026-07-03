@@ -11,14 +11,17 @@ import {
   getAllAchievementProgress,
   evaluateAchievements,
 } from "../lib/achievements";
-import type { AchievementCategory } from "../lib/achievements";
+import type { AchievementCategory, AchievementIconName } from "../lib/achievements";
 
 export type AchievementItem = {
   id: string;
   name: string;
   description: string;
   category: AchievementCategory;
+  /** @deprecated Use iconName for rendering. */
   icon: string;
+  /** MaterialCommunityIcons name — use this for rendering to avoid tofu on web. */
+  iconName: AchievementIconName;
   earned: boolean;
   earnedAt: number | null;
   progress: number;
@@ -75,6 +78,7 @@ export function useAchievements() {
               description: p.achievement.description,
               category: p.achievement.category,
               icon: p.achievement.icon,
+              iconName: p.achievement.iconName,
               earned: p.earned,
               earnedAt: p.earnedAt,
               progress: p.progress,

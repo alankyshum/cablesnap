@@ -41,6 +41,7 @@ function makeAchievement(overrides: Partial<AchievementDef> = {}): AchievementDe
     name: "First Session",
     description: "Complete your first workout session",
     icon: "🏅",
+    iconName: "trophy",
     category: "consistency",
     evaluate: () => ({ earned: true, progress: 1 }),
     ...overrides,
