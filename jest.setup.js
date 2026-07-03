@@ -1,6 +1,14 @@
 // We rely on moduleNameMapper in jest.config.js to intercept
 // react-native-reanimated and react-native-worklets before they load native code.
 
+// BLD-2701: Global mock for useIntensityMode to avoid QueryClientProvider requirements
+// in all existing tests that render components which now call this hook.
+// Individual tests that need to test mode-aware behaviour can override this mock.
+jest.mock('./hooks/useIntensityMode', () => ({
+  useIntensityMode: () => 'rpe',
+  invalidateIntensityMode: jest.fn(),
+}));
+
 // Patch VirtualizedList to render all items in tests (no virtualization).
 // FlashList rendered everything; FlatList virtualizes by default (initialNumToRender=10),
 // breaking findByText assertions for items beyond the first 10.
