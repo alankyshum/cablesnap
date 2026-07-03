@@ -704,9 +704,18 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   grid: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 32 },
-  row: { gap: 8, marginBottom: 8 },
+  // BLD-2741: Use space-between + fixed 48% width instead of gap+flex:1.
+  // Under react-native-web@0.21, gap+flex:1 in a FlatList columnWrapperStyle
+  // over-allocates the right cell past the container's right padding, leaving
+  // the right card flush to the viewport edge. space-between distributes the
+  // two 48% cards evenly, giving symmetric ~12px gutters on both sides.
+  // Two 48% cards = 96% of the 366px inner width (390-24 padding) → ~4% (~14px)
+  // centre gap, with ~7px natural left/right margins from space-between.
+  // This is cross-platform: RN native honours both width:"48%" and
+  // justifyContent:"space-between" identically to web.
+  row: { justifyContent: "space-between", marginBottom: 8 },
   thumb: {
-    flex: 1,
+    width: "48%",
     aspectRatio: 9 / 16,
     borderRadius: radii.md,
     borderWidth: 1,

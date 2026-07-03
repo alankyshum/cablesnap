@@ -40,7 +40,6 @@ export function useSessionDetail(id: string | undefined) {
   const [prs, setPrs] = useState<{ exercise_id: string; name: string; weight: number; previous_max: number }[]>([]);
   const [rating, setRating] = useState<number | null>(null);
   const [notesText, setNotesText] = useState("");
-  const [notesExpanded, setNotesExpanded] = useState(false);
   const [templateModalVisible, setTemplateModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [completedSetCount, setCompletedSetCount] = useState(0);
@@ -72,7 +71,6 @@ export function useSessionDetail(id: string | undefined) {
     setSession(sess);
     setRating(sess.rating ?? null);
     setNotesText(sess.notes ?? "");
-    setNotesExpanded(!!(sess.notes && sess.notes.length > 0));
 
     const [sets, prData, setCount] = await Promise.all([
       getSessionSets(id),
@@ -223,8 +221,6 @@ export function useSessionDetail(id: string | undefined) {
     rating,
     notesText,
     setNotesText,
-    notesExpanded,
-    setNotesExpanded,
     templateModalVisible,
     templateName,
     setTemplateName,
