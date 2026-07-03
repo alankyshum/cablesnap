@@ -9,6 +9,7 @@ import { deleteTemplate, duplicateTemplate, duplicateProgram, importCoachTemplat
 import type { Program, WorkoutTemplate } from "../lib/types";
 import { STARTER_TEMPLATES } from "../lib/starter-templates";
 import { bumpQueryVersion } from "../lib/query";
+import { guardedStartWorkout } from "../lib/start-guard";
 import { useToast } from "../components/ui/bna-toast";
 
 export function useHomeActions() {
@@ -18,9 +19,19 @@ export function useHomeActions() {
   const reload = useCallback(() => queryClient.invalidateQueries({ queryKey: ["home"] }), [queryClient]);
   const starterMeta = useCallback((id: string) => STARTER_TEMPLATES.find((s) => s.id === id), []);
 
-  const quickStart = useCallback(async () => { const s = await startSession(null, "Quick Workout"); bumpQueryVersion("home"); router.push(`/session/${s.id}`); }, [router]);
+  const quickStart = useCallback(async () => {
+    await guardedStartWorkout({
+      onResume: (id) => router.push(`/session/${id}`),
+      onStartNew: async () => { const s = await startSession(null, "Quick Workout"); bumpQueryVersion("home"); router.push(`/session/${s.id}`); },
+    });
+  }, [router]);
 
-  const startFromTemplate = useCallback(async (tpl: WorkoutTemplate) => { const s = await startSession(tpl.id, tpl.name); bumpQueryVersion("home"); router.push(`/session/${s.id}?templateId=${tpl.id}`); }, [router]);
+  const startFromTemplate = useCallback(async (tpl: WorkoutTemplate) => {
+    await guardedStartWorkout({
+      onResume: (id) => router.push(`/session/${id}`),
+      onStartNew: async () => { const s = await startSession(tpl.id, tpl.name); bumpQueryVersion("home"); router.push(`/session/${s.id}?templateId=${tpl.id}`); },
+    });
+  }, [router]);
 
   const confirmDelete = useCallback((tpl: WorkoutTemplate) => {
     if (tpl.is_starter) return;

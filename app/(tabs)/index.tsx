@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { startSession, setAppSetting } from "../../lib/db";
+import { guardedStartWorkout } from "../../lib/start-guard";
 import { getTodayQuickAddSummary } from "../../lib/db/day-session";
 import { serializeDismissalState } from "../../lib/overreaching";
 import { useFocusRefetch } from "../../lib/query";
@@ -85,14 +86,24 @@ export default function Workouts() {
   const startNextWorkout = useCallback(async () => {
     if (!nextWorkout) return;
     if (!nextWorkout.day.template_id) { info("Template no longer exists"); return; }
-    const s = await startSession(nextWorkout.day.template_id, nextWorkout.day.label || nextWorkout.day.template_name || nextWorkout.program.name, nextWorkout.day.id);
-    router.push(`/session/${s.id}?templateId=${nextWorkout.day.template_id}`);
+    await guardedStartWorkout({
+      onResume: (id) => router.push(`/session/${id}`),
+      onStartNew: async () => {
+        const s = await startSession(nextWorkout.day.template_id!, nextWorkout.day.label || nextWorkout.day.template_name || nextWorkout.program.name, nextWorkout.day.id);
+        router.push(`/session/${s.id}?templateId=${nextWorkout.day.template_id}`);
+      },
+    });
   }, [nextWorkout, info, router]);
 
   const startFromSchedule = useCallback(async () => {
     if (!todaySchedule) return;
-    const s = await startSession(todaySchedule.template_id, todaySchedule.template_name);
-    router.push(`/session/${s.id}?templateId=${todaySchedule.template_id}`);
+    await guardedStartWorkout({
+      onResume: (id) => router.push(`/session/${id}`),
+      onStartNew: async () => {
+        const s = await startSession(todaySchedule.template_id, todaySchedule.template_name);
+        router.push(`/session/${s.id}?templateId=${todaySchedule.template_id}`);
+      },
+    });
   }, [todaySchedule, router]);
 
   // On wide screens the small info tiles (weekly summary, GTG, recovery heatmap)
