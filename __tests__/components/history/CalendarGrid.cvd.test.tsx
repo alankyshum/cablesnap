@@ -81,10 +81,12 @@ const colors = {
  * A ScheduleEntry stub for scheduled-day tests.
  */
 const stubScheduleEntry: ScheduleEntry = {
-  id: 1,
+  id: "1",
   day_of_week: 1,
-  template_id: 42,
+  template_id: "42",
   template_name: "Upper Body",
+  exercise_count: 0,
+  created_at: 0,
 };
 
 // ── Harness ───────────────────────────────────────────────────────────────────
