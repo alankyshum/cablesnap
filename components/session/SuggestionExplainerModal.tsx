@@ -18,6 +18,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "../../constants/design-tokens";
+import { rpeToRir } from "@/lib/intensity";
+import { useIntensityMode } from "@/hooks/useIntensityMode";
 
 export type SuggestionExplainerModalProps = {
   visible: boolean;
@@ -28,6 +30,12 @@ export type SuggestionExplainerModalProps = {
 
 export function SuggestionExplainerModal({ visible, onClose, plateauMode }: SuggestionExplainerModalProps) {
   const colors = useThemeColors();
+  // BLD-2701: show intensity threshold in the user's preferred unit.
+  const intensityMode = useIntensityMode();
+  // RPE 9.5 = 0.5 RIR
+  const maintainThreshold = intensityMode === "rir"
+    ? `${rpeToRir(9.5)} RIR`
+    : "RPE 9.5";
   return (
     <Modal
       visible={visible}
@@ -79,7 +87,7 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
               iconColor={colors.primary}
               title="Increase weight"
               body={
-                "When all sets completed, RPE < 9.5, and your reps held vs. the prior session.\n\nNew weight = heaviest set last session + your weight step."
+                `When all sets completed, ${intensityMode === "rir" ? "harder than 0.5 RIR" : "RPE < 9.5"}, and your reps held vs. the prior session.\n\nNew weight = heaviest set last session + your weight step.`
               }
               colors={colors}
             />
@@ -97,7 +105,7 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
               iconColor={colors.onSurfaceVariant}
               title="Maintain"
               body={
-                "When RPE ≥ 9.5, you deloaded, reps dropped, or any set was incomplete."
+                `When ${maintainThreshold} or harder, you deloaded, reps dropped, or any set was incomplete.`
               }
               colors={colors}
             />
