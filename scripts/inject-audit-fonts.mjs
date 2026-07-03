@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-env node */
 // inject-audit-fonts.mjs — make the visual-audit harness render text in the
 // fontless agent-runtime container (BLD-2586).
 //
@@ -10,8 +11,22 @@
 // (`fc-list`/`fc-match`) is absent. With no font to fall back to, Chromium
 // measures every sans/serif text run as **0x0** — so ALL app text vanishes
 // from audit screenshots and the audit emits a whole CLASS of false
-// "missing text/label" findings (BLD-2581 / BLD-2582 / BLD-2585). Only the
-// bundled `material-community` icon font renders.
+// "missing text/label" findings (BLD-2581 / BLD-2582 / BLD-2585).
+//
+// The SAME fontless container also blanks every `@expo/vector-icons`
+// `MaterialCommunityIcons` glyph (BLD-2744). Each vector icon renders an empty
+// `<Text/>` until `state.fontIsLoaded` flips, which only happens once
+// `Font.loadAsync('material-community', …)` → `fontfaceobserver` resolves. On
+// Chromium, fontfaceobserver takes its NATIVE branch —
+// `document.fonts.load('100px "material-community"', 'BESbswy')` — and in this
+// fontless config a CSS `@font-face` with a data/URL src makes that call throw
+// `NetworkError`, so the observer rejects and the glyph stays blank forever.
+// (The CSS family the app actually renders icons with is `material-community`,
+// from `createIconSet(glyphMap,'material-community',font)` — NOT the ttf
+// filename `MaterialCommunityIcons`.) Constructing the `FontFace` explicitly
+// and `document.fonts.add()`-ing it — exactly how we handle the text stack
+// below — makes `document.fonts.load(...)` match, so the observer resolves and
+// glyphs paint. So this script eager-loads the bundled icon font too.
 //
 // # What this does
 //
@@ -22,9 +37,15 @@
 //      pointing at a base64 data-URI of `e2e/assets/fonts/audit-latin.woff2`.
 //      (You CANNOT alias the reserved keywords `sans-serif`/`serif`/
 //      `monospace`/`system-ui`, but aliasing the concrete members makes the
-//      browser resolve the stack left-to-right to a real font.)
+//      browser resolve the stack left-to-right to a real font.) It also loads
+//      the bundled **icon** font family `material-community` from the ttf that
+//      `expo export` already emitted into `dist/assets/**` (resolved by glob so
+//      the content-hash is never hardcoded) — see the loader (step 2) which
+//      registers it via the `FontFace` constructor so `document.fonts.load()`
+//      matches and `@expo/vector-icons` glyphs paint (BLD-2744).
 //   2. Emit a blocking inline `<script>` (in `<head>`, BEFORE the expo entry
-//      bundle) that constructs a `FontFace` per family, `await ff.load()`,
+//      bundle) that constructs a `FontFace` per family (text families AND the
+//      `material-community` icon family), `await ff.load()`,
 //      `document.fonts.add(ff)`, then `await document.fonts.ready`.
 //   3. **Park the expo entry bundle so it cannot execute until step 2 finishes.**
 //      A CSS-only `@font-face` does NOT force-load in time, and — crucially —
@@ -58,21 +79,30 @@
 //
 // # Production safety
 //
-// The font asset lives under `e2e/` (never `public/` or `assets/`) and is
+// The text font asset lives under `e2e/` (never `public/` or `assets/`) and is
 // never imported by app code, so `expo export` of a normal build does not
-// bundle it and `public/index.html` is untouched. This script only ever edits
-// the transient `dist/index.html` produced for an audit run. The shipped app
-// bundle carries no new font and no visual-identity change (BLD-2586 AC3).
+// bundle it and `public/index.html` is untouched. The icon ttf is the app's
+// OWN already-bundled `MaterialCommunityIcons` font — we only re-reference it
+// (base64-inlined into the transient audit HTML), we never add a new asset to
+// the shipped bundle. This script only ever edits the transient
+// `dist/index.html` produced for an audit run. The shipped app bundle carries
+// no new font and no visual-identity change (BLD-2586 AC3 / BLD-2744).
 //
 // # Usage
 //   node scripts/inject-audit-fonts.mjs [--dist <dir>] [--force] [--quiet]
 //
-// Refs: BLD-2586 (this fix), BLD-2585 / BLD-2581 / BLD-2582 (false positives),
-//       BLD-645 (audit workflow), BLD-481 (audit loop).
+// Refs: BLD-2586 (text half), BLD-2744 (icon half), BLD-2585 / BLD-2581 /
+//       BLD-2582 (false positives), BLD-645 (audit workflow), BLD-481 (loop).
 
-import { readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  statSync,
+  readdirSync,
+} from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, join } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
@@ -97,6 +127,76 @@ const FAMILIES = [
   "Arial",
   "Noto Sans",
 ];
+
+// Bundled `@expo/vector-icons` icon fonts to eager-load so their glyphs paint
+// in the fontless audit (BLD-2744). Each entry maps the CSS `font-family` the
+// app actually renders with (react-native-web sets `fontFamily` to the name
+// passed to `createIconSet`) to the ttf basename `expo export` emits under
+// `dist/assets/**`. NOTE the family is the createIconSet NAME
+// (`material-community`), NOT the ttf filename (`MaterialCommunityIcons`) — a
+// FontFace registered under the filename would never match the rendered
+// `font-family: material-community` and glyphs would stay blank.
+//
+// The daily audit's blank-glyph findings are all MaterialCommunityIcons (the
+// only vector family the app uses in the audited screens), so we register just
+// that one. Adding more families later is a one-line append here — the loader
+// treats icon families generically.
+const ICON_FONTS = [
+  { family: "material-community", ttfBasename: "MaterialCommunityIcons" },
+];
+
+// Resolve each ICON_FONTS entry to its built ttf under `<dist>/assets/**` by
+// GLOB (the content-hash in `MaterialCommunityIcons.<hash>.ttf` is
+// build-generated and MUST NOT be hardcoded). Returns
+// [{ family, dataUri }, …]. Missing a ttf is a hard error (mirrors the
+// `parkedCount===0` policy) so we never emit an audit build that silently
+// re-blanks the icons this script exists to fix.
+function resolveIconFonts(distDir) {
+  const assetsRoot = resolve(distDir, "assets");
+  return ICON_FONTS.map(({ family, ttfBasename }) => {
+    const ttf = findTtf(assetsRoot, ttfBasename);
+    if (!ttf) {
+      process.stderr.write(
+        `[inject-audit-fonts] ERROR: bundled icon font ${ttfBasename}.<hash>.ttf ` +
+          `not found under ${assetsRoot} — cannot eager-load the '${family}' ` +
+          `family, so @expo/vector-icons glyphs would render blank in the audit ` +
+          `(the exact bug this fixes). Did \`expo export -p web\` change its ` +
+          `asset layout?\n`,
+      );
+      process.exit(1);
+    }
+    const dataUri =
+      "data:font/ttf;base64," + readFileSync(ttf).toString("base64");
+    return { family, dataUri };
+  });
+}
+
+// Recursively find `<basename>.<hash>.ttf` (or bare `<basename>.ttf`) under
+// `dir`. Returns the absolute path of the first match, or null. Kept dependency
+// free (no glob package): a small readdir walk over the dist assets tree.
+function findTtf(dir, basename) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  // Match `<basename>.<anything>.ttf` and the un-hashed `<basename>.ttf`.
+  const re = new RegExp(
+    `^${basename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\.[^/]+)?\\.ttf$`,
+    "i",
+  );
+  for (const ent of entries) {
+    const full = join(dir, ent.name);
+    if (ent.isDirectory()) {
+      const hit = findTtf(full, basename);
+      if (hit) return hit;
+    } else if (re.test(ent.name)) {
+      return full;
+    }
+  }
+  return null;
+}
 
 function parseArgs(argv) {
   const args = { dist: resolve(ROOT, "dist"), force: false, quiet: false };
@@ -174,6 +274,17 @@ function buildFontFaceStyle(dataUri) {
 // the audit font is loaded. If FontFace is unsupported we still un-park the
 // entry so the page is never permanently blank (graceful degradation).
 //
+// ICON FONTS (BLD-2744): the same Promise.all also constructs a FontFace for
+// each bundled `@expo/vector-icons` family (e.g. `material-community`) from its
+// own ttf data-URI and `document.fonts.add()`s it. This is what makes the icon
+// glyphs paint: `@expo/vector-icons` renders a blank `<Text/>` until its
+// `fontfaceobserver` resolves, and on Chromium that observer polls
+// `document.fonts.load('… "material-community"')` — which only matches once a
+// loaded FontFace under that family exists. Registering via the FontFace
+// constructor (not a CSS `@font-face`, which throws `NetworkError` on
+// `document.fonts.load` in the fontless headless config) is the empirically
+// verified working path.
+//
 // CRITICAL (BLD-2586 second review): boot() MUST also wait for the DOM.
 // This loader is injected in <head>, so it runs while
 // `document.readyState === "loading"` and BEFORE the parser has reached the
@@ -184,12 +295,18 @@ function buildFontFaceStyle(dataUri) {
 // is un-parked, and the app is permanently blank. So every boot path funnels
 // through bootWhenDomReady(), which defers boot() to `DOMContentLoaded` while
 // the document is still loading and runs it immediately once parsing is done.
-function buildLoader(dataUri) {
+function buildLoader(dataUri, iconFonts) {
   const families = JSON.stringify(FAMILIES);
+  // [ [family, dataUri], … ] — kept as a plain array literal so the emitted
+  // IIFE has no dependency on how the build resolved the ttf paths.
+  const icons = JSON.stringify(
+    (iconFonts || []).map(({ family, dataUri: uri }) => [family, uri]),
+  );
   const loader =
     `(function(){` +
     `var URI=${JSON.stringify(dataUri)};` +
     `var FAMS=${families};` +
+    `var ICONS=${icons};` +
     `var PARK=${JSON.stringify(PARKED_TYPE)};` +
     `var SRCATTR=${JSON.stringify(PARKED_SRC_ATTR)};` +
     // Re-inject every parked entry bundle as an executable <script src>, in
@@ -217,11 +334,21 @@ function buildLoader(dataUri) {
     // No FontFace API (or already-font-equipped host that we force-patched):
     // don't hang the page — un-park as soon as the DOM is ready.
     `if(typeof FontFace==="undefined"||!document.fonts){bootWhenDomReady();return;}` +
-    `Promise.all(FAMS.map(function(f){` +
+    // Text families: one shared woff2 data-URI aliased to every concrete name.
+    `var loads=FAMS.map(function(f){` +
     `try{var ff=new FontFace(f,'url("'+URI+'") format("woff2")',{weight:"100 900"});` +
     `return ff.load().then(function(l){document.fonts.add(l);}).catch(function(){});` +
     `}catch(e){return Promise.resolve();}` +
-    `})).then(function(){return document.fonts.ready;})` +
+    `});` +
+    // Icon families (BLD-2744): each has its OWN ttf data-URI. Registering a
+    // loaded FontFace under the createIconSet family name is what lets
+    // @expo/vector-icons' fontfaceobserver resolve so glyphs paint.
+    `ICONS.forEach(function(pair){` +
+    `try{var iff=new FontFace(pair[0],'url("'+pair[1]+'") format("truetype")');` +
+    `loads.push(iff.load().then(function(l){document.fonts.add(l);}).catch(function(){}));` +
+    `}catch(e){}` +
+    `});` +
+    `Promise.all(loads).then(function(){return document.fonts.ready;})` +
     // Boot after fonts settle whether the load resolved or rejected — a failed
     // font must not permanently block the app from mounting. bootWhenDomReady
     // additionally ensures the parked body tags exist before we query them.
@@ -232,11 +359,11 @@ function buildLoader(dataUri) {
 }
 
 // Build the <head> block: marker comment + @font-face rules + blocking loader.
-function buildInjection(dataUri) {
+function buildInjection(dataUri, iconFonts) {
   return (
-    `\n    <!-- ${MARKER} — E2E-only audit text font; no-op on font-equipped hosts. -->\n` +
+    `\n    <!-- ${MARKER} — E2E-only audit text+icon fonts; no-op on font-equipped hosts. -->\n` +
     `    ${buildFontFaceStyle(dataUri)}\n` +
-    `    ${buildLoader(dataUri)}\n`
+    `    ${buildLoader(dataUri, iconFonts)}\n`
   );
 }
 
@@ -301,6 +428,12 @@ function main() {
   const dataUri =
     "data:font/woff2;base64," + readFileSync(fontPath).toString("base64");
 
+  // Resolve the bundled icon fonts (glob, no hardcoded hash). Hard-errors if a
+  // ttf is missing so we never emit an audit build that re-blanks icons
+  // (BLD-2744). Done BEFORE we mutate `dist/index.html` so a missing ttf leaves
+  // the file untouched (no marker), consistent with the parkedCount===0 policy.
+  const iconFonts = resolveIconFonts(args.dist);
+
   // Park the expo entry bundle FIRST so the loader can gate its execution on
   // font readiness. If nothing parks, the fonts would race the bundle and RNW
   // would measure text 0x0 again (the exact bug this script fixes), so a
@@ -318,7 +451,7 @@ function main() {
   }
   html = parked.html;
 
-  const injection = buildInjection(dataUri);
+  const injection = buildInjection(dataUri, iconFonts);
   const idx = html.lastIndexOf("</head>");
   if (idx === -1) {
     process.stderr.write(
@@ -330,8 +463,14 @@ function main() {
   writeFileSync(indexPath, html, "utf8");
 
   const kb = (Buffer.byteLength(dataUri) / 1024).toFixed(1);
+  const iconKb = (
+    iconFonts.reduce((n, f) => n + Buffer.byteLength(f.dataUri), 0) / 1024
+  ).toFixed(1);
   log(
-    `injected font-gated loader (${FAMILIES.length} families, ${kb} KB data-URI); ` +
+    `injected font-gated loader (${FAMILIES.length} text families, ${kb} KB; ` +
+      `${iconFonts.length} icon font(s) [${iconFonts
+        .map((f) => f.family)
+        .join(", ")}], ${iconKb} KB); ` +
       `parked ${parked.parkedCount} entry bundle(s) until document.fonts.ready → ${indexPath}`,
   );
 }
