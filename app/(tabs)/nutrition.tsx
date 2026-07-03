@@ -28,9 +28,6 @@ function getWeekLabel(now: Date): string {
   return `${start}–${end}`;
 }
 
-// AC3 synthetic crash — BLD-2861 proof-of-failure. Reverted in next commit.
-throw new Error("BLD-2861 synthetic crash: nutrition tab pageerror guard test");
-
 export default function Nutrition() {
   const colors = useThemeColors();
   const layout = useLayout();
