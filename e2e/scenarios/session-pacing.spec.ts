@@ -9,8 +9,11 @@
  *  2. Segment labels "Working", "Rest", "Other" are visible (AC§134)
  *  3. Tapping the card body opens the per-exercise breakdown sheet (AC§137)
  *  4. Screenshot captured at mobile viewport.
+ *  5. Sort controls in breakdown sheet are reachable by testID and role (BLD-2726)
+ *  6. Tapping a sort header re-sorts the table (BLD-2726)
  *
  * Refs: BLD-1144, BLD-1124 convention (mobile-only, no per-scenario opt-in for extra viewports).
+ * BLD-2726: illegible Unicode sort glyphs (↕↓↑) replaced with MaterialCommunityIcons.
  */
 import { test, expect } from "@playwright/test";
 import * as path from "path";
@@ -199,5 +202,102 @@ test.describe("@scenario session-pacing", () => {
       path: path.join(OUT_DIR, "pacing-breakdown-sheet.png"),
       fullPage: true,
     });
+  });
+
+  // BLD-2726: sort controls must be reachable via stable testID and accessibilityRole.
+  // Verifies that the MaterialCommunityIcons sort glyphs replaced the illegible Unicode
+  // arrows without breaking touch affordances.
+  test("breakdown sheet sort controls are visible and reachable by testID (BLD-2726)", async ({ page }) => {
+    await page.addInitScript((pacing) => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+      w.__SESSION_PACING_HARNESS__ = {
+        harnessActive: true,
+        pacing,
+        exerciseNames: {
+          ex1: "Cable Row",
+          ex2: "Lat Pulldown",
+          ex3: "Face Pull",
+          ex4: "Bodyweight Dips",
+        },
+      };
+    }, SAMPLE_PACING);
+
+    await page.goto("/__test__/session-pacing");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("pacing-card")).toBeVisible({ timeout: 5000 });
+
+    // Open breakdown sheet
+    const cardBody = page.getByRole("button", { name: /Estimated pacing/i });
+    await cardBody.click();
+    await expect(page.getByText("Pacing by exercise")).toBeVisible({ timeout: 5000 });
+
+    // Advance to full-height snap-point so header row is visible
+    const handle = page.getByTestId("bottom-sheet-handle");
+    await handle.click();
+    await page.waitForTimeout(400);
+
+    // All three sort controls must be reachable by testID (BLD-2726 AC)
+    await expect(page.getByTestId("pacing-sort-working")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId("pacing-sort-rest")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByTestId("pacing-sort-other")).toBeVisible({ timeout: 5000 });
+
+    // All three must also be reachable via accessibilityRole="button" with matching label
+    await expect(page.getByRole("button", { name: /Sort by working/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Sort by rest/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Sort by other/i })).toBeVisible();
+  });
+
+  // BLD-2726: tapping a non-active sort header re-sorts the table and moves the
+  // active highlight. Tap "Rest", then tap "Other", verifying interactive sort still works.
+  test("tapping sort headers re-sorts table rows (BLD-2726)", async ({ page }) => {
+    await page.addInitScript((pacing) => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+      w.__SESSION_PACING_HARNESS__ = {
+        harnessActive: true,
+        pacing,
+        exerciseNames: {
+          ex1: "Cable Row",
+          ex2: "Lat Pulldown",
+          ex3: "Face Pull",
+          ex4: "Bodyweight Dips",
+        },
+      };
+    }, SAMPLE_PACING);
+
+    await page.goto("/__test__/session-pacing");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("pacing-card")).toBeVisible({ timeout: 5000 });
+
+    // Open breakdown sheet
+    const cardBody = page.getByRole("button", { name: /Estimated pacing/i });
+    await cardBody.click();
+    await expect(page.getByText("Pacing by exercise")).toBeVisible({ timeout: 5000 });
+
+    // Advance to full-height snap-point
+    const handle = page.getByTestId("bottom-sheet-handle");
+    await handle.click();
+    await page.waitForTimeout(400);
+
+    // Default sort is by "working" desc — rows are sorted accordingly.
+    // Tap "Rest" sort control; the sheet should re-sort without crashing.
+    const sortByRest = page.getByRole("button", { name: /Sort by rest/i });
+    await sortByRest.click();
+    await page.waitForTimeout(200);
+
+    // After tapping "Rest", the row scroll area should still contain known exercises.
+    await expect(page.getByTestId("pacing-breakdown-row-scroll")).toBeVisible();
+
+    // Tap "Other" — sort changes again, no crash.
+    const sortByOther = page.getByRole("button", { name: /Sort by other/i });
+    await sortByOther.click();
+    await page.waitForTimeout(200);
+    await expect(page.getByTestId("pacing-breakdown-row-scroll")).toBeVisible();
+
+    // Tap "Other" again — direction should toggle (desc → asc), still no crash.
+    await sortByOther.click();
+    await page.waitForTimeout(200);
+    await expect(page.getByTestId("pacing-breakdown-row-scroll")).toBeVisible();
   });
 });

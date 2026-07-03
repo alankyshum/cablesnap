@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { BottomSheet, useBottomSheet } from "@/components/ui/bottom-sheet";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -26,6 +27,44 @@ type Props = {
   exerciseNames: Record<string, string>;
   onClose: () => void;
 };
+
+// ─── Sort icon component ──────────────────────────────────────────────────────
+//
+// Replaces raw Unicode arrows (↕ ↓ ↑) that do not render in the web bundle font
+// (BLD-2726). Uses MaterialCommunityIcons matching the established convention
+// in PacingCard.tsx and SetsCard.tsx.
+//
+//   Active desc  → "menu-down"               (primary colour)
+//   Active asc   → "menu-up"                 (primary colour)
+//   Inactive     → "unfold-more-horizontal"  (onSurfaceVariant)
+//
+type SortIconProps = {
+  col: SortKey;
+  sortKey: SortKey;
+  sortDir: SortDir;
+  activeColor: string;
+  inactiveColor: string;
+};
+
+function SortIcon({ col, sortKey, sortDir, activeColor, inactiveColor }: SortIconProps) {
+  const isActive = sortKey === col;
+  if (!isActive) {
+    return (
+      <MaterialCommunityIcons
+        name="unfold-more-horizontal"
+        size={16}
+        color={inactiveColor}
+      />
+    );
+  }
+  return (
+    <MaterialCommunityIcons
+      name={sortDir === "desc" ? "menu-down" : "menu-up"}
+      size={16}
+      color={activeColor}
+    />
+  );
+}
 
 export default function PacingBreakdownSheet({ pacing, exerciseNames, onClose }: Props) {
   const colors = useThemeColors();
@@ -63,11 +102,6 @@ export default function PacingBreakdownSheet({ pacing, exerciseNames, onClose }:
     return sortDir === "desc" ? -diff : diff;
   });
 
-  const arrowFor = (key: SortKey) => {
-    if (sortKey !== key) return " ↕";
-    return sortDir === "desc" ? " ↓" : " ↑";
-  };
-
   return (
     <BottomSheet
       isVisible={sheet.isVisible}
@@ -92,17 +126,26 @@ export default function PacingBreakdownSheet({ pacing, exerciseNames, onClose }:
               style={styles.valueCell}
               accessibilityRole="button"
               accessibilityLabel={`Sort by ${col}`}
+              testID={`pacing-sort-${col}`}
             >
-              <Text
-                variant="caption"
-                style={{
-                  color: sortKey === col ? colors.primary : colors.onSurfaceVariant,
-                  fontWeight: sortKey === col ? "700" : "400",
-                }}
-              >
-                {col === "working" ? "Working" : col === "rest" ? "Rest" : "Other"}
-                {arrowFor(col)}
-              </Text>
+              <View style={styles.headerCellContent}>
+                <Text
+                  variant="caption"
+                  style={{
+                    color: sortKey === col ? colors.primary : colors.onSurfaceVariant,
+                    fontWeight: sortKey === col ? "700" : "400",
+                  }}
+                >
+                  {col === "working" ? "Working" : col === "rest" ? "Rest" : "Other"}
+                </Text>
+                <SortIcon
+                  col={col}
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  activeColor={colors.primary}
+                  inactiveColor={colors.onSurfaceVariant}
+                />
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -171,4 +214,10 @@ const styles = StyleSheet.create({
   },
   nameCell: { flex: 2, paddingRight: spacing.xs },
   valueCell: { flex: 1, textAlign: "right" },
+  // Inline flex row for label + sort icon — right-aligned within valueCell.
+  headerCellContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
 });

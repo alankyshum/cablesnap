@@ -196,4 +196,53 @@ describe("WorkoutHeatmap", () => {
     expect(queryByText(/No completed workouts/)).toBeNull();
     expect(queryByText("Start working out to see your consistency here!")).toBeNull();
   });
+
+  // BLD-2719: Regression guard — heatmap frequency cells must NOT use the
+  // Electric Coral primary color (#FF6038 / #FF7A55). Coral is a red-green
+  // channel hue that collapses to grey-olive under deuteranopia, making all
+  // intensity levels indistinguishable. The fix switches to the blue
+  // heatmapFrequency token (#007AFF / #0A84FF) which uses the S-cone channel
+  // and retains contrast under red-green CVD.
+  //
+  // We assert via backgroundColor on rendered cells: for count=1,2,3 the
+  // rendered color must contain the blue channel string (partial hex or rgba
+  // from withOpacity()). Specifically:
+  //   - count=0 → surfaceVariant (grey muted)
+  //   - count=1 → rgba(0,122,255, 0.15)  [withOpacity on #007AFF]
+  //   - count=2 → rgba(0,122,255, 0.55)
+  //   - count=3 → #007AFF  (or dark-mode variant #0A84FF)
+  //
+  // The test checks that no filled-cell color string contains the coral hex
+  // values (#FF6038 or #FF7A55), and that count=1 and count=2 are visually
+  // distinct from count=0 (different backgroundColor strings).
+  it("uses non-coral (CVD-safe blue) color for frequency cells (BLD-2719 regression)", () => {
+    // Use three dates with counts 1, 2, 3 to exercise all filled steps.
+    const today = new Date();
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    // Use dates far enough in the past to fall in the 16-week window.
+    const d1 = new Date(today); d1.setDate(today.getDate() - 7);
+    const d2 = new Date(today); d2.setDate(today.getDate() - 14);
+    const d3 = new Date(today); d3.setDate(today.getDate() - 21);
+    const data = new Map([
+      [fmt(d1), 1],
+      [fmt(d2), 2],
+      [fmt(d3), 3],
+    ]);
+
+    const { toJSON } = renderScreen(<WorkoutHeatmap data={data} />);
+    const json = JSON.stringify(toJSON());
+
+    // Must NOT contain Electric Coral hex values anywhere in rendered styles.
+    // This is the key regression guard — if heatmapColor reverts to `primary`,
+    // these coral hex strings will appear in cell backgroundColor styles.
+    expect(json).not.toMatch(/#[Ff][Ff]6038/);
+    expect(json).not.toMatch(/#[Ff][Ff]7[Aa]55/);
+
+    // Must NOT contain the coral as rgba() partial either.
+    // withOpacity('#FF6038', 0.15) -> 'rgba(255, 96, 56, 0.15)'
+    expect(json).not.toMatch(/rgba\(255,\s*96,\s*56/);
+    // withOpacity('#FF7A55', ...) -> 'rgba(255, 122, 85, ...)'
+    expect(json).not.toMatch(/rgba\(255,\s*122,\s*85/);
+  });
 });

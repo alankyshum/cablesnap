@@ -75,4 +75,33 @@ describe('WorkoutEmptyState', () => {
     expect(onStart).toHaveBeenCalledTimes(1)
     expect(pushMock).not.toHaveBeenCalled()
   })
+
+  // CVD legibility (BLD-2729): the "Start a workout" CTA uses the `default`
+  // button variant whose background is the `primary` color.  Under protanopia
+  // and deuteranopia that color shifts to yellow-olive, removing the primary-
+  // action hue signal.  A supplemental border in `onSurface` color at ~35%
+  // opacity provides a non-hue-dependent affordance cue.
+  // This test guards against the border being accidentally stripped.
+  it('CTA button carries a non-hue-dependent border style for CVD legibility (BLD-2729)', () => {
+    const { getByTestId } = render(<WorkoutEmptyState />)
+    const ctaNode = getByTestId('progress-empty-cta')
+
+    // Walk up to find the Pressable/Animated.View that holds the inline style.
+    // The testID is on the Pressable's outer element; style is on its children.
+    // We check the Pressable itself (which receives the style array).
+    const hasBorder = (style: unknown): boolean => {
+      if (!style) return false
+      const styles = Array.isArray(style) ? style : [style]
+      for (const s of styles) {
+        if (s && typeof s === 'object') {
+          if ('borderWidth' in s && (s as Record<string, unknown>).borderWidth) return true
+        }
+      }
+      return false
+    }
+
+    // The Pressable at ctaNode.parent level carries our style array with borderWidth.
+    const pressable = ctaNode
+    expect(hasBorder(pressable.props.style)).toBe(true)
+  })
 })
