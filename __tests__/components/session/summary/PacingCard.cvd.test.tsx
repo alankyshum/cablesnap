@@ -1,24 +1,29 @@
 /**
- * PacingCard.cvd.test.tsx — BLD-1939
+ * PacingCard.cvd.test.tsx — BLD-1939, BLD-2713, BLD-2714
  *
- * Headless proxy tests for the CVD (colour-vision-deficiency) fix on the
- * pacing bar. The original finding is a deuteranopia emulation visual
- * judgment that cannot be re-run headlessly; these tests cover the same
- * risk by verifying the structural properties that make the fix work:
+ * Headless proxy tests for the CVD (colour-vision-deficiency) fixes on the
+ * pacing bar. Visual CVD emulation judgments cannot be re-run headlessly;
+ * these tests cover the same risk by verifying the structural properties
+ * that make each fix work.
  *
- * 1. The "Other" bar segment renders the diagonal hatch pattern element.
- * 2. The "Other" legend dot renders the diagonal hatch pattern element.
- * 3. "Working" and "Rest" bar/dot do NOT carry the hatch.
- * 4. Each segment still has its base backgroundColor (additive, not replacement).
- * 5. The hatch overlay is decorative: a11y hidden, pointer-events none.
- * 6. Empty state path (otherFrac == 0) does not crash and hatch is absent.
- * 7. Source contracts (labels/copy) are unchanged.
+ * Fix inventory:
+ *   BLD-1939  — "Other" bar + legend dot carry a dot/stipple texture (HatchOverlay).
+ *   BLD-2725  — Stripes → dots on Other (same testIDs; stripe was "disabled"-looking).
+ *   BLD-2713/2714 — "Working" bar + legend dot carry a distinct horizontal-dash
+ *                   overlay (WorkingDashOverlay) so all three segs are mutually
+ *                   distinguishable in grayscale and under red-green CVD.
+ *   BLD-2205  — Bar Other hatch covers the full segment (full-fill, not 18px).
+ *
+ * Per-segment non-color cue summary:
+ *   Working → horizontal-dash pattern (pacing-seg-working-pattern / pacing-dot-working-pattern)
+ *   Rest    → solid only              (no pattern overlay)
+ *   Other   → dot stipple             (pacing-seg-other-pattern  / pacing-dot-other-pattern)
  */
 
 import React from "react";
 import { Platform } from "react-native";
 import { render } from "@testing-library/react-native";
-import PacingCard, { HatchOverlay } from "../../../../components/session/summary/PacingCard";
+import PacingCard, { HatchOverlay, WorkingDashOverlay } from "../../../../components/session/summary/PacingCard";
 import type { PacingBreakdown } from "@/lib/session-pacing";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -75,26 +80,35 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     expect(dotHatch).toBeTruthy();
   });
 
-  // ── 3. Working segment has NO hatch ───────────────────────────────────────
-  it("does NOT render a hatch on the Working bar segment", () => {
-    const { queryByTestId } = render(<PacingCard pacing={makePacing()} />);
-    expect(queryByTestId("pacing-seg-working-pattern", { includeHiddenElements: true })).toBeNull();
+  // ── 3. Working bar segment carries the horizontal-dash cue (BLD-2713/BLD-2714)
+  //
+  // Previously: test asserted Working had NO pattern (testIDs absent).
+  // Updated: Working must NOW carry WorkingDashOverlay so all three segments
+  // are mutually distinguishable in grayscale and under red-green CVD.
+  it("renders the dash pattern overlay on the Working bar segment", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dash = getByTestId("pacing-seg-working-pattern", { includeHiddenElements: true });
+    expect(dash).toBeTruthy();
   });
 
-  // ── 4. Rest segment has NO hatch ──────────────────────────────────────────
-  it("does NOT render a hatch on the Rest bar segment", () => {
+  // ── 4. Rest segment has NO pattern overlay ────────────────────────────────
+  it("does NOT render a pattern on the Rest bar segment", () => {
     const { queryByTestId } = render(<PacingCard pacing={makePacing()} />);
     expect(queryByTestId("pacing-seg-rest-pattern", { includeHiddenElements: true })).toBeNull();
   });
 
-  // ── 5. Working dot has NO hatch ────────────────────────────────────────────
-  it("does NOT render a hatch on the Working legend dot", () => {
-    const { queryByTestId } = render(<PacingCard pacing={makePacing()} />);
-    expect(queryByTestId("pacing-dot-working-pattern", { includeHiddenElements: true })).toBeNull();
+  // ── 5. Working legend dot carries the horizontal-dash cue (BLD-2713/BLD-2714)
+  //
+  // Previously: test asserted Working dot had NO pattern.
+  // Updated: Working dot must carry WorkingDashOverlay.
+  it("renders the dash pattern overlay on the Working legend dot", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dotDash = getByTestId("pacing-dot-working-pattern", { includeHiddenElements: true });
+    expect(dotDash).toBeTruthy();
   });
 
-  // ── 6. Rest dot has NO hatch ──────────────────────────────────────────────
-  it("does NOT render a hatch on the Rest legend dot", () => {
+  // ── 6. Rest dot has NO pattern overlay ────────────────────────────────────
+  it("does NOT render a pattern on the Rest legend dot", () => {
     const { queryByTestId } = render(<PacingCard pacing={makePacing()} />);
     expect(queryByTestId("pacing-dot-rest-pattern", { includeHiddenElements: true })).toBeNull();
   });
@@ -124,7 +138,7 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     expect(flat.backgroundColor).toBeTruthy();
   });
 
-  // ── 8. Hatch overlay is a11y-hidden (Platform-aware — BLD-1994) ──────────
+  // ── 8. HatchOverlay is a11y-hidden (Platform-aware — BLD-1994) ──────────
   //
   // On native, accessibilityElementsHidden must be true so screen readers skip
   // the decorative overlay. On web, the prop must NOT be true — react-native-svg's
@@ -155,12 +169,41 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     }
   });
 
+  // ── 8b. WorkingDashOverlay is a11y-hidden (BLD-2713/BLD-2714, BLD-1994) ──
+  it("dash overlay accessibilityElementsHidden is Platform-gated (true on native, false on web)", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dash = getByTestId("pacing-seg-working-pattern", { includeHiddenElements: true });
+    if (Platform.OS === 'web') {
+      expect(dash.props.accessibilityElementsHidden).not.toBe(true);
+    } else {
+      expect(dash.props.accessibilityElementsHidden).toBe(true);
+    }
+  });
+
+  it("dash overlay importantForAccessibility is undefined on web", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dash = getByTestId("pacing-seg-working-pattern", { includeHiddenElements: true });
+    if (Platform.OS === 'web') {
+      expect(dash.props.importantForAccessibility).toBeUndefined();
+    } else {
+      expect(dash.props.importantForAccessibility).toBe('no-hide-descendants');
+    }
+  });
+
   // ── 9. Empty state — otherFrac == 0: no crash, hatch absent ───────────────
   it("does not render hatch on Other segment when other time is zero", () => {
     // working + rest == gross leaves otherFrac = 0
     const pacing = makePacing({ working: 900, rest: 900, other: 0, gross: 1800 });
     const { queryByTestId } = render(<PacingCard pacing={pacing} />);
     expect(queryByTestId("pacing-seg-other-pattern", { includeHiddenElements: true })).toBeNull();
+  });
+
+  // ── 9b. workingFrac == 0: no crash, dash absent ────────────────────────────
+  it("does not render dash on Working segment when working time is zero", () => {
+    // rest == gross leaves workingFrac = 0
+    const pacing = makePacing({ working: 0, rest: 1800, other: 0, gross: 1800 });
+    const { queryByTestId } = render(<PacingCard pacing={pacing} />);
+    expect(queryByTestId("pacing-seg-working-pattern", { includeHiddenElements: true })).toBeNull();
   });
 
   // ── 10. isEmpty path renders without crash ────────────────────────────────
@@ -170,6 +213,7 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     // No bar segments in empty state
     expect(queryByTestId("pacing-seg-other", { includeHiddenElements: true })).toBeNull();
     expect(queryByTestId("pacing-seg-other-pattern", { includeHiddenElements: true })).toBeNull();
+    expect(queryByTestId("pacing-seg-working-pattern", { includeHiddenElements: true })).toBeNull();
   });
 
   // ── 11. Copy contracts unchanged ─────────────────────────────────────────
@@ -193,6 +237,17 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
 
   it("HatchOverlay returns null when height is 0", () => {
     const { toJSON } = render(<HatchOverlay width={18} height={0} />);
+    expect(toJSON()).toBeNull();
+  });
+
+  // ── 12b. WorkingDashOverlay unit: returns null for zero/negative dims ─────
+  it("WorkingDashOverlay returns null when width is 0", () => {
+    const { toJSON } = render(<WorkingDashOverlay width={0} height={18} />);
+    expect(toJSON()).toBeNull();
+  });
+
+  it("WorkingDashOverlay returns null when height is 0", () => {
+    const { toJSON } = render(<WorkingDashOverlay width={18} height={0} />);
     expect(toJSON()).toBeNull();
   });
 
@@ -237,5 +292,41 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     // Legend dot is fixed 8×8 — must NOT use "100%" (that would scale with the dot container)
     expect(dotHatch.props.width).toBe(8);
     expect(dotHatch.props.height).toBe(8);
+  });
+
+  // ── 13b. Working dash bar must be full-fill (BLD-2713/BLD-2714) ──────────
+  //
+  // Same regression guard as BLD-2205: the dash SVG canvas must be "100%×100%"
+  // to cover the full flex-sized bar segment.
+  it("bar Working dash SVG canvas is full-fill (width/height = '100%')", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dash = getByTestId("pacing-seg-working-pattern", { includeHiddenElements: true });
+    expect(dash.props.width).toBe("100%");
+    expect(dash.props.height).toBe("100%");
+  });
+
+  it("legend dot dash SVG canvas keeps explicit 8×8 dimensions (not full-fill)", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dotDash = getByTestId("pacing-dot-working-pattern", { includeHiddenElements: true });
+    expect(dotDash.props.width).toBe(8);
+    expect(dotDash.props.height).toBe(8);
+  });
+
+  // ── 14. Working dash and Other dot use distinct SVG pattern IDs ───────────
+  //
+  // The two overlays must use DIFFERENT SVG Pattern IDs so they render distinct
+  // shapes. If both had the same ID, the second Defs block would shadow the first
+  // and both segments would look identical — defeating the CVD fix.
+  //
+  // Both use url(#...) pattern fills; we distinguish by finding both Defs
+  // patterns and asserting that the Pattern elements have different IDs.
+  it("Other dot and Working dash patterns have distinct SVG Pattern IDs", () => {
+    const { UNSAFE_getAllByType } = render(<PacingCard pacing={makePacing()} />);
+    const { Pattern } = require("react-native-svg");
+    const patterns = UNSAFE_getAllByType(Pattern);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ids = new Set(patterns.map((p: any) => p.props.id as string | undefined));
+    // Must have at least two distinct IDs (one for dot, one for dash)
+    expect(ids.size).toBeGreaterThanOrEqual(2);
   });
 });

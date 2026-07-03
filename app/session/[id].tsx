@@ -48,6 +48,7 @@ import { useSessionTimerContextValue } from "../../hooks/useSessionTimerContextV
 import { getSetupPhotoForSet, deleteSetupPhoto } from "../../lib/media/setup-photos";
 import { toAbsPath } from "../../lib/media/form-clips";
 import { useCompareFromPlayer } from "../../hooks/useCompareFromPlayer";
+import { useIntensityMode } from "../../hooks/useIntensityMode";
 import { CoachOverlay } from "../../components/session/CoachOverlay";
 import {
   startCoach,
@@ -240,6 +241,10 @@ export default function ActiveSession() {
       setCaptureRpe(val === "true");
     }).catch(() => {});
   }, []);
+
+  // BLD-2701: Active intensity display mode (RPE | RIR); single source of truth
+  // via react-query-backed hook so all active-session surfaces re-render on change.
+  const intensityMode = useIntensityMode();
 
   // BLD-1114: Pulley pin tracking enabled preference (default on)
   const [pulleyPinTrackingEnabled, setPulleyPinTrackingEnabled] = useState(true);
@@ -500,6 +505,7 @@ export default function ActiveSession() {
       setupPhotoUriMap={setupPhotoUriMap}
       onSetupPhotoGlyph={handleSetupPhotoGlyph}
       captureRpe={captureRpe}
+      intensityMode={intensityMode}
       onRpeChange={handleRpeChange}
       showPulleyPin={pulleyPinTrackingEnabled} gymId={session?.gym_id ?? null} onMarkerConfirm={handleMarkerConfirm} onManualWeightSave={handleManualWeightSave}
       onAddSegment={handleAddSegment}
@@ -511,7 +517,7 @@ export default function ActiveSession() {
       onPreferredSwap={handlePreferredSwap}
     />
     );
-  }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal, handlePreferredSwap, appliedPreferredSwaps]);
+  }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, intensityMode, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal, handlePreferredSwap, appliedPreferredSwaps]);
 
   const listHeader = useMemo(() => (
     <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />

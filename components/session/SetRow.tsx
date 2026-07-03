@@ -173,6 +173,8 @@ export type SetRowProps = {
   // completed sets. onRpeChange writes to DB + emits breadcrumb in parent.
   captureRpe?: boolean;
   onRpeChange?: (setId: string, rpe: number | null) => void;
+  /** BLD-2701: Active intensity display mode (RPE | RIR). Forwarded to RpeChipStrip. */
+  intensityMode?: import("@/lib/intensity").IntensityMode;
   // BLD-1126: Stack Marker Quick-Pick.
   // BLD-1130 G3: stacks fetched once in ExerciseGroupCard and prop-drilled.
   // Empty array = no calibration / not cable. onMarkerConfirm writes the five
@@ -206,6 +208,7 @@ export const SetRow = memo(function SetRow({
   hasClip, onVideoGlyph,
   pulleyPin, onOpenPulleyPinPicker, showPulleyPin, hasSetupPhoto, setupPhotoUri, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
+  intensityMode,
   stacks, onMarkerConfirm, onManualWeightSave,
   onAddSegment, onDeleteSegment, onCollapseToNormal,
 }: SetRowProps) {
@@ -364,8 +367,9 @@ export const SetRow = memo(function SetRow({
   );
 
   // BLD-1110: RPE chip strip element, shared across Case A/B/C footer topologies.
+  // BLD-2701: Pass intensityMode so chips and sheet display in the user's preferred unit.
   const rpeStrip = set.completed && captureRpe
-    ? <RpeChipStrip value={set.rpe ?? null} onChange={handleRpeChange} setId={set.id} />
+    ? <RpeChipStrip value={set.rpe ?? null} onChange={handleRpeChange} setId={set.id} intensityMode={intensityMode} />
     : null;
 
   return (

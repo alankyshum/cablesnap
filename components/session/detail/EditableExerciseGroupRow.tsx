@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 import { EditableSetRow } from "./EditableSetRow";
+import { useIntensityMode } from "@/hooks/useIntensityMode";
 
 type DraftSet = {
   key: string;
@@ -39,6 +40,8 @@ export function EditableExerciseGroupRow({
   onRemoveExercise,
 }: Props) {
   const colors = useThemeColors();
+  // BLD-2701: read intensity mode once per group so all rows in this group use the same mode.
+  const intensityMode = useIntensityMode();
   return (
     <View style={styles.group}>
       <View style={styles.header}>
@@ -69,6 +72,7 @@ export function EditableExerciseGroupRow({
           onChangeRpe={(v) => onChangeRpe(i, v)}
           onToggleCompleted={(v) => onToggleCompleted(i, v)}
           onRemove={() => onRemoveSet(i)}
+          intensityMode={intensityMode}
         />
       ))}
       <Pressable

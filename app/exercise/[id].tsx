@@ -54,6 +54,8 @@ import { PinnedExerciseNoteEditor } from "@/components/session/PinnedExerciseNot
 import { ExerciseDefaultTempoField } from "@/components/exercise/ExerciseDefaultTempoField";
 import { useProgressionChain } from "@/hooks/useProgressionChain";
 import { fontSizes } from "@/constants/design-tokens";
+import { formatIntensity } from "@/lib/intensity";
+import { useIntensityMode } from "@/hooks/useIntensityMode";
 
 function formatDateLong(ts: number): string {
   return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(new Date(ts));
@@ -96,6 +98,8 @@ export default function ExerciseDetail() {
   const progression = useProgressionChain(id);
   // BLD-1122: plateau detection for exercise detail screen
   const plateauStatus = usePlateauStatus(id);
+  // BLD-2701: active intensity display mode (RPE vs RIR) for history badges
+  const intensityMode = useIntensityMode();
 
   // BLD-1122 AC3: form-clip recording sheet triggered by plateau form_check CTA
   const [formClipSetId, setFormClipSetId] = useState<string | null>(null);
@@ -296,10 +300,13 @@ export default function ExerciseDetail() {
   );
 
   const renderItem = ({ item }: { item: ExerciseSession }) => {
-    const rpeLabel = item.avg_rpe != null ? `, avg RPE ${Math.round(item.avg_rpe * 10) / 10}` : "";
+    // BLD-2701: a11y label uses active intensity mode (RPE or RIR), not hardcoded "avg RPE".
+    const intensityLabel = item.avg_rpe != null
+      ? `, avg ${formatIntensity(item.avg_rpe, intensityMode)}`
+      : "";
     const label = d.bw
-      ? `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max reps ${item.max_reps}${rpeLabel}`
-      : `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max weight ${toDisplay(item.max_weight, d.unit)} ${d.unit}${rpeLabel}`;
+      ? `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max reps ${item.max_reps}${intensityLabel}`
+      : `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max weight ${toDisplay(item.max_weight, d.unit)} ${d.unit}${intensityLabel}`;
     return (
       <Pressable onPress={() => router.push(`/session/detail/${item.session_id}`)} accessibilityLabel={label} accessibilityRole="button"
         style={[styles.historyRow, { borderBottomColor: colors.outlineVariant }]}>
@@ -311,7 +318,11 @@ export default function ExerciseDetail() {
           <Text variant="title" style={{ color: colors.primary }}>{d.bw ? `${item.max_reps} reps` : `${toDisplay(item.max_weight, d.unit)} ${d.unit}`}</Text>
           {item.avg_rpe != null && (
             <View style={[styles.rpeBadge, { backgroundColor: rpeColor(item.avg_rpe) }]}>
-              <Text style={{ color: rpeText(item.avg_rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>RPE {Math.round(item.avg_rpe * 10) / 10}</Text>
+              {/* BLD-2701: render via formatIntensity so mode flip (RPE ↔ RIR) is reflected.
+                  Color stays keyed on the stored RPE value — rpeColor/rpeText are NOT changed. */}
+              <Text style={{ color: rpeText(item.avg_rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>
+                {formatIntensity(item.avg_rpe, intensityMode)}
+              </Text>
             </View>
           )}
         </View>

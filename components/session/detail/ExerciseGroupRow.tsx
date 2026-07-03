@@ -4,6 +4,8 @@ import { Text } from "@/components/ui/text";
 import { SET_TYPE_LABELS } from "@/lib/types";
 import type { SetType } from "@/lib/types";
 import { rpeColor, rpeText } from "@/lib/rpe";
+import { formatIntensity } from "@/lib/intensity";
+import { useIntensityMode } from "@/hooks/useIntensityMode";
 import type { ExerciseGroup } from "@/hooks/useSessionDetail";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
@@ -51,6 +53,8 @@ export function ExerciseGroupRow({ group, groups, linkIds, palette, colors }: Pr
     : "";
   const groupColorIdx = group.link_id ? linkIds.indexOf(group.link_id) : -1;
   const groupColor = groupColorIdx >= 0 ? palette[groupColorIdx % palette.length] : undefined;
+  // BLD-2701: intensity mode for displaying RPE badges in the correct unit.
+  const intensityMode = useIntensityMode();
 
   return (
     <View style={styles.group}>
@@ -124,7 +128,7 @@ export function ExerciseGroupRow({ group, groups, linkIds, palette, colors }: Pr
                   {set.rpe != null && (
                     <View style={[styles.rpeBadge, { backgroundColor: rpeColor(set.rpe) }]}>
                       <Text style={{ color: rpeText(set.rpe), fontSize: fontSizes.xs, fontWeight: "600" }}>
-                        RPE {set.rpe}
+                        {formatIntensity(set.rpe, intensityMode)}
                       </Text>
                     </View>
                   )}

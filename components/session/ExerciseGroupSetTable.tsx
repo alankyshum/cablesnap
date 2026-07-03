@@ -44,6 +44,8 @@ export type ExerciseGroupSetTableProps = {
   // BLD-1110: live RPE capture
   captureRpe?: boolean;
   onRpeChange?: (setId: string, rpe: number | null) => void;
+  /** BLD-2701: Active intensity display mode (RPE | RIR). */
+  intensityMode?: import("@/lib/intensity").IntensityMode;
   // BLD-1126: Stack Marker Quick-Pick
   // BLD-1130 G3: stacks fetched once in ExerciseGroupCard; passed through.
   gymId?: string | null;
@@ -66,6 +68,7 @@ export function ExerciseGroupSetTable({
   hasClipMap, onVideoGlyph,
   onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, setupPhotoUriMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
+  intensityMode,
   gymId, stacks, onMarkerConfirm, onManualWeightSave,
   onAddSegment, onDeleteSegment, onCollapseToNormal,
 }: ExerciseGroupSetTableProps) {
@@ -113,6 +116,7 @@ export function ExerciseGroupSetTable({
             onSetupPhotoGlyph={onSetupPhotoGlyph}
             captureRpe={captureRpe}
             onRpeChange={onRpeChange}
+            intensityMode={intensityMode}
             gymId={gymId}
             stacks={stacks}
             onMarkerConfirm={onMarkerConfirm}

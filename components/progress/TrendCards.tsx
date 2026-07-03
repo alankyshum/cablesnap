@@ -11,6 +11,8 @@ import {
   getRecentSessionRatings,
 } from "../../lib/db/e1rm-trends";
 import type { SessionRPERow, SessionRatingRow } from "../../lib/db/e1rm-trends";
+import { rpeToRir } from "@/lib/intensity";
+import { useIntensityMode } from "@/hooks/useIntensityMode";
 
 type TrendLineCardProps = {
   title: string;
@@ -111,6 +113,9 @@ type RPETrendCardProps = {
 export function RPETrendCard({ chartWidth, gymId, style }: RPETrendCardProps) {
   const colors = useThemeColors();
   const [rpeData, setRpeData] = useState<SessionRPERow[]>([]);
+  // BLD-2701: Q3 decision — NO axis inversion. Chart stays canonical RPE.
+  // In RIR mode, show a labeled RIR readout below the chart.
+  const intensityMode = useIntensityMode();
 
   useFocusEffect(
     useCallback(() => {
@@ -122,17 +127,28 @@ export function RPETrendCard({ chartWidth, gymId, style }: RPETrendCardProps) {
   );
 
   const data = rpeData.map((d, i) => ({ x: i, y: d.avg_rpe }));
+  const latestRpe = rpeData.length > 0 ? rpeData[rpeData.length - 1].avg_rpe : null;
 
   return (
-    <TrendLineCard
-      title="Avg RPE per Session (1–10)"
-      data={data}
-      yDomain={[1, 10]}
-      lineColor={colors.tertiary}
-      emptyMessage="Log RPE on your sets to see trends here."
-      chartWidth={chartWidth}
-      style={style}
-    />
+    <View style={style}>
+      <TrendLineCard
+        title="Avg RPE per Session (1–10)"
+        data={data}
+        yDomain={[1, 10]}
+        lineColor={colors.tertiary}
+        emptyMessage="Log RPE on your sets to see trends here."
+        chartWidth={chartWidth}
+      />
+      {intensityMode === "rir" && latestRpe != null && (
+        <Text
+          variant="caption"
+          style={{ color: colors.onSurfaceVariant, marginTop: -8, marginBottom: 8, textAlign: "right" }}
+          accessibilityLabel={`Latest session avg RIR: ${Math.round(rpeToRir(latestRpe) * 10) / 10}`}
+        >
+          Latest avg: {Math.round(rpeToRir(latestRpe) * 10) / 10} RIR
+        </Text>
+      )}
+    </View>
   );
 }
 

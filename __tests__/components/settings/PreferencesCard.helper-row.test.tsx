@@ -12,6 +12,12 @@ import { waitFor, act, fireEvent } from "@testing-library/react-native";
 import { render } from "@testing-library/react-native";
 
 // Mocks must come BEFORE the component import.
+// BLD-2701: mock useQueryClient since PreferencesCard now calls it for
+// invalidateIntensityMode. Tests here don't test react-query behaviour.
+jest.mock("@tanstack/react-query", () => ({
+  ...jest.requireActual("@tanstack/react-query"),
+  useQueryClient: jest.fn(() => ({ invalidateQueries: jest.fn() })),
+}));
 jest.mock("expo-audio", () => ({
   createAudioPlayer: jest.fn(() => ({ seekTo: jest.fn(), play: jest.fn(), release: jest.fn() })),
   setAudioModeAsync: jest.fn().mockResolvedValue(undefined),
