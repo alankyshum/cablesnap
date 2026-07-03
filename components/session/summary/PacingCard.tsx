@@ -11,11 +11,22 @@
  * in this file — enforced by source-contracts-batch.test.ts.
  * ⓘ disclosure copy is verbatim per AC§147 — locked by source-contracts.
  *
- * CVD accessibility (BLD-1939, BLD-2725): The "Other" segment carries a dot/stipple
- * overlay so it is distinguishable from "Working" under deuteranopia/protanopia.
- * Dots replaced diagonal stripes (BLD-2725) — stripes imply a disabled/unavailable
- * state, dots do not carry that connotation while still providing a non-hue texture.
- * The overlay is additive — full-colour appearance for sighted users is unchanged.
+ * CVD accessibility (BLD-1939, BLD-2713, BLD-2714, BLD-2725):
+ * All three pacing segments carry a distinct non-color structural cue so that
+ * the bar and legend are mutually distinguishable under deuteranopia, protanopia,
+ * and in pure grayscale — following the dual-channel encoding pattern (BLD-65/BLD-732).
+ *
+ *   "Working"  — horizontal-dash overlay (WorkingDashOverlay): short horizontal
+ *                rectangles in a repeating tile pattern. Resolves BLD-2713/BLD-2714.
+ *                Distinct from Other's circular dots (shape: dash ≠ dot) and from
+ *                solid Rest (texture ≠ no texture) in any color mode.
+ *   "Other"    — dot/stipple pattern overlay (HatchOverlay): repeating 6px circular dots.
+ *                Replaces diagonal stripes (BLD-2725: stripes imply disabled state).
+ *   "Rest"     — solid (blue; high inherent luminance contrast vs both textured segs).
+ *
+ * Both overlays are additive: full-colour sighted appearance is unchanged.
+ * Both are purely decorative: aria-hidden (web) + accessibilityElementsHidden (native).
+ * Both use distinct SVG Pattern IDs so they render distinct shapes (BLD-2714 requirement).
  */
 
 import { useState } from "react";
@@ -47,7 +58,12 @@ function useSegmentColors() {
   };
 }
 
-// ─── Dot/stipple overlay (BLD-1939 CVD fix, BLD-2725 UX fix) ─────────────────
+// ─── Shared overlay colour ────────────────────────────────────────────────────
+// Semi-transparent white works on both light and dark themes without
+// hardcoding a specific shade. Used by both overlay types for visual consistency.
+const OVERLAY_COLOR = "rgba(255,255,255,0.55)";
+
+// ─── Dot/stipple overlay — "Other" segment (BLD-1939 CVD fix, BLD-2725 UX fix) ─
 //
 // Renders an SVG dot/stipple pattern as an absolute-fill overlay.
 // Replaced diagonal stripes (BLD-2725): stripes carry a 'disabled/unavailable'
@@ -56,14 +72,34 @@ function useSegmentColors() {
 // The overlay is purely decorative: aria-hidden + accessibilityElementsHidden
 // so it does not pollute the a11y tree. pointerEvents="none" ensures taps
 // pass through to the parent Pressable.
-//
-// The dot fill colour is semi-transparent white so it works on both
-// light and dark themes without hardcoding a specific shade.
 
 const HATCH_PATTERN_ID = "pacing-other-hatch";
 const HATCH_SIZE = 6;          // tile size in px (dot spacing)
 const HATCH_DOT_RADIUS = 1.1;  // dot radius in px — subtle but visible
-const HATCH_STROKE_COLOR = "rgba(255,255,255,0.55)"; // semi-white for theme-agnostic contrast
+const HATCH_STROKE_COLOR = OVERLAY_COLOR;
+
+// ─── Horizontal-dash overlay — "Working" segment (BLD-2713/BLD-2714 CVD fix) ─
+//
+// Renders short horizontal rectangle dashes in a repeating tile pattern as an
+// absolute-fill overlay on the Working bar segment and legend dot.
+//
+// Chosen as the Working cue because it is structurally distinct from Other's
+// circular dots (shape: dash ≠ dot) and from solid Rest (texture ≠ no texture).
+// The distinction holds in pure grayscale AND under red-green CVD, relying solely
+// on luminance (semi-white dashes) and shape, not hue.
+//
+// Uses a different PATTERN_ID from the Other dot pattern so both render distinct
+// shapes when present in the same SVG tree.
+//
+// Does NOT imply "disabled/unavailable" (BLD-2725 lesson): short horizontal lines
+// read as a textured fill, not as a "strikethrough" or diagonal-disabled cue.
+
+const DASH_PATTERN_ID = "pacing-working-dash";
+const DASH_TILE_W = 8;    // tile width — wider than dot tile for distinct horizontal rhythm
+const DASH_TILE_H = 6;    // tile height — same as dot tile height
+const DASH_W = 4;         // dash width: noticeably longer than the 2.2px dot diameter
+const DASH_H = 1.5;       // dash height: thin horizontal bar, not a block
+const DASH_COLOR = OVERLAY_COLOR;
 
 type HatchOverlayProps =
   | {
@@ -85,7 +121,8 @@ type HatchOverlayProps =
 
 /**
  * HatchOverlay — decorative dot/stipple fill (BLD-2725: replaced diagonal stripes).
- * Caller is responsible for positioning (absoluteFill or explicit dimensions).
+ * Used for the "Other" segment. Caller is responsible for positioning (absoluteFill
+ * or explicit dimensions).
  *
  * Two modes:
  *   fill=true  — SVG canvas is "100%×100%" so it fills any flex-sized parent
@@ -140,6 +177,82 @@ export function HatchOverlay({ fill, width, height, testID }: HatchOverlayProps)
         width={svgWidth}
         height={svgHeight}
         fill={`url(#${HATCH_PATTERN_ID})`}
+      />
+    </Svg>
+  );
+}
+
+type WorkingDashOverlayProps =
+  | {
+      /** Fill mode: SVG canvas is "100%×100%" to cover the flex-sized bar segment. */
+      fill: true;
+      width?: never;
+      height?: never;
+      testID?: string;
+    }
+  | {
+      /** Explicit-size mode: pass exact pixel dimensions (e.g. legend dot 8×8). */
+      fill?: false;
+      width: number;
+      height: number;
+      testID?: string;
+    };
+
+/**
+ * WorkingDashOverlay — decorative horizontal-dash fill for the "Working" segment.
+ * Resolves BLD-2713 (deuteranopia) and BLD-2714 (protanopia).
+ *
+ * Short horizontal rectangles spaced at regular vertical intervals provide a
+ * distinct texture from Other's circular dots (shape: dash vs circle) and from
+ * solid Rest. The cue is hue-independent: works in pure grayscale and under any
+ * CVD type. Uses DASH_PATTERN_ID (distinct from HATCH_PATTERN_ID) so both patterns
+ * render their own shapes in the same SVG tree.
+ *
+ * Shares the same two modes as HatchOverlay (fill / explicit-size).
+ */
+export function WorkingDashOverlay({ fill, width, height, testID }: WorkingDashOverlayProps) {
+  // In explicit-size mode, guard against non-positive dimensions.
+  if (!fill && (width <= 0 || height <= 0)) return null;
+
+  const svgWidth = fill ? "100%" : width;
+  const svgHeight = fill ? "100%" : height;
+
+  return (
+    <Svg
+      width={svgWidth}
+      height={svgHeight}
+      style={StyleSheet.absoluteFillObject}
+      {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
+      {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
+      aria-hidden
+      pointerEvents="none"
+      testID={testID}
+    >
+      <Defs>
+        <Pattern
+          id={DASH_PATTERN_ID}
+          x="0"
+          y="0"
+          width={DASH_TILE_W}
+          height={DASH_TILE_H}
+          patternUnits="userSpaceOnUse"
+        >
+          {/* Centered horizontal dash within the tile */}
+          <Rect
+            x={(DASH_TILE_W - DASH_W) / 2}
+            y={(DASH_TILE_H - DASH_H) / 2}
+            width={DASH_W}
+            height={DASH_H}
+            fill={DASH_COLOR}
+          />
+        </Pattern>
+      </Defs>
+      <Rect
+        x="0"
+        y="0"
+        width={svgWidth}
+        height={svgHeight}
+        fill={`url(#${DASH_PATTERN_ID})`}
       />
     </Svg>
   );
@@ -226,13 +339,21 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
                 style={styles.barContainer}
                 {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
               >
+                {/* Working segment: horizontal-dash overlay for CVD (BLD-2713/BLD-2714) */}
                 <View
                   testID="pacing-seg-working"
                   style={[
                     styles.barSegment,
                     { flex: workingFrac, backgroundColor: segColors.working, borderTopLeftRadius: 4, borderBottomLeftRadius: 4 },
                   ]}
-                />
+                >
+                  {workingFrac > 0 && (
+                    <WorkingDashOverlay
+                      fill
+                      testID="pacing-seg-working-pattern"
+                    />
+                  )}
+                </View>
                 <View
                   testID="pacing-seg-rest"
                   style={[
@@ -259,9 +380,9 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
 
               {/* Labels */}
               <View style={styles.labelsRow}>
-                <LabelChip label="Working" value={workingLabel} color={segColors.working} textColor={colors.onSurface} showHatch={false} />
-                <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} />
-                <LabelChip label="Other" value={otherLabel} color={segColors.other} textColor={colors.onSurface} showHatch />
+                <LabelChip label="Working" value={workingLabel} color={segColors.working} textColor={colors.onSurface} showHatch={false} showDash />
+                <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} showDash={false} />
+                <LabelChip label="Other" value={otherLabel} color={segColors.other} textColor={colors.onSurface} showHatch showDash={false} />
               </View>
 
               <Text
@@ -296,22 +417,31 @@ function LabelChip({
   color,
   textColor,
   showHatch,
+  showDash,
 }: {
   label: string;
   value: string;
   color: string;
   textColor: string;
   showHatch: boolean;
+  showDash: boolean;
 }) {
   return (
     <View style={styles.labelChip}>
-      {/* Legend dot with optional dot/stipple overlay (BLD-1939, BLD-2725) */}
+      {/* Legend dot with optional CVD overlay (BLD-1939, BLD-2713/2714, BLD-2725) */}
       <View
         testID={`pacing-dot-${label.toLowerCase()}`}
         style={[styles.legendDot, { backgroundColor: color }]}
       >
         {showHatch && (
           <HatchOverlay
+            width={LEGEND_DOT_SIZE}
+            height={LEGEND_DOT_SIZE}
+            testID={`pacing-dot-${label.toLowerCase()}-pattern`}
+          />
+        )}
+        {showDash && (
+          <WorkingDashOverlay
             width={LEGEND_DOT_SIZE}
             height={LEGEND_DOT_SIZE}
             testID={`pacing-dot-${label.toLowerCase()}-pattern`}
