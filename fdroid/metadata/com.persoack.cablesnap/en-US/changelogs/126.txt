@@ -1,0 +1,3 @@
+- **Your completed sets are no longer lost when you leave and reopen an in-progress workout** — starting a new workout while another was still in progress could create a second, empty session, making your already-logged sets appear to reset. Starting a workout now detects an in-progress session and lets you resume it (or explicitly discard it before starting fresh), so finished sets are never silently dropped.
+- **The "Next" set suggestion now applies to every
+…see in-app release notes

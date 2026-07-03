@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.56 — 2026-07-03
+<!-- versionCode: 126 -->
+
 - **Your completed sets are no longer lost when you leave and reopen an in-progress workout** — starting a new workout while another was still in progress could create a second, empty session, making your already-logged sets appear to reset. Starting a workout now detects an in-progress session and lets you resume it (or explicitly discard it before starting fresh), so finished sets are never silently dropped.
 - **The "Next" set suggestion now applies to every remaining set** — tapping "Next" previously refused to fill sets it considered non-empty and treated a 0 weight or 0 reps as already filled. After you confirm, it now applies the suggested values to all not-yet-completed sets, overwriting existing values, instead of blocking with a "nothing to apply" notice.
 - **Send a test notification from Settings** — the Notifications settings now include a "Send test notification" button so you can confirm alerts actually reach your device. The notification options were also streamlined to the three that matter most, with sensible defaults applied to the rest.
