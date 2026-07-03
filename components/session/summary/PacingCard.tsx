@@ -11,9 +11,11 @@
  * in this file — enforced by source-contracts-batch.test.ts.
  * ⓘ disclosure copy is verbatim per AC§147 — locked by source-contracts.
  *
- * CVD accessibility (BLD-1939): The "Other" segment carries a diagonal hatch
+ * CVD accessibility (BLD-1939, BLD-2725): The "Other" segment carries a dot/stipple
  * overlay so it is distinguishable from "Working" under deuteranopia/protanopia.
- * The hatch is additive — full-colour appearance for sighted users is unchanged.
+ * Dots replaced diagonal stripes (BLD-2725) — stripes imply a disabled/unavailable
+ * state, dots do not carry that connotation while still providing a non-hue texture.
+ * The overlay is additive — full-colour appearance for sighted users is unchanged.
  */
 
 import { useState } from "react";
@@ -23,7 +25,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import Svg, { Defs, Line, Pattern, Rect } from "react-native-svg";
+import Svg, { Circle, Defs, Pattern, Rect } from "react-native-svg";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -45,19 +47,22 @@ function useSegmentColors() {
   };
 }
 
-// ─── Diagonal hatch overlay (BLD-1939 CVD fix) ───────────────────────────────
+// ─── Dot/stipple overlay (BLD-1939 CVD fix, BLD-2725 UX fix) ─────────────────
 //
-// Renders an SVG diagonal stripe pattern as an absolute-fill overlay.
+// Renders an SVG dot/stipple pattern as an absolute-fill overlay.
+// Replaced diagonal stripes (BLD-2725): stripes carry a 'disabled/unavailable'
+// visual connotation. Dots provide the same non-hue texture for CVD without
+// implying a disabled state.
 // The overlay is purely decorative: aria-hidden + accessibilityElementsHidden
 // so it does not pollute the a11y tree. pointerEvents="none" ensures taps
 // pass through to the parent Pressable.
 //
-// The hatch stroke colour is semi-transparent white so it works on both
+// The dot fill colour is semi-transparent white so it works on both
 // light and dark themes without hardcoding a specific shade.
 
 const HATCH_PATTERN_ID = "pacing-other-hatch";
-const HATCH_SIZE = 6;          // tile size in px
-const HATCH_STROKE_WIDTH = 1.5;
+const HATCH_SIZE = 6;          // tile size in px (dot spacing)
+const HATCH_DOT_RADIUS = 1.1;  // dot radius in px — subtle but visible
 const HATCH_STROKE_COLOR = "rgba(255,255,255,0.55)"; // semi-white for theme-agnostic contrast
 
 type HatchOverlayProps =
@@ -79,7 +84,7 @@ type HatchOverlayProps =
     };
 
 /**
- * HatchOverlay — decorative diagonal stripe fill.
+ * HatchOverlay — decorative dot/stipple fill (BLD-2725: replaced diagonal stripes).
  * Caller is responsible for positioning (absoluteFill or explicit dimensions).
  *
  * Two modes:
@@ -120,15 +125,12 @@ export function HatchOverlay({ fill, width, height, testID }: HatchOverlayProps)
           width={HATCH_SIZE}
           height={HATCH_SIZE}
           patternUnits="userSpaceOnUse"
-          patternTransform="rotate(45)"
         >
-          <Line
-            x1="0"
-            y1="0"
-            x2="0"
-            y2={HATCH_SIZE}
-            stroke={HATCH_STROKE_COLOR}
-            strokeWidth={HATCH_STROKE_WIDTH}
+          <Circle
+            cx={HATCH_SIZE / 2}
+            cy={HATCH_SIZE / 2}
+            r={HATCH_DOT_RADIUS}
+            fill={HATCH_STROKE_COLOR}
           />
         </Pattern>
       </Defs>
@@ -238,7 +240,7 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
                     { flex: restFrac, backgroundColor: segColors.rest },
                   ]}
                 />
-                {/* Other segment: hatch overlay for CVD (BLD-1939) */}
+                {/* Other segment: dot/stipple overlay for CVD (BLD-1939, BLD-2725) */}
                 <View
                   testID="pacing-seg-other"
                   style={[
@@ -303,7 +305,7 @@ function LabelChip({
 }) {
   return (
     <View style={styles.labelChip}>
-      {/* Legend dot with optional hatch overlay (BLD-1939) */}
+      {/* Legend dot with optional dot/stipple overlay (BLD-1939, BLD-2725) */}
       <View
         testID={`pacing-dot-${label.toLowerCase()}`}
         style={[styles.legendDot, { backgroundColor: color }]}
