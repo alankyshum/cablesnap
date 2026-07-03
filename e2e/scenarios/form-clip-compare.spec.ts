@@ -166,4 +166,60 @@ test.describe("@scenario form-clip-compare", () => {
       fullPage: true,
     });
   });
+
+  /**
+   * BLD-2741: Clip grid symmetric gutter assertion.
+   *
+   * Verifies that the left card's gap from the left screen edge equals the
+   * right card's gap from the right screen edge (within 2px tolerance).
+   * This is the headless proxy for the "right card flush to screen edge" visual
+   * regression that manifested under react-native-web@0.21 gap+flex:1.
+   */
+  test("clip grid gutters are symmetric — left edge inset equals right edge inset (BLD-2741)", async ({ page }) => {
+    await page.addInitScript((clips: { clipA: typeof clipA; clipB: typeof clipB }) => {
+      const w = window as unknown as Record<string, unknown>;
+      w.__SKIP_ONBOARDING__ = true;
+      w.__FORM_CLIPS_HARNESS__ = {
+        exerciseId: "ex-compare-1",
+        clips: [clips.clipA, clips.clipB],
+        recordTarget: null,
+        recordDisabledReason: "all_have_clips",
+      };
+    }, { clipA, clipB });
+
+    await page.goto("/__test__/form-clips");
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 15_000 });
+
+    // Wait for both thumbnail buttons to appear.
+    const thumbnails = page.getByRole("button", { name: /^Clip from / });
+    await expect(thumbnails).toHaveCount(2, { timeout: 5000 });
+
+    const viewportSize = page.viewportSize();
+    if (!viewportSize) throw new Error("Viewport size not available");
+    const { width: viewportWidth } = viewportSize;
+
+    // Get bounding boxes for left and right cards.
+    const leftBox = await thumbnails.nth(0).boundingBox();
+    const rightBox = await thumbnails.nth(1).boundingBox();
+
+    if (!leftBox || !rightBox) throw new Error("Could not get bounding boxes for clip thumbnails");
+
+    const leftInset = leftBox.x;
+    const rightInset = viewportWidth - (rightBox.x + rightBox.width);
+
+    // Both gutters must be equal within 2px tolerance (BLD-2741 fix).
+    expect(
+      Math.abs(leftInset - rightInset),
+      `Left inset (${leftInset.toFixed(1)}px) should equal right inset (${rightInset.toFixed(1)}px) within 2px — BLD-2741`,
+    ).toBeLessThanOrEqual(2);
+
+    // Both gutters should be positive (no card touching screen edge).
+    expect(leftInset, "Left card must not touch left screen edge").toBeGreaterThan(0);
+    expect(rightInset, "Right card must not touch right screen edge").toBeGreaterThan(0);
+
+    await page.screenshot({
+      path: path.join(OUT_DIR, "grid-symmetric-gutters.png"),
+      fullPage: true,
+    });
+  });
 });
