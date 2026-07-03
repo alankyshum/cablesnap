@@ -395,7 +395,7 @@ export default function Settings() {
               onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
               accessibilityRole="link"
               accessibilityLabel="Buy me a coffee"
-              style={{ marginTop: spacing.sm }}
+              style={{ marginTop: spacing.sm, minHeight: 48, justifyContent: 'center' }}
             >
               <Image
                 source={require('../../assets/badges/bmc-button.png')}
@@ -406,7 +406,7 @@ export default function Settings() {
               onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
               accessibilityRole="link"
               accessibilityLabel="Sponsor on thanks.dev"
-              style={{ marginTop: spacing.sm }}
+              style={{ marginTop: spacing.md, minHeight: 48, justifyContent: 'center' }}
             >
               <Image
                 source={require('../../assets/badges/thanks-dev-button.png')}
