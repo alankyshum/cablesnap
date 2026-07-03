@@ -113,6 +113,10 @@ export function makeMockThemeColors(scheme: ColorScheme = "light") {
     heatmapMid: t.heatmapMid,
     heatmapHigh: t.heatmapHigh,
     heatmapBorder: t.heatmapBorder,
+
+    // Workout-frequency heatmap accent (BLD-2719).
+    // Must be a blue/purple hue so the opacity ramp is CVD-safe.
+    heatmapFrequency: t.blue,
   };
 }
 
