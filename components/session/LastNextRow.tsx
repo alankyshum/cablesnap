@@ -10,12 +10,15 @@
  * - Tapping Last fires a confirm dialog → "Refill from last session?" →
  *   onPrefillLast (which fills empty sets only at the parent layer).
  * - Tapping Next fires a confirm dialog → "Apply suggested values?" with
- *   the count of empty sets and the values that will be applied.
+ *   the count of sets and the values that will be applied. On confirm the
+ *   suggestion is applied to ALL non-completed sets, OVERWRITING any existing
+ *   weight/reps (a 0 or blank value is not special-cased — the user already
+ *   consented via the confirm dialog).
  * - Trailing ⓘ on the Next half opens the SuggestionExplainerModal via
  *   onOpenExplainer; nested Pressable hit-target prevents the parent
  *   confirm from firing.
- * - When `emptyCount === 0` the apply confirm degrades to an "All sets are
- *   filled" notice with a single dismiss button.
+ * - When every set is already completed the apply confirm degrades to a
+ *   "Nothing to apply" notice with a single dismiss button.
  *
  * Confirms are RN's built-in `Alert.alert` per the approved plan. If
  * visual mismatch with the design system is reported, swap for the
@@ -31,7 +34,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "../../constants/design-tokens";
 import type { SetWithMeta } from "./types";
 import type { Suggestion } from "../../lib/rm";
-import { applyBreakThroughFill, type BreakThroughSuggestion } from "../../lib/plateau";
+import { type BreakThroughSuggestion } from "../../lib/plateau";
 import { toDisplay } from "../../lib/units";
 
 export type LastNextRowProps = {
@@ -85,42 +88,47 @@ function suggestedValueDescription(s: Suggestion): string {
   return `weight: ${s.weight}`;
 }
 
-/** Apply the Next suggestion to empty sets only — verbatim translation of
- *  the previous SuggestionChip fill loop, kept here so the confirm gate
- *  can wrap it. */
+/** Apply the Next suggestion to ALL non-completed sets, OVERWRITING any
+ *  existing value. The user has already consented via the confirm dialog, so
+ *  0/blank sets are not special-cased and populated sets are overridden too.
+ *  Completed sets are always left untouched (logged history is immutable). */
 function applyNextFill(
   s: Suggestion,
   sets: SetWithMeta[],
   onUpdate: (setId: string, field: "weight" | "reps", val: string) => void,
 ): void {
-  if (s.type === "rep_increase") {
-    for (const set of sets) {
-      if (!set.completed && (set.reps == null || set.reps === 0)) {
-        onUpdate(set.id, "reps", String(s.reps));
-      }
-    }
-  } else {
-    for (const set of sets) {
-      if (!set.completed && (set.weight == null || set.weight === 0)) {
-        onUpdate(set.id, "weight", String(s.weight));
-      }
+  const field: "weight" | "reps" = s.type === "rep_increase" ? "reps" : "weight";
+  const value = String(s.type === "rep_increase" ? s.reps : s.weight);
+  for (const set of sets) {
+    if (!set.completed) {
+      onUpdate(set.id, field, value);
     }
   }
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 }
 
-function countEmpty(s: Suggestion | BreakThroughSuggestion, sets: SetWithMeta[]): number {
-  if ("type" in s) {
-    // Suggestion (existing type)
-    if (s.type === "rep_increase") {
-      return sets.filter((x) => !x.completed && (x.reps == null || x.reps === 0)).length;
-    }
-    return sets.filter((x) => !x.completed && (x.weight == null || x.weight === 0)).length;
-  }
-  // BreakThroughSuggestion — fully-empty predicate
-  return sets.filter(
-    (x) => !x.completed && (x.weight == null || x.weight === 0) && (x.reps == null || x.reps === 0),
-  ).length;
+/** Count sets eligible for a suggestion apply: every non-completed set.
+ *  Completed sets are immutable (logged history); everything else is a valid
+ *  override target regardless of its current weight/reps value. */
+function countIncomplete(sets: SetWithMeta[]): number {
+  return sets.filter((x) => !x.completed).length;
+}
+
+/** Build override updates for the break-through path: apply the hint to ALL
+ *  non-completed sets, overwriting existing values. rep_plus_one preserves the
+ *  existing per-set weight (only the rep target changes). */
+function buildBreakThroughOverride(
+  suggestion: BreakThroughSuggestion,
+  sets: SetWithMeta[],
+): { id: string; weight: number | null; reps: number | null }[] {
+  if (suggestion.kind === "form_check") return [];
+  return sets
+    .filter((set) => !set.completed)
+    .map((set) =>
+      suggestion.kind === "rep_plus_one"
+        ? { id: set.id, weight: set.weight, reps: suggestion.reps }
+        : { id: set.id, weight: suggestion.weight, reps: suggestion.reps },
+    );
 }
 
 export function LastNextRow({
@@ -157,11 +165,11 @@ export function LastNextRow({
     // BLD-1122: if a plateau hint exists and we have an atomic apply callback,
     // use the break-through atomic path.
     if (plateauHint && onApplyBreakThrough && plateauHint.kind !== "form_check") {
-      const updates = applyBreakThroughFill(plateauHint, sets);
+      const updates = buildBreakThroughOverride(plateauHint, sets);
       if (updates.length === 0) {
         alertFn(
-          "All sets are filled",
-          "There are no empty sets to apply the suggestion to.",
+          "Nothing to apply",
+          "Every set is already completed.",
           [{ text: "OK", style: "cancel" }],
         );
         return;
@@ -172,7 +180,7 @@ export function LastNextRow({
           : `weight: ${toDisplay(plateauHint.weight, unit)} ${unit} × ${plateauHint.reps}`;
       alertFn(
         "Apply break-through suggestion?",
-        `Will fill ${updates.length} empty set${updates.length === 1 ? "" : "s"} with ${weightDesc}.`,
+        `Will apply ${weightDesc} to ${updates.length} set${updates.length === 1 ? "" : "s"}, overwriting existing values.`,
         [
           { text: "Cancel", style: "cancel" },
           { text: "Apply", onPress: () => { onApplyBreakThrough(updates); } },
@@ -182,11 +190,11 @@ export function LastNextRow({
     }
 
     if (!suggestion) return;
-    const emptyCount = countEmpty(suggestion, sets);
-    if (emptyCount === 0) {
+    const targetCount = countIncomplete(sets);
+    if (targetCount === 0) {
       alertFn(
-        "All sets are filled",
-        "There are no empty sets to apply the suggestion to. Existing values won't be overwritten.",
+        "Nothing to apply",
+        "Every set is already completed.",
         [{ text: "OK", style: "cancel" }],
       );
       return;
@@ -194,7 +202,7 @@ export function LastNextRow({
     const valueDesc = suggestedValueDescription(suggestion);
     alertFn(
       "Apply suggested values?",
-      `Will fill ${emptyCount} empty set${emptyCount === 1 ? "" : "s"} with ${valueDesc}. Existing values won't be overwritten.`,
+      `Will apply ${valueDesc} to ${targetCount} set${targetCount === 1 ? "" : "s"}, overwriting existing values.`,
       [
         { text: "Cancel", style: "cancel" },
         { text: "Apply", onPress: () => applyNextFill(suggestion, sets, onUpdate) },

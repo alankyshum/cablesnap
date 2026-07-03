@@ -14,9 +14,9 @@
  *     fires `onPrefillLast`, cancel is a no-op.
  *   - Tapping Next opens an "Apply suggested values?" Alert with the
  *     correct empty-set count + suggested value description; confirm
- *     fires per-set `onUpdate` calls for empty sets only; cancel is a
+ *     fires per-set `onUpdate` calls for ALL non-completed sets (override); cancel is a
  *     no-op.
- *   - Tapping Next when there are no empty sets degrades to an "All
+ *   - Tapping Next when every set is completed degrades to a "Nothing to apply"
  *     sets are filled" notice (single-button confirm).
  *   - Tapping the trailing ⓘ icon fires `onOpenExplainer` and does NOT
  *     fire the parent confirm dialog.
@@ -339,11 +339,11 @@ describe("LastNextRow (BLD-850)", () => {
   });
 
   describe("Next — apply confirm flow", () => {
-    it("opens 'Apply suggested values?' with the correct empty-set count", () => {
+    it("opens 'Apply suggested values?' counting ALL non-completed sets", () => {
       const sets = [
         mkSet({ id: "s1", weight: null, completed: false }),
         mkSet({ id: "s2", weight: 0, completed: false }),
-        mkSet({ id: "s3", weight: 22.5, completed: false }), // user-entered → preserved
+        mkSet({ id: "s3", weight: 22.5, completed: false }), // user-entered → will be overwritten
       ];
       const { getByTestId } = render(
         <LastNextRow
@@ -362,16 +362,16 @@ describe("LastNextRow (BLD-850)", () => {
       expect(alertSpy).toHaveBeenCalledTimes(1);
       const [title, body] = alertSpy.mock.calls[0];
       expect(title).toBe("Apply suggested values?");
-      expect(body).toContain("2 empty sets");
+      expect(body).toContain("3 sets");
       expect(body).toContain("weight: 27.5");
-      expect(body).toContain("Existing values won't be overwritten");
+      expect(body).toContain("overwriting existing values");
     });
 
-    it("calls onUpdate ONLY for empty sets when Apply is confirmed", () => {
+    it("overrides ALL non-completed sets (including populated) when Apply is confirmed", () => {
       const sets = [
         mkSet({ id: "s1", weight: null, completed: false }),
         mkSet({ id: "s2", weight: 0, completed: false }),
-        mkSet({ id: "s3", weight: 22.5, completed: false }), // preserved
+        mkSet({ id: "s3", weight: 22.5, completed: false }), // overwritten
         mkSet({ id: "s4", weight: null, completed: true }), // completed → preserved
       ];
       const onUpdate = jest.fn();
@@ -390,18 +390,18 @@ describe("LastNextRow (BLD-850)", () => {
       );
       fireEvent.press(getByTestId("next-half"));
       pressAlertButton(alertSpy, "Apply");
-      expect(onUpdate).toHaveBeenCalledTimes(2);
+      expect(onUpdate).toHaveBeenCalledTimes(3);
       expect(onUpdate).toHaveBeenCalledWith("s1", "weight", "27.5");
       expect(onUpdate).toHaveBeenCalledWith("s2", "weight", "27.5");
-      expect(onUpdate).not.toHaveBeenCalledWith("s3", expect.anything(), expect.anything());
+      expect(onUpdate).toHaveBeenCalledWith("s3", "weight", "27.5");
       expect(onUpdate).not.toHaveBeenCalledWith("s4", expect.anything(), expect.anything());
     });
 
-    it("uses 'reps' field for rep_increase suggestions and skips non-empty rep cells", () => {
+    it("uses 'reps' field for rep_increase suggestions and overrides non-empty rep cells", () => {
       const sets = [
         mkSet({ id: "s1", reps: null, completed: false }),
         mkSet({ id: "s2", reps: 0, completed: false }),
-        mkSet({ id: "s3", reps: 8, completed: false }), // preserved
+        mkSet({ id: "s3", reps: 8, completed: false }), // overwritten
       ];
       const onUpdate = jest.fn();
       const { getByTestId } = render(
@@ -419,9 +419,10 @@ describe("LastNextRow (BLD-850)", () => {
       );
       fireEvent.press(getByTestId("next-half"));
       pressAlertButton(alertSpy, "Apply");
-      expect(onUpdate).toHaveBeenCalledTimes(2);
+      expect(onUpdate).toHaveBeenCalledTimes(3);
       expect(onUpdate).toHaveBeenCalledWith("s1", "reps", "11");
       expect(onUpdate).toHaveBeenCalledWith("s2", "reps", "11");
+      expect(onUpdate).toHaveBeenCalledWith("s3", "reps", "11");
     });
 
     it("does NOT call onUpdate when the user cancels the confirm dialog", () => {
@@ -445,10 +446,10 @@ describe("LastNextRow (BLD-850)", () => {
       expect(onUpdate).not.toHaveBeenCalled();
     });
 
-    it("shows 'All sets are filled' notice when there are no empty sets", () => {
+    it("shows 'Nothing to apply' notice only when every set is already completed", () => {
       const sets = [
-        mkSet({ id: "s1", weight: 25, completed: false }),
-        mkSet({ id: "s2", weight: 25, completed: false }),
+        mkSet({ id: "s1", weight: 25, completed: true }),
+        mkSet({ id: "s2", weight: 25, completed: true }),
       ];
       const onUpdate = jest.fn();
       const { getByTestId } = render(
@@ -466,7 +467,7 @@ describe("LastNextRow (BLD-850)", () => {
       );
       fireEvent.press(getByTestId("next-half"));
       const [title, , buttons] = alertSpy.mock.calls[0];
-      expect(title).toBe("All sets are filled");
+      expect(title).toBe("Nothing to apply");
       // Single dismiss button only — no Apply.
       const buttonNames = (buttons as ButtonSpec[]).map((b) => b.text);
       expect(buttonNames).toEqual(["OK"]);
