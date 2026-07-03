@@ -3,9 +3,6 @@ import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
-// BLD-2674: shared float-safe step helper. Extracted so both NumericStepper
-// (goal forms) and SessionWeightStepper (session rows) use the same logic.
-import { stepWeight } from "@/lib/weight-step";
 
 type Props = {
   value: number;
@@ -20,17 +17,18 @@ export default function NumericStepper({ value, onValueChange, min, step, unit, 
   const colors = useThemeColors();
 
   const decrement = () => {
-    const next = stepWeight(value, step, -1, { min, max });
-    // Restore original >= min guard: stepWeight clamps to min, so explicitly
-    // re-check to preserve the same guard semantics as pre-refactor main.
-    if (next >= min && next !== value) onValueChange(next);
+    // BLD-2688: guard on the raw (pre-clamp) next value, matching original behavior
+    // (pre-BLD-2674). stepWeight clamps -1.5 to 0 for value=1 step=2.5 min=0, but
+    // the original code used if (next >= min) where next was the RAW computed value.
+    // Off-grid near-bound inputs (raw < min) must NOT fire onValueChange.
+    const rawNext = Math.round((value - step) * 10) / 10;
+    if (rawNext >= min) onValueChange(rawNext);
   };
 
   const increment = () => {
-    const next = stepWeight(value, step, 1, { min, max });
-    // Restore original <= max guard: stepWeight clamps to max, so explicitly
-    // re-check to preserve the same guard semantics as pre-refactor main.
-    if (next <= max && next !== value) onValueChange(next);
+    // Same pattern: guard on raw next, not clamped next.
+    const rawNext = Math.round((value + step) * 10) / 10;
+    if (rawNext <= max) onValueChange(rawNext);
   };
 
   return (

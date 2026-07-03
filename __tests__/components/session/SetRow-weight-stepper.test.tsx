@@ -641,52 +641,50 @@ describe("NumericStepper — stepWeight refactor characterization (BLD-2674)", (
     expect(onValueChange).toHaveBeenCalledTimes(1);
   });
 
-  // ── At-bound: next === value after stepWeight clamps → no call ────────────
+  // ── At-bound: button is disabled, no call ────────────────────────────────
 
-  it("decrement at min: value=0, step=2.5, min=0 → onValueChange NOT called (next===value)", () => {
+  it("decrement at min: value=0, step=2.5, min=0 → onValueChange NOT called (button disabled)", () => {
     const onValueChange = jest.fn();
     const { getByLabelText } = render(
       <NumericStepper value={0} onValueChange={onValueChange} min={0} step={2.5} unit="kg" />,
     );
     // Button is disabled (value <= min). Even if fireEvent bypasses disabled:
-    // stepWeight(0, 2.5, -1, {min:0}) = 0; guard: 0 >= 0 && 0 !== 0 → false → NO CALL
+    // rawNext = 0 - 2.5 = -2.5; guard: -2.5 >= 0 → false → NO CALL
     fireEvent.press(getByLabelText("Decrease by 2.5"));
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
-  it("increment at max: value=500, step=5, max=500 → onValueChange NOT called (next===value)", () => {
+  it("increment at max: value=500, step=5, max=500 → onValueChange NOT called (button disabled)", () => {
     const onValueChange = jest.fn();
     const { getByLabelText } = render(
       <NumericStepper value={500} onValueChange={onValueChange} min={0} step={5} unit="kg" max={500} />,
     );
     // Button is disabled (value >= max). Even if fireEvent bypasses disabled:
-    // stepWeight(500, 5, 1, {max:500}) = 500; guard: 500 <= 500 && 500 !== 500 → false → NO CALL
+    // rawNext = 500 + 5 = 505; guard: 505 <= 500 → false → NO CALL
     fireEvent.press(getByLabelText("Increase by 5"));
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
-  // ── Near-bound clamping fires with clamped value ──────────────────────────
+  // ── Near-bound off-grid: raw step out-of-bounds → NO callback ────────────
 
-  it("decrement near-min: value=1, step=2.5, min=0 → onValueChange(0) (stepWeight clamps; guard 0>=0 passes)", () => {
+  it("decrement near-min: value=1, step=2.5, min=0 → NO callback (raw -1.5 < 0; BLD-2688)", () => {
     const onValueChange = jest.fn();
     const { getByLabelText } = render(
       <NumericStepper value={1} onValueChange={onValueChange} min={0} step={2.5} unit="kg" />,
     );
-    // Button NOT disabled (1 > 0).
-    // stepWeight(1, 2.5, -1, {min:0}) = 0 (clamps -1.5 to 0); 0 >= 0 && 0 !== 1 → fires
+    // Button NOT disabled (1 > 0). But raw next = 1 - 2.5 = -1.5 < min=0 → guard blocks.
+    // BLD-2688: restored original pre-BLD-2674 guard: check rawNext >= min, not clamped next.
     fireEvent.press(getByLabelText("Decrease by 2.5"));
-    expect(onValueChange).toHaveBeenCalledWith(0);
-    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).not.toHaveBeenCalled();
   });
 
-  it("increment near-max: value=498, step=5, max=500 → onValueChange(500) (stepWeight clamps; guard 500<=500 passes)", () => {
+  it("increment near-max: value=498, step=5, max=500 → NO callback (raw 503 > 500; BLD-2688)", () => {
     const onValueChange = jest.fn();
     const { getByLabelText } = render(
       <NumericStepper value={498} onValueChange={onValueChange} min={0} step={5} unit="kg" max={500} />,
     );
-    // stepWeight(498, 5, 1, {max:500}) = 500 (clamps 503 to 500); 500 <= 500 && 500 !== 498 → fires
+    // Button NOT disabled (498 < 500). But raw next = 498 + 5 = 503 > max=500 → guard blocks.
     fireEvent.press(getByLabelText("Increase by 5"));
-    expect(onValueChange).toHaveBeenCalledWith(500);
-    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).not.toHaveBeenCalled();
   });
 });
