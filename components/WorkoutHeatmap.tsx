@@ -65,29 +65,40 @@ function formatDateKey(date: Date): string {
  * collapsed to near-identical golden-brown tones under deuteranopia (red-green
  * CVD), affecting ~6 % of males. Adjacent steps now maintain ≥ 1.5:1 luminance
  * contrast ratio. Numeric labels (BLD-732) remain the primary non-color cue.
+ *
+ * BLD-2719: Switched from `primary` (Electric Coral, #FF6038) to
+ * `heatmapFrequency` (blue, #007AFF). The coral hue is carried by the
+ * red-green channel and collapses to near-uniform grey-olive under
+ * deuteranopia emulation, making steps 1 and 2 indistinguishable from
+ * empty cells. Blue is perceived by the blue (S-cone) channel which is
+ * unaffected by red-green CVD, retaining distinct luminance steps.
  */
 function heatmapColor(
   count: number,
-  colors: { surfaceVariant: string; primary: string }
+  colors: { surfaceVariant: string; heatmapFrequency: string }
 ): string {
   if (count === 0) return colors.surfaceVariant;
-  if (count === 1) return withOpacity(colors.primary, 0.15);
-  if (count === 2) return withOpacity(colors.primary, 0.55);
-  return colors.primary;
+  if (count === 1) return withOpacity(colors.heatmapFrequency, 0.15);
+  if (count === 2) return withOpacity(colors.heatmapFrequency, 0.55);
+  return colors.heatmapFrequency;
 }
 
 /**
  * Foreground color for the numeric label inside a filled heatmap cell.
  *
- * Step 1 uses a tinted background that is too light to support white text,
- * so we render the count in `onPrimaryContainer` (dark accent foreground)
- * for the lowest step and `onPrimary` for the higher (saturated) steps.
+ * BLD-2719: Updated for the blue heatmapFrequency token.
+ * - Step 1 (15% opacity blue): very light tint, needs dark text → onSurface
+ * - Step 2+ (55–100% blue): saturated blue, needs white text → onSecondary
+ *
+ * Step 1 uses onSurface (dark foreground) rather than onPrimaryContainer
+ * because onPrimaryContainer was tuned for the coral accent palette and
+ * renders a dark-brown on light mode that clashes with blue tints.
  */
 function heatmapTextColor(
   count: number,
-  colors: { onPrimary: string; onPrimaryContainer: string }
+  colors: { onSecondary: string; onSurface: string }
 ): string {
-  return count <= 1 ? colors.onPrimaryContainer : colors.onPrimary;
+  return count <= 1 ? colors.onSurface : colors.onSecondary;
 }
 
 type CellData = {
