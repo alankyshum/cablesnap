@@ -23,7 +23,7 @@ export default function SessionDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     session, groups, prs, rating, notesText, setNotesText,
-    notesExpanded, setNotesExpanded, templateModalVisible, templateName,
+    templateModalVisible, templateName,
     setTemplateName, completedSetCount, saving, linkIds, palette,
     volume, completedSets, handleRatingChange, handleNotesSave,
     handleSaveAsTemplate, handleRepeatWorkout, openTemplateModal,
@@ -120,8 +120,6 @@ export default function SessionDetail() {
                 onRatingChange={handleRatingChange}
                 notesText={notesText}
                 onNotesChange={setNotesText}
-                notesExpanded={notesExpanded}
-                onToggleNotes={() => setNotesExpanded(!notesExpanded)}
                 onNotesSave={handleNotesSave}
                 colors={colors}
               />
