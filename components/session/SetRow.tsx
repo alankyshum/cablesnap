@@ -50,6 +50,7 @@ import { SetTimerCell } from "./SetTimerCell";
 import { StackMarkerHint } from "./StackMarkerHint";
 import type { StackWithCalibrations } from "@/hooks/useActiveCalibration";
 import { MiniSetEditor } from "./MiniSetEditor";
+import { SessionWeightStepper } from "./SessionWeightStepper";
 
 const SWIPE_COMPLETE_HINT_KEY = "hint:swipe-complete-set:v1";
 
@@ -322,6 +323,29 @@ export const SetRow = memo(function SetRow({
   // Mirrors SetWeightCell's gate (isCable && no calibrations on any stack).
   const hasCalibration = stacksProp.some((s) => s.calibrations.length > 0);
   const showStackMarkerHint = isCable && !hasCalibration;
+
+  // BLD-2674: Quick Weight Stepper gate.
+  //
+  // Show the stepper footer for Case C rows ONLY (plain numeric weight).
+  // Gating rules (from PLAN-BLD-2674 rev 3, APPROVED):
+  //   Case A (StackMarkerPill): no stepper (handled inside SetWeightCell routing,
+  //     which this gate never sees, but also guarded: isBodyweight=false here)
+  //   Case B (cable + calibrated + manual/legacy): SUPPRESS — the ↕ marker path
+  //     is primary; we must not stack WeightPicker + ↕ + − + + in narrow pickerCol
+  //     (TL required condition (b))
+  //   Case C (plain numeric weight): stepper renders
+  //   Completed Case C + RPE: SUPPRESS (option B from plan) — the 96dp budget is
+  //     consumed by main+standalone-RPE+PlateHint; adding a stepper band breaches it
+  //     (TL required condition (d))
+  //   Bodyweight: no stepper (isBodyweight guard + pickerCol renders BodyweightModifierChip)
+  //   Duration: no stepper (weight irrelevant)
+  const isCaseBRow = isCable && hasCalibration; // manual/legacy cable row
+  const isCompletedWithRpe = set.completed && captureRpe;
+  const showWeightStepper =
+    !isBodyweight &&
+    !isCaseBRow &&
+    !isDurationMode &&
+    !isCompletedWithRpe;
 
   const handleMarkerConfirm = useCallback(
     (result: { stackId: string; stackName: string; marker: number; trueWeight: number; unit: string }) => {
@@ -609,6 +633,28 @@ export const SetRow = memo(function SetRow({
           </Pressable>
         </View>
       </SwipeRowAction>
+
+      {/*
+        BLD-2674: Quick Weight Stepper — compact full-width footer-row stepper.
+        Rendered as a sibling below the main set row (BLD-1841 pattern, same
+        topology as StackMarkerHint at :649 and the cable variant footer at :669).
+        Gating: Case C rows only (plain numeric weight). Suppressed for:
+          - bodyweight rows (isBodyweight)
+          - Case B rows (cable + calibrated manual/legacy: isCaseBRow)
+          - duration/time rows (isDurationMode)
+          - completed Case C rows with RPE capture on (isCompletedWithRpe —
+            the 96dp height budget is already consumed; TL condition (d), plan rev 3)
+        The center editable WeightPicker stays in pickerCol on the main row, untouched.
+      */}
+      {showWeightStepper && (
+        <SessionWeightStepper
+          displayedWeight={displayedWeight}
+          step={step}
+          unit={unit}
+          onValueChange={onWeightChange}
+          testID={`set-${set.set_number}-weight-stepper`}
+        />
+      )}
 
       {/*
         BLD-1841: uncalibrated-cable stack-marker hint. Previously rendered
