@@ -153,11 +153,10 @@ describe("CalendarGrid dot indicator size (BLD-2747)", () => {
   let dotStyles: FlatStyle[] = [];
   let dotCount = 0;
   let badgeCount = 0;
-  let badgeText: string | undefined;
 
   beforeAll(() => {
     const { StyleSheet, View } = require("react-native");
-    const { UNSAFE_getAllByType, queryByText, unmount } = render(
+    const { UNSAFE_getAllByType, unmount } = render(
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <CalendarHarness cellSize={48} dotMap={dotMap} />
@@ -177,13 +176,6 @@ describe("CalendarGrid dot indicator size (BLD-2747)", () => {
       .map((v) => StyleSheet.flatten(v.props.style) as FlatStyle | null)
       .filter((s): s is FlatStyle => s != null && (s as { minWidth?: number }).minWidth === 18 && s.height === 18);
     badgeCount = badgeViews.length;
-
-    // Try to find the badge text node "3" — the count badge renders {count} as a Text child.
-    // Use queryByText so we don't throw if it's not present.
-    try {
-      const node = queryByText("3");
-      badgeText = node ? (node.children[0] as string) : undefined;
-    } catch { badgeText = undefined; }
 
     unmount();
   });
@@ -221,7 +213,7 @@ describe("CalendarGrid dot indicator size (BLD-2747)", () => {
         </ToastProvider>
       </QueryClientProvider>
     );
-    const allViews = UNSAFE_getAllByType(View) as ViewNode[];
+    const allViews = UNSAFE_getAllByType(View) as Array<{ props: { style?: unknown } }>;
     const emptyDotViews = allViews.filter((v) => {
       const s = StyleSheet.flatten(v.props.style) as { width?: number; height?: number } | null;
       return s != null && s.width === 7 && s.height === 7;
