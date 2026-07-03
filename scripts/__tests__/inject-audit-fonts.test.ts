@@ -40,6 +40,25 @@
  *         readyState="loading", the emitted loader does NOT un-park until
  *         DOMContentLoaded fires, then un-parks exactly the entry bundle.
  *
+ * BLD-2744 — the same fontless container also blanks every
+ * @expo/vector-icons MaterialCommunityIcons glyph (icon renders <Text/> until
+ * fontfaceobserver resolves, and on Chromium that observer polls
+ * document.fonts.load('… "material-community"') which only matches a loaded
+ * FontFace). So the injector also eager-loads the bundled icon font:
+ *   AC-L. The injected loader registers a FontFace under the CSS family
+ *         `material-community` (the createIconSet name — NOT the ttf filename
+ *         `MaterialCommunityIcons`) with the ttf inlined as a data-URI, and
+ *         adds it to document.fonts inside the same document.fonts.ready gate.
+ *   AC-M. The icon ttf is resolved by GLOB (content-hashed basename), never a
+ *         hardcoded hash — a fixture ttf named `MaterialCommunityIcons.<hash>`
+ *         is still found and inlined.
+ *   AC-N. A dist missing the bundled icon ttf hard-errors (non-zero exit,
+ *         actionable message) and leaves dist/index.html untouched (no marker)
+ *         — mirroring the no-entry-bundle policy.
+ *   AC-O. Behavioral proof: the emitted loader adds the `material-community`
+ *         icon face to document.fonts (alongside the text families) before it
+ *         un-parks the entry bundle.
+ *
  * Strategy mirrors daily-audit-set-e-ordering.test.ts: drive the REAL script
  * via spawnSync against temp fixtures, assert on exit code + emitted HTML.
  */
@@ -50,7 +69,38 @@ import * as path from "node:path";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const INJECTOR = path.join(REPO_ROOT, "scripts", "inject-audit-fonts.mjs");
+// The injector's own source — asserted against in AC-M to prove the icon ttf
+// hash is resolved by glob at runtime, never hardcoded in the script.
+const INJECTOR_SOURCE = fs.readFileSync(INJECTOR, "utf8");
 const FONT_ASSET = path.join(REPO_ROOT, "e2e", "assets", "fonts", "audit-latin.woff2");
+// The app's OWN bundled MaterialCommunityIcons ttf. `expo export` emits a
+// content-hashed copy under dist/assets/**; the injector must resolve it by
+// GLOB (never a hardcoded hash) and eager-load it under the CSS family
+// `material-community` so @expo/vector-icons glyphs paint (BLD-2744).
+const MCI_TTF_SRC = path.join(
+  REPO_ROOT,
+  "node_modules",
+  "@expo",
+  "vector-icons",
+  "build",
+  "vendor",
+  "react-native-vector-icons",
+  "Fonts",
+  "MaterialCommunityIcons.ttf",
+);
+// Where the injector globs for it inside a dist. A content hash is baked into
+// the basename to prove the resolver does not depend on a fixed name.
+const MCI_TTF_DIST_REL = path.join(
+  "assets",
+  "node_modules",
+  "@expo",
+  "vector-icons",
+  "build",
+  "vendor",
+  "react-native-vector-icons",
+  "Fonts",
+  "MaterialCommunityIcons.deadbeefdeadbeefdeadbeefdeadbeef.ttf",
+);
 
 // A minimal dist/index.html shaped like expo's output: entry bundle sits in
 // <body> after </head>, so any <head> injection precedes it.
@@ -75,9 +125,21 @@ interface RunResult {
   combined: string;
 }
 
-function makeDist(): string {
+// Write the bundled MCI ttf into a dist under a content-hashed name so the
+// injector's glob resolver is exercised realistically. Skips silently only if
+// the source ttf is somehow absent (it ships with @expo/vector-icons).
+function writeIconTtf(distDir: string): void {
+  const dest = path.join(distDir, MCI_TTF_DIST_REL);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(MCI_TTF_SRC, dest);
+}
+
+function makeDist(opts: { withIconTtf?: boolean } = {}): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bld-2586-inject-"));
   fs.writeFileSync(path.join(dir, "index.html"), FIXTURE_HTML, "utf8");
+  // By default include the icon ttf so injection succeeds (the injector
+  // hard-errors when it is missing — asserted separately in AC-N).
+  if (opts.withIconTtf !== false) writeIconTtf(dir);
   return dir;
 }
 
@@ -414,16 +476,167 @@ describe("inject-audit-fonts.mjs — BLD-2586 fontless-container text fix", () =
     }
   });
 
+  // BLD-2744 — icon-font eager-load. @expo/vector-icons renders a blank <Text/>
+  // until fontfaceobserver resolves; on Chromium that observer polls
+  // document.fonts.load('… "material-community"'), which only matches once a
+  // loaded FontFace under that family exists. So the injector must register the
+  // icon FontFace under the createIconSet family name `material-community`
+  // (NOT the ttf filename) and gate the entry bundle on it.
+  it("AC-L: registers a FontFace under the CSS family 'material-community' (not the ttf filename) inside the fonts.ready gate", () => {
+    const dist = makeDist();
+    try {
+      const r = runInjector(dist);
+      expect(r.status).toBe(0);
+      const html = readIndex(dist);
+      const loader = html.match(
+        /<script id="audit-font-loader">([\s\S]*?)<\/script>/,
+      )![1];
+
+      // The icon family must be the createIconSet NAME, which is what RNW sets
+      // as `font-family`. Registering under the ttf FILENAME would never match.
+      expect(loader).toContain('"material-community"');
+      expect(loader).not.toContain('"MaterialCommunityIcons"');
+
+      // The icon ttf is inlined as a data-URI and registered via the FontFace
+      // constructor (a CSS @font-face throws NetworkError on document.fonts.load
+      // in the fontless headless config — the whole reason for the ctor path).
+      expect(loader).toContain("data:font/ttf;base64,");
+      expect(loader).toContain('format("truetype")');
+      expect(loader).toContain("new FontFace(pair[0]");
+      // …and it is added to document.fonts (so the observer's load() matches).
+      expect(loader).toContain("document.fonts.add");
+
+      // Crucially the icon loads are part of the SAME promise set that gates the
+      // entry bundle on document.fonts.ready (they are pushed onto `loads`).
+      expect(loader).toContain("loads.push");
+      expect(loader).toContain("Promise.all(loads)");
+      expect(loader).toContain("document.fonts.ready");
+    } finally {
+      cleanup(dist);
+    }
+  });
+
+  it("AC-M: resolves the icon ttf by GLOB (content-hashed basename), never a hardcoded hash", () => {
+    // The fixture writes MaterialCommunityIcons.<hash>.ttf; the injector must
+    // find it by pattern, inline its bytes, and NOT depend on any fixed hash.
+    const dist = makeDist();
+    try {
+      const r = runInjector(dist);
+      expect(r.status).toBe(0);
+      const html = readIndex(dist);
+
+      // The exact bytes of the bundled ttf must be inlined (base64), proving the
+      // glob resolved the real hashed file rather than emitting an empty/dummy.
+      const expectedB64 = fs.readFileSync(MCI_TTF_SRC).toString("base64");
+      expect(html).toContain(expectedB64);
+
+      // The hashed basename must NOT appear literally in the SCRIPT source — the
+      // resolver globs, it does not hardcode the hash.
+      expect(INJECTOR_SOURCE).not.toContain("deadbeefdeadbeefdeadbeefdeadbeef");
+      // Only the un-hashed logical name may appear (as the glob target).
+      expect(INJECTOR_SOURCE).toContain("MaterialCommunityIcons");
+    } finally {
+      cleanup(dist);
+    }
+  });
+
+  it("AC-N: hard-errors when the bundled icon ttf is missing (no silent icon-blank build)", () => {
+    // A dist with an entry bundle but NO MaterialCommunityIcons ttf under
+    // assets/** must fail loudly — otherwise we'd emit an audit build that
+    // re-blanks every icon (the exact bug this fixes).
+    const dist = makeDist({ withIconTtf: false });
+    try {
+      const r = runInjector(dist);
+      expect(r.status).not.toBe(0);
+      expect(r.combined).toMatch(/icon font MaterialCommunityIcons.*not found/i);
+      // dist/index.html left untouched (no marker) on this failure.
+      expect(readIndex(dist)).not.toContain("audit-font-inject:BLD-2586");
+    } finally {
+      cleanup(dist);
+    }
+  });
+
+  it("AC-O: emitted loader adds the 'material-community' icon face (with the text families) before un-parking", () => {
+    // Behavioral proof (not just source-shape): run the real emitted loader in a
+    // DOM shim with synchronous-resolving FontFaces. Assert the icon family is
+    // among the faces added to document.fonts, and that un-parking still waits
+    // for DOMContentLoaded (the DOM gate must not regress).
+    const dist = makeDist();
+    try {
+      runInjector(dist);
+      const html = readIndex(dist);
+      const loaderSrc = html.match(
+        /<script id="audit-font-loader">([\s\S]*?)<\/script>/,
+      )![1];
+
+      const harness = `
+        const added = [];
+        const appended = [];
+        let readyState = "loading";
+        const dcl = [];
+        let parkedTag = null;
+        global.document = {
+          get readyState() { return readyState; },
+          fonts: {
+            _ready: Promise.resolve(),
+            get ready() { return this._ready; },
+            add(f) { added.push(f && f.__fam); },
+          },
+          addEventListener(type, cb) { if (type === "DOMContentLoaded") dcl.push(cb); },
+          querySelectorAll(sel) {
+            return (sel.includes("x-audit-parked-entry") && parkedTag) ? [parkedTag] : [];
+          },
+          createElement() { return { src: "", async: true, crossOrigin: "" }; },
+          head: { appendChild(el) { appended.push(el.src); } },
+        };
+        global.FontFace = function (fam) {
+          return { __fam: fam, load() { return Promise.resolve({ __fam: fam }); } };
+        };
+        ${loaderSrc}
+        setTimeout(() => {
+          const early = appended.length;
+          parkedTag = {
+            getAttribute: (k) => (k === "data-audit-entry-src" ? "/_expo/static/js/web/entry-abc.js" : null),
+            crossOrigin: "",
+          };
+          readyState = "interactive";
+          dcl.forEach((cb) => cb());
+          setTimeout(() => {
+            const hasIcon = added.includes("material-community");
+            const hasText = added.includes("Roboto");
+            if (early !== 0) { console.error("FAIL: un-parked before DCL"); process.exit(3); }
+            if (!hasIcon) { console.error("FAIL: icon face not added:", JSON.stringify(added)); process.exit(4); }
+            if (!hasText) { console.error("FAIL: text face not added:", JSON.stringify(added)); process.exit(5); }
+            if (appended.length !== 1 || appended[0] !== "/_expo/static/js/web/entry-abc.js") {
+              console.error("FAIL: entry not un-parked after DCL:", JSON.stringify(appended)); process.exit(6);
+            }
+            console.log("OK");
+          }, 0);
+        }, 0);
+      `;
+      const tmp = path.join(dist, "icon-loader-harness.mjs");
+      fs.writeFileSync(tmp, harness, "utf8");
+      const r = spawnSync("node", [tmp], { encoding: "utf8", timeout: 30_000 });
+      expect(r.stderr + r.stdout).toContain("OK");
+      expect(r.status).toBe(0);
+    } finally {
+      cleanup(dist);
+    }
+  });
+
   it("AC-i: hard-errors when no expo entry bundle is present (no silent no-fix)", () => {
     // A dist/index.html with fonts injected but NO entry bundle to gate would
     // mean the fonts race nothing / RNW is never gated — that must fail loudly
-    // rather than emit a build that silently reproduces the 0x0 bug.
+    // rather than emit a build that silently reproduces the 0x0 bug. The icon
+    // ttf IS present so we reach the entry-bundle check (the missing-icon-ttf
+    // hard error is asserted separately in AC-N).
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bld-2586-noentry-"));
     fs.writeFileSync(
       path.join(dir, "index.html"),
       `<!DOCTYPE html><html><head><title>x</title></head><body><div id="root"></div></body></html>`,
       "utf8",
     );
+    writeIconTtf(dir);
     try {
       const r = runInjector(dir);
       expect(r.status).not.toBe(0);
