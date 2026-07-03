@@ -192,6 +192,7 @@ Common failure patterns and fixes:
 - **Horizontal overflow:** Element wider than viewport — check `width`, `paddingHorizontal`, or `FlatList` horizontal scroll
 - **Edge padding missing:** Content text/inputs flush against viewport edge (< 8px inset) — add `contentContainerStyle={{ padding: 16 }}` to FlashList/FlatList or `padding: spacing.base` to the container View. Common on tool screens using FlashList without `contentContainerStyle`.
 - **Content too wide on tablet:** Content stretches edge-to-edge on 768px+ viewports — add `maxWidth: 720, alignSelf: 'center'` or use a constrained container wrapper
+- **Tablet lists stuck in 1 column (parent Masonry nesting):** Lists (like Templates/Programs) nested inside a parent page-level `Masonry` are trapped in a single column — place them outside the parent `Masonry` so their internal responsive grid can flow full-width across the entire screen
 
 ### Step 4: Output Findings
 
@@ -213,6 +214,17 @@ const id = uuid();
 
 ### No `Alert.alert()` on cross-platform screens — use `confirmAction()` from `lib/confirm.ts`
 `Alert.alert()` silently does nothing on web. Use `confirmAction()` which falls back to `window.confirm()` on web.
+
+### Use `react-native-gesture-handler` scrollables with gesture/swipe rows
+When a component uses `SwipeRowAction` (or other react-native-gesture-handler pan/swipe gesture-wrapping elements) inside a list, you **MUST** import `FlatList`, `ScrollView`, and other scroll containers from `react-native-gesture-handler` instead of `react-native`.
+A plain `react-native` FlatList is not registered with RNGH, causing the vertical gesture hand-off to intermittently fail on Android, which blocks vertical scrolling when the drag starts on a row.
+```ts
+// BAD
+import { FlatList } from "react-native";
+
+// GOOD
+import { FlatList } from "react-native-gesture-handler";
+```
 
 ## Exempt Files
 
