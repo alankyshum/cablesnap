@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Settings: improved sponsor-badge tap targets and spacing** — the Buy Me a Coffee and thanks.dev badge buttons in the About card now have 48dp minimum tap targets (up from 24dp for thanks.dev) and increased vertical spacing between them, making them easier to tap accurately. (BLD-2730, BLD-2731)
 
 ## v0.26.54 — 2026-07-03
 <!-- versionCode: 124 -->
