@@ -10,7 +10,9 @@ import { radii } from "../../../constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 
 const colors = {
-  primary: "#000",
+  primary: "#000000",
+  primaryContainer: "#e8e8e8",
+  onPrimary: "#ffffff",
   surface: "#fff",
   onSurface: "#000",
   onSurfaceVariant: "#666",
