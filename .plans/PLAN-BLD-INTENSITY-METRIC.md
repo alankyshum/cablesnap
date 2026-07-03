@@ -1,209 +1,229 @@
-# Feature Plan: Intensity Metric Choice — log by RIR or RPE
+# Feature Plan: Intensity Metric Choice — Log by RIR or RPE
 
-**Issue**: BLD-2699 (parent product-evolution issue: BLD-2698)
-**Author**: CEO
-**Date**: 2026-07-03
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Issue**: BLD-2699  **Author**: CEO  **Date**: 2026-07-03
+**Status**: IN_REVIEW
+**Parent**: BLD-2698 (Product evolution) — sourced from daily research
 
-## Research Source
-
-- **Origin:** Daily product-evolution research on BLD-2698. Reddit/community synthesis via `search-web.py` across r/fitness, r/naturalbodybuilding, r/weightlifting, r/strongapp, plus competitor-gap analysis (Strong/Hevy/Fitbod/Boostcamp/Liftosaur) — 2025–2026 threads.
-- **Pain point observed:** Serious lifters increasingly program and autoregulate with **RIR (reps in reserve)** — "2 RIR", "leave 1 in the tank" — especially for hypertrophy and accessory/back-off work (Renaissance Periodization, many popular programs). They **do not consider RIR and RPE fully interchangeable in practice**: RIR is regarded as more precise in the 8–16 rep range and for accessories, while RPE captures holistic effort for top/heavy singles. Many lifters "want both mentally" — they think in RIR for back-off sets and RPE for top sets. Direct user-voice examples from the research:
-  - *"I program everything in RIR. Every app makes me do the RPE→RIR math in my head. RPE 8 is 2 RIR, whatever — just let me log the number my program tells me."*
-  - *"RIR and RPE aren't the same thing to me. I'll take RPE for my top single and RIR for my back-offs. No tracker lets me mix them."*
-- **Frequency:** Recurring, not a one-off. RIR/RPE autoregulation is described as *the* primary intensity-tracking standard for modern programs in multiple 2026 "best tracker" threads. No single Reddit thread ranks it #1 as a missing feature (many trackers *have* RPE), but the specific gap — **"let me log in RIR, not just RPE"** — is a repeated, concrete complaint. CableSnap today has RPE only; **RIR is entirely absent** from the codebase (verified: zero matches for `rir`/`RIR`/`reps_in_reserve`).
-- **Adjacent precedent:** CableSnap already ships a mature RPE subsystem (`lib/rpe.ts`, `components/session/RpeChipStrip.tsx`, `RpeSheet.tsx`, `workout_sets.rpe` column, adaptive-rest RPE buckets in `lib/rest.ts`). This plan **extends** that subsystem with a display/input vocabulary, rather than adding a new per-set data dimension. It follows the "let the user speak their own language" theme of prior smart-defaults work.
-
-## Goal Alignment (transparency note)
-
-The prior product goals *Fluent UX* and *Gamify fitness* are `cancelled`; *Frictionless workout tracking for cable & bodyweight enthusiasts* is marked `achieved`. The active company goal is `e4fa9312-…` — *Internal development productivity and engineering infrastructure*.
-
-This proposal is deliberately framed to fit the active goal **and** the achieved product north star:
-
-- **Frictionless-UX alignment (achieved goal's north star):** it removes an in-head unit-conversion tax (RPE↔RIR math) on every intensity-logged set for RIR-programmed lifters — squarely "smart defaults / minimal cognitive load."
-- **Engineering-quality alignment (active goal):** the implementation is a small, well-isolated pure-function layer over an existing column with a typed `app_settings` accessor and a single source of truth for the RPE↔RIR mapping. It **adds no schema migration** and **no new per-set data**, so it increases code without increasing data-model risk. It is a low-blast-radius change with a high unit-test surface — the kind of confidence-preserving increment the active goal favors.
-
-If the board would prefer to park product work until a new user-product goal is set, this plan can be moved to `backlog` after review with zero implementation cost sunk.
-
-## Behavior-Design Classification (MANDATORY)
-
-- [ ] **YES**
-- [x] **NO** — purely functional. This is an intensity-**measurement vocabulary** preference. It contains no streaks, no rewards, no notifications, no onboarding hooks, no leaderboard/social, no habit loops, no goal-commitments, no motivational/loss-framing copy, no re-engagement of lapsed users, and no motivational progress visualizations. RIR and RPE are neutral training instruments describing proximity to momentary muscular failure. Displaying "2 RIR" instead of "RPE 8" does not shape behavior; it relabels an existing measurement.
-
-Psychologist review: **N/A** (Classification = NO). Per §3.2, the CEO will still tag `@psychologist` for a one-line scoping confirmation that this is not behavior design, but implementation is not gated on it.
+---
 
 ## Problem Statement
 
-CableSnap lets a lifter rate each set's intensity on the **RPE (Rate of Perceived Exertion) 6–10** scale. That is the correct, well-built default. But a large and growing segment of serious lifters — particularly hypertrophy-focused and Renaissance-Periodization-influenced trainees — program and think in **RIR (Reps In Reserve)**: "do this set with 2 reps in reserve."
+CableSnap logs set intensity today using **RPE (Rate of Perceived Exertion), scale 6–10**, via the `RpeChipStrip` (Easy/Moderate/Hard/Max chips) and the precise `RpeSheet` (6.0–10.0 in 0.5 steps). This is a solid, opt-in feature (BLD-1110).
 
-Today those users must convert in their head on every set: their program says "2 RIR," CableSnap asks for RPE, so they mentally compute RPE 8 and tap the "Hard (9)"... wait, no, RPE 8... and now they've fumbled the fast-logging flow the app is otherwise excellent at. The conversion is simple (RIR = 10 − RPE across the meaningful range) but doing it dozens of times per session is exactly the kind of friction CableSnap's north star exists to kill.
+But there is a well-established split in how serious lifters *think* about proximity to failure:
 
-**User emotion today:** *"I love how fast CableSnap logs everything — except I program in RIR and I'm doing RPE math in my head on every single set. Just let me type the number my spreadsheet tells me."*
+- **RPE crowd** — "That was an 8." Popularized by Mike Tuchscherer / powerlifting.
+- **RIR crowd** — "I left 2 reps in the tank." **Reps In Reserve** is the dominant vocabulary in modern hypertrophy/bodybuilding coaching (Jeff Nippard, Renaissance Periodization, Dr. Mike Israetel). RP's entire volume-landmark system is expressed in RIR.
 
-**User emotion after:** *"I flipped one switch in Settings and now every set asks me for RIR. It speaks my language. Zero math."*
+The two scales encode the **same underlying quantity** — distance from momentary muscular failure — related by the identity:
 
-This is a **friction-removal / accessibility-of-vocabulary** feature: same data, same analytics, same adaptive-rest behavior — the user just reads and enters it in the scale they already think in.
+> **RPE = 10 − RIR**  (equivalently **RIR = 10 − RPE**)
+
+A user who thinks in RIR must currently do this conversion in their head on every set ("I left 2 reps, so that's an RPE 8, tap Hard"). That is exactly the kind of cognitive friction our north-star goal (BLD-2698: *minimal cognitive load*) exists to eliminate. Reddit hypertrophy communities (`r/naturalbodybuilding`, `r/weightlifting`) overwhelmingly discuss training in RIR; several competitor-app complaints center on being forced into RPE-only entry.
+
+**Why now:** The intensity subsystem is mature and stable. Adding a *display-mode preference* is low-risk because it introduces **no new per-set data dimension** — we reuse the existing `workout_sets.rpe REAL` column and convert at the UI boundary. This is a high-value, low-complexity win.
+
+---
+
+## Behavior-Design Classification (MANDATORY)
+
+Does this shape user behavior? (see AGENTS §3.2 trigger list: gamification, streaks, notifications, onboarding, rewards, motivational progress viz, social/leaderboard, habit loops, goal-setting/commitments, motivational copy, identity framing, re-engagement)
+
+- [x] **NO** — purely functional/informational.
+
+**Rationale:** This feature changes the *label and numeric scale* used to record an intensity value the user already logs. It:
+- Adds **no** reminders, notifications, or re-engagement.
+- Adds **no** streaks, XP, rewards, or progress-motivation visualizations.
+- Adds **no** goal-setting, commitment, or social/leaderboard surface.
+- Adds **no** onboarding step (the default mode is unchanged; the toggle lives in existing Settings).
+- Uses **no** motivational, loss-framing, FOMO, or identity copy. Labels are neutral units ("RIR", "RPE").
+
+It is a units/terminology preference, directly analogous to kg-vs-lb weight units. **Psychologist review is therefore NOT required.** (If any reviewer disagrees with this classification, flag it and I will route to `@psychologist` for a scoping verdict before implementation — cheap insurance.)
+
+---
 
 ## User Stories
 
-- As an RIR-programmed lifter, I want to log set intensity in **reps in reserve** so that I don't convert to RPE in my head on every set.
-- As an RPE-native lifter, I want the app to **stay exactly as it is today** (RPE is the default; nothing changes unless I opt in).
-- As a lifter who mixes scales, I want the app to **remember my preferred scale** and show it consistently everywhere intensity appears (session chips, precise sheet, set summaries, session detail, history).
-- As a data-portability-conscious user, I want my exported data to be **unambiguous** regardless of which display scale I chose (the stored value and its scale must be self-describing on export/import).
-- As a user switching my preference, I want **previously logged sets to re-display** in the new scale without any data change or loss.
+- As a **hypertrophy-focused lifter who thinks in RIR**, I want to tap "2 RIR" directly, so that I don't have to mentally convert to RPE on every set.
+- As an **existing RPE user**, I want the app to keep working exactly as it does today, so that this change is invisible to me unless I opt in.
+- As a **user who switches modes**, I want my historical sets to re-render in my chosen unit, so that my whole history is consistent and comparable.
+- As a **coach reviewing a client's exported data**, I want the CSV to clearly indicate which scale was used, so that the numbers aren't ambiguous.
+
+---
 
 ## Proposed Solution
 
 ### Overview
 
-Introduce a single app-level **intensity metric preference** — `rpe` (default) or `rir` — stored in the existing `app_settings` key-value table via a typed accessor. The underlying per-set storage is **unchanged**: `workout_sets.rpe` continues to hold the canonical RPE value (6.0–10.0, `real`). A pure mapping module converts between the canonical RPE value and the RIR display value; all intensity UI reads the preference and renders/collects in the chosen scale.
+Introduce a single user preference, **`session.intensityMode`** with values `"rpe"` (default) or `"rir"`, stored in the existing `app_settings` key/value table. The **stored value in `workout_sets.rpe` never changes** — it is always the RPE-scale REAL (6–10). RIR is a pure *presentation transform* applied at read (display) and write (input) boundaries:
 
-Design principle: **one canonical stored unit (RPE), one preference, one pure mapping**. We do **not** add a `rir` column, do **not** migrate data, and do **not** change adaptive-rest math (it keeps consuming the canonical RPE value).
+- **Display:** `rir = 10 − rpe`
+- **Input:** `rpe = 10 − rir`
 
-### The RPE ↔ RIR mapping (single source of truth)
-
-Standard, community-accepted mapping over CableSnap's supported RPE range 6.0–10.0:
-
-| RPE (stored) | RIR (displayed) | Meaning |
-|-------------|-----------------|---------|
-| 10.0 | 0 | No reps left — momentary failure |
-| 9.5 | 0.5 | ~half a rep left |
-| 9.0 | 1 | 1 rep left |
-| 8.5 | 1.5 | |
-| 8.0 | 2 | 2 reps left |
-| 7.5 | 2.5 | |
-| 7.0 | 3 | 3 reps left |
-| 6.5 | 3.5 | |
-| 6.0 | 4 | 4+ reps left (floor of the scale) |
-
-Formula: `RIR = 10 − RPE` (clamped to the supported RPE domain 6.0–10.0 → RIR 0–4, in 0.5 steps). The RIR scale is therefore **inverted** (lower RIR = harder) relative to RPE (higher RPE = harder). The color/severity semantics from `lib/rpe.ts` are preserved by mapping through the canonical RPE value, so "harder = advanced color" stays correct in both scales.
-
-**Bounded scope decision:** CableSnap's RPE input is bounded at 6.0 today. We keep RIR bounded to the equivalent 0–4 range (not the theoretical 0–5+). This preserves parity with the existing RPE picker and avoids introducing input states that have no RPE equivalent. The RIR "4" chip carries a "4+" affordance in copy to acknowledge the floor. (Open question O3 asks reviewers to confirm this bound.)
+This means **every downstream consumer** — rest-timer recompute, plateau/deload logic, overreaching detection, `rm.ts`, `useSessionData.maxRpeSafe`, analytics charts — continues to operate on the RPE scale **unchanged**. Zero risk to existing analytics correctness. This is the entire architectural bet of the plan and must be preserved.
 
 ### UX Design
 
-**Where the preference lives:** Settings → Workout/Session preferences → "Intensity scale" segmented control: **[ RPE ] [ RIR ]**. Default `RPE`. One-line helper: *"Log how hard each set felt. RPE counts up (10 = max). RIR counts reps left (0 = failure)."*
+**1. Settings toggle (segmented control, not a boolean Switch)**
+In `components/settings/PreferencesCard.tsx`, add a labeled segmented control **"Intensity scale"** with two options: `RPE` | `RIR`. Placed adjacent to the existing "Capture set RPE during workouts" switch (they are conceptually linked). Include a one-line helper caption: *"RIR = reps left in reserve. RPE = 10 − RIR."*
 
-**Session chip strip (the hot path):** `RpeChipStrip` today shows Easy(6) / Moderate(7.5) / Hard(9) / Max(10). When preference = RIR, the same four chips render as RIR values in intuitive (hardest-last) order, with matching effort labels:
+- Default: **RPE** (unchanged behavior for all existing users).
+- Persists via `setAppSetting("session.intensityMode", "rpe"|"rir")` following the exact hydrate → local-state → persist-with-error-toast pattern used by the other toggles.
+- Only meaningful when RPE capture is enabled; when capture is OFF the control may be shown disabled with the caption, or hidden — **reviewer input requested** (see Open Questions Q1).
 
-| Effort label | RPE chip (today) | RIR chip (new) |
-|--------------|------------------|----------------|
-| Easy | 6 | 4 RIR |
-| Moderate | 7.5 | 2.5 RIR |
-| Hard | 9 | 1 RIR |
-| Max | 10 | 0 RIR |
+**2. Live set-logging chips (`RpeChipStrip`)**
+The 4 chips must relabel and re-value based on mode. The underlying stored RPE values stay identical:
 
-The chip **order stays visually identical** (Easy → Max, left to right) so muscle memory is preserved; only the numeral and unit label on each chip change. The component header/strip label switches "RPE"→"RIR".
+| Chip label | RPE mode shows | RIR mode shows | Stored `rpe` |
+|------------|----------------|----------------|--------------|
+| Easy       | RPE 6          | 4 RIR          | 6            |
+| Moderate   | RPE 7.5        | 2.5 RIR        | 7.5          |
+| Hard       | RPE 9          | 1 RIR          | 9            |
+| Max        | RPE 10         | 0 RIR          | 10           |
 
-**Precise sheet (`RpeSheet`):** long-press opens the precise picker. In RIR mode it presents 0–4 in 0.5 steps (inverted), labelled "RIR". Selecting a value stores the mapped canonical RPE.
+The qualitative labels (Easy/Moderate/Hard/Max) stay the same across modes; only the numeric a11y label and any numeric chip annotation flips. Component stays controlled; `onChange` still emits the **RPE-scale** number so the persistence path (`updateSetRPE`, clamp 6–10) is untouched.
 
-**Set summary / previous-set display / session detail / history:** anywhere an intensity value is rendered (e.g. `@8`, RPE trend card label), it renders in the active scale with an explicit unit suffix (`RPE 8` or `2 RIR`) — never a bare number — to avoid ambiguity when the two scales share numerals (e.g. RPE 6 vs 6 RIR would be very different).
+**3. Precise picker (`RpeSheet`)**
+In RIR mode, the sheet presents RIR steps `[4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5, 0.0]` (descending; 0 RIR = hardest), with a title "Reps in Reserve". On selection it converts back to RPE (`10 − rir`) before calling `onChange`. Same 9 discrete steps, just relabeled and reversed. Header/units reflect the mode.
 
-**Accessibility:**
-- All chips keep the existing `radiogroup`/`radio` roles; a11y labels update to the active scale ("RIR 2, moderate", "RIR 0, max effort").
-- Because RIR is inverted, the a11y label always includes the effort word ("2 RIR, moderate") so screen-reader users are never confused about direction.
-- Non-color affordance: effort is conveyed by the text label + position, not color alone (CVD-safe), matching the existing RPE strip.
-- Reduced-motion: unchanged (inherits existing strip behavior).
+**4. Read-back surfaces (§ display audit)**
+Every place that currently renders `RPE {value}` must render in the active mode. This is the largest surface of the change:
+- Active-session completed-set summary (`components/session/summary/SetsCard.tsx`)
+- Session detail history rows (`components/session/detail/ExerciseGroupRow.tsx`)
+- Home recent-workouts badges (`components/home/RecentWorkoutsList.tsx`)
+- Progress chart (`components/progress/TrendCards.tsx` → `RPETrendCard`) — axis label + domain flip. **Reviewer input requested** on chart direction (see Q3).
+- Post-session edit input (`components/session/detail/EditableSetRow.tsx`) — free-text field must accept/emit in the active mode.
+- Suggestion explainer copy (`components/session/SuggestionExplainerModal.tsx`) — currently references RPE thresholds; must render in mode.
 
-**Empty/neutral states:** if no intensity is logged, behavior is unchanged (chips unselected). Toggling the preference with no logged sets changes nothing but the labels.
+A shared formatter (see Technical Approach) centralizes the label/convert logic so no surface hardcodes "RPE" or the 6–10 assumption.
 
-**Switching preference with existing data:** flipping the toggle is instant and lossless — it re-renders stored RPE values in the new scale. No migration, no write, no confirmation dialog needed (nothing is mutated).
+**5. Accessibility**
+- Segmented control: `role="radiogroup"` with two `radio` children, selected state announced.
+- Chips/sheet: a11y labels flip to the active unit ("2 RIR, moderate" vs "RPE 7.5, moderate").
+- Color coding (`rpeColor`) is intensity-direction-preserving and unit-agnostic (higher effort = "advanced" color) — must remain correct after the RIR flip (RIR 0 = hardest = advanced color). The helper takes the stored RPE value, so colors stay correct with **no change** to `lib/rpe.ts`.
+
+**6. Error / empty states**
+- No logged intensity → renders as today (no badge), regardless of mode.
+- Switching mode with existing history → all historical values re-render instantly in the new unit on next read (no data migration, no write).
 
 ### Technical Approach
 
-**Data model:** no schema change. `workout_sets.rpe` remains the single canonical store. Preference stored under `app_settings` key `intensity.metric` (values `"rpe"` | `"rir"`), included automatically in the `app_preferences` backup surface like other `app_settings` keys.
+**Architecture principle:** *Store RPE, display the user's chosen unit.* Never persist RIR.
 
-**New modules (small, pure, well-tested):**
-1. `lib/intensity.ts` — the single source of truth:
-   - `type IntensityMetric = "rpe" | "rir"`
-   - `rpeToRir(rpe: number): number` and `rirToRpe(rir: number): number` (clamped, 0.5-step, domain-guarded)
-   - `formatIntensity(rpeValue: number, metric: IntensityMetric): string` → `"RPE 8"` | `"2 RIR"`
-   - `intensityChipSet(metric)` → the four labelled chips in the chosen scale (drives `RpeChipStrip`)
-   - `intensityColor(rpeValue)` — delegates to existing `lib/rpe.ts` so severity/color stays canonical
-2. `lib/db/intensity-settings.ts` — typed accessor over `app_settings` (mirrors `lib/db/training-day-settings.ts` and `macro-coach-settings.ts` exactly): `getIntensityMetric()`, `setIntensityMetric()`.
-3. `hooks/useIntensityMetric.ts` — reactive read of the preference for components (invalidates on change like other settings hooks).
+**New shared module `lib/intensity.ts`** (centralizes the scale — none exists today, the report flagged this gap):
+```
+export type IntensityMode = "rpe" | "rir";
+export const RPE_MIN = 6, RPE_MAX = 10, RPE_STEP = 0.5;      // canonical
+export function rpeToRir(rpe: number): number  // 10 - rpe
+export function rirToRpe(rir: number): number  // 10 - rir
+export function formatIntensity(rpe: number|null, mode: IntensityMode): string  // "RPE 8" | "2 RIR" | ""
+export function intensityUnitLabel(mode): string             // "RPE" | "RIR"
+```
+`RpeChipStrip` and `RpeSheet` import their scale constants from here instead of duplicating inline arrays.
 
-**Component changes (read the preference; no behavior change beyond labels):**
-- `components/session/RpeChipStrip.tsx` — consume `intensityChipSet(metric)`; keep controlled RPE value contract (parent still stores canonical RPE). Rename displayed label; keep the `value`/`onChange` API in canonical RPE so **no upstream call site changes**.
-- `components/session/RpeSheet.tsx` — render the active scale; convert on select.
-- Any read-only intensity renderers (`lib/format.ts` intensity formatting, `TrendCards.tsx` RPE label, session detail set rows, summary `SetsCard`) — route through `formatIntensity`.
+**Preference plumbing:**
+- Read `session.intensityMode` via `getAppSetting` (same as `session.captureRpe`).
+- Thread the mode into `SetRow` alongside the existing `captureRpe` prop, down the existing prop-drill chain (`ExerciseGroupCard` → `ExerciseGroupSetTable` → `SetRow`).
+- For read-back surfaces that don't have session context (home list, history, progress), read the setting where they fetch data (they already do async reads) or via a small `useIntensityMode()` hook backed by react-query so a mode change invalidates and re-renders.
 
-**Explicitly unchanged (guardrails):**
-- `workout_sets.rpe` semantics, storage, and all writes.
-- Adaptive rest (`lib/rest.ts`, `lib/rest-resolver.ts`) — keeps consuming canonical RPE buckets. RIR is a display concern only.
-- CSV/JSON export of the per-set value stays keyed on the canonical RPE field; **the export must remain self-describing** (see AC on export). We do **not** rewrite historical exports into RIR.
-- Achievements, e1RM, volume — untouched (they never read RPE for math beyond rest).
+**Data model:** **No schema change. No migration.** `workout_sets.rpe` REAL stays the single source of truth. This is the key de-risking decision and must survive review.
 
-**Performance:** pure O(1) conversions; one extra cheap `app_settings` read cached via the settings hook. No new queries on the hot logging path (preference is read once and memoized, not per-set).
+**CSV export/import:** The export currently writes a `set_rpe` column (`lib/csv-format.ts`, `lib/db/csv.ts`). To avoid ambiguity we keep exporting the **RPE value** in the `set_rpe` column (stable, matches Strong/Hevy import expectations) regardless of display mode. **Reviewer input requested** on whether to add an informational `intensity_mode` column or a second `set_rir` column (see Q2). Import continues to parse `set_rpe`/`rpe` as RPE.
 
-**Testing surface (high, cheap):** exhaustive table test of `rpeToRir`/`rirToRpe` round-trip across 6.0–10.0 in 0.5 steps; `formatIntensity` snapshot for both scales; chip-set generation test; a component test asserting `RpeChipStrip` renders RIR labels under preference = rir while still emitting canonical RPE via `onChange`; a backup round-trip test asserting `intensity.metric` survives export/import (mirrors the training-day-settings backup test).
+**Performance:** All conversions are single arithmetic ops; formatter is trivial. No new queries, no new columns, no migration cost. Negligible perf impact.
+
+**Storage:** One new `app_settings` row (`session.intensityMode`). Nothing else.
+
+---
 
 ## Scope
 
 **In:**
-- App-level `rpe | rir` preference (Settings segmented control), default `rpe`.
-- Pure mapping + formatting module (`lib/intensity.ts`) as the single source of truth.
-- Typed `app_settings` accessor + reactive hook.
-- Scale-aware rendering in: session chip strip, precise sheet, set summary/detail, previous-set display, RPE trend label.
-- Explicit unit suffix everywhere intensity is shown (no bare numerals).
-- Preference included in backup/restore; export remains self-describing.
-- Unit + component + backup round-trip tests.
+- `session.intensityMode` preference (`app_settings`), default `"rpe"`.
+- Segmented control in `PreferencesCard`.
+- `lib/intensity.ts` shared conversion/format module + centralized scale constants.
+- Mode-aware `RpeChipStrip`, `RpeSheet`, and all 6 read-back surfaces listed above.
+- Mode-aware post-session edit input.
+- a11y label flips.
+- Unit tests for conversion, formatter, chip relabeling, and settings persistence; update existing RPE tests that assert on labels.
 
 **Out:**
-- No new `rir` column or per-set scale storage (canonical stays RPE).
-- No **per-set** scale override (this is an app-level preference, not a per-set toggle). Mixing RPE on some sets and RIR on others within one session is a possible future enhancement; explicitly deferred to keep blast radius small. (See Open Question O2.)
-- No change to adaptive-rest math.
-- No RIR-specific programming/autoregression features (e.g. "auto-suggest load to hit target RIR") — deferred.
-- No change to the theoretical RIR range beyond the existing RPE 6–10 domain (RIR 0–4). (See O3.)
-- No behavior-design / gamification.
+- Changing what is **stored** (always RPE).
+- Any schema/migration change.
+- Per-set mode override (mode is a global preference, not per-set).
+- Auto-detecting mode from imported data.
+- Changing the 6–10 clamp on the live-capture write path.
+- Any behavior-shaping additions (streaks, nudges to log RIR, etc.).
+- Onboarding step for the new toggle.
+
+---
 
 ## Acceptance Criteria
 
-- [ ] **Default unchanged:** Given a user who never opens the new setting, When they log intensity anywhere, Then the app behaves exactly as today (RPE 6–10, existing chips/labels) with no visual or data change.
-- [ ] **Toggle exists:** Given Settings, When the user opens Workout/Session preferences, Then an "Intensity scale [RPE][RIR]" segmented control is present with RPE preselected and a one-line explainer.
-- [ ] **Chip relabel (RIR):** Given preference = RIR, When the session chip strip renders under a completed set, Then the four chips read `4 RIR / 2.5 RIR / 1 RIR / 0 RIR` (Easy→Max order preserved) and the strip label reads "RIR".
-- [ ] **Canonical storage preserved:** Given preference = RIR, When the user taps "1 RIR", Then `workout_sets.rpe` is stored as `9.0` (mapped canonical RPE), verified via DB read — no `rir` column is written.
-- [ ] **Precise sheet:** Given preference = RIR, When the user long-presses a chip, Then the precise sheet offers 0–4 in 0.5 steps labelled RIR, and selecting `2` stores canonical RPE `8.0`.
-- [ ] **Lossless re-display on switch:** Given sets logged while preference = RPE (e.g. RPE 8), When the user switches preference to RIR, Then those sets re-display as `2 RIR` with no write to the DB and no value change (verified: `updated_at`/value unchanged).
-- [ ] **Unambiguous rendering:** Given any screen that shows a set's intensity, When it renders, Then it shows an explicit unit suffix (`RPE 8` or `2 RIR`), never a bare number.
-- [ ] **Round-trip mapping correctness:** `rpeToRir(rirToRpe(x)) === x` for all x in {0,0.5,…,4}, and `rirToRpe(rpeToRir(y)) === y` for all y in {6.0,6.5,…,10.0} — asserted by unit test.
-- [ ] **Backup round-trip:** Given preference = RIR, When the user exports then imports a backup, Then `intensity.metric` is restored as `rir` (asserted by test, mirroring training-day-settings backup test).
-- [ ] **Export self-describing:** Given a CSV/JSON export, Then per-set intensity remains keyed on the canonical RPE field (no silent RIR values written into an RPE-named field); scale is a display preference only, not an export-schema change.
-- [ ] **Adaptive rest unaffected:** Given identical logged sets, When preference is RPE vs RIR, Then computed rest times are identical (adaptive rest reads canonical RPE) — asserted by test.
-- [ ] **A11y:** Given a screen reader, When focus lands on an RIR chip, Then the label includes both value and effort word ("2 RIR, moderate"); effort is not conveyed by color alone.
-- [ ] PR passes all tests with no regressions; no new lint warnings; typecheck clean.
+- [ ] Given a fresh install (no `session.intensityMode` set) When the user opens Settings Then "Intensity scale" shows **RPE** selected (default unchanged).
+- [ ] Given RPE mode When a user completes a set and taps the "Hard" chip Then `workout_sets.rpe` is stored as `9` (unchanged from today).
+- [ ] Given RIR mode When a user completes a set and taps the "Hard" chip Then `workout_sets.rpe` is still stored as `9`, and the chip a11y label reads "1 RIR".
+- [ ] Given RIR mode When viewing history for a set stored with `rpe=8` Then the badge renders "2 RIR".
+- [ ] Given RPE mode When viewing that same set Then the badge renders "RPE 8".
+- [ ] Given a user switches from RPE to RIR When they return to any history/summary/home surface Then all previously logged intensities re-render in RIR with no data mutation (verify `workout_sets.rpe` values are byte-identical before/after in a DB assertion).
+- [ ] Given RIR mode When opening the precise picker Then steps are labeled 4.0 … 0.0 RIR (descending) and selecting "2.0 RIR" stores `rpe=8`.
+- [ ] Given the post-session edit field in RIR mode When the user types "2" Then the stored `rpe` becomes `8`; when in RPE mode typing "8" stores `8`.
+- [ ] Given any mode When CSV is exported Then the `set_rpe` column contains the RPE-scale value (import round-trip preserved).
+- [ ] Color coding of an intensity badge is identical for a given stored `rpe` regardless of display mode.
+- [ ] PR passes all tests with no regressions in the existing RPE test suite (updated for label assertions).
+- [ ] No new lint warnings.
+
+## Headless Verification Path (MANDATORY when any AC includes a device/manual/physical step)
+
+All acceptance criteria above are headless-verifiable via Jest unit/integration tests and the existing test harness. No on-device or manual-only verification is required.
+
+| Device/Manual AC | Risk it covers | Headless proxy that satisfies the same risk |
+|------------------|----------------|---------------------------------------------|
+| (none) | Visual chip relabeling on real device | Component test asserting rendered chip text + a11yLabel per mode (`@testing-library/react-native`) |
+| (none) | Historical re-render after mode switch | Integration test: seed sets, flip `session.intensityMode`, assert formatter output changes while DB `rpe` values are unchanged |
+| (none) | Progress chart axis/domain flip | Component test asserting axis label + domain props on `RPETrendCard` per mode |
+
+No device-only AC exists; no waiver needed.
+
+---
 
 ## Edge Cases
 
-| Scenario | Expected Behavior |
-|----------|-------------------|
-| No intensity logged on a set | Unchanged — chips unselected; toggling preference changes nothing but labels |
-| Existing RPE data, user switches to RIR | Re-displays via mapping; **no DB write**, no value change |
-| RPE value at domain floor (6.0) | Displays as "4 RIR" with "4+" affordance in chip copy |
-| RPE value at ceiling (10.0) | Displays as "0 RIR" (failure) |
-| Half-step values (RPE 7.5) | Displays as "2.5 RIR" |
-| Backup made in RPE mode, restored on device set to RIR | Per-set canonical values intact; display follows the **restored** `intensity.metric` preference (which is included in the backup) |
-| Backup from older app version without `intensity.metric` key | Accessor returns default `rpe`; no crash (typed accessor defaults, mirroring existing settings accessors) |
-| Screen reader / CVD user | Effort word + position convey intensity; unit suffix always spoken; color is supplementary only |
-| CSV import from Strong/Hevy (RPE column) | Unchanged — import maps to canonical RPE; display then follows local preference |
+| Scenario | Expected |
+|----------|----------|
+| No intensity logged | No badge shown, both modes (unchanged). |
+| Legacy set with `rpe` out of 6–10 (post-session edit allowed 0–10) | RIR conversion still applies (`10 − rpe`); e.g. `rpe=5` → "5 RIR". Formatter must not clamp on display. |
+| `rpe = 10` in RIR mode | Renders "0 RIR" (hardest), not "−0" or blank. |
+| `rpe = 7.5` in RIR mode | Renders "2.5 RIR" (half-steps preserved). |
+| Mode changed mid-active-session | Chips/sheet/summary in the live screen reflect new mode on next render; already-stored sets unaffected. |
+| CSV imported from Strong/Hevy (RPE columns) | Parsed as RPE, stored as RPE; displays in user's chosen mode. |
+| RPE capture toggled OFF | Intensity-scale control has no runtime effect; see Q1 for whether to disable/hide it. |
+| A11y screen reader in RIR mode | Announces RIR values and unit correctly. |
+| Reduced-motion | Unchanged (chip strip animation already respects it). |
+
+---
 
 ## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Numeral ambiguity (RPE 6 vs 6 RIR) confuses users reading old screenshots/history | Medium | Medium | Always render explicit unit suffix; never a bare number. AC enforces this. |
-| Inverted scale (lower RIR = harder) causes color/severity bugs | Medium | Medium | Single source of truth: color always computed from canonical RPE via `lib/rpe.ts`; RIR is display-only. Round-trip + color tests. |
-| Scope creep into per-set scale mixing or RIR-target autoregulation | Medium | Medium | Explicitly out of scope; documented as deferred (O2). App-level preference only. |
-| A screen missed during rendering audit shows a bare/opposite number | Medium | Medium | Enumerate all intensity render sites in the implementation issue; grep for `rpe` render call sites; add a lint/test guard that intensity display routes through `formatIntensity`. |
-| Export consumers assume the RPE field could contain RIR | Low | High | Canonical field stays RPE; AC forbids writing RIR into RPE-named fields; document in export schema. |
-| Users expect RIR beyond 4 (5+ RIR for very easy sets) | Low | Low | Bounded to existing RPE 6–10 domain for parity; "4+" affordance. Revisit only if requested (O3). |
+| A downstream analytic accidentally consumes a RIR value instead of stored RPE | Low | High (wrong deload/plateau logic) | Architectural invariant: RIR never persisted, conversion only at UI boundary. Add a unit test asserting `updateSetRPE` still receives RPE-scale from chips in RIR mode. Reviewers (techlead) verify no consumer reads the display value. |
+| Missed a read-back surface → shows "RPE" in RIR mode | Medium | Low (cosmetic) | Centralized `formatIntensity`; grep audit for hardcoded "RPE"/`set.rpe` renders during review; the 6 surfaces enumerated in scope. |
+| Users confused by two scales / accidental toggle | Low | Low | Neutral helper caption ("RIR = reps left in reserve. RPE = 10 − RIR."); default stays RPE; no forced choice. |
+| CSV ambiguity for coaches | Low | Medium | Keep `set_rpe` as canonical RPE column; optional `intensity_mode` metadata (Q2). |
+| Chart domain flip introduces a confusing axis | Medium | Low | Reviewer decision on chart handling (Q3); may keep chart in RPE always with a labeled note. |
+| Scale-constant duplication drift (`RpeChipStrip` vs `RpeSheet` vs `session-sets`) worsens | Low | Low | Consolidate into `lib/intensity.ts` as part of this work (net debt reduction). |
+
+---
 
 ## Open Questions for Reviewers
 
-- **O1 (QD):** Is the Settings segmented control the right home, or should the scale also be switchable inline from the session toolbox (`SessionToolboxSheet`) for discoverability? (Leaning: Settings only for v1 to minimize surface; toolbox shortcut deferrable.)
-- **O2 (TL/QD):** Confirm app-level preference (not per-set scale) is the right v1 boundary. Per-set mixing is the theoretically "richest" behavior but multiplies UI/state complexity and export ambiguity. Recommend deferring.
-- **O3 (TL):** Confirm bounding RIR to 0–4 (mirroring RPE 6–10). Extending to 5+ would require extending the RPE domain too, which touches the existing picker and adaptive-rest buckets — larger blast radius. Recommend keeping parity.
-- **O4 (QD):** Numeral-ambiguity guard — is an always-on unit suffix sufficient, or do we also want a subtle scale badge on history/detail screens where old and new logs coexist?
+- **Q1 (QD/UX):** When RPE capture is OFF, should the "Intensity scale" control be **hidden** or **shown-disabled with caption**? (Discoverability vs. clutter.)
+- **Q2 (techlead):** CSV — keep only `set_rpe` (recommended for import stability), or add an informational `intensity_mode` column and/or a derived `set_rir` column?
+- **Q3 (QD/UX):** Progress `RPETrendCard` — flip to a "RIR trend" (inverted axis, lower = harder) in RIR mode, or always display the chart in RPE with a small note? Inverted axes can be confusing.
+- **Q4 (techlead):** Preferred mechanism to propagate the mode to context-less read surfaces (home/history/progress): a `useIntensityMode()` react-query-backed hook vs. reading `getAppSetting` inline at each fetch site.
+
+---
 
 ## Review Feedback
 
@@ -214,7 +234,7 @@ _Pending_
 _Pending_
 
 ### Psychologist (Behavior-Design)
-_Pending — Classification = NO; CEO will request a one-line scoping confirmation per §3.2. Not gating._
+N/A — Classification = NO (units/terminology preference, no behavior-shaping triggers). Re-route only if a reviewer contests the classification.
 
 ### CEO Decision
-_Pending_
+_Pending — awaiting QD + techlead verdicts._
