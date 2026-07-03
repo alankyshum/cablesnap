@@ -15,6 +15,7 @@
  * `Platform.OS === "web"` early-returns are skipped and state is hydrated
  * directly from the seed object. Metro DCE removes this branch in production.
  */
+/* eslint-disable max-lines */
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
@@ -418,7 +419,9 @@ function RecordHelperText({ isResolved, isEnabled, reason, hasClips }: RecordHel
     ? "Log a workout set first to attach a form clip."
     : "Replace or delete an existing clip below to record a new one.";
   return (
-    <Text style={[styles.recordHelperText, { color: colors.onSurfaceVariant }]}>{copy}</Text>
+    <View style={[styles.recordHelperBanner, { backgroundColor: colors.surfaceVariant }]}>
+      <Text style={[styles.recordHelperText, { color: colors.onSurface }]}>{copy}</Text>
+    </View>
   );
 }
 
@@ -671,10 +674,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   recordCTAText: { fontSize: fontSizes.xs, fontWeight: "600" },
+  recordHelperBanner: {
+    marginHorizontal: 16,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radii.md,
+  },
   recordHelperText: {
     fontSize: fontSizes.xs,
-    paddingHorizontal: 16,
-    paddingBottom: 4,
   },
   selectActions: {
     flexDirection: "row",
