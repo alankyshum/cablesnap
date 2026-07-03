@@ -28,6 +28,7 @@ marker) at release time.
 - **Session notes textarea now immediately visible** — the Session notes input on the summary and detail screens was previously hidden behind a tap-to-expand gesture, making it unclear the area was interactive. The textarea is now always shown with a visible outline border and placeholder text ("Add notes about this workout...") so users can tap directly to add notes without any extra step. (BLD-2711)
 - **Settings: improved sponsor-badge tap targets and spacing** — the Buy Me a Coffee and thanks.dev badge buttons in the About card now have 48dp minimum tap targets (up from 24dp for thanks.dev) and increased vertical spacing between them, making them easier to tap accurately. (BLD-2730, BLD-2731)
 - **Fixed broken trophy/achievement icons on web** — achievement and level icons previously appeared as tofu boxes (empty squares) on web because emoji glyphs are not available in the default system font there. All icons are now drawn with bundled vector icons and display correctly on every platform. (BLD-2708)
+- **Pacing bar always shows a visible Working segment** — when working time was a very small fraction of total session time, the Working segment rendered too thin to see. It now has a guaranteed minimum visual width so all non-zero segments are always visible. (BLD-2712)
 
 ## v0.26.54 — 2026-07-03
 <!-- versionCode: 124 -->
