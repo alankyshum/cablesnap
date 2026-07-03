@@ -596,68 +596,94 @@ describe("SetRow — 320px narrow layout guard (BLD-2674 AC QD-required)", () =>
 
 describe("NumericStepper — stepWeight refactor characterization (BLD-2674)", () => {
   /**
-   * These tests characterize NumericStepper's behavior after the stepWeight
-   * extraction refactor. Note: the refactor is NOT strictly behavior-preserving
-   * at off-grid values within one step above min. The old inline guard was:
+   * Characterization tests for NumericStepper after stepWeight extraction.
    *
-   *   const next = Math.round((value - step) * 10) / 10;
-   *   if (next >= min) onValueChange(next);  // silent no-call if below min
+   * This refactor uses stepWeight for arithmetic but restores the >= min / <= max
+   * guard so the component's behavior for QuickAddSheet and GoalSetForm callers
+   * is correct.
    *
-   * The new guard calls stepWeight which clamps to min and fires onValueChange
-   * if the clamped value differs from the current value:
+   * Guard logic (post-refactor):
+   *   decrement: next = stepWeight(value, step, -1, {min,max})  [clamps to min]
+   *              fires onValueChange(next) only when next >= min && next !== value
+   *   increment: next = stepWeight(value, step,  1, {min,max})  [clamps to max]
+   *              fires onValueChange(next) only when next <= max && next !== value
    *
-   *   const next = stepWeight(value, step, -1, { min, max }); // clamps to min
-   *   if (next !== value) onValueChange(next);                // fires if clamped
-   *
-   * Divergence example: value=1, step=2.5, min=0
-   *   OLD: next = Math.round((1-2.5)*10)/10 = -1.5 → -1.5 < 0 → NO CALL
-   *   NEW: stepWeight(1, 2.5, -1, {min:0}) = Math.max(0, -1.5) = 0 → CALLS onValueChange(0)
-   *
-   * The new behavior is CORRECT (clamp-to-bound beats silently dead button).
-   * These tests document the actual contract callers can rely on.
+   * Since stepWeight always clamps to [min, max]:
+   *   - next >= min is always true (next is always ≥ min after clamping)
+   *   - next <= max is always true (next is always ≤ max after clamping)
+   *   - The next !== value guard is the effective no-op guard when at the bound
    */
 
-  // ── Values well above min (identical in old and new) ──────────────────────
+  const NumericStepper = require("../../../components/exercise/NumericStepper").default;
 
-  it("increment 10 by step 2.5 → 12.5 (identical to old)", () => {
-    const { stepWeight } = require("../../../lib/weight-step");
-    expect(stepWeight(10, 2.5, 1, { min: 0, max: 9999 })).toBe(12.5);
+  // ── In-range steps fire with correct rounded value ────────────────────────
+
+  it("increment in-range: value=10, step=2.5 → onValueChange(12.5)", () => {
+    const onValueChange = jest.fn();
+    const { getByLabelText } = render(
+      <NumericStepper value={10} onValueChange={onValueChange} min={0} step={2.5} unit="kg" />,
+    );
+    fireEvent.press(getByLabelText("Increase by 2.5"));
+    expect(onValueChange).toHaveBeenCalledWith(12.5);
+    expect(onValueChange).toHaveBeenCalledTimes(1);
   });
 
-  it("decrement 10 by step 5 → 5 (identical to old)", () => {
-    const { stepWeight } = require("../../../lib/weight-step");
-    expect(stepWeight(10, 5, -1, { min: 0, max: 9999 })).toBe(5);
+  it("decrement in-range: value=10, step=5, min=0 → onValueChange(5)", () => {
+    const onValueChange = jest.fn();
+    const { getByLabelText } = render(
+      <NumericStepper value={10} onValueChange={onValueChange} min={0} step={5} unit="kg" />,
+    );
+    fireEvent.press(getByLabelText("Decrease by 5"));
+    expect(onValueChange).toHaveBeenCalledWith(5);
+    expect(onValueChange).toHaveBeenCalledTimes(1);
   });
 
-  it("decrement at min(0) → 0 (identical to old — value already at min, no change)", () => {
-    const { stepWeight } = require("../../../lib/weight-step");
-    expect(stepWeight(0, 2.5, -1, { min: 0, max: 9999 })).toBe(0);
+  // ── At-bound: next === value after stepWeight clamps → no call ────────────
+
+  it("decrement at min: value=0, step=2.5, min=0 → onValueChange NOT called (next===value)", () => {
+    const onValueChange = jest.fn();
+    const { getByLabelText } = render(
+      <NumericStepper value={0} onValueChange={onValueChange} min={0} step={2.5} unit="kg" />,
+    );
+    // Button is disabled (value <= min). Even if fireEvent bypasses disabled:
+    // stepWeight(0, 2.5, -1, {min:0}) = 0; guard: 0 >= 0 && 0 !== 0 → false → NO CALL
+    fireEvent.press(getByLabelText("Decrease by 2.5"));
+    expect(onValueChange).not.toHaveBeenCalled();
   });
 
-  it("increment at max(9999) → 9999 (identical to old — value already at max)", () => {
-    const { stepWeight } = require("../../../lib/weight-step");
-    expect(stepWeight(9999, 1, 1, { min: 0, max: 9999 })).toBe(9999);
+  it("increment at max: value=500, step=5, max=500 → onValueChange NOT called (next===value)", () => {
+    const onValueChange = jest.fn();
+    const { getByLabelText } = render(
+      <NumericStepper value={500} onValueChange={onValueChange} min={0} step={5} unit="kg" max={500} />,
+    );
+    // Button is disabled (value >= max). Even if fireEvent bypasses disabled:
+    // stepWeight(500, 5, 1, {max:500}) = 500; guard: 500 <= 500 && 500 !== 500 → false → NO CALL
+    fireEvent.press(getByLabelText("Increase by 5"));
+    expect(onValueChange).not.toHaveBeenCalled();
   });
 
-  // ── Divergent cases: off-grid value within one step above min ─────────────
-  // NEW behavior: clamps to min and fires. OLD behavior: silently no-call.
-  // The new behavior is intentionally better — documents the contract change.
+  // ── Near-bound clamping fires with clamped value ──────────────────────────
 
-  it("divergent: value=1, step=2.5, min=0 → clamps to 0 (new: fires; old: silent no-call)", () => {
-    const { stepWeight } = require("../../../lib/weight-step");
-    // stepWeight returns 0 (clamped), which !== 1, so NumericStepper calls onValueChange(0)
-    expect(stepWeight(1, 2.5, -1, { min: 0, max: 9999 })).toBe(0);
+  it("decrement near-min: value=1, step=2.5, min=0 → onValueChange(0) (stepWeight clamps; guard 0>=0 passes)", () => {
+    const onValueChange = jest.fn();
+    const { getByLabelText } = render(
+      <NumericStepper value={1} onValueChange={onValueChange} min={0} step={2.5} unit="kg" />,
+    );
+    // Button NOT disabled (1 > 0).
+    // stepWeight(1, 2.5, -1, {min:0}) = 0 (clamps -1.5 to 0); 0 >= 0 && 0 !== 1 → fires
+    fireEvent.press(getByLabelText("Decrease by 2.5"));
+    expect(onValueChange).toHaveBeenCalledWith(0);
+    expect(onValueChange).toHaveBeenCalledTimes(1);
   });
 
-  it("divergent: value=2.5, step=5, min=0 → clamps to 0 (new: fires; old: silent no-call)", () => {
-    const { stepWeight } = require("../../../lib/weight-step");
-    // 2.5 - 5 = -2.5 → clamp to 0; fires onValueChange(0)
-    expect(stepWeight(2.5, 5, -1, { min: 0, max: 9999 })).toBe(0);
-  });
-
-  it("divergent: value=2, step=5, min=1 → clamps to 1 (new: fires; old: silent no-call)", () => {
-    const { stepWeight } = require("../../../lib/weight-step");
-    // 2 - 5 = -3 → clamp to 1; fires onValueChange(1)
-    expect(stepWeight(2, 5, -1, { min: 1, max: 9999 })).toBe(1);
+  it("increment near-max: value=498, step=5, max=500 → onValueChange(500) (stepWeight clamps; guard 500<=500 passes)", () => {
+    const onValueChange = jest.fn();
+    const { getByLabelText } = render(
+      <NumericStepper value={498} onValueChange={onValueChange} min={0} step={5} unit="kg" max={500} />,
+    );
+    // stepWeight(498, 5, 1, {max:500}) = 500 (clamps 503 to 500); 500 <= 500 && 500 !== 498 → fires
+    fireEvent.press(getByLabelText("Increase by 5"));
+    expect(onValueChange).toHaveBeenCalledWith(500);
+    expect(onValueChange).toHaveBeenCalledTimes(1);
   });
 });
