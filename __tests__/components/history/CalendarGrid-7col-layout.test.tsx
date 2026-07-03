@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ToastProvider } from "../../../components/ui/bna-toast";
 import CalendarGrid from "../../../components/history/CalendarGrid";
 import { DAYS } from "../../../lib/format";
+import { radii } from "../../../constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 
 const colors = {
@@ -18,7 +19,7 @@ const colors = {
   error: "#f00",
 } as unknown as ThemeColors;
 
-function CalendarHarness({ cellSize }: { cellSize: number }) {
+function CalendarHarness({ cellSize, dotMap = new Map() }: { cellSize: number; dotMap?: Map<string, number> }) {
   const sv = useSharedValue(0);
   const animatedCalendarStyle = useAnimatedStyle(() => ({ transform: [{ translateX: sv.value }] }));
   const swipeGesture = Gesture.Pan();
@@ -28,7 +29,7 @@ function CalendarHarness({ cellSize }: { cellSize: number }) {
       colors={colors}
       year={2026}
       month={3}
-      dotMap={new Map()}
+      dotMap={dotMap}
       scheduleMap={new Map()}
       selected={null}
       animatedCalendarStyle={animatedCalendarStyle}
@@ -125,5 +126,90 @@ describe("CalendarGrid 7-column layout (BLD-661)", () => {
     for (const day of SAMPLE_DATES) {
       expect(dateWidth.get(day)).toBe(PERCENT_WIDTH);
     }
+  });
+});
+
+// ─── BLD-2747: dot size legibility ───────────────────────────────────────────
+
+describe("CalendarGrid dot indicator size (BLD-2747)", () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+
+  // April 2026: day 1 is a Wednesday (offset 3). Use deterministic days:
+  // day 5 → count=1 (1 dot), day 6 → count=2 (2 dots), day 7 → count=3 (badge).
+  const dotMap = new Map([
+    ["2026-04-05", 1],
+    ["2026-04-06", 2],
+    ["2026-04-07", 3],
+  ]);
+
+  type ViewNode = { props: { style?: unknown } };
+  let dotViews: ViewNode[] = [];
+  let badgeText: string | undefined;
+
+  beforeAll(() => {
+    const { StyleSheet, View } = require("react-native");
+    const { UNSAFE_getAllByType, getByText, unmount } = render(
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <CalendarHarness cellSize={48} dotMap={dotMap} />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+
+    const allViews = UNSAFE_getAllByType(View) as ViewNode[];
+    dotViews = allViews.filter((v) => {
+      const s = StyleSheet.flatten(v.props.style) as { width?: number; height?: number } | null;
+      return s != null && s.width === 7 && s.height === 7;
+    });
+
+    try { badgeText = getByText("3").children[0] as string; } catch { badgeText = undefined; }
+
+    unmount();
+  });
+
+  it("dot style width and height are 7px (enlarged from 5px for legibility)", () => {
+    expect(dotViews.length).toBeGreaterThanOrEqual(1);
+    const { StyleSheet } = require("react-native");
+    const dotStyle = StyleSheet.flatten(dotViews[0].props.style) as { width?: number; height?: number; borderRadius?: number };
+    expect(dotStyle.width).toBe(7);
+    expect(dotStyle.height).toBe(7);
+  });
+
+  it("dot borderRadius is radii.pill (9999) so it stays a perfect circle", () => {
+    const { StyleSheet } = require("react-native");
+    const dotStyle = StyleSheet.flatten(dotViews[0].props.style) as { borderRadius?: number };
+    expect(dotStyle.borderRadius).toBe(radii.pill);
+  });
+
+  it("renders 1 dot View for count=1 and 2 dot Views for count=2 (total >= 3)", () => {
+    // count=1 day contributes 1 dot, count=2 day contributes 2 → combined ≥ 3
+    expect(dotViews.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("renders a numeric count badge (not dots) for count >= 3", () => {
+    // Badge text "3" is present
+    expect(badgeText).toBe("3");
+    // No extra dot Views from the count=3 day — exactly 3 (1+2) dot Views total
+    expect(dotViews.length).toBe(3);
+  });
+
+  it("renders no 7px dot Views when dotMap is empty (count=0)", () => {
+    const { StyleSheet, View } = require("react-native");
+    const { UNSAFE_getAllByType, unmount } = render(
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <CalendarHarness cellSize={48} dotMap={new Map()} />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+    const allViews = UNSAFE_getAllByType(View) as ViewNode[];
+    const emptyDotViews = allViews.filter((v) => {
+      const s = StyleSheet.flatten(v.props.style) as { width?: number; height?: number } | null;
+      return s != null && s.width === 7 && s.height === 7;
+    });
+    expect(emptyDotViews.length).toBe(0);
+    unmount();
   });
 });
