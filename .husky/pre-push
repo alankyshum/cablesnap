@@ -15,6 +15,20 @@ if $all_deletes; then
   exit 0
 fi
 
+# ─── TypeScript Type-Check Gate (BLD-2853) ──────────────────────
+# Runs tsc --noEmit (via npm run typecheck) to catch orphaned imports and
+# type errors that ESLint misses. Fast structural failures surface early,
+# before the slower gates run.
+# Mirrors the CI typecheck step locally — no round-trip needed.
+echo "🔎 Type-checking (tsc --noEmit)..."
+if ! npm run typecheck --silent; then
+  echo ""
+  echo "TypeScript type errors detected. Fix the type errors above before pushing."
+  echo "Run 'npm run typecheck' locally to see the full error list."
+  echo "To skip this check (governance escape hatch only): git push --no-verify"
+  exit 1
+fi
+
 # ─── License Integrity Gate ──────────────────────────────────────
 # Blocks push if LICENSE file has been tampered with
 if [ -f "scripts/check-license.sh" ]; then
