@@ -7,12 +7,16 @@
  * In RIR mode: same stored values (6, 7.5, 9, 10) but displayed as 4 RIR, 2.5 RIR, 1 RIR, 0 RIR.
  * Long-press → RpeSheet (precise picker, 6.0–10.0 or 4.0–0.0 RIR steps).
  *
+ * Each chip shows two text lines (BLD-2739 Fix 2):
+ *   1. Qualitative label  — "Easy" / "Moderate" / "Hard" / "Max" (always)
+ *   2. Numeric annotation — "RPE 6" | "4 RIR" (flips per mode via chipAnnotation())
+ *
  * INVARIANT: onChange always emits the RPE-scale value (6–10), regardless of mode.
  * Accessibility: radiogroup + per-chip radio role with selected state.
  * Reduced motion: disables slide-in animation.
  */
 import React, { memo, useCallback, useRef } from "react";
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { Text } from "@/components/ui/text";
@@ -48,8 +52,10 @@ function chipA11yLabel(chip: { label: string; value: number }, mode: IntensityMo
 }
 
 /**
- * Build the short numeric annotation shown on each chip (alongside qualitative label).
- * Not currently rendered as separate text — preserved for future use.
+ * Build the short numeric annotation rendered on each chip below the qualitative label.
+ * BLD-2739 Fix 2: This IS rendered as a secondary caption line on each chip.
+ * Flips per mode: RPE mode → "RPE 9", RIR mode → "1 RIR".
+ * onChange still emits RPE-scale value regardless.
  */
 export function chipAnnotation(rpeValue: number, mode: IntensityMode): string {
   if (mode === "rpe") return `RPE ${rpeValue}`;
@@ -128,12 +134,22 @@ export const RpeChipStrip = memo(function RpeChipStrip({
               ]}
               hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
             >
-              <Text
-                style={[styles.chipLabel, { color: fgColor }]}
-                numberOfLines={1}
-              >
-                {chip.label}
-              </Text>
+              <View style={styles.chipContent}>
+                <Text
+                  style={[styles.chipLabel, { color: fgColor }]}
+                  numberOfLines={1}
+                >
+                  {chip.label}
+                </Text>
+                {/* BLD-2739 Fix 2: visible numeric annotation flips per mode */}
+                <Text
+                  style={[styles.chipAnnotation, { color: fgColor }]}
+                  numberOfLines={1}
+                  testID={`chip-annotation-${chip.value}`}
+                >
+                  {chipAnnotation(chip.value, intensityMode)}
+                </Text>
+              </View>
             </Pressable>
           );
         })}
@@ -155,16 +171,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    height: 32,
+    height: 48,
     paddingHorizontal: 6,
   },
   chip: {
     flex: 1,
-    height: 28,
+    height: 44,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     minWidth: 56,
+  },
+  chipContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 1,
   },
   chipSelected: {
     // Visual elevation hint for selected state
@@ -177,5 +198,13 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.xs,
     fontWeight: "600",
     lineHeight: 16,
+  },
+  chipAnnotation: {
+    // BLD-2739 Fix 2: secondary numeric annotation below the qualitative label.
+    // Slightly smaller font keeps the chip compact on narrow screens.
+    fontSize: 11,
+    fontWeight: "400",
+    lineHeight: 12,
+    opacity: 0.8,
   },
 });
