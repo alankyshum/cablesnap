@@ -258,6 +258,85 @@ export function WorkingDashOverlay({ fill, width, height, testID }: WorkingDashO
   );
 }
 
+// ─── Min-segment fraction helper (BLD-2712) ──────────────────────────────────
+//
+// Ensures every non-zero segment is wide enough to be perceptible at mobile
+// viewport widths. The bar inner width is ~330–350px at 390px viewport; 8px
+// corresponds to ~0.023. We use MIN_FRAC = 0.03 (~10px at 340px) to give a
+// comfortable margin.
+//
+// Segments that are exactly 0 stay 0 — a truly-absent segment must NOT appear
+// (e.g. working=0 must render nothing). Only non-zero raw fractions are raised.
+//
+// After flooring, the three fractions are re-normalised so they still sum to
+// 1.0 ± floating tolerance: the surplus (total of raises) is subtracted
+// proportionally from the segments that exceed MIN_FRAC.
+//
+// Edge cases handled:
+//   • Degenerate surplus-donor set empty (all non-zero segments are at or below
+//     MIN_FRAC after flooring) — fall back to returning the raw fractions.
+//   • All three segments zero — returns {0, 0, 0}.
+//   • Floating-point drift — result sums within 1e-6 of 1.0.
+
+/** Minimum display fraction for any non-zero pacing bar segment (~10px at 340px bar). */
+export const MIN_SEGMENT_FRAC = 0.03;
+
+export type SegmentFractions = {
+  working: number;
+  rest: number;
+  other: number;
+};
+
+/**
+ * Apply a minimum visible fraction to non-zero pacing bar segments and
+ * re-normalise so the three fractions still sum to 1.0.
+ *
+ * Pure function — no side effects, fully unit-testable.
+ */
+export function applyMinSegmentFraction(raw: SegmentFractions): SegmentFractions {
+  const keys: (keyof SegmentFractions)[] = ["working", "rest", "other"];
+
+  // Step 1: floor each non-zero segment to MIN_SEGMENT_FRAC and track total surplus raised.
+  const floored: SegmentFractions = { working: raw.working, rest: raw.rest, other: raw.other };
+  let surplus = 0;
+  for (const k of keys) {
+    if (raw[k] > 0 && raw[k] < MIN_SEGMENT_FRAC) {
+      surplus += MIN_SEGMENT_FRAC - raw[k];
+      floored[k] = MIN_SEGMENT_FRAC;
+    }
+  }
+
+  if (surplus === 0) {
+    // Nothing needed flooring — return as-is (no-op for normal data).
+    return floored;
+  }
+
+  // Step 2: find donor segments — those strictly above MIN_SEGMENT_FRAC (they can give).
+  const donors = keys.filter((k) => floored[k] > MIN_SEGMENT_FRAC);
+  if (donors.length === 0) {
+    // Degenerate: no segment has room to donate — fall back to raw fractions unchanged.
+    return raw;
+  }
+
+  // Step 3: subtract surplus proportionally from donors.
+  const donorTotal = donors.reduce((sum, k) => sum + floored[k], 0);
+  let remaining = surplus;
+  for (let i = 0; i < donors.length; i++) {
+    const k = donors[i];
+    if (i === donors.length - 1) {
+      // Last donor absorbs the remainder to prevent floating-point accumulation.
+      floored[k] = Math.max(MIN_SEGMENT_FRAC, floored[k] - remaining);
+    } else {
+      const share = (floored[k] / donorTotal) * surplus;
+      const reduced = Math.max(MIN_SEGMENT_FRAC, floored[k] - share);
+      remaining -= floored[k] - reduced;
+      floored[k] = reduced;
+    }
+  }
+
+  return floored;
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 type Props = {
@@ -274,9 +353,18 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
   const [disclosureOpen, setDisclosureOpen] = useState(false);
 
   const gross = pacing.gross > 0 ? pacing.gross : 1; // avoid division by zero
-  const workingFrac = pacing.working / gross;
-  const restFrac = pacing.rest / gross;
-  const otherFrac = Math.max(0, 1 - workingFrac - restFrac);
+  const rawWorkingFrac = pacing.working / gross;
+  const rawRestFrac = pacing.rest / gross;
+  const rawOtherFrac = Math.max(0, 1 - rawWorkingFrac - rawRestFrac);
+
+  // Apply minimum visible fraction to non-zero segments (BLD-2712).
+  // Gate on raw fraction > 0 so segments with zero working/rest/other stay at 0
+  // (a floored-up segment remains non-zero, which also correctly shows its texture).
+  const { working: workingFrac, rest: restFrac, other: otherFrac } = applyMinSegmentFraction({
+    working: rawWorkingFrac,
+    rest: rawRestFrac,
+    other: rawOtherFrac,
+  });
 
   const workingLabel = formatPacingTime(pacing.working);
   const restLabel = formatPacingTime(pacing.rest);
