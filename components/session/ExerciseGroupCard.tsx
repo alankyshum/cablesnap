@@ -73,6 +73,8 @@ export type GroupCardProps = {
   // BLD-1110: live RPE capture
   captureRpe?: boolean;
   onRpeChange?: (setId: string, rpe: number | null) => void;
+  /** BLD-2701: Active intensity display mode (RPE | RIR). */
+  intensityMode?: import("@/lib/intensity").IntensityMode;
   // BLD-1126: Stack Marker Quick-Pick
   gymId?: string | null;
   onMarkerConfirm?: (setId: string, result: { stackId: string; stackName: string; marker: number; trueWeight: number; unit: string }) => void;
@@ -107,6 +109,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   hasClipMap, onVideoGlyph,
   onOpenPulleyPinPicker, showPulleyPin, hasSetupPhotoMap, setupPhotoUriMap, onSetupPhotoGlyph,
   captureRpe, onRpeChange,
+  intensityMode,
   gymId, onMarkerConfirm, onManualWeightSave,
   onAddSegment, onDeleteSegment, onCollapseToNormal,
   preferredSubstituteName, isPreferredSwapApplied, preferredSwappedToName, onPreferredSwap,
@@ -170,6 +173,7 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       onSetupPhotoGlyph={onSetupPhotoGlyph}
       captureRpe={captureRpe}
       onRpeChange={onRpeChange}
+      intensityMode={intensityMode}
       gymId={gymId}
       stacks={stacks}
       onMarkerConfirm={onMarkerConfirm}
