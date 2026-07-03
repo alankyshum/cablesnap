@@ -110,8 +110,13 @@ export default function CalendarGrid({
         {count > 0 && (
           <View style={styles.dots} testID={`cal-day-${key}-workout`}>
             {count >= 3 ? (
-              /* Count badge: numeric glyph — already CVD-safe, no shape change needed */
-              <View style={[styles.countBadge, { backgroundColor: isSel ? colors.onPrimary : colors.primary }]}>
+              /* Count badge: numeric glyph with CVD-safe luminance border (BLD-2742) */
+              <View style={[
+                styles.countBadge,
+                { backgroundColor: isSel ? colors.onPrimary : colors.primary },
+                !isSel && styles.countBadgeBorder,
+                !isSel && { borderColor: colors.onBackground },
+              ]}>
                 <Text style={[styles.countBadgeText, { color: isSel ? colors.primary : colors.onPrimary }]}>{count}</Text>
               </View>
             ) : (
@@ -203,6 +208,11 @@ const styles = StyleSheet.create({
   cell: { alignItems: "center", justifyContent: "center", marginVertical: 2, minHeight: MIN_TOUCH_TARGET },
   dots: { flexDirection: "row", gap: 3, position: "absolute", bottom: 4 },
   dot: { width: 5, height: 5, borderRadius: radii.sm },
+  /** CVD-safe luminance affordance: dark outline makes unselected dots distinguishable
+   *  without relying on the coral hue alone (WCAG 1.4.1). Applied only when !isSel. */
+  dotBorder: { borderWidth: 1.5 },
   countBadge: { minWidth: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },
+  /** CVD-safe luminance affordance: dark outline on the unselected count badge (WCAG 1.4.1). */
+  countBadgeBorder: { borderWidth: 1.5 },
   countBadgeText: { fontSize: fontSizes.xs, fontWeight: "700", textAlign: "center" },
 });
