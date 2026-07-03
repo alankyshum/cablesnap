@@ -49,12 +49,27 @@ export default function WorkoutEmptyState({ onStart }: Props) {
       >
         Complete your first workout to see sessions, PRs, and weekly trends here.
       </Text>
+      {/*
+       * CVD a11y (BLD-2729): the `default` variant's background relies on
+       * `primary` color which shifts to yellow-olive under protanopia /
+       * deuteranopia, losing primary-action signal.  A visible border in
+       * `onSurface` color at 35% opacity adds a non-hue-dependent affordance
+       * cue (shape outline) that remains legible in any CVD mode and in
+       * grayscale.  The border weight (1.5px) stays subtle enough not to
+       * clash with the filled-button visual language.
+       */}
       <Button
         variant="default"
         onPress={handleStart}
         accessibilityLabel="Start your first workout"
         label="Start a workout"
-        style={styles.cta}
+        style={[
+          styles.cta,
+          {
+            borderWidth: 1.5,
+            borderColor: `${colors.onSurface}59`,
+          },
+        ]}
         testID="progress-empty-cta"
       />
     </View>
