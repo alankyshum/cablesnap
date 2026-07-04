@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { StyleSheet, TouchableOpacity, View, FlatList } from "react-native";
-import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect, Stack } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
@@ -156,11 +156,7 @@ export default function EditMealTemplate() {
   if (!template) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back" accessibilityRole="button" hitSlop={8} style={{ padding: 8 }}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.onSurface} />
-          </TouchableOpacity>
-        </View>
+        <Stack.Screen options={{ title: "Edit Template" }} />
         <View style={styles.empty}>
           <Text variant="body" style={{ color: colors.onSurfaceVariant }}>Template not found</Text>
         </View>
@@ -183,17 +179,22 @@ export default function EditMealTemplate() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => router.back()} accessibilityLabel="Go back" accessibilityRole="button" hitSlop={8} style={{ padding: 8 }}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.onSurface} />
-        </TouchableOpacity>
-        <Text variant="title" style={{ color: colors.onBackground, flex: 1, textAlign: "center" }}>
-          Edit Template
-        </Text>
-        <TouchableOpacity onPress={handleDelete} accessibilityLabel="Delete template" accessibilityRole="button" hitSlop={8} style={{ padding: 8, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}>
-          <MaterialCommunityIcons name="delete-outline" size={24} color={colors.error} />
-        </TouchableOpacity>
-      </View>
+      <Stack.Screen
+        options={{
+          title: "Edit Template",
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={handleDelete}
+              accessibilityLabel="Delete template"
+              accessibilityRole="button"
+              hitSlop={8}
+              style={{ padding: 8, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+            >
+              <MaterialCommunityIcons name="delete-outline" size={24} color={colors.error} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
 
       <FlatList
         data={items}
@@ -282,12 +283,6 @@ export default function EditMealTemplate() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
   scroll: { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 80 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

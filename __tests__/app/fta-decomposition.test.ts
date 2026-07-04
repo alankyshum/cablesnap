@@ -126,8 +126,10 @@ describe("FTA decomposition structural tests", () => {
     ['constants/screen-config.ts', '"onboarding"', 'has onboarding screen'],
     ['constants/screen-config.ts', '"exercise/[id]"', 'has exercise/[id] screen'],
     ['constants/screen-config.ts', '"session/[id]"', 'has session/[id] screen'],
-    ['constants/screen-config.ts', '"tools/plates"', 'has tools/plates screen'],
-    ['constants/screen-config.ts', '"tools/timer"', 'has tools/timer screen'],
+    // tools/* screens now get their header from app/tools/_layout.tsx; the root
+    // config registers the group, not each route.
+    ['constants/screen-config.ts', '"tools"', 'has tools group'],
+    ['app/tools/_layout.tsx', 'headerShown: true', 'tools group layout owns the header'],
 
     // Batch 6 — FloatingTabBar decomposition
     ["components/FloatingTabBar.tsx", "CenterButton", "imports CenterButton"],

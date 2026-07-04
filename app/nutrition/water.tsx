@@ -6,7 +6,7 @@
  */
 import { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { useFocusEffect, Stack } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
@@ -95,29 +95,22 @@ export default function WaterDetail() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.headerRow}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={8}
-          style={{ padding: 8 }}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.onSurface} />
-        </TouchableOpacity>
-        <Text variant="title" style={{ color: colors.onBackground, flex: 1, textAlign: "center" }}>
-          Water
-        </Text>
-        <TouchableOpacity
-          onPress={() => setSheet({ visible: true, entry: null })}
-          accessibilityLabel="Add water entry"
-          accessibilityRole="button"
-          hitSlop={8}
-          style={{ padding: 8 }}
-        >
-          <MaterialCommunityIcons name="plus" size={24} color={colors.onSurface} />
-        </TouchableOpacity>
-      </View>
+      <Stack.Screen
+        options={{
+          title: "Water",
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => setSheet({ visible: true, entry: null })}
+              accessibilityLabel="Add water entry"
+              accessibilityRole="button"
+              hitSlop={8}
+              style={{ padding: 8 }}
+            >
+              <MaterialCommunityIcons name="plus" size={24} color={colors.onSurface} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <Card style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -170,12 +163,6 @@ export default function WaterDetail() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
   content: { padding: 16, paddingBottom: 80 },
   card: { borderRadius: 12 },
   headerRowSummary: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },

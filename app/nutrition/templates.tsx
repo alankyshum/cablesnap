@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, Stack } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
@@ -114,21 +114,7 @@ export default function MealTemplates() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.headerRow}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-          hitSlop={8}
-          style={{ padding: 8 }}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.onSurface} />
-        </TouchableOpacity>
-        <Text variant="title" style={{ color: colors.onBackground, flex: 1, textAlign: "center" }}>
-          Meal Templates
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <Stack.Screen options={{ title: "Meal Templates" }} />
 
       {templates.length >= 5 && (
         <View style={styles.searchContainer}>
@@ -202,12 +188,6 @@ export default function MealTemplates() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-  },
   searchContainer: { paddingHorizontal: 16, marginBottom: 8 },
   list: { flex: 1 },
   listContent: { padding: 16, paddingBottom: 80 },

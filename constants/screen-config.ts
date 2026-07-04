@@ -28,14 +28,11 @@ export const SCREEN_CONFIGS: ScreenConfig[] = [
   { name: "progress", options: { headerShown: false } },
   { name: "history", options: { headerShown: true, title: "Workout History" } },
   { name: "session/summary/[id]", options: { headerShown: true, title: "Summary" } },
-  { name: "settings/advanced-sets", options: { headerShown: true, title: "Advanced Set Types" } },
-  { name: "settings/gym-profiles", options: { headerShown: true, title: "Gym Profiles" } },
-  { name: "settings/backups", options: { headerShown: true, title: "Backups" } },
-  { name: "settings/macro-coach", options: { headerShown: true, title: "Macro Coach" } },
-  { name: "settings/import-backup", options: { headerShown: true, title: "Import Backup" } },
-  { name: "settings/import-workouts", options: { headerShown: true, title: "Import Workout History" } },
-  { name: "tools/index", options: { headerShown: true, title: "Workout Tools" } },
-  { name: "tools/plates", options: { headerShown: true, title: "Plate Calculator" } },
-  { name: "tools/rm", options: { headerShown: true, title: "1RM Calculator" } },
-  { name: "tools/timer", options: { headerShown: true, title: "Interval Timer" } },
+  { name: "day-session/[id]", options: { headerShown: true } },
+  // Route groups own their headers via a nested app/<group>/_layout.tsx (the
+  // native header handles the top safe-area inset). New screens dropped into
+  // these folders inherit the header automatically — no per-route registration.
+  { name: "settings", options: { headerShown: false } },
+  { name: "tools", options: { headerShown: false } },
+  { name: "nutrition", options: { headerShown: false } },
 ];

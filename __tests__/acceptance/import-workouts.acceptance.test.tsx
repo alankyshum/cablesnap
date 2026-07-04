@@ -113,6 +113,8 @@ jest.mock('expo-document-picker', () => ({
 
 import ImportWorkouts from '@/app/settings/import-workouts';
 import { SCREEN_CONFIGS } from '@/constants/screen-config';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 // ---- CSV Fixture helpers ----
 
@@ -609,15 +611,25 @@ describe('Import Workouts — Acceptance (BLD-2463)', () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe('Route registration — import-workouts navigation header (BLD-2463)', () => {
-  it('settings/import-workouts is registered in SCREEN_CONFIGS with headerShown: true', () => {
-    const config = SCREEN_CONFIGS.find((c) => c.name === 'settings/import-workouts');
+  // import-workouts now gets its native header from the settings group layout
+  // (app/settings/_layout.tsx), not a per-route SCREEN_CONFIGS entry. The root
+  // stack registers the "settings" group as header-less and the nested layout
+  // supplies the header + title, so the screen can't overlap the status bar.
+  it('root registers the "settings" group with headerShown: false (delegates to nested layout)', () => {
+    const config = SCREEN_CONFIGS.find((c) => c.name === 'settings');
     expect(config).toBeDefined();
-    expect(config?.options.headerShown).toBe(true);
+    expect(config?.options.headerShown).toBe(false);
+    // The old per-route entry must be gone.
+    expect(SCREEN_CONFIGS.find((c) => c.name === 'settings/import-workouts')).toBeUndefined();
   });
 
-  it('settings/import-workouts has title "Import Workout History"', () => {
-    const config = SCREEN_CONFIGS.find((c) => c.name === 'settings/import-workouts');
-    expect(config?.options.title).toBe('Import Workout History');
+  it('settings/import-workouts title "Import Workout History" is declared in the settings group layout', () => {
+    const layout = readFileSync(
+      join(__dirname, '..', '..', 'app', 'settings', '_layout.tsx'),
+      'utf8',
+    );
+    expect(layout).toMatch(/name="import-workouts"[\s\S]*?title:\s*"Import Workout History"/);
+    expect(layout).toMatch(/headerShown:\s*true/);
   });
 });
 
