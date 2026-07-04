@@ -1,0 +1,3 @@
+- **Simpler, less cluttered Settings** — the Notifications card now shows only notification controls, and your session preferences (pulley-pin tracking, RPE capture, and the RPE/RIR intensity scale) moved to the Training card where they belong. Several rarely-changed toggles were removed and replaced with sensible always-on defaults (timer sound, set-completion feedback, and the Tempo Coach launcher).
+- **Your workout rest times now come from your template** —
+…see in-app release notes

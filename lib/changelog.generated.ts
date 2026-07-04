@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.57",
+    "date": "2026-07-04",
+    "versionCode": 127,
+    "body": "- **Simpler, less cluttered Settings** — the Notifications card now shows only notification controls, and your session preferences (pulley-pin tracking, RPE capture, and the RPE/RIR intensity scale) moved to the Training card where they belong. Several rarely-changed toggles were removed and replaced with sensible always-on defaults (timer sound, set-completion feedback, and the Tempo Coach launcher).\n- **Your workout rest times now come from your template** — the adaptive rest timer, which could override the rest durations you set on a template or superset and even change a rest countdown that was already running when you logged an RPE, is now off. Rest lengths follow exactly what your template and linked-set settings specify."
+  },
+  {
     "version": "0.26.56",
     "date": "2026-07-03",
     "versionCode": 126,

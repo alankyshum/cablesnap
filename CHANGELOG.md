@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.57 — 2026-07-04
+<!-- versionCode: 127 -->
+
 - **Simpler, less cluttered Settings** — the Notifications card now shows only notification controls, and your session preferences (pulley-pin tracking, RPE capture, and the RPE/RIR intensity scale) moved to the Training card where they belong. Several rarely-changed toggles were removed and replaced with sensible always-on defaults (timer sound, set-completion feedback, and the Tempo Coach launcher).
 - **Your workout rest times now come from your template** — the adaptive rest timer, which could override the rest durations you set on a template or superset and even change a rest countdown that was already running when you logged an RPE, is now off. Rest lengths follow exactly what your template and linked-set settings specify.
 
