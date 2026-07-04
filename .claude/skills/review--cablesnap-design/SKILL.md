@@ -5,6 +5,9 @@ description: "Review CableSnap changes for design system compliance: design toke
 
 # CableSnap Design System Review
 
+## Goal
+Review CableSnap changes for design system compliance: design tokens, theme colors, spacing, and animations.
+
 Deterministic + LLM code review for the **CableSnap** app. Enforces mandatory use of design tokens, theme colors, animation presets, and UI component library.
 
 ## References
@@ -18,7 +21,7 @@ Deterministic + LLM code review for the **CableSnap** app. Enforces mandatory us
 
 - React Native 0.81 + Expo SDK 54 + TypeScript
 - react-native-paper (MD3) for UI components
-- react-native-reanimated v4 for animations
+- react-native-reanimated for animations
 - StyleSheet.create for styling (no CSS-in-JS)
 
 ## Rule Index
@@ -225,6 +228,12 @@ import { FlatList } from "react-native";
 // GOOD
 import { FlatList } from "react-native-gesture-handler";
 ```
+
+### Use Group-Nested Layouts (_layout.tsx) for Header & Safe-Area Insets
+To prevent screens from overlapping with the system status bar, avoid registering individual routes in a central allow-list (like SCREEN_CONFIGS). Instead, use group-nested layouts (_layout.tsx) inside folders (settings/, tools/, nutrition/) declaring Stack layouts with headerShown: true to cover entire groups of screens. This ensures child routes automatically inherit correct safe-area top insets and native headers.
+
+### Use useFocusEffect for Stale State/Caption Reloading on Tab Refocus
+In Expo Router / React Navigation, returning to a tab screen from a nested sub-screen refocusses the tab instead of remounting it. A mount-only useEffect(..., []) will not re-run, causing configuration flags or status captions loaded from local storage/state to remain stale. Always use useFocusEffect (or a focus-aware hook) to reload state and refresh captions on focus.
 
 ## Exempt Files
 
