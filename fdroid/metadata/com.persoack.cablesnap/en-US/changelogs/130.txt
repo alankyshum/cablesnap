@@ -1,0 +1,1 @@
+- **Connecting Strava now works on Android** — tapping "Connect Strava" and approving access sometimes landed on a "Page could not be found" screen and left your account disconnected. The Strava sign-in now completes reliably and returns you to Settings showing your connected athlete.

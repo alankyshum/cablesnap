@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.60",
+    "date": "2026-07-04",
+    "versionCode": 130,
+    "body": "- **Connecting Strava now works on Android** — tapping \"Connect Strava\" and approving access sometimes landed on a \"Page could not be found\" screen and left your account disconnected. The Strava sign-in now completes reliably and returns you to Settings showing your connected athlete."
+  },
+  {
     "version": "0.26.59",
     "date": "2026-07-04",
     "versionCode": 129,

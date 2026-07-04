@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.60 — 2026-07-04
+<!-- versionCode: 130 -->
+
 - **Connecting Strava now works on Android** — tapping "Connect Strava" and approving access sometimes landed on a "Page could not be found" screen and left your account disconnected. The Strava sign-in now completes reliably and returns you to Settings showing your connected athlete.
 
 ## v0.26.59 — 2026-07-04
