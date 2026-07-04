@@ -173,6 +173,7 @@ type Params = {
   triggerPR?: (exerciseName: string, goalAchieved?: boolean) => void;
   unit?: "kg" | "lb";
   suggestions?: Record<string, Suggestion | null>;
+  sessionRestOverrideSeconds?: number | null;
 };
 
 export function useSessionActions({
@@ -189,6 +190,7 @@ export function useSessionActions({
   triggerPR,
   unit,
   suggestions,
+  sessionRestOverrideSeconds = null,
 }: Params) {
   const router = useRouter();
   // BLD-1239: ref so finish/cancel can access the router without including it in
@@ -396,10 +398,12 @@ export function useSessionActions({
       const firstLinked = linked.length > 0 ? linked[0] : undefined;
       const previewGroup = firstLinked?.exercise_id !== set.exercise_id ? firstLinked : undefined;
       const { preview, isLastSet } = computeRestPreview(set.id, previewGroup, groups, unit ?? "lb", previewGroup ? suggestions?.[previewGroup.exercise_id] : undefined);
-      const secs = await getRestSecondsForLink(id!, set.link_id!);
+      const secs = sessionRestOverrideSeconds != null
+        ? sessionRestOverrideSeconds
+        : await getRestSecondsForLink(id!, set.link_id!);
       startRestWithDuration(secs, preview, isLastSet);
     }
-  }, [groups, id, unit, suggestions, startRestWithDuration]);
+  }, [groups, id, unit, suggestions, startRestWithDuration, sessionRestOverrideSeconds]);
 
   const handleCheck = useCallback(async (set: SetWithMeta) => {
     const group = groups.find((g) => g.exercise_id === set.exercise_id);

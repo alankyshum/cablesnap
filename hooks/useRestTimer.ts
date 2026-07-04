@@ -36,6 +36,7 @@ import {
   rescheduleResumeNotifications,
   scheduleRestNotifications,
   type PersistedRestTimerState,
+  sessionRestOverrideKey,
 } from "./rest-timer-state";
 import {
   fireRestCompleteFeedback,
@@ -76,6 +77,8 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   const restSetIdRef = useRef<string | null>(null);
   // BLD-1110: set type of the triggering set (needed for recomputeActiveRest resolver call).
   const restSetTypeRef = useRef<SetType>("normal");
+  const [sessionRestOverrideSeconds, setSessionRestOverrideSeconds] = useState<number | null>(null);
+  const sessionRestOverrideRef = useRef<number | null>(null);
   const [persistedDurationSeconds, setPersistedDurationSeconds] = useState(DEFAULT_REST_SECONDS);
   const [selectedDurationSeconds, setSelectedDurationSeconds] = useState(DEFAULT_REST_SECONDS);
   const restRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -100,10 +103,17 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
   const restHapticTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const prevRest = useRef(0);
 
-  const persistLastUsedDuration = useCallback((seconds: number) => {
-    setPersistedDurationSeconds(seconds);
-    void setAppSetting(REST_DEFAULT_SECONDS_KEY, String(seconds)).catch(() => {});
-  }, []);
+  const setSessionRestOverride = useCallback((seconds: number) => {
+    const clean = seconds > 0 ? Math.round(seconds) : DEFAULT_REST_SECONDS;
+    sessionRestOverrideRef.current = clean;
+    setSessionRestOverrideSeconds(clean);
+    setSelectedDurationSeconds(clean);
+    setPersistedDurationSeconds(clean);
+    void setAppSetting(REST_DEFAULT_SECONDS_KEY, String(clean)).catch(() => {});
+    if (sessionId) {
+      void setAppSetting(sessionRestOverrideKey(sessionId), String(clean)).catch(() => {});
+    }
+  }, [sessionId]);
 
   const persistActiveTimerState = useCallback((state: PersistedRestTimerState | null) => {
     if (!state) {
@@ -213,8 +223,6 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       isLastSetRef.current = isLastSet;
       setRest(secs);
       setBreakdown(nextBreakdown);
-      setSelectedDurationSeconds(secs);
-      persistLastUsedDuration(secs);
       if (sessionId) {
         persistActiveTimerState({
           sessionId,
@@ -237,7 +245,6 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     [
       cancelNotification,
       persistActiveTimerState,
-      persistLastUsedDuration,
       scheduleNotification,
       sessionId,
       startRestInterval,
@@ -269,7 +276,8 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
 
       setRestSource(null);
       setRestExerciseId(exerciseId);
-      const secs = await getRestSecondsForExercise(sessionId, exerciseId);
+      const override = sessionRestOverrideRef.current;
+      const secs = override != null ? override : await getRestSecondsForExercise(sessionId, exerciseId);
       runTimer(secs, defaultBreakdown(secs), preview, isLastSet);
     },
     [sessionId, runTimer],
@@ -313,15 +321,26 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
 
     (async () => {
       try {
-        const [savedDefault, savedActiveTimer] = await Promise.all([
+        const [savedDefault, savedActiveTimer, savedOverride] = await Promise.all([
           getAppSetting(REST_DEFAULT_SECONDS_KEY),
           getAppSetting(ACTIVE_REST_TIMER_KEY),
+          sessionId ? getAppSetting(sessionRestOverrideKey(sessionId)) : Promise.resolve(null),
         ]);
         if (cancelled) return;
 
         const nextPersistedDuration = sanitizeRestSeconds(savedDefault);
         setPersistedDurationSeconds(nextPersistedDuration);
-        setSelectedDurationSeconds(nextPersistedDuration);
+
+        let initialSelected = nextPersistedDuration;
+        if (savedOverride) {
+          const overrideVal = parseInt(savedOverride, 10);
+          if (Number.isFinite(overrideVal) && overrideVal > 0) {
+            sessionRestOverrideRef.current = overrideVal;
+            setSessionRestOverrideSeconds(overrideVal);
+            initialSelected = overrideVal;
+          }
+        }
+        setSelectedDurationSeconds(initialSelected);
 
         const restoredState = parsePersistedRestTimerState(savedActiveTimer);
         if (!restoredState || !sessionId || restoredState.sessionId !== sessionId) {
@@ -332,14 +351,13 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
         previewRef.current = restoredState.previewSnapshot;
         isLastSetRef.current = restoredState.isLastSet;
         setBreakdown(restoredState.breakdown);
-        setSelectedDurationSeconds(restoredState.durationSeconds);
 
         const remaining = Math.max(0, Math.ceil((restoredState.endTimestamp - Date.now()) / 1000));
         if (remaining <= 0) {
           clearPersistedActiveTimer();
           setRest(0);
           setBreakdown(defaultBreakdown(0));
-          setSelectedDurationSeconds(nextPersistedDuration);
+          setSelectedDurationSeconds(initialSelected);
           return;
         }
 
@@ -447,6 +465,8 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     handlePinChange,
     persistedDurationSeconds,
     selectedDurationSeconds,
+    sessionRestOverrideSeconds,
+    setSessionRestOverride,
     restFlashStyle,
     startRest,
     startRestWithDuration,

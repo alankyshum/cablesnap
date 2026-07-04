@@ -119,7 +119,7 @@ describe("useRestTimer", () => {
     });
 
     act(() => {
-      result.current.startRestWithDuration(45);
+      result.current.setSessionRestOverride(45);
     });
 
     expect(result.current.selectedDurationSeconds).toBe(45);
@@ -411,7 +411,7 @@ describe("useRestTimer", () => {
     });
 
     expect(result.current.rest).toBe(45);
-    expect(result.current.selectedDurationSeconds).toBe(45);
+    expect(result.current.selectedDurationSeconds).toBe(30);
   });
 
   it("BLD-1208 — cold-start restore path uses LIVE_COUNTDOWN_TICK_MS (15s) cadence, not 5s", async () => {

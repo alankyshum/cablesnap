@@ -43,9 +43,9 @@ type Props = {
   estimatedDuration?: number | null;
   breakdown?: RestBreakdown;
   onStartRest: (duration: number) => void;
+  onSelectRestDuration?: (seconds: number) => void;
   onDismissRest: () => void;
   onOpenToolbox: () => void;
-  persistedDurationSeconds?: number;
   selectedDurationSeconds?: number;
   pickerRequested?: boolean;
   onPickerDismissed?: () => void;
@@ -81,9 +81,9 @@ function SessionHeaderToolbarInner({
   estimatedDuration,
   breakdown,
   onStartRest,
+  onSelectRestDuration,
   onDismissRest,
   onOpenToolbox,
-  persistedDurationSeconds = DEFAULT_REST_SECONDS,
   selectedDurationSeconds = DEFAULT_REST_SECONDS,
   pickerRequested,
   onPickerDismissed,
@@ -92,6 +92,7 @@ function SessionHeaderToolbarInner({
   restExerciseId,
   onPinChange,
 }: Props) {
+  const selectRestDuration = onSelectRestDuration ?? onStartRest;
   const colors = useThemeColors();
   const { width: viewportWidth } = useWindowDimensions();
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -186,8 +187,8 @@ function SessionHeaderToolbarInner({
 
   const handlePresetSelect = useCallback((seconds: number) => {
     setPickerVisible(false);
-    onStartRest(seconds);
-  }, [onStartRest]);
+    selectRestDuration(seconds);
+  }, [selectRestDuration]);
 
   const handleVibrateToggle = useCallback(async (value: boolean) => {
     setVibrateSetting(value);
@@ -311,7 +312,6 @@ function SessionHeaderToolbarInner({
         visible={pickerVisible}
         vibrateSetting={vibrateSetting}
         soundSetting={soundSetting}
-        persistedDurationSeconds={persistedDurationSeconds}
         selectedDurationSeconds={selectedDurationSeconds}
         onSelectPreset={handlePresetSelect}
         onVibrateToggle={handleVibrateToggle}
@@ -342,7 +342,6 @@ type PickerProps = {
   visible: boolean;
   vibrateSetting: boolean;
   soundSetting: boolean;
-  persistedDurationSeconds: number;
   selectedDurationSeconds: number;
   onSelectPreset: (seconds: number) => void;
   onVibrateToggle: (value: boolean) => void;
@@ -354,7 +353,6 @@ function RestDurationPicker({
   visible,
   vibrateSetting,
   soundSetting,
-  persistedDurationSeconds,
   selectedDurationSeconds,
   onSelectPreset,
   onVibrateToggle,
@@ -378,28 +376,24 @@ function RestDurationPicker({
         >
           <Text
             variant="subtitle"
-            style={{ color: colors.onSurface, marginBottom: 16 }}
+            style={{ color: colors.onSurface, marginBottom: 4 }}
           >
             Rest Duration
+          </Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
+            Applies to every set this session · overrides template defaults
           </Text>
 
           <View style={styles.selectionSummary}>
             <Text variant="body" style={{ color: colors.onSurface }}>
               Current: {presetLabel(selectedDurationSeconds)}
             </Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-              Last used: {presetLabel(persistedDurationSeconds)}
-            </Text>
           </View>
 
           <View style={styles.presetsRow}>
             {REST_PRESETS.map((seconds) => {
               const isSelected = seconds === selectedDurationSeconds;
-              const isPersisted = seconds === persistedDurationSeconds;
-              const metaLabel = [
-                isSelected ? "Current" : null,
-                isPersisted ? "Last used" : null,
-              ].filter(Boolean).join(" • ");
+              const metaLabel = isSelected ? "Current" : null;
 
               return (
                 <View key={seconds} style={styles.presetChipWrap}>
@@ -407,7 +401,7 @@ function RestDurationPicker({
                     selected={isSelected}
                     onPress={() => onSelectPreset(seconds)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Start ${presetLabel(seconds)} rest timer${metaLabel ? `. ${metaLabel}.` : ""}`}
+                    accessibilityLabel={`Set rest to ${presetLabel(seconds)}${isSelected ? ". Currently selected." : ""}`}
                   >
                     {presetLabel(seconds)}
                   </Chip>

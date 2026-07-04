@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Set one rest time for your whole workout** — the rest-duration picker (spanner icon) is now a single universal setting that applies to every set in the current session and highlights your chosen duration so you can see which one is active. Picking a duration overrides your template's default rest for that session (templates stay editable and still provide the starting default), and it now sticks for every completed set instead of snapping back after each one.
 
 ## v0.26.58 — 2026-07-04
 <!-- versionCode: 128 -->

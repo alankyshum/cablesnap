@@ -101,8 +101,9 @@ export default function ActiveSession() {
 
   const {
     rest, breakdown, restSource, restExerciseId, handlePinChange,
-    persistedDurationSeconds,
     selectedDurationSeconds,
+    sessionRestOverrideSeconds,
+    setSessionRestOverride,
     restFlashStyle,
     startRest,
     startRestWithDuration,
@@ -185,7 +186,7 @@ export default function ActiveSession() {
     handleMarkerConfirm, handleManualWeightSave,
     handleAddSegment, handleDeleteSegment, handleCollapseToNormal,
     finish, cancel,
-  } = useSessionActions({ id, groups, setGroups, updateGroupSet, startRest, startRestWithDuration, startRestWithBreakdown, dismissRest, session, showToast, showError, triggerPR, unit, suggestions });
+  } = useSessionActions({ id, groups, setGroups, updateGroupSet, startRest, startRestWithDuration, startRestWithBreakdown, dismissRest, session, showToast, showError, triggerPR, unit, suggestions, sessionRestOverrideSeconds });
 
   const {
     activeExerciseId: timerExerciseId, activeSetIndex: timerSetIndex,
@@ -396,6 +397,11 @@ export default function ActiveSession() {
     startRestWithDuration(seconds);
   }, [startRestWithDuration]);
 
+  const handleSelectRestDuration = useCallback((seconds: number) => {
+    setSessionRestOverride(seconds);
+    startRestWithDuration(seconds);
+  }, [setSessionRestOverride, startRestWithDuration]);
+
   const handleOpenRestSettings = useCallback(() => {
     setRestSettingsRequested(true);
   }, []);
@@ -544,10 +550,10 @@ export default function ActiveSession() {
               clockStarted={clockStartedAt != null}
               estimatedDuration={estimatedDuration}
               breakdown={breakdown}
-              persistedDurationSeconds={persistedDurationSeconds}
               selectedDurationSeconds={selectedDurationSeconds}
               flashStyle={restFlashStyle}
               onStartRest={handleToolboxStartRest}
+              onSelectRestDuration={handleSelectRestDuration}
               onDismissRest={dismissRest}
               onOpenToolbox={handleToolboxOpen}
               pickerRequested={restSettingsRequested}

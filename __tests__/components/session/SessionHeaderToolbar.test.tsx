@@ -50,7 +50,6 @@ const defaultProps = {
   onStartRest: jest.fn(),
   onDismissRest: jest.fn(),
   onOpenToolbox: jest.fn(),
-  persistedDurationSeconds: 30,
   selectedDurationSeconds: 30,
 };
 
@@ -202,13 +201,12 @@ describe("SessionHeaderToolbar", () => {
     expect(getByText("2m")).toBeTruthy();
   });
 
-  it("shows current and last-used rest values in the picker", async () => {
+  it("shows current rest values in the picker", async () => {
     mockGetAppSetting.mockResolvedValue("true");
 
-    const { getByText } = render(
+    const { getByText, queryByText } = render(
       <SessionHeaderToolbar
         {...defaultProps}
-        persistedDurationSeconds={60}
         selectedDurationSeconds={30}
       />,
     );
@@ -218,9 +216,9 @@ describe("SessionHeaderToolbar", () => {
     });
 
     expect(getByText("Current: 30s")).toBeTruthy();
-    expect(getByText("Last used: 1m")).toBeTruthy();
+    expect(queryByText("Last used: 1m")).toBeNull();
     expect(getByText("Current")).toBeTruthy();
-    expect(getByText("Last used")).toBeTruthy();
+    expect(queryByText("Last used")).toBeNull();
   });
 
   it("selecting a preset starts rest without saving settings in the toolbar", async () => {

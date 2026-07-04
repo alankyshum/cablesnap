@@ -21,6 +21,11 @@ export const DEFAULT_REST_SECONDS = 30;
 export const REST_DEFAULT_SECONDS_KEY = "rest_timer_default_seconds";
 export const ACTIVE_REST_TIMER_KEY = "rest_timer_active_state";
 
+export const REST_SESSION_OVERRIDE_KEY_PREFIX = "rest_session_override_";
+export function sessionRestOverrideKey(sessionId: string): string {
+  return `${REST_SESSION_OVERRIDE_KEY_PREFIX}${sessionId}`;
+}
+
 export type PersistedRestTimerState = {
   sessionId: string;
   endTimestamp: number;
