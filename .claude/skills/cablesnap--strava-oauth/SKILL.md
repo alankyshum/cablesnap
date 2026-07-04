@@ -1,7 +1,11 @@
 ---
 name: cablesnap--strava-oauth
-description: "CableSnap Strava OAuth ops: app config (id 227474), Cloudflare Worker proxy at strava-proxy.alankyshum.workers.dev, redirect URI architecture. Use when debugging 'Connect Strava' failures, 'invalid redirect URI' errors, or modifying the Strava connect/token/refresh flow."
+description: "CableSnap Strava OAuth ops: app config (id 227474), Cloudflare Worker proxy at strava-proxy.alankyshum.workers.dev, redirect URI architecture. Use when debugging 'Connect Strava' failures, 'invalid redirect URI' errors, or modifying the Strava connect/token/refresh flow." <!-- skill-lint: allow -->
 ---
+
+# Goal
+
+Securely manage Strava OAuth flow, app configurations, worker proxy redirects, and token exchange routines for CableSnap.
 
 # Critical Rules
 
@@ -9,6 +13,8 @@ description: "CableSnap Strava OAuth ops: app config (id 227474), Cloudflare Wor
 - **MUST** route Strava → app via the worker bounce: Strava → `https://strava-proxy.alankyshum.workers.dev/callback?code=...` → 302 → `cablesnap://strava-callback?code=...` → app.
 - **MUST** keep app's `state` param matching between authorize URL and callback (CSRF). Generated via `lib/uuid.ts`.
 - **NEVER** commit `STRAVA_CLIENT_SECRET` (lives in Cloudflare Worker via `wrangler secret put`) or the Strava session cookie / CSRF token (lives in `.env.local`).
+- **MUST** register an explicit route (e.g. `app/strava-callback.tsx` via Expo Router) to handle Android deep links, as Android may relaunch the app fresh and bypass Custom Tab watchers.
+- **MUST** implement a single-consume lock: check in-flight guard, validate, and delete the pending state from `SecureStore` *before* initiating `exchangeCodeForTokens` to prevent concurrent/duplicate exchanges of single-use codes.
 
 # Architecture
 
@@ -95,6 +101,8 @@ Strava login automation is blocked by anti-bot — user must log in manually fir
 | Test mock missing | `expo-web-browser.openAuthSessionAsync` not stubbed | `__mocks__/expo-web-browser.js` needs `openAuthSessionAsync: jest.fn()` |
 | `expo-auth-session` re-introduced | Old pattern reintroduced | Removed intentionally — use `WebBrowser.openAuthSessionAsync` only |
 | Dashboard scripts return HTML login page | Session cookie expired | Re-capture `_strava4_session` + `x-csrf-token` from devtools, update `.env.local` |
+| Empty `code=` query parameter | Callback contains parameter without value, returning `""` instead of `null` | Change code guard to falsy check `if (!code)` instead of `if (code === null)` to handle empty strings properly |
+| Testing concurrent in-flight guards | Module-local `inFlight` booleans can be tricky to test without network calls | Call async function twice concurrently (without awaiting), mocking dependency to return a manually-resolved deferred Promise, then `await Promise.all` and assert single mock call |
 
 # Notes
 
