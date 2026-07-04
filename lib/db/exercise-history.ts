@@ -381,6 +381,7 @@ type RecentSetRow = {
   rpe: number | null;
   completed: number;
   started_at: number;
+  set_type?: string | null;
 };
 
 export async function getRecentExerciseSetsBatch(
@@ -394,6 +395,7 @@ export async function getRecentExerciseSetsBatch(
   rpe: number | null;
   completed: number;
   started_at: number;
+  set_type?: string | null;
 }[]>> {
   if (exerciseIds.length === 0) return {};
   const db = await getDrizzle();
@@ -438,6 +440,7 @@ export async function getRecentExerciseSetsBatch(
       rpe: workoutSets.rpe,
       completed: workoutSets.completed,
       started_at: workoutSessions.started_at,
+      set_type: workoutSets.set_type,
     })
     .from(workoutSets)
     .innerJoin(workoutSessions, eq(workoutSets.session_id, workoutSessions.id))
