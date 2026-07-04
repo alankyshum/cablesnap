@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.58",
+    "date": "2026-07-04",
+    "versionCode": 128,
+    "body": "- **Weight and reps edits now save reliably** — while logging an active workout, changing a set's weight or reps and then dismissing the keyboard could occasionally snap the value back to its previous number, especially while a rest timer was counting down. Your edits are now captured and saved every time, and editing one field no longer risks reverting the other."
+  },
+  {
     "version": "0.26.57",
     "date": "2026-07-04",
     "versionCode": 127,

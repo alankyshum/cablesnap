@@ -30,8 +30,8 @@ Description: |
   - CSV export and sharing
   - Dark mode support
 
-CurrentVersion: 0.26.57
-CurrentVersionCode: 127
+CurrentVersion: 0.26.58
+CurrentVersionCode: 128
 
 # F-Droid build server build recipe.
 #
