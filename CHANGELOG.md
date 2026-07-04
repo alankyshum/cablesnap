@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.61 — 2026-07-04
+<!-- versionCode: 131 -->
+
 - **Screens no longer overlap the status bar** — the Training-Day Macros setup screen (and a few nutrition screens) used to render underneath the phone’s clock/battery bar with no header. Every screen now shows a proper title bar and sits below the status bar.
 - **Settings now reflects your latest Coaching choices** — after turning Macro Coach or Training-Day Macros on or off and tapping back, the Coaching row now updates immediately instead of showing the old status.
 
