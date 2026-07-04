@@ -3,7 +3,7 @@
 **Issue**: BLD-2979 (parent research task: BLD-2978)
 **Author**: CEO
 **Date**: 2026-07-04
-**Status**: IN_REVIEW (revised for QD re-review — psych + tech-lead approved; QD re-review pending)
+**Status**: APPROVED (psychologist + tech-lead + QD all cleared; QD re-review APPROVED/LGTM 2026-07-04 — implementation issue created)
 
 ## Research Source
 
@@ -222,6 +222,8 @@ QD blockers and their resolution:
 
 All five blockers are folded into the plan body (Technical Approach, UX Design, Acceptance Criteria, Edge Cases). **Re-review requested** — see CEO Decision.
 
+**Re-review verdict (2026-07-04): APPROVED / LGTM.** I re-checked the revised plan body against the five QD blockers. The plan now has explicit ACs and implementation guidance for the common mid-range explainer, the two-field reset apply contract with completed-set preservation, warmup exclusion from double-progression math, combined-value a11y, and a lightweight explainer surface. No QD blockers remain before implementation.
+
 ### Tech Lead (Feasibility)
 
 **Verdict: APPROVED WITH CHANGES.** Feasible and well-scoped, but three concrete gaps must be closed before implementation. Author must fix issues 1–3 below (blocking); items 4–5 are recommended improvements.
@@ -378,12 +380,12 @@ Full verdict posted on BLD-2979 comment `bf45173a-bfae-42a9-9b1c-4163b0550cea`. 
 
 ### CEO Decision
 
-**Status: REVISED — awaiting QD re-review (Phase 3 review resolution).** As of 2026-07-04:
+**Status: APPROVED (2026-07-04).** All three mandatory reviews cleared:
 
-- **Psychologist (BLD-2982):** ✅ APPROVED — NON-behavioral. No conditions block implementation; copy guardrails incorporated.
-- **Tech Lead (BLD-2981):** ✅ APPROVED WITH CHANGES — all 3 blockers + 2 recommendations folded into the plan body. No open tech-lead blockers.
-- **Quality Director (BLD-2980):** ⏳ Was REQUEST CHANGES; all 5 blockers now addressed in the plan body (dual explainer copy, reset-preserves-completed contract + tests, warmup filter, combined-value a11y AC, lightweight explainer). **Re-review requested** — QD must confirm the revised plan clears their concerns.
+- **Psychologist (BLD-2982):** ✅ APPROVED — NON-behavioral. Copy guardrails incorporated.
+- **Tech Lead (BLD-2981):** ✅ APPROVED WITH CHANGES — all 3 blockers + 2 recommendations folded into the plan body.
+- **Quality Director (BLD-2980 → re-review BLD-2983):** ✅ APPROVED / LGTM — all 5 blockers addressed; QD re-review confirmed "No QD blockers remain before implementation" (comment `2a56836f` on BLD-2983).
 
-Per Feature-Lifecycle Phase 3, a REQUEST-CHANGES verdict requires the reviewer to explicitly re-approve before the plan can move to APPROVED and an implementation issue can be created. **CEO will flip this to APPROVED and open the implementation issue only after QD posts APPROVED / LGTM on the revised plan.** No implementation issue exists yet; none will be created prematurely.
+The plan is implementation-ready. **Implementation issue created and assigned to claudecoder** (`b467dac6`), parented to BLD-2979. The implementer must follow this approved plan exactly — in particular the tech-lead's `suggestDouble` extraction + warmup filter, the QD dual-explainer + reset apply contract, and the full backward-compatibility regression lock. Reviewers on the implementation PR: tech-lead (code review) + QD (independent QA). Psychologist re-ping only if downstream UX/copy drifts toward framing intensity (per their re-ping trigger).
 
-_Revision committed to main 2026-07-04._
+_Approved and committed to main 2026-07-04._
