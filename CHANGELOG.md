@@ -24,6 +24,8 @@ marker) at release time.
 
 - **Set one rest time for your whole workout** — the rest-duration picker (spanner icon) is now a single universal setting that applies to every set in the current session and highlights your chosen duration so you can see which one is active. Picking a duration overrides your template's default rest for that session (templates stay editable and still provide the starting default), and it now sticks for every completed set instead of snapping back after each one.
 
+- **Exercise position illustrations show everywhere and never overflow** — the Start/End position images now appear on phones too (they were previously missing there), and the two cards flow side-by-side when there's room and stack when space is tight, so they no longer spill past the screen edge or get stuck in the wrong layout after rotating or resizing your device.
+
 ## v0.26.58 — 2026-07-04
 <!-- versionCode: 128 -->
 

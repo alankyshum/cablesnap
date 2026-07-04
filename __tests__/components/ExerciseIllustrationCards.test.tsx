@@ -4,12 +4,10 @@
  * Verifies:
  *   - Voltra with complete manifest → 2 image pressables with startAlt/endAlt.
  *   - Custom exercise without images → 0 images + "Add your own illustration" hint.
- *   - Container width breakpoint: stacked vs side-by-side via onLayout.
- *
- * Uses `it.each` where practical per QD budget guidance.
+ *   - Intrinsic flex-wrap styles for auto-flowing.
  */
 import React from "react";
-import { render, fireEvent } from "@testing-library/react-native";
+import { render } from "@testing-library/react-native";
 import { ExerciseIllustrationCards } from "../../components/exercises/ExerciseIllustrationCards";
 
 jest.mock("../../assets/exercise-illustrations/manifest.generated", () => ({
@@ -54,7 +52,7 @@ describe("ExerciseIllustrationCards", () => {
 
   it("renders 2 illustration pressables for a voltra exercise with manifest entry", () => {
     const { getByTestId } = render(
-      <ExerciseIllustrationCards exercise={voltra} initialWidth={600} />
+      <ExerciseIllustrationCards exercise={voltra} />
     );
     expect(getByTestId("exercise-illustration-start")).toBeTruthy();
     expect(getByTestId("exercise-illustration-end")).toBeTruthy();
@@ -62,7 +60,7 @@ describe("ExerciseIllustrationCards", () => {
 
   it("applies substantive AI alt-text as accessibilityLabel (not a stub)", () => {
     const { getByTestId } = render(
-      <ExerciseIllustrationCards exercise={voltra} initialWidth={600} />
+      <ExerciseIllustrationCards exercise={voltra} />
     );
     const start = getByTestId("exercise-illustration-start");
     const end = getByTestId("exercise-illustration-end");
@@ -74,7 +72,6 @@ describe("ExerciseIllustrationCards", () => {
     const { queryByTestId } = render(
       <ExerciseIllustrationCards
         exercise={{ id: "voltra-unknown", name: "Unknown", is_custom: false }}
-        initialWidth={600}
       />
     );
     expect(queryByTestId("exercise-illustration-start")).toBeNull();
@@ -83,7 +80,7 @@ describe("ExerciseIllustrationCards", () => {
 
   it("renders empty-state hint for a custom exercise without images", () => {
     const { getByLabelText, queryByTestId } = render(
-      <ExerciseIllustrationCards exercise={custom} initialWidth={600} />
+      <ExerciseIllustrationCards exercise={custom} />
     );
     expect(getByLabelText("Add your own illustration — coming soon")).toBeTruthy();
     expect(queryByTestId("exercise-illustration-start")).toBeNull();
@@ -91,52 +88,15 @@ describe("ExerciseIllustrationCards", () => {
 
   it("renders images for a custom exercise when both URIs are supplied", () => {
     const { getByTestId } = render(
-      <ExerciseIllustrationCards exercise={customWithImages} initialWidth={600} />
+      <ExerciseIllustrationCards exercise={customWithImages} />
     );
     expect(getByTestId("exercise-illustration-start")).toBeTruthy();
     expect(getByTestId("exercise-illustration-end")).toBeTruthy();
   });
 
-  it.each([
-    { width: 320, layout: "column" as const, label: "narrow stacks vertically" },
-    { width: 600, layout: "row" as const, label: "wide renders side-by-side" },
-  ])("$label (width $width)", ({ width, layout }) => {
-    const { getByTestId } = render(
-      <ExerciseIllustrationCards exercise={voltra} initialWidth={width} />
-    );
-    const row = getByTestId("exercise-illustration-row");
-    const styles = Array.isArray(row.props.style) ? row.props.style.flat() : [row.props.style];
-    const flex = styles.reduce(
-      (acc: string | undefined, s: Record<string, unknown> | undefined) =>
-        (s && typeof s === "object" && (s as Record<string, unknown>).flexDirection)
-          ? ((s as Record<string, unknown>).flexDirection as string)
-          : acc,
-      undefined as string | undefined
-    );
-    expect(flex).toBe(layout);
-  });
-
-  it("re-layouts on onLayout container width change", () => {
-    const { getByTestId } = render(
-      <ExerciseIllustrationCards exercise={voltra} initialWidth={320} />
-    );
-    const row = getByTestId("exercise-illustration-row");
-    fireEvent(row, "layout", { nativeEvent: { layout: { width: 600, height: 200, x: 0, y: 0 } } });
-    // After wide layout, row should now use horizontal direction.
-    const styles = Array.isArray(row.props.style) ? row.props.style.flat() : [row.props.style];
-    const flex = styles.reduce(
-      (acc: string | undefined, s: Record<string, unknown> | undefined) =>
-        (s && typeof s === "object" && (s as Record<string, unknown>).flexDirection)
-          ? ((s as Record<string, unknown>).flexDirection as string)
-          : acc,
-      undefined as string | undefined
-    );
-    expect(flex).toBe("row");
-  });
-
   it("renders safety note row when safetyNote is present", () => {
     const { getByTestId } = render(
-      <ExerciseIllustrationCards exercise={voltraSafety} initialWidth={600} />
+      <ExerciseIllustrationCards exercise={voltraSafety} />
     );
     const safetyNote = getByTestId("exercise-safety-note");
     expect(safetyNote).toBeTruthy();
@@ -145,8 +105,64 @@ describe("ExerciseIllustrationCards", () => {
 
   it("does not render safety note row when safetyNote is absent", () => {
     const { queryByTestId } = render(
-      <ExerciseIllustrationCards exercise={voltra} initialWidth={600} />
+      <ExerciseIllustrationCards exercise={voltra} />
     );
     expect(queryByTestId("exercise-safety-note")).toBeNull();
+  });
+
+  it("asserts auto-flow styles on the exercise-illustration-row", () => {
+    const { getByTestId } = render(
+      <ExerciseIllustrationCards exercise={voltra} />
+    );
+    const row = getByTestId("exercise-illustration-row");
+    const styles = Array.isArray(row.props.style) ? row.props.style.flat() : [row.props.style];
+    const flexDirection = styles.reduce(
+      (acc: string | undefined, s: Record<string, unknown> | undefined) =>
+        s && typeof s === "object" && s.flexDirection
+          ? (s.flexDirection as string)
+          : acc,
+      undefined as string | undefined
+    );
+    const flexWrap = styles.reduce(
+      (acc: string | undefined, s: Record<string, unknown> | undefined) =>
+        s && typeof s === "object" && s.flexWrap
+          ? (s.flexWrap as string)
+          : acc,
+      undefined as string | undefined
+    );
+    expect(flexDirection).toBe("row");
+    expect(flexWrap).toBe("wrap");
+  });
+
+  it("asserts card has flexGrow, flexBasis, and minWidth styles", () => {
+    const { getByTestId } = render(
+      <ExerciseIllustrationCards exercise={voltra} />
+    );
+    const card = getByTestId("exercise-illustration-start");
+    const styles = Array.isArray(card.props.style) ? card.props.style.flat() : [card.props.style];
+    const flexGrow = styles.reduce(
+      (acc: number | undefined, s: Record<string, unknown> | undefined) =>
+        s && typeof s === "object" && s.flexGrow !== undefined
+          ? (s.flexGrow as number)
+          : acc,
+      undefined as number | undefined
+    );
+    const flexBasis = styles.reduce(
+      (acc: number | undefined, s: Record<string, unknown> | undefined) =>
+        s && typeof s === "object" && s.flexBasis !== undefined
+          ? (s.flexBasis as number)
+          : acc,
+      undefined as number | undefined
+    );
+    const minWidth = styles.reduce(
+      (acc: number | undefined, s: Record<string, unknown> | undefined) =>
+        s && typeof s === "object" && s.minWidth !== undefined
+          ? (s.minWidth as number)
+          : acc,
+      undefined as number | undefined
+    );
+    expect(flexGrow).toBe(1);
+    expect(flexBasis).toBe(240);
+    expect(minWidth).toBe(220);
   });
 });

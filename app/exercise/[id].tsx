@@ -56,6 +56,7 @@ import { useProgressionChain } from "@/hooks/useProgressionChain";
 import { fontSizes } from "@/constants/design-tokens";
 import { formatIntensity } from "@/lib/intensity";
 import { useIntensityMode } from "@/hooks/useIntensityMode";
+import { ExerciseIllustrationCards } from "@/components/exercises/ExerciseIllustrationCards";
 
 function formatDateLong(ts: number): string {
   return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(new Date(ts));
@@ -172,13 +173,17 @@ export default function ExerciseDetail() {
         <View style={styles.infoRow}>
           <View style={{ flex: 1 }}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>Muscles Involved</Text>
             <MuscleMap primary={exercise.primary_muscles} secondary={exercise.secondary_muscles} width={Math.min(screenWidth * 0.45, 400)} gender={profileGender} /></View>
-          <View style={{ flex: 1 }}>{steps.length > 0 && (<View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>Instructions</Text>
-            {steps.map((step, i) => <Text key={i} variant="body" style={[styles.step, { color: colors.onSurface }]}>{step}</Text>)}</View>)}</View>
+          <View style={{ flex: 1 }}>
+            {steps.length > 0 && <ExerciseIllustrationCards exercise={exercise} />}
+            {steps.length > 0 && (<View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>Instructions</Text>
+            {steps.map((step, i) => <Text key={i} variant="body" style={[styles.step, { color: colors.onSurface }]}>{step}</Text>)}</View>)}
+          </View>
         </View>
       ) : (
         <>
           <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>Muscles Involved</Text>
             <MuscleMap primary={exercise.primary_muscles} secondary={exercise.secondary_muscles} width={screenWidth - 32} gender={profileGender} /></View>
+          {steps.length > 0 && <ExerciseIllustrationCards exercise={exercise} />}
           {steps.length > 0 && (<View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>Instructions</Text>
             {steps.map((step, i) => <Text key={i} variant="body" style={[styles.step, { color: colors.onSurface }]}>{step}</Text>)}</View>)}
         </>

@@ -1,12 +1,12 @@
 // BLD-561: Inline start/end position illustrations for exercise detail views.
 //
 // Renders above the numbered text steps in both ExerciseDetailDrawer and
-// ExerciseDetailPane. Uses onLayout container width (≥480px → side-by-side,
-// <480px → stacked) so tablet bottom-sheets render correctly too.
+// ExerciseDetailPane. Uses viewport-agnostic intrinsic flex-wrap flow:
+// two cards flow side-by-side when there's room and wrap to stacked when narrow.
 //
 // Tap any image opens ExerciseImageZoomModal with full-screen pinch-zoom.
-import React, { useCallback, useMemo, useState } from "react";
-import { Pressable, StyleSheet, View, type LayoutChangeEvent } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Text } from "@/components/ui/text";
@@ -15,17 +15,12 @@ import type { Exercise } from "@/lib/types";
 import { resolveExerciseImages, type ResolvedExerciseImages } from "../../assets/exercise-illustrations/resolve";
 import { ExerciseImageZoomModal } from "./ExerciseImageZoomModal";
 
-const SIDE_BY_SIDE_MIN_WIDTH = 480;
-
 interface Props {
   exercise: Pick<Exercise, "id" | "name" | "is_custom" | "start_image_uri" | "end_image_uri">;
-  /** Initial width hint (optional). We rely primarily on onLayout. */
-  initialWidth?: number;
 }
 
-export function ExerciseIllustrationCards({ exercise, initialWidth }: Props) {
+export function ExerciseIllustrationCards({ exercise }: Props) {
   const colors = useThemeColors();
-  const [containerWidth, setContainerWidth] = useState<number>(initialWidth ?? 0);
   const [zoom, setZoom] = useState<"start" | "end" | null>(null);
 
   const resolved = useMemo<ResolvedExerciseImages | null>(
@@ -33,18 +28,13 @@ export function ExerciseIllustrationCards({ exercise, initialWidth }: Props) {
     [exercise]
   );
 
-  const onLayout = useCallback((e: LayoutChangeEvent) => {
-    const w = e.nativeEvent.layout.width;
-    if (Math.abs(w - containerWidth) > 1) setContainerWidth(w);
-  }, [containerWidth]);
-
   // Hint for custom exercises without images. For seeded exercises with a
   // missing manifest entry we render nothing (no placeholder, no error) per
   // the R2 renderer decisions.
   if (!resolved) {
     if (exercise.is_custom) {
       return (
-        <View onLayout={onLayout} style={styles.hintWrap}>
+        <View style={styles.hintWrap}>
           <Text
             variant="body"
             style={{ color: colors.onSurfaceVariant, fontSize: 12 }}
@@ -58,15 +48,12 @@ export function ExerciseIllustrationCards({ exercise, initialWidth }: Props) {
     return null;
   }
 
-  const sideBySide = containerWidth >= SIDE_BY_SIDE_MIN_WIDTH;
-
   const cardStyle = [styles.card, { backgroundColor: colors.surfaceAlt }];
 
   return (
     <>
       <View
-        onLayout={onLayout}
-        style={[styles.row, sideBySide ? styles.rowHorizontal : styles.rowVertical]}
+        style={styles.row}
         testID="exercise-illustration-row"
       >
         <Pressable
@@ -74,7 +61,7 @@ export function ExerciseIllustrationCards({ exercise, initialWidth }: Props) {
           accessibilityRole="button"
           accessibilityLabel={resolved.startAlt}
           accessibilityHint="Tap to view full-screen"
-          style={[cardStyle, sideBySide ? styles.halfWidth : styles.fullWidth]}
+          style={cardStyle}
           testID="exercise-illustration-start"
         >
           <Image
@@ -91,7 +78,7 @@ export function ExerciseIllustrationCards({ exercise, initialWidth }: Props) {
           accessibilityRole="button"
           accessibilityLabel={resolved.endAlt}
           accessibilityHint="Tap to view full-screen"
-          style={[cardStyle, sideBySide ? styles.halfWidth : styles.fullWidth]}
+          style={cardStyle}
           testID="exercise-illustration-end"
         >
           <Image
@@ -140,24 +127,24 @@ const styles = StyleSheet.create({
   row: {
     marginTop: 8,
     marginBottom: 16,
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
-  rowHorizontal: {
-    flexDirection: "row",
-  },
-  rowVertical: {
-    flexDirection: "column",
-  },
   card: {
+    flexGrow: 1,
+    flexBasis: 240,
+    minWidth: 220,
+    maxWidth: "100%",
     padding: 8,
     borderRadius: 12,
     alignItems: "center",
+    overflow: "hidden",
   },
-  halfWidth: { flex: 1 },
-  fullWidth: { width: "100%" },
   image: {
     width: "100%",
     aspectRatio: 1,
+    maxWidth: "100%",
     maxHeight: 240,
   },
   caption: {
