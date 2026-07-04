@@ -211,6 +211,18 @@ export function useSessionActions({
   useLayoutEffect(() => {
     elapsedRef.current = elapsed;
   });
+  // BLD-2760: keep a synchronous mirror of `groups` so handlers can read the
+  // latest sets WITHOUT re-creating their useCallback identity on every edit.
+  // handleUpdate previously read state via a `setGroups(prev => { ...; return prev; })`
+  // updater; React only invokes that updater eagerly when no other update to the
+  // `groups` hook is pending, so when anything else was churning `groups` the
+  // read was deferred, `resolvedSet` stayed undefined, and the edit was silently
+  // dropped — the value snapped back on keyboard dismiss. Reading from a ref is
+  // always synchronous and correct.
+  const groupsRef = useRef(groups);
+  useLayoutEffect(() => {
+    groupsRef.current = groups;
+  });
   // BLD-630: optimistic local mirror of `workout_sessions.clock_started_at`.
   // The DB write inside completeSet is authoritative for persistence/export,
   // but `useSessionDetail` fetches the session once on `[id]` and never
@@ -343,13 +355,10 @@ export function useSessionActions({
     val: string
   ) => {
     let resolvedSet: SetWithMeta | undefined;
-    setGroups((prev) => {
-      for (const g of prev) {
-        const s = g.sets.find((s) => s.id === setId);
-        if (s) { resolvedSet = s; break; }
-      }
-      return prev;
-    });
+    for (const g of groupsRef.current) {
+      const s = g.sets.find((s) => s.id === setId);
+      if (s) { resolvedSet = s; break; }
+    }
     if (!resolvedSet) return;
 
     const num = val === "" ? null : parseFloat(val);
