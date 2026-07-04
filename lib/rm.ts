@@ -48,19 +48,51 @@ export type HistorySet = {
   rpe: number | null;
   completed: number;
   started_at: number;
+  set_type?: string | null;
 };
 
 export type Suggestion = {
-  type: "increase" | "maintain" | "rep_increase";
+  type: "increase" | "maintain" | "rep_increase" | "weight_and_rep_reset";
   weight: number;
   reps: number | null;
   reason: string;
 };
 
+export function suggestDouble(
+  attempted: HistorySet[],
+  step: number,
+  repRange: { min: number; max: number },
+  lastWeight: number,
+): Suggestion | null {
+  const workingSets = attempted.filter((s) => s.set_type !== "warmup");
+  if (workingSets.length === 0) return null;
+
+  const minRepsAcrossSets = Math.min(...workingSets.map((s) => s.reps!));
+
+  if (minRepsAcrossSets >= repRange.max) {
+    const nextWeight = Math.round((lastWeight + step) * 100) / 100;
+    return {
+      type: "weight_and_rep_reset",
+      weight: nextWeight,
+      reps: repRange.min,
+      reason: `Hit ${repRange.max} reps — add ${step} and reset to ${repRange.min}`,
+    };
+  } else {
+    const nextReps = Math.min(minRepsAcrossSets + 1, repRange.max);
+    return {
+      type: "rep_increase",
+      weight: lastWeight,
+      reps: nextReps,
+      reason: `Build reps toward ${repRange.max} before adding weight`,
+    };
+  }
+}
+
 export function suggest(
   sets: HistorySet[],
   step: number,
   bodyweight: boolean,
+  repRange?: { min: number; max: number } | null,
 ): Suggestion | null {
   // Group sets by session
   const sessions = new Map<string, HistorySet[]>();
@@ -128,6 +160,10 @@ export function suggest(
   const priorMinReps = Math.min(...priorAttempted.map((s) => s.reps!));
   if (lastMinReps < priorMinReps) {
     return { type: "maintain", weight: lastWeight, reps: null, reason: "Reps dropped — maintain weight" };
+  }
+
+  if (repRange && repRange.min < repRange.max) {
+    return suggestDouble(attempted, step, repRange, lastWeight);
   }
 
   const next = Math.round((lastWeight + step) * 100) / 100;

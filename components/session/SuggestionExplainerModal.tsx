@@ -94,6 +94,24 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
             <Section
               icon="arrow-up-bold"
               iconColor={colors.primary}
+              title="Increase reps (range)"
+              body={
+                "You completed your sets but haven't hit the top of your 8–12 range yet. Add a rep at the same weight — we'll bump the weight once every set reaches 12."
+              }
+              colors={colors}
+            />
+            <Section
+              icon="arrow-up-bold"
+              iconColor={colors.primary}
+              title="Increase weight and reset reps"
+              body={
+                "You hit the top of your 8–12 range, so we added 2.5 kg and reset you to 8 reps. Below the top, we build reps first."
+              }
+              colors={colors}
+            />
+            <Section
+              icon="arrow-up-bold"
+              iconColor={colors.primary}
               title="Increase reps (bodyweight)"
               body={
                 "When all sets completed → highest reps in last session + 1."

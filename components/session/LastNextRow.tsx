@@ -68,23 +68,26 @@ export type LastNextRowProps = {
 
 function formatNextLabel(s: Suggestion): string {
   if (s.type === "rep_increase") return `${s.reps} reps`;
+  if (s.type === "weight_and_rep_reset") return `${s.weight} × ${s.reps}`;
   return `${s.weight}`;
 }
 
 function formatNextA11y(s: Suggestion): string {
   if (s.type === "rep_increase") return `Suggested reps: ${s.reps}, ${s.reason}`;
+  if (s.type === "weight_and_rep_reset") return `Suggested weight: ${s.weight}, reps: ${s.reps}, ${s.reason}`;
   if (s.type === "increase") return `Suggested weight: ${s.weight}, ${s.reason}`;
   return `Suggested weight: ${s.weight}, maintain — ${s.reason}`;
 }
 
 function nextLeadingIconName(s: Suggestion): "arrow-up-bold" | "equal" {
-  return s.type === "increase" || s.type === "rep_increase"
+  return s.type === "increase" || s.type === "rep_increase" || s.type === "weight_and_rep_reset"
     ? "arrow-up-bold"
     : "equal";
 }
 
 function suggestedValueDescription(s: Suggestion): string {
   if (s.type === "rep_increase") return `reps: ${s.reps}`;
+  if (s.type === "weight_and_rep_reset") return `weight: ${s.weight} × ${s.reps}`;
   return `weight: ${s.weight}`;
 }
 
@@ -97,11 +100,20 @@ function applyNextFill(
   sets: SetWithMeta[],
   onUpdate: (setId: string, field: "weight" | "reps", val: string) => void,
 ): void {
-  const field: "weight" | "reps" = s.type === "rep_increase" ? "reps" : "weight";
-  const value = String(s.type === "rep_increase" ? s.reps : s.weight);
-  for (const set of sets) {
-    if (!set.completed) {
-      onUpdate(set.id, field, value);
+  if (s.type === "weight_and_rep_reset") {
+    for (const set of sets) {
+      if (!set.completed) {
+        onUpdate(set.id, "weight", String(s.weight));
+        onUpdate(set.id, "reps", String(s.reps));
+      }
+    }
+  } else {
+    const field: "weight" | "reps" = s.type === "rep_increase" ? "reps" : "weight";
+    const value = String(s.type === "rep_increase" ? s.reps : s.weight);
+    for (const set of sets) {
+      if (!set.completed) {
+        onUpdate(set.id, field, value);
+      }
     }
   }
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});

@@ -671,4 +671,79 @@ describe("LastNextRow (BLD-850)", () => {
       );
     });
   });
+
+  describe("weight_and_rep_reset double progression cases", () => {
+    const RESET_SUGGESTION: Suggestion = {
+      type: "weight_and_rep_reset",
+      weight: 22.5,
+      reps: 8,
+      reason: "Hit 12 reps — add 2.5 and reset to 8",
+    };
+
+    it("renders combined weight and reps text '22.5 × 8' in the pill", () => {
+      const { getByText } = render(
+        <LastNextRow
+          previousPerformance={null}
+          previousPerformanceA11y={null}
+          suggestion={RESET_SUGGESTION}
+          sets={[mkSet()]}
+          step={2.5}
+          onPrefillLast={() => {}}
+          onUpdate={() => {}}
+          onOpenExplainer={() => {}}
+          exerciseName="Lateral Raise"
+        />,
+      );
+      expect(getByText(/22\.5.*8/)).toBeTruthy();
+    });
+
+    it("announces both weight, reset reps, and rationale in accessibilityLabel", () => {
+      const { getByTestId } = render(
+        <LastNextRow
+          previousPerformance={null}
+          previousPerformanceA11y={null}
+          suggestion={RESET_SUGGESTION}
+          sets={[mkSet()]}
+          step={2.5}
+          onPrefillLast={() => {}}
+          onUpdate={() => {}}
+          onOpenExplainer={() => {}}
+          exerciseName="Lateral Raise"
+        />,
+      );
+      expect(getByTestId("next-half").props.accessibilityLabel).toBe(
+        "Suggested weight: 22.5, reps: 8, Hit 12 reps — add 2.5 and reset to 8",
+      );
+    });
+
+    it("tapping the reset pill applies BOTH weight and reps to uncompleted sets and leaves completed sets untouched", () => {
+      const onUpdateSpy = jest.fn();
+      const uncompletedSet = mkSet({ id: "set-uncompleted", completed: false });
+      const completedSet = mkSet({ id: "set-completed", completed: true });
+      const { getByTestId } = render(
+        <LastNextRow
+          previousPerformance={null}
+          previousPerformanceA11y={null}
+          suggestion={RESET_SUGGESTION}
+          sets={[uncompletedSet, completedSet]}
+          step={2.5}
+          onPrefillLast={() => {}}
+          onUpdate={onUpdateSpy}
+          onOpenExplainer={() => {}}
+          exerciseName="Lateral Raise"
+        />,
+      );
+
+      fireEvent.press(getByTestId("next-half"));
+      pressAlertButton(alertSpy, "Apply");
+
+      // Should call onUpdate for the uncompleted set for both weight and reps
+      expect(onUpdateSpy).toHaveBeenCalledWith("set-uncompleted", "weight", "22.5");
+      expect(onUpdateSpy).toHaveBeenCalledWith("set-uncompleted", "reps", "8");
+
+      // Should NOT call onUpdate for the completed set
+      expect(onUpdateSpy).not.toHaveBeenCalledWith("set-completed", "weight", "22.5");
+      expect(onUpdateSpy).not.toHaveBeenCalledWith("set-completed", "reps", "8");
+    });
+  });
 });
