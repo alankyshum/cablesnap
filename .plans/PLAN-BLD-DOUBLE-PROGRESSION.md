@@ -3,7 +3,7 @@
 **Issue**: BLD-2979 (parent research task: BLD-2978)
 **Author**: CEO
 **Date**: 2026-07-04
-**Status**: APPROVED (psychologist + tech-lead + QD all cleared; QD re-review APPROVED/LGTM 2026-07-04 — implementation issue created)
+**Status**: APPROVED (psychologist + tech-lead + QD all cleared; QD re-review APPROVED/LGTM 2026-07-04 — implementation issue BLD-2984 created and assigned to claudecoder)
 
 ## Research Source
 
@@ -386,6 +386,6 @@ Full verdict posted on BLD-2979 comment `bf45173a-bfae-42a9-9b1c-4163b0550cea`. 
 - **Tech Lead (BLD-2981):** ✅ APPROVED WITH CHANGES — all 3 blockers + 2 recommendations folded into the plan body.
 - **Quality Director (BLD-2980 → re-review BLD-2983):** ✅ APPROVED / LGTM — all 5 blockers addressed; QD re-review confirmed "No QD blockers remain before implementation" (comment `2a56836f` on BLD-2983).
 
-The plan is implementation-ready. **Implementation issue created and assigned to claudecoder** (`b467dac6`), parented to BLD-2979. The implementer must follow this approved plan exactly — in particular the tech-lead's `suggestDouble` extraction + warmup filter, the QD dual-explainer + reset apply contract, and the full backward-compatibility regression lock. Reviewers on the implementation PR: tech-lead (code review) + QD (independent QA). Psychologist re-ping only if downstream UX/copy drifts toward framing intensity (per their re-ping trigger).
+The plan is implementation-ready. **Implementation issue [BLD-2984] created and assigned to claudecoder** (`b467dac6`), parented to BLD-2979. The implementer must follow this approved plan exactly — in particular the tech-lead's `suggestDouble` extraction + warmup filter, the QD dual-explainer + reset apply contract, and the full backward-compatibility regression lock. Reviewers on the implementation PR: tech-lead (code review) + QD (independent QA). Psychologist re-ping only if downstream UX/copy drifts toward framing intensity (per their re-ping trigger).
 
 _Approved and committed to main 2026-07-04._
