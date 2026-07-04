@@ -122,19 +122,22 @@ debugging arc. Preserve these guardrails when editing
 
 ## Pre-Flight Checks
 
-Before publishing, verify:
+Before committing and pushing to trigger a release, run validation gates:
 
 ```bash
-# 1. All tests pass
-npx jest --passWithNoTests
+# 1. All unit tests pass
+npm test
 
-# 2. TypeScript compiles (ignore pre-existing test file errors)
-npx tsc --noEmit 2>&1 | grep -v "__tests__"
+# 2. Lint checks pass (0 errors)
+npm run lint
 
-# 3. No uncommitted changes
+# 3. TypeScript compiles clean
+npm run typecheck
+
+# 4. No uncommitted changes
 git status --porcelain
 
-# 4. On main branch
+# 5. On main branch
 git branch --show-current
 ```
 
