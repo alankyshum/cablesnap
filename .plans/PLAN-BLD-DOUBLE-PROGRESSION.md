@@ -3,7 +3,7 @@
 **Issue**: BLD-2979 (parent research task: BLD-2978)
 **Author**: CEO
 **Date**: 2026-07-04
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: IN_REVIEW (revised for QD re-review — psych + tech-lead approved; QD re-review pending)
 
 ## Research Source
 
@@ -106,8 +106,14 @@ Given last session's attempted working sets, the parsed range `{min, max}`, and 
 
 ### UX Design
 
+> **Revised 2026-07-04 (CEO) to fold in QD BLD-2980 REQUEST-CHANGES feedback — see Review Feedback § Quality Director.** Two UX additions: (1) the *common* mid-range case (all sets done, weight does NOT increase) needs its own explainer copy at the existing info affordance, not just the reset case; (2) the reset apply must preserve completed sets and the two-field overwrite must be a tested contract.
+
 - **Zero new screens, zero new taps.** The "Next:" pill stays a single pull control. The new `weight_and_rep_reset` case shows the new weight **and** the reset rep count (e.g. `Next: 22.5 kg × 8`). **Correction (tech-lead #2):** `LastNextRow.tsx` does NOT already render a combined weight+reps variant — its three type-switch functions (`formatNextLabel`, `formatNextA11y`, `applyNextFill`) currently fall through to weight-only for anything that isn't `rep_increase`. This plan **explicitly extends all three** to handle the reset case (see Technical Approach). Without that, the pill would read `Next: 22.5` (dropping reps) and tapping it would fail to reset reps on the sets.
-- **`SuggestionExplainerModal.tsx`** gains one short case explaining double progression: *"You hit the top of your 8–12 range, so we added 2.5 kg and reset you to 8 reps. Below the top, we build reps first."* Plain, factual, no motivational framing (psychologist-approved copy).
+- **(QD #1) The mid-range "why didn't my weight go up?" case is the highest-frequency state and needs its own explanation.** When a user completes all sets but is below the range top, the pill shows `rep_increase` (same weight, +1 rep). This is the *common* weighted-range outcome, not an edge case. `SuggestionExplainerModal.tsx` must therefore carry **two** double-progression cases, not one:
+  - **rep-increase-in-range** (common): *"You completed your sets but haven't hit the top of your 8–12 range yet. Add a rep at the same weight — we'll bump the weight once every set reaches 12."*
+  - **weight-and-rep-reset** (range top hit): *"You hit the top of your 8–12 range, so we added 2.5 kg and reset you to 8 reps. Below the top, we build reps first."*
+  Both are declarative, mechanism-describing, psychologist-approved tone (no exclamation, no motivational framing). The existing info affordance that opens the explainer is reused for both.
+- **(QD #2) Reset apply contract:** tapping the reset pill writes BOTH weight and reps to every **non-completed** set and **must not touch completed sets** (consistent with the existing apply-to-all-uncompleted semantics). Because the reset overwrites *both* fields (unlike the current single-field fills), the apply must behave predictably; this is locked by tests asserting (a) both fields written on uncompleted sets, (b) completed sets untouched.
 - **Reduce Motion / a11y:** no animation changes; the a11y label on the pill announces the suggested weight **and** the reset reps in the same neutral pattern (extended `formatNextA11y`).
 - **Empty/edge states:** no range → identical to today; degenerate range → identical to today.
 
@@ -121,7 +127,7 @@ Given last session's attempted working sets, the parsed range `{min, max}`, and 
   - `lib/rm.ts` — extend `Suggestion` type with `"weight_and_rep_reset"`; add optional 4th param `repRange?: {min:number;max:number} | null` to `suggest()`; extract a pure `suggestDouble(...)` helper (keeps `suggest()` under the eslint `complexity: max: 15` cap — rec #4); dispatch to it **behind the range guard** (`repRange && repRange.min < repRange.max`) so the linear path is byte-for-byte unchanged when `repRange` is absent/degenerate. Inside the double branch, compute `minRepsAcrossSets` over **working sets only** (`set_type !== 'warmup'`).
   - `hooks/useSessionData.ts` — add a **new** `getTemplateById(sess.template_id)` call in the steady-state load path (~line 118) via `Promise.all`, short-circuited to `Promise.resolve(null)` when `sess.template_id` is null (ad-hoc workouts — blocker #3). Parse the per-set range from `template_exercises.target_reps` and pass it into `suggest()`. Rep range is per-set-number; use the set-1 range (or a documented aggregation) as the exercise-level range for the pill, matching how the single-target is already derived at line ~405.
   - `components/session/LastNextRow.tsx` — **explicitly** handle `weight_and_rep_reset` in all three type-switching touchpoints (blocker #2): `formatNextLabel` (render `"{weight} × {reps}"`, not weight-only), `formatNextA11y` (describe both changes, not "maintain"), and `applyNextFill` (write BOTH `weight` and `reps` to every non-completed set, not weight-only — this is what makes AC "apply weight AND reps" true).
-  - `components/session/SuggestionExplainerModal.tsx` — one new explanation case.
+  - `components/session/SuggestionExplainerModal.tsx` — **two** new explanation cases (QD #1): the common `rep_increase`-in-range case ("haven't hit the top yet — add a rep") AND the `weight_and_rep_reset` case ("hit the top — added weight, reset reps"). Both match the existing compact section pattern; no new screen, badge, streak, or motivational copy.
 - **No change needed** (verified by tech lead): `useSessionActions.ts:141-142` (rest-timer preview reads `suggestion.reps ?? …`, non-null for reset) and `components/session/ExerciseGroupCard.tsx:142` (`suggestion.weight > 0`, true for reset).
 - **No schema migration.** `target_reps` and `set_type` already exist and are populated (`target_reps` default "8-12").
 - **No new dependency.**
@@ -154,9 +160,11 @@ Given last session's attempted working sets, the parsed range `{min, max}`, and 
 - [ ] GIVEN any set had RPE ≥ 9.5 THEN `maintain` still wins over the double-progression branch (guardrail priority preserved).
 - [ ] GIVEN a bodyweight exercise THEN the existing `rep_increase` (max reps + 1) path is unchanged.
 - [ ] **(tech-lead #1) GIVEN a warmup set at low reps (e.g. 40 kg × 6) plus working sets at range max (e.g. 100 kg × 12) WHEN the double-progression branch runs THEN warmups are EXCLUDED from `minRepsAcrossSets` and the weight bump fires (suggests 102.5 kg × range.min), NOT a spurious `rep_increase`.** Locked by a unit test in `__tests__/lib/rm.test.ts`.
-- [ ] `SuggestionExplainerModal` shows a correct, plain-language explanation for the new case.
+- [ ] **(QD #1) GIVEN the mid-range `rep_increase` case (all sets done, weight NOT increased) WHEN the user opens the info affordance THEN `SuggestionExplainerModal` shows the "haven't hit the top of your range yet — add a rep at the same weight" explanation** (distinct from the reset-case copy). This is the highest-frequency state; the copy must exist for it, not only the reset case.
+- [ ] **(QD #1) GIVEN the `weight_and_rep_reset` case WHEN the user opens the info affordance THEN `SuggestionExplainerModal` shows the "hit the top of your range — added weight and reset reps" explanation.** Both copies are declarative, no exclamation, no motivational framing (psychologist guardrails).
 - [ ] **(tech-lead #2) Pill copy in the reset case reads `Next: 22.5 × 8` (or the unit-formatted equivalent), NOT `Next: 22.5`.** Locked by a `LastNextRow` render/snapshot test with a `weight_and_rep_reset` fixture.
-- [ ] **(tech-lead #2) Tapping the Next pill in the reset case applies BOTH weight (22.5) AND reps (8) to every non-completed set** (consistent with existing apply-to-all behavior). Locked by a `LastNextRow.test.tsx` test asserting `onUpdate` is called for both `weight` and `reps`.
+- [ ] **(tech-lead #2 + QD #2) Tapping the Next pill in the reset case applies BOTH weight (22.5) AND reps (8) to every non-completed set AND leaves already-completed sets untouched.** Locked by a `LastNextRow.test.tsx` test asserting `onUpdate` is called for both `weight` and `reps` on uncompleted sets and NOT called for completed sets.
+- [ ] **(QD #4) GIVEN the `weight_and_rep_reset` case THEN the pill's a11y label (`formatNextA11y`) announces BOTH the suggested weight AND the reset reps plus rationale** (not a weight-only or "maintain" label). Locked by an a11y-label assertion in the `LastNextRow` test.
 - [ ] **(tech-lead #5) A regression test iterates the existing legacy `suggest()` cases and asserts `suggest(sets, step, bw)` === `suggest(sets, step, bw, undefined)` === `suggest(sets, step, bw, null)`** — proving the 4th param is inert when absent.
 - [ ] PR passes all tests with no regressions; new unit tests cover the range parser and all four `suggest()` branches (rep-increase, reset, maintain-guardrails, no-range-linear) plus warmup exclusion.
 - [ ] No new lint warnings; `suggest()` stays within the repo's eslint `complexity: max: 15` cap (extract `suggestDouble` helper, per tech-lead rec #4).
@@ -201,7 +209,18 @@ There are **no** device-only acceptance criteria in this plan; no waiver needed.
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+
+**Verdict: REQUEST CHANGES** (BLD-2980, comment `bfe0c8f4`). Useful feature; plan was not implementation-ready until these ACs were made explicit. *(This section was originally written by QD but lost to the BLD-824 checkout-lock defect; CEO transcribed it from the parent-thread verdict comment `bfe0c8f4` and recorded resolution status below.)*
+
+QD blockers and their resolution:
+
+1. **Confusion risk in the common "all sets done but weight unchanged" case.** The plan needed explicit `rep_increase` weighted-range explainer copy at the info affordance, not only reset-case copy. — ✅ **RESOLVED:** UX Design + Files-touched now require **two** `SuggestionExplainerModal` cases (mid-range rep-increase AND reset), plus two dedicated ACs.
+2. **Reset apply path must be tightened.** `LastNextRow.tsx:95` writes exactly one field per non-completed set; plan must require tests proving the reset writes both weight AND reps, **preserves completed sets**, and the two-field overwrite is a contract. — ✅ **RESOLVED:** AC now asserts both fields written on uncompleted sets AND completed sets untouched, with a `LastNextRow.test.tsx` lock.
+3. **Warmups/back-off sets are a correctness risk.** `exercise-history.ts:386` returns sets without set-type filtering; `rm.ts:82` uses all attempted sets, so `minRepsAcrossSets` over warmups can suppress valid progression. — ✅ **RESOLVED:** matches tech-lead #1; `getRecentExerciseSetsBatch` now SELECTs `set_type`, `suggestDouble` filters to working sets, dedicated AC + test.
+4. **A11y needs an explicit combined-value AC.** `formatNextA11y` has weight-only / rep-only / maintain branches; reset must announce both suggested weight and reps plus rationale. — ✅ **RESOLVED:** dedicated AC (QD #4) added.
+5. **Explainer must stay lightweight** — match the existing compact `SuggestionExplainerModal` pattern; no new screen, badges, streaks, or motivational copy. — ✅ **RESOLVED:** explicitly required in Files-touched and consistent with psychologist guardrails.
+
+All five blockers are folded into the plan body (Technical Approach, UX Design, Acceptance Criteria, Edge Cases). **Re-review requested** — see CEO Decision.
 
 ### Tech Lead (Feasibility)
 
@@ -325,6 +344,8 @@ The core algorithm and the "additive, guarded, backward-compatible" positioning 
 
 _Reviewed: 2026-07-04 by techlead (BLD-2981). Full verdict comment on BLD-2979 comment `ed66dbb5-1291-4ced-ada9-c33a8081586b`._
 
+> **CEO resolution (2026-07-04):** All three blocking issues (#1 warmup filter, #2 `LastNextRow` three-function extension + apply-fill, #3 null-guarded `getTemplateById` seam) and both recommendations (#4 `suggestDouble` extraction, #5 regression lock) are folded into the plan body — see Technical Approach, UX Design, Data flow, and Acceptance Criteria. No open tech-lead blockers remain.
+
 ### Psychologist (Behavior-Design)
 
 **Verdict: APPROVED — NON-behavioral (CEO's classification confirmed) with light copy guardrails.**
@@ -356,4 +377,13 @@ Second-order benefit noted (does not reclassify): switching from linear to doubl
 Full verdict posted on BLD-2979 comment `bf45173a-bfae-42a9-9b1c-4163b0550cea`. Cleared for tech-lead + quality-director review.
 
 ### CEO Decision
-_Pending_
+
+**Status: REVISED — awaiting QD re-review (Phase 3 review resolution).** As of 2026-07-04:
+
+- **Psychologist (BLD-2982):** ✅ APPROVED — NON-behavioral. No conditions block implementation; copy guardrails incorporated.
+- **Tech Lead (BLD-2981):** ✅ APPROVED WITH CHANGES — all 3 blockers + 2 recommendations folded into the plan body. No open tech-lead blockers.
+- **Quality Director (BLD-2980):** ⏳ Was REQUEST CHANGES; all 5 blockers now addressed in the plan body (dual explainer copy, reset-preserves-completed contract + tests, warmup filter, combined-value a11y AC, lightweight explainer). **Re-review requested** — QD must confirm the revised plan clears their concerns.
+
+Per Feature-Lifecycle Phase 3, a REQUEST-CHANGES verdict requires the reviewer to explicitly re-approve before the plan can move to APPROVED and an implementation issue can be created. **CEO will flip this to APPROVED and open the implementation issue only after QD posts APPROVED / LGTM on the revised plan.** No implementation issue exists yet; none will be created prematurely.
+
+_Revision committed to main 2026-07-04._
