@@ -197,7 +197,7 @@ describe("recomputeActiveRest — debounce (BLD-1110)", () => {
     jest.useRealTimers();
   });
 
-  it("multiple rapid taps only trigger one recompute after 250ms", async () => {
+  it("does not trigger any recomputes after 250ms (disabled)", async () => {
     const { result } = renderHook(() => useRestTimer(defaultOptions));
     await act(async () => {
       result.current.startRest({
@@ -223,7 +223,7 @@ describe("recomputeActiveRest — debounce (BLD-1110)", () => {
     await act(async () => {
       jest.advanceTimersByTime(300);
     });
-    // Exactly one new call after debounce
-    expect(mockGetRestContext.mock.calls.length).toBe(callsBefore + 1);
+    // No new calls because recomputing is permanently a no-op now
+    expect(mockGetRestContext.mock.calls.length).toBe(callsBefore);
   });
 });

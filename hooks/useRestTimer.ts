@@ -9,19 +9,16 @@ import {
 import {
   getRestSecondsForExercise,
   getAppSetting,
-  getRestContext,
   setAppSetting,
   deleteAppSetting,
 } from "../lib/db";
 import type { SetType } from "../lib/types";
 import {
-  resolveRestSeconds,
   defaultBreakdown,
   type RestBreakdown,
 } from "../lib/rest";
 import type { RestSource } from "../lib/rest-resolver";
-import { setUserRestSeconds, restResolverBreadcrumb } from "../lib/rest-resolver";
-import * as Sentry from "@sentry/react-native";
+import { setUserRestSeconds } from "../lib/rest-resolver";
 import {
   cancelRestComplete,
   presentLiveRestCountdown,
@@ -37,7 +34,6 @@ import {
   parsePersistedRestTimerState,
   startLiveCountdownLoop,
   rescheduleResumeNotifications,
-  isPresetRestSource,
   scheduleRestNotifications,
   type PersistedRestTimerState,
 } from "./rest-timer-state";
@@ -266,38 +262,10 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       const preview: NextSetPreview = typeof ctx === "object" ? (ctx.preview ?? null) : null;
       const isLastSet: boolean = typeof ctx === "object" ? (ctx.isLastSet ?? false) : false;
       if (!sessionId) return;
-      const adaptiveSetting = await getAppSetting("rest_adaptive_enabled");
-      const adaptiveOn = adaptiveSetting !== "false";
 
       // BLD-1110: capture the triggering setId for recomputeActiveRest gating.
       restSetIdRef.current = typeof ctx === "object" && ctx.setId ? ctx.setId : null;
       restSetTypeRef.current = typeof ctx === "object" ? ctx.setType : "normal";
-
-      if (typeof ctx === "object" && adaptiveOn) {
-        try {
-          const inputs = await getRestContext(sessionId, ctx.exerciseId, {
-            set_type: ctx.setType,
-            rpe: ctx.rpe,
-          });
-          setRestSource(inputs.source);
-          setRestExerciseId(ctx.exerciseId);
-          // AC2b: bypass resolveRestSeconds for history/pinned — their seconds are
-          // already the user's actual rest value; re-multiplying is double-counting.
-          // Clamp to [15, 600] (resolver-side bounds), NOT legacy [10, 360].
-          if (isPresetRestSource(inputs.source.kind)) {
-            const secs = Math.min(600, Math.max(15, inputs.source.seconds));
-            runTimer(secs, defaultBreakdown(secs), preview, isLastSet);
-            return;
-          }
-          const br = resolveRestSeconds(inputs);
-          runTimer(br.totalSeconds, br, preview, isLastSet);
-          return;
-        } catch (e) {
-          // Resolver error — log to Sentry for observability, then fall through to legacy path.
-          Sentry.captureException(e, { tags: { feature: "rest-resolver" } });
-          restResolverBreadcrumb({ source: "default", seconds: 0, exerciseId: ctx.exerciseId, level: "error" });
-        }
-      }
 
       setRestSource(null);
       setRestExerciseId(exerciseId);
@@ -323,109 +291,12 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
     [runTimer],
   );
 
-  /**
-   * BLD-1110: Recompute the running rest timer when the user updates RPE on
-   * the most-recent-completed set during an active rest.
-   *
-   * No-op guards (all four required per Tech B1):
-   * 1. No active timer (endAtRef.current == null)
-   * 2. Wrong exercise (restExerciseId !== exerciseId param)
-   * 3. Not the most-recent-completed set (setId !== restSetIdRef.current)
-   * 4. Source is history or pinned (would double-count the multiplier)
-   *
-   * When computing: remaining = max(0, prev_remaining + (newTotal − oldTotal)).
-   * Elapsed is preserved (no reset). If remaining ≤ 0, fires the existing
-   * natural-expiry path. Debounced: 250 ms window, only the final tap fires.
-   */
-  const recomputeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const recomputeActiveRest = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     (setId: string, exerciseId: string, newRpe: number | null) => {
-      // Guard 1: no active timer
-      if (endAtRef.current == null) return;
-      // Guard 2: wrong exercise
-      if (restExerciseId !== exerciseId) return;
-      // Guard 3: not the triggering set
-      if (restSetIdRef.current !== setId) return;
-      // Guard 4: history/pinned sources must not be re-multiplied
-      if (isPresetRestSource(restSource?.kind)) return;
-
-      // Debounce — only the final tap within 250 ms drives the recompute.
-      if (recomputeDebounceRef.current) clearTimeout(recomputeDebounceRef.current);
-      recomputeDebounceRef.current = setTimeout(() => {
-        recomputeDebounceRef.current = null;
-        if (!sessionId || endAtRef.current == null) return;
-
-        // Re-resolve with new RPE
-        getRestContext(sessionId, exerciseId, {
-          set_type: restSetTypeRef.current,
-          rpe: newRpe,
-        }).then((inputs) => {
-          // In-callback guard: timer may have expired or been dismissed while
-          // the async resolver was pending.
-          if (endAtRef.current == null) return;
-
-          // Double-check source hasn't changed to history/pinned between the
-          // debounce delay and now.
-          if (isPresetRestSource(inputs.source.kind)) return;
-
-          const newBreakdown = resolveRestSeconds(inputs);
-          const newTotal = newBreakdown.totalSeconds;
-          const oldTotal = breakdown.totalSeconds;
-          const delta = newTotal - oldTotal;
-
-          const prevRemaining = Math.max(
-            0,
-            Math.ceil((endAtRef.current! - Date.now()) / 1000),
-          );
-          const newRemaining = Math.max(0, prevRemaining + delta);
-
-          // Emit breadcrumb only on real recomputes (not no-ops).
-          restResolverBreadcrumb({
-            source: inputs.source.kind,
-            seconds: newTotal,
-            exerciseId,
-          });
-
-          if (newRemaining <= 0) {
-            // Natural-expiry path — reuse existing timer completion logic.
-            endAtRef.current = Date.now(); // set to now so tick fires immediately
-            return;
-          }
-
-          // Adjust endAt and update state (elapsed preserved — endAt extends/contracts).
-          const newEndTimestamp = Date.now() + newRemaining * 1000;
-          endAtRef.current = newEndTimestamp;
-          setRest(newRemaining);
-          setBreakdown(newBreakdown);
-
-          // Persist the recomputed active timer state unconditionally so
-          // app-restore always reflects the adjusted timer, regardless of
-          // whether the notification path succeeds (mirrors runTimer() pattern).
-          if (sessionId) {
-            persistActiveTimerState({
-              sessionId,
-              endTimestamp: newEndTimestamp,
-              durationSeconds: newRemaining,
-              breakdown: newBreakdown,
-              notificationIds: notificationIdsRef.current,
-              previewSnapshot: previewRef.current,
-              isLastSet: isLastSetRef.current,
-              cueSeconds: 10,
-              liveEnabled: false,
-            });
-          }
-
-          // Cancel the stale notification and reschedule with the updated
-          // remaining seconds so backgrounded users get the correct alert.
-          cancelNotification();
-          void scheduleNotification(newRemaining, newEndTimestamp, newBreakdown, previewRef.current, isLastSetRef.current);
-        }).catch(() => {
-          // Resolver error on recompute — silently skip; timer continues with old value.
-        });
-      }, 250);
+      // Neuter to a no-op as adaptive rest is now forced OFF.
     },
-    [restExerciseId, restSource, sessionId, breakdown, cancelNotification, scheduleNotification, persistActiveTimerState],
+    [],
   );
 
   const dismissRest = useCallback(() => {
@@ -560,12 +431,6 @@ export function useRestTimer({ sessionId, colors }: UseRestTimerOptions) {
       restHapticTimers.current = [];
       stopRestInterval();
       stopLiveCountdownInterval();
-      // Clear any pending recompute debounce on unmount to prevent post-unmount
-      // state updates.
-      if (recomputeDebounceRef.current) {
-        clearTimeout(recomputeDebounceRef.current);
-        recomputeDebounceRef.current = null;
-      }
     };
   }, [stopRestInterval, stopLiveCountdownInterval]);
 

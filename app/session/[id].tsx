@@ -52,7 +52,6 @@ import { useIntensityMode } from "../../hooks/useIntensityMode";
 import { CoachOverlay } from "../../components/session/CoachOverlay";
 import {
   startCoach,
-  getTempoCoachEnabled,
 } from "../../lib/workout/tempo-coach";
 import type { CoachSession, CoachPhase } from "../../lib/workout/tempo-coach";
 
@@ -89,15 +88,9 @@ export default function ActiveSession() {
   }>();
   const { success: showToast, error: showError } = useToast();
 
-  // Load timer sound setting + preload audio players so the first
-  // set-complete tap is not the audio load trigger (BLD-559 TL-T3).
+  // Preload audio players so the first set-complete tap is not the audio load trigger (BLD-559 TL-T3).
   useEffect(() => {
-    getAppSetting("timer_sound_enabled").then((val) => {
-      setAudioCategoryEnabled("timer", val !== "false");
-    }).catch(() => {
-      setAudioCategoryEnabled("timer", true);
-      showError("Could not load sound setting");
-    });
+    setAudioCategoryEnabled("timer", true);
     void preloadAudio();
   }, []);
 
@@ -141,16 +134,12 @@ export default function ActiveSession() {
 
   const { celebration, triggerPR, cleanup: cleanupCelebration } = usePRCelebration();
 
-  // BLD-1158b: Tempo Coach state
-  const [tempoCoachEnabled, setTempoCoachEnabledState] = useState(false);
+  // BLD-1158b: Tempo Coach state — launcher always available (toggle removed)
+  const tempoCoachEnabled = true;
   const [activeCoachSession, setActiveCoachSession] = useState<CoachSession | null>(null);
   const [coachPhase, setCoachPhase] = useState<CoachPhase | null>(null);
   const [coachTempo, setCoachTempo] = useState<string | null>(null);
   const activeCoachRef = useRef<CoachSession | null>(null);
-
-  useEffect(() => {
-    getTempoCoachEnabled().then(setTempoCoachEnabledState).catch(() => {});
-  }, []);
 
   // Cancel coach on unmount.
   useEffect(() => {

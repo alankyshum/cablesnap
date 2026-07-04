@@ -104,14 +104,9 @@ export function useTimerEngine() {
 
   useFocusEffect(
     useCallback(() => {
-      getAppSetting("timer_sound_enabled").then((val) => {
-        setAudioCategoryEnabled("timer", val !== "false")
-      }).catch(() => {
-        setAudioCategoryEnabled("timer", true)
-        toast.error("Could not load sound setting")
-      })
+      setAudioCategoryEnabled("timer", true)
       return () => { unloadAudio() }
-    }, [toast])
+    }, [])
   )
 
   // Keep awake only when timer is active

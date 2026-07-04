@@ -16,7 +16,7 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ChevronRight } from 'lucide-react-native';
-import PreferencesCard from '../../components/settings/PreferencesCard';
+import SessionPreferencesCard from '../../components/settings/SessionPreferencesCard';
 import HydrationCard from '../../components/settings/HydrationCard';
 import FrequencyGoalPicker from '../../components/settings/FrequencyGoalPicker';
 import IntegrationsCard from '../../components/settings/IntegrationsCard';
@@ -90,7 +90,6 @@ export default function Settings() {
     toast,
     loading, setLoading,
     count,
-    soundEnabled, setSoundEnabled,
     restNotifications, setRestNotifications,
     reminders, setReminders,
     reminderTime, setReminderTime,
@@ -234,31 +233,29 @@ export default function Settings() {
             accessibilityLabel="Open advanced set types help"
             onPress={() => router.push('/settings/advanced-sets')}
           />
+          <Separator style={styles.tileDivider} />
+          <SessionPreferencesCard
+            colors={colors}
+            toast={toast}
+            bareContent
+          />
         </SettingsTile>
 
         {/* ── 4. Notifications ── */}
         <SettingsTile colors={colors} title="Notifications" testID="settings-tile-notifications" index={3}>
-          <PreferencesCard
+          <ReminderSection
             colors={colors}
             toast={toast}
-            soundEnabled={soundEnabled}
-            setSoundEnabled={setSoundEnabled}
-            bareContent
-          >
-            <ReminderSection
-              colors={colors}
-              toast={toast}
-              reminders={reminders}
-              setReminders={setReminders}
-              reminderTime={reminderTime}
-              setReminderTime={setReminderTime}
-              permDenied={permDenied}
-              setPermDenied={setPermDenied}
-              scheduleCount={scheduleCount}
-              restNotifications={restNotifications}
-              setRestNotifications={setRestNotifications}
-            />
-          </PreferencesCard>
+            reminders={reminders}
+            setReminders={setReminders}
+            reminderTime={reminderTime}
+            setReminderTime={setReminderTime}
+            permDenied={permDenied}
+            setPermDenied={setPermDenied}
+            scheduleCount={scheduleCount}
+            restNotifications={restNotifications}
+            setRestNotifications={setRestNotifications}
+          />
         </SettingsTile>
 
         {/* ── 5. Coaching ── */}

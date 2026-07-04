@@ -121,7 +121,7 @@ jest.mock('../../lib/strava', () => ({
 
 import Settings from '../../app/(tabs)/settings'
 
-const { exportAllData, importData, getWorkoutCSVData, setAppSetting } = require('../../lib/db')
+const { exportAllData, importData, getWorkoutCSVData } = require('../../lib/db')
 const { shareAsync } = require('expo-sharing')
 const { getDocumentAsync } = require('expo-document-picker')
 
@@ -234,19 +234,6 @@ describe('Data Management Acceptance', () => {
 
     await waitFor(() => {
       expect(mockRouter.push).toHaveBeenCalledWith('/errors')
-    })
-  })
-
-  it('toggles timer sound setting', async () => {
-    const { findByLabelText } = renderScreen(<Settings />)
-
-    const toggle = await findByLabelText('Timer Sound')
-    expect(toggle).toBeTruthy()
-
-    fireEvent(toggle, 'valueChange', false)
-
-    await waitFor(() => {
-      expect(setAppSetting).toHaveBeenCalledWith('timer_sound_enabled', 'false')
     })
   })
 })

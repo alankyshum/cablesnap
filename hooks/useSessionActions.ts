@@ -10,8 +10,6 @@ import {
   completeSession,
   completeSet,
   getRestSecondsForLink,
-  getRestContext,
-  getAppSetting,
   uncompleteSet,
   updateSet,
   updateSetNotes,
@@ -59,9 +57,7 @@ import {
   resolvePrefillCandidate,
   type PrefillCandidate,
 } from "./resolvePrefillCandidate";
-import { resolveRestSeconds, type RestBreakdown } from "../lib/rest";
-import { restResolverBreadcrumb } from "../lib/rest-resolver";
-import * as Sentry from "@sentry/react-native";
+import { type RestBreakdown } from "../lib/rest";
 import { bumpQueryVersion, queryClient } from "../lib/query";
 import {
   getSessionProgramDayId,
@@ -186,7 +182,6 @@ export function useSessionActions({
   updateGroupSet,
   startRest,
   startRestWithDuration,
-  startRestWithBreakdown,
   dismissRest,
   session,
   showToast,
@@ -392,35 +387,10 @@ export function useSessionActions({
       const firstLinked = linked.length > 0 ? linked[0] : undefined;
       const previewGroup = firstLinked?.exercise_id !== set.exercise_id ? firstLinked : undefined;
       const { preview, isLastSet } = computeRestPreview(set.id, previewGroup, groups, unit ?? "lb", previewGroup ? suggestions?.[previewGroup.exercise_id] : undefined);
-      // Adaptive superset rest: resolve using the last-completed set's context
-      // on the final exercise of the superset (per plan §5).
-      const adaptiveSetting = await getAppSetting("rest_adaptive_enabled");
-      if (adaptiveSetting !== "false" && id) {
-        try {
-          // AC2c: linkScope: true so history tier is never consulted for linked groups.
-          // Only bypass needed is for pinned (history cannot occur here).
-          const ctx = await getRestContext(id, set.exercise_id, {
-            set_type: set.set_type,
-            rpe: set.rpe,
-          }, { linkScope: true });
-          if (ctx.source.kind === "pinned") {
-            const secs = Math.min(600, Math.max(15, ctx.source.seconds));
-            startRestWithDuration(secs, preview, isLastSet);
-            return;
-          }
-          const breakdown = resolveRestSeconds(ctx);
-          startRestWithBreakdown(breakdown, preview, isLastSet);
-          return;
-        } catch (e) {
-          // Resolver error — log to Sentry for observability, then fall through to legacy path.
-          Sentry.captureException(e, { tags: { feature: "rest-resolver" } });
-          restResolverBreadcrumb({ source: "default", seconds: 0, exerciseId: set.exercise_id, level: "error" });
-        }
-      }
       const secs = await getRestSecondsForLink(id!, set.link_id!);
       startRestWithDuration(secs, preview, isLastSet);
     }
-  }, [groups, id, unit, suggestions, startRestWithDuration, startRestWithBreakdown]);
+  }, [groups, id, unit, suggestions, startRestWithDuration]);
 
   const handleCheck = useCallback(async (set: SetWithMeta) => {
     const group = groups.find((g) => g.exercise_id === set.exercise_id);
@@ -554,11 +524,8 @@ export function useSessionActions({
       }
     }
 
-    // Warmup sets: default behavior preserved (no timer). Opt-in via setting.
-    if (set.set_type === 'warmup') {
-      const warmupRest = await getAppSetting("rest_after_warmup_enabled");
-      if (warmupRest !== "true") return;
-    }
+    // Warmup sets: never start rest timer.
+    if (set.set_type === 'warmup') return;
 
     if (set.link_id) {
       await handleLinkedRest(set);

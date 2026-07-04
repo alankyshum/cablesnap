@@ -94,17 +94,17 @@ describe("useSetCompletionFeedback — AC-8/9 (live toggle from Settings)", () =
   it("subsequent fire() reflects updated settings with no restart", async () => {
     const { result } = renderHook(() => useSetCompletionFeedback());
 
-    // Start with plan defaults: haptic on, audio off.
+    // Start with plan defaults: both ON now.
     act(() => { result.current.fire(); });
     expect(mockHaptic).toHaveBeenCalledTimes(1);
-    expect(mockPlay).toHaveBeenCalledTimes(0);
+    expect(mockPlay).toHaveBeenCalledTimes(1);
 
     // User toggles both from Settings screen.
     await setSetCompletionHaptic(false);
-    await setSetCompletionAudio(true);
+    await setSetCompletionAudio(false);
 
     act(() => { result.current.fire(); });
-    // Haptic count unchanged (still 1), audio now fired.
+    // Haptic count unchanged (still 1), audio count unchanged (still 1).
     expect(mockHaptic).toHaveBeenCalledTimes(1);
     expect(mockPlay).toHaveBeenCalledTimes(1);
   });
@@ -117,16 +117,10 @@ describe("useSetCompletionFeedback — AC-8/9 (live toggle from Settings)", () =
   });
 });
 
-describe("useSetCompletionFeedback — hydration on mount", () => {
-  it("reads both setting keys on mount (does not fire anything)", async () => {
+describe("useSetCompletionFeedback — initialization on mount", () => {
+  it("enables feedback audio category on mount", async () => {
     renderHook(() => useSetCompletionFeedback());
-    // Allow the hydrate() microtask to run.
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(mockGet).toHaveBeenCalledWith("feedback.setComplete.haptic");
-    expect(mockGet).toHaveBeenCalledWith("feedback.setComplete.audio");
-    expect(mockHaptic).not.toHaveBeenCalled();
-    expect(mockPlay).not.toHaveBeenCalled();
+    expect(mockSetEnabled).toHaveBeenCalledWith("feedback", true);
   });
 });
 

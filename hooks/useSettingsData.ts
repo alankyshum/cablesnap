@@ -9,14 +9,12 @@ import {
   getStravaConnection,
 } from '@/lib/db';
 import { getErrorCount } from '@/lib/errors';
-import { setEnabled as setAudioCategoryEnabled } from '@/lib/audio';
 import { getPermissionStatus } from '@/lib/notifications';
 
 export function useSettingsData() {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [count, setCount] = useState(0);
-  const [soundEnabled, setSoundEnabled] = useState(true);
   const [restNotifications, setRestNotifications] = useState(true);
   const [reminders, setReminders] = useState(false);
   const [reminderTime, setReminderTime] = useState('08:00');
@@ -42,17 +40,6 @@ export function useSettingsData() {
           setFatGoal(s.body_fat_goal);
         })
         .catch(() => {});
-      getAppSetting('timer_sound_enabled')
-        .then((val) => {
-          const on = val !== 'false';
-          setSoundEnabled(on);
-          setAudioCategoryEnabled('timer', on);
-        })
-        .catch(() => {
-          setSoundEnabled(true);
-          setAudioCategoryEnabled('timer', true);
-          toast.error('Could not load sound setting');
-        });
       getAppSetting('rest_notification_enabled')
         .then((val) => {
           setRestNotifications(val !== 'false');
@@ -90,14 +77,13 @@ export function useSettingsData() {
           .then((conn) => setStravaAthlete(conn?.athlete_name ?? null))
           .catch(() => {});
       }
-    }, [toast]),
+    }, []),
   );
 
   return {
     toast,
     loading, setLoading,
     count,
-    soundEnabled, setSoundEnabled,
     restNotifications, setRestNotifications,
     reminders, setReminders,
     reminderTime, setReminderTime,
