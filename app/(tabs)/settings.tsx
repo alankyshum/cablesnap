@@ -13,8 +13,8 @@ import { useFloatingTabBarHeight } from '../../components/FloatingTabBar';
 import Masonry from '../../components/ui/Masonry';
 import BodyProfileCard from '../../components/BodyProfileCard';
 import Constants from 'expo-constants';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ChevronRight } from 'lucide-react-native';
 import SessionPreferencesCard from '../../components/settings/SessionPreferencesCard';
 import HydrationCard from '../../components/settings/HydrationCard';
@@ -81,10 +81,16 @@ export default function Settings() {
   const [trainingDayMacrosEnabled, setTrainingDayMacrosEnabled] = useState<boolean | null>(null);
   const appVersion = Constants.expoConfig?.version ?? '0.0.0';
 
-  useEffect(() => {
+  // Reload coaching feature flags every time the Settings tab regains focus, so
+  // the Coaching module captions reflect toggles made on the sub-screens after
+  // the user navigates back (the tab stays mounted, so a mount-only effect went
+  // stale). See app/settings/macro-coach + training-day-macros.
+  const refreshCoachingStatus = useCallback(() => {
     getMacroCoachEnabled().then(setMacroCoachEnabled).catch(() => setMacroCoachEnabled(false));
     getTrainingDayMacrosEnabled().then(setTrainingDayMacrosEnabled).catch(() => setTrainingDayMacrosEnabled(false));
   }, []);
+
+  useFocusEffect(refreshCoachingStatus);
 
   const {
     toast,
