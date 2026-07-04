@@ -139,7 +139,6 @@ import Settings, { SETTINGS_SCROLL_EXTRA_BOTTOM } from '../../app/(tabs)/setting
 import { FLOATING_TAB_BAR_HEIGHT } from '../../components/FloatingTabBar'
 import { spacing } from '../../constants/design-tokens'
 
-const { setEnabled: mockSetAudioEnabled } = require('../../lib/audio')
 const { requestPermission, scheduleReminders, cancelAll, getPermissionStatus } = require('../../lib/notifications')
 
 describe('Settings Screen Acceptance', () => {
@@ -159,8 +158,8 @@ describe('Settings Screen Acceptance', () => {
   it('renders all section titles, app name/version, and open-source description', async () => {
     const { findByText } = renderScreen(<Settings />)
     expect(await findByText('Units')).toBeTruthy()
-    expect(await findByText('Preferences')).toBeTruthy()
-    expect(await findByText('Data Management')).toBeTruthy()
+    expect(await findByText('Training')).toBeTruthy()
+    expect(await findByText('Notifications')).toBeTruthy()
     expect(await findByText('Feedback & Reports')).toBeTruthy()
     expect(await findByText('About')).toBeTruthy()
     expect(await findByText(/CableSnap v/)).toBeTruthy()
@@ -245,46 +244,12 @@ describe('Settings Screen Acceptance', () => {
     })
   })
 
-  // ── Timer Sound Toggle ──────────────────────────────────
-
-  it('Timer Sound switch renders, has accessible label, and saves setting on toggle off', async () => {
-    const { findByLabelText } = renderScreen(<Settings />)
-    const toggle = await findByLabelText('Timer Sound')
-    expect(toggle).toBeTruthy()
-
-    fireEvent(toggle, 'valueChange', false)
-
-    await waitFor(() => {
-      expect(mockSetAudioEnabled).toHaveBeenCalledWith('timer', false)
-    })
-    await waitFor(() => {
-      expect(mockSetAppSetting).toHaveBeenCalledWith('timer_sound_enabled', 'false')
-    })
-  })
-
-  it('Timer Sound switch saves setting on toggle on (starting from off)', async () => {
-    mockGetAppSetting.mockResolvedValue('false')
-
-    const { findByLabelText } = renderScreen(<Settings />)
-    const toggle = await findByLabelText('Timer Sound')
-
-    fireEvent(toggle, 'valueChange', true)
-
-    await waitFor(() => {
-      expect(mockSetAudioEnabled).toHaveBeenCalledWith('timer', true)
-    })
-    await waitFor(() => {
-      expect(mockSetAppSetting).toHaveBeenCalledWith('timer_sound_enabled', 'true')
-    })
-  })
-
   // ── Workout Reminders Toggle ──────────────────────────────────
 
   it('Workout Reminders switch renders, has accessible label, and enables reminders when toggled on', async () => {
     // Start with reminders off
     mockGetAppSetting.mockImplementation((key: string) => {
       if (key === 'reminders_enabled') return Promise.resolve('false')
-      if (key === 'timer_sound_enabled') return Promise.resolve('true')
       return Promise.resolve(null)
     })
 
@@ -306,7 +271,6 @@ describe('Settings Screen Acceptance', () => {
     // Start with reminders on
     mockGetAppSetting.mockImplementation((key: string) => {
       if (key === 'reminders_enabled') return Promise.resolve('true')
-      if (key === 'timer_sound_enabled') return Promise.resolve('true')
       return Promise.resolve(null)
     })
 
@@ -329,7 +293,6 @@ describe('Settings Screen Acceptance', () => {
 
     mockGetAppSetting.mockImplementation((key: string) => {
       if (key === 'reminders_enabled') return Promise.resolve('false')
-      if (key === 'timer_sound_enabled') return Promise.resolve('true')
       return Promise.resolve(null)
     })
 
@@ -354,7 +317,6 @@ describe('Settings Screen Acceptance', () => {
 
     mockGetAppSetting.mockImplementation((key: string) => {
       if (key === 'reminders_enabled') return Promise.resolve('false')
-      if (key === 'timer_sound_enabled') return Promise.resolve('true')
       return Promise.resolve(null)
     })
 
@@ -378,7 +340,6 @@ describe('Settings Screen Acceptance', () => {
     mockGetAppSetting.mockImplementation((key: string) => {
       if (key === 'rest_notification_enabled') return Promise.resolve('true')
       if (key === 'reminders_enabled') return Promise.resolve('false')
-      if (key === 'timer_sound_enabled') return Promise.resolve('true')
       return Promise.resolve(null)
     })
 
@@ -397,7 +358,6 @@ describe('Settings Screen Acceptance', () => {
     mockGetAppSetting.mockImplementation((key: string) => {
       if (key === 'rest_notification_enabled') return Promise.resolve('true')
       if (key === 'reminders_enabled') return Promise.resolve('false')
-      if (key === 'timer_sound_enabled') return Promise.resolve('true')
       return Promise.resolve(null)
     })
 
@@ -477,12 +437,9 @@ describe('Settings Screen Acceptance', () => {
 
   it('all switches have accessibilityRole="switch" and accessibilityHint text', async () => {
     const { findByLabelText } = renderScreen(<Settings />)
-    const timerSound = await findByLabelText('Timer Sound')
     const remindersToggle = await findByLabelText('Workout Reminders')
 
-    expect(timerSound.props.accessibilityRole).toBe('switch')
     expect(remindersToggle.props.accessibilityRole).toBe('switch')
-    expect(timerSound.props.accessibilityHint).toBeTruthy()
     expect(remindersToggle.props.accessibilityHint).toBeTruthy()
   })
 

@@ -331,7 +331,7 @@ describe("SessionHeaderToolbar", () => {
     expect(queryByTestId("adaptive-chip")).toBeNull();
   });
 
-  it("renders adaptive chip when rest_show_breakdown setting is explicitly 'true'", async () => {
+  it("does NOT render adaptive chip regardless of rest_show_breakdown setting (feature removed)", async () => {
     mockGetAppSetting.mockImplementation(async (key: string) => {
       if (key === "rest_show_breakdown") return "true";
       return null;
@@ -352,7 +352,9 @@ describe("SessionHeaderToolbar", () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(queryByTestId("adaptive-chip")).toBeTruthy();
+    // rest_show_breakdown setting was removed in the settings declutter refactor;
+    // the adaptive chip is now permanently off (showBreakdownChip = false).
+    expect(queryByTestId("adaptive-chip")).toBeNull();
   });
 
   it("does NOT render adaptive chip when rest_show_breakdown is 'false'", async () => {

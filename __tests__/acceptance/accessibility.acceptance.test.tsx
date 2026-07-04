@@ -384,7 +384,6 @@ describe('Accessibility Compliance Audit', () => {
       const screen = renderScreen(<Settings />)
       await waitFor(() => {
         expect(screen.getByLabelText('Workout Reminders')).toBeTruthy()
-        expect(screen.getByLabelText('Timer Sound')).toBeTruthy()
       })
     })
   })
