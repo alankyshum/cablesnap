@@ -7,6 +7,9 @@ import * as path from "path";
 const stravaClientSrc = fs.readFileSync(
   path.resolve(__dirname, "../../lib/strava.ts"),
   "utf-8"
+) + "\n" + fs.readFileSync(
+  path.resolve(__dirname, "../../lib/strava-callback.ts"),
+  "utf-8"
 );
 
 const stravaDbSrc = fs.readFileSync(
