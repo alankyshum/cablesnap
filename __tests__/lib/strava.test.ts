@@ -286,6 +286,14 @@ const db = require("../../lib/db");
 // Must require after mocks are set up
 const strava = require("../../lib/strava");
 
+let secureStoreMockData: Record<string, string> = {};
+beforeEach(() => {
+  secureStoreMockData = {};
+  SecureStore.getItemAsync.mockImplementation(async (key: string) => secureStoreMockData[key] ?? null);
+  SecureStore.setItemAsync.mockImplementation(async (key: string, value: string) => { secureStoreMockData[key] = value; });
+  SecureStore.deleteItemAsync.mockImplementation(async (key: string) => { delete secureStoreMockData[key]; });
+});
+
 describe("Strava Integration — Behavioral", () => {
   const mockFetch = jest.fn();
   const originalFetch = global.fetch;
@@ -1407,6 +1415,151 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+});
+
+describe("Strava Integration — completeStravaCallback Behavior", () => {
+  const mockFetch = jest.fn();
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = mockFetch;
+  });
+
+  afterAll(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("(a) happy path — persisted state + matching code → exchanges once, saveTokens + saveStravaConnection called, returns {athleteId,athleteName}", async () => {
+    await SecureStore.setItemAsync("strava_pending_oauth_state", "happy-state");
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: "happy-access-token",
+        refresh_token: "happy-refresh-token",
+        expires_at: 123456789,
+        athlete: { id: 101, firstname: "John", lastname: "Happy" },
+      }),
+    });
+
+    const url = "cablesnap://strava-callback?code=happy-code&state=happy-state";
+    const result = await strava.completeStravaCallback(url);
+
+    expect(result).toEqual({ athleteId: 101, athleteName: "John Happy" });
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith("strava_access_token", "happy-access-token");
+    expect(SecureStore.setItemAsync).toHaveBeenCalledWith("strava_refresh_token", "happy-refresh-token");
+    expect(db.saveStravaConnection).toHaveBeenCalledWith(101, "John Happy");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    const pendingState = await SecureStore.getItemAsync("strava_pending_oauth_state");
+    expect(pendingState).toBeNull();
+  });
+
+  it("(b) no persisted state → returns null, NO exchange", async () => {
+    await SecureStore.deleteItemAsync("strava_pending_oauth_state");
+
+    const url = "cablesnap://strava-callback?code=some-code&state=some-state";
+    const result = await strava.completeStravaCallback(url);
+
+    expect(result).toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("(c) url not starting with APP_DEEP_LINK → null", async () => {
+    await SecureStore.setItemAsync("strava_pending_oauth_state", "some-state");
+
+    const url = "https://example.com/callback?code=some-code&state=some-state";
+    const result = await strava.completeStravaCallback(url);
+
+    expect(result).toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("(d) state mismatch → parseCallbackUrl throws, KEY_PENDING_OAUTH_STATE deleted, error propagates", async () => {
+    await SecureStore.setItemAsync("strava_pending_oauth_state", "correct-state");
+
+    const url = "cablesnap://strava-callback?code=some-code&state=wrong-state";
+
+    await expect(strava.completeStravaCallback(url)).rejects.toThrow("OAuth state mismatch");
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    const pendingState = await SecureStore.getItemAsync("strava_pending_oauth_state");
+    expect(pendingState).toBeNull();
+  });
+
+  it("(e) SINGLE-CONSUME: after a successful consume the pending state is gone, so a second call with the same url returns null and does NOT call exchangeCodeForTokens again", async () => {
+    await SecureStore.setItemAsync("strava_pending_oauth_state", "single-state");
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: "token-1",
+        refresh_token: "refresh-1",
+        expires_at: 123456789,
+        athlete: { id: 102, firstname: "Single", lastname: "User" },
+      }),
+    });
+
+    const url = "cablesnap://strava-callback?code=some-code&state=single-state";
+
+    const result1 = await strava.completeStravaCallback(url);
+    expect(result1).toEqual({ athleteId: 102, athleteName: "Single User" });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    const result2 = await strava.completeStravaCallback(url);
+    expect(result2).toBeNull();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("(f) web platform → null", async () => {
+    const { Platform } = require("react-native");
+    const originalOS = Platform.OS;
+    (Platform as { OS: string }).OS = "web";
+    try {
+      await SecureStore.setItemAsync("strava_pending_oauth_state", "web-state");
+      const url = "cablesnap://strava-callback?code=web-code&state=web-state";
+      const result = await strava.completeStravaCallback(url);
+      expect(result).toBeNull();
+      expect(mockFetch).not.toHaveBeenCalled();
+    } finally {
+      (Platform as { OS: string }).OS = originalOS;
+    }
+  });
+
+  it("(g) CONCURRENT in-flight guard: invoking concurrently calls exchange exactly once, first resolves, second returns null", async () => {
+    await SecureStore.setItemAsync("strava_pending_oauth_state", "concurrent-state");
+
+    let resolveFetch: (value: any) => void;
+    const deferredPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+
+    mockFetch.mockReturnValueOnce(deferredPromise);
+
+    const url = "cablesnap://strava-callback?code=concurrent-code&state=concurrent-state";
+
+    // Call completeStravaCallback TWICE concurrently
+    const p1 = strava.completeStravaCallback(url);
+    const p2 = strava.completeStravaCallback(url);
+
+    // Resolve the deferred promise so the first call can finish
+    resolveFetch!({
+      ok: true,
+      json: async () => ({
+        access_token: "concurrent-access-token",
+        refresh_token: "concurrent-refresh-token",
+        expires_at: 123456789,
+        athlete: { id: 103, firstname: "Concurrent", lastname: "User" },
+      }),
+    });
+
+    const [result1, result2] = await Promise.all([p1, p2]);
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(result1).toEqual({ athleteId: 103, athleteName: "Concurrent User" });
+    expect(result2).toBeNull();
   });
 });
 

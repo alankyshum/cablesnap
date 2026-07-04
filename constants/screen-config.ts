@@ -23,6 +23,7 @@ export const SCREEN_CONFIGS: ScreenConfig[] = [
   { name: "session/detail/[id]", options: { headerShown: true, title: "Workout Summary" } },
   { name: "errors", options: { headerShown: true, title: "Error Log" } },
   { name: "feedback", options: { headerShown: true, title: "Feedback & Reports" } },
+  { name: "strava-callback", options: { headerShown: false } },
   { name: "body", options: { headerShown: false } },
   { name: "progress", options: { headerShown: false } },
   { name: "history", options: { headerShown: true, title: "Workout History" } },

@@ -80,7 +80,7 @@ function getProxyUrl(): string {
 // The worker's GET /callback bounces this to the cablesnap:// deep link below.
 const REDIRECT_URI_FOR_STRAVA = `${Constants.expoConfig?.extra?.stravaProxyUrl ?? "https://strava-proxy.alankyshum.workers.dev"}/callback`;
 // Deep link that WebBrowser.openAuthSessionAsync watches for to close the browser.
-const APP_DEEP_LINK = "cablesnap://strava-callback";
+export const APP_DEEP_LINK = "cablesnap://strava-callback";
 // On bare Android, Custom Tabs may dismiss and report `cancel`/`dismiss` one
 // macrotask before the OS delivers the `cablesnap://strava-callback` deep-link
 // event. This grace window keeps the Linking listener alive after a browser
@@ -356,6 +356,90 @@ async function runAuthPrompt(
   }
 }
 
+let stravaCallbackInFlight = false;
+
+export async function completeStravaCallback(
+  url: string,
+): Promise<{ athleteId: number; athleteName: string } | null> {
+  if (Platform.OS === "web") return null;
+  if (!url.startsWith(APP_DEEP_LINK)) return null;
+
+  if (stravaCallbackInFlight) return null;
+  stravaCallbackInFlight = true;
+
+  try {
+    const pendingState = await SecureStore.getItemAsync(KEY_PENDING_OAUTH_STATE);
+    if (!pendingState) return null;
+
+    let code: string | null;
+    try {
+      code = parseCallbackUrl(url, pendingState);
+    } catch (err) {
+      await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
+      throw err;
+    }
+
+    if (!code) {
+      await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
+      const wrapped = new StravaError("unknown", "Strava authorization failed: no code in callback URL");
+      stravaLog("warn", "strava auth prompt errored", {
+        flow: "strava_connect",
+        step: "auth_prompt_error",
+        resultType: "deep_link",
+        errorMessage: wrapped.message,
+      });
+      captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: "deep_link" });
+      throw wrapped;
+    }
+
+    const clientId = getClientId();
+    if (!clientId) {
+      const err = new StravaError("config", "Strava client ID not configured");
+      captureStravaError(err, "strava_connect", "config_check");
+      throw err;
+    }
+
+    let proxyUrl: string;
+    try {
+      proxyUrl = getProxyUrl();
+    } catch (err) {
+      const wrapped = new StravaError(
+        "config",
+        err instanceof Error ? err.message : "Strava proxy URL not configured"
+      );
+      captureStravaError(wrapped, "strava_connect", "config_check");
+      throw wrapped;
+    }
+
+    await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
+
+    const data = await exchangeCodeForTokens(code, proxyUrl, clientId);
+
+    await saveTokens(
+      data.access_token as string,
+      data.refresh_token as string,
+      data.expires_at as number,
+    );
+
+    const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
+    const athleteName =
+      [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
+
+    await saveStravaConnection(athleteId, athleteName);
+
+    stravaBreakcrumb("connectStrava succeeded", { athleteId });
+    stravaLog("info", "strava connect succeeded", {
+      flow: "strava_connect",
+      step: "success",
+      athleteId,
+    });
+
+    return { athleteId, athleteName };
+  } finally {
+    stravaCallbackInFlight = false;
+  }
+}
+
 // eslint-disable-next-line complexity
 export async function connectStrava(): Promise<{
   athleteId: number;
@@ -396,30 +480,8 @@ export async function connectStrava(): Promise<{
   const initialUrl = await Linking.getInitialURL();
   if (initialUrl?.startsWith(APP_DEEP_LINK)) {
     stravaLog("info", "strava cold-start deep link detected", { flow: "strava_connect", step: "cold_start_check" });
-    const persistedState = await SecureStore.getItemAsync(KEY_PENDING_OAUTH_STATE);
-    if (persistedState) {
-      // parseCallbackUrl: returns null for malformed URL, throws StravaError on state mismatch
-      const coldCode = parseCallbackUrl(initialUrl, persistedState);
-      if (coldCode) {
-        await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
-        stravaLog("info", "strava cold-start deep link consumed", { flow: "strava_connect", step: "cold_start_consumed" });
-        // exchangeCodeForTokens / saveTokens / saveStravaConnection errors propagate to caller
-        const data = await exchangeCodeForTokens(coldCode, proxyUrl, clientId);
-        await saveTokens(
-          data.access_token as string,
-          data.refresh_token as string,
-          data.expires_at as number,
-        );
-        const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
-        const athleteName =
-          [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
-        await saveStravaConnection(athleteId, athleteName);
-        stravaBreakcrumb("connectStrava succeeded (cold-start)", { athleteId });
-        stravaLog("info", "strava connect succeeded", { flow: "strava_connect", step: "success", athleteId });
-        return { athleteId, athleteName };
-      }
-    }
-    // No persisted state (or URL didn't validate) — fall through to normal auth flow.
+    const completed = await completeStravaCallback(initialUrl);
+    if (completed) return completed;
   }
 
   const authorizeUrl = new URL(STRAVA_AUTH_URL);
@@ -434,13 +496,7 @@ export async function connectStrava(): Promise<{
   // recovery can match the deep-link URL from the relaunched session.
   await SecureStore.setItemAsync(KEY_PENDING_OAUTH_STATE, oauthState);
 
-  let result: Awaited<ReturnType<typeof runAuthPrompt>>["result"];
-  let code: string | undefined;
-  try {
-    ({ result, code } = await runAuthPrompt(authorizeUrl.toString(), oauthState));
-  } finally {
-    await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
-  }
+  const { result, code } = await runAuthPrompt(authorizeUrl.toString(), oauthState);
 
   const hasCode = !!(result.type === "success" && code);
   stravaBreakcrumb("auth prompt completed", { resultType: result.type, hasCode });
@@ -451,19 +507,14 @@ export async function connectStrava(): Promise<{
     hasCode,
   });
 
-  if (result.type !== "success" || !code) {
-    if (result.type === "success" && !code) {
-      // Browser returned a cablesnap:// URL but no code — treat as error
-      const wrapped = new StravaError("unknown", "Strava authorization failed: no code in callback URL");
-      stravaLog("warn", "strava auth prompt errored", {
-        flow: "strava_connect",
-        step: "auth_prompt_error",
-        resultType: result.type,
-        errorMessage: wrapped.message,
-      });
-      captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
-      throw wrapped;
-    }
+  if (result.type === "success" && result.url) {
+    const completed = await completeStravaCallback(result.url);
+    if (completed) return completed;
+    return null;
+  }
+
+  if (result.type !== "success") {
+    await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
     stravaLog("info", "strava connect user cancelled", {
       flow: "strava_connect",
       step: "user_cancelled",
@@ -472,29 +523,21 @@ export async function connectStrava(): Promise<{
     return null;
   }
 
-  // Exchange authorization code for tokens via proxy
-  const data = await exchangeCodeForTokens(code, proxyUrl, clientId);
+  const pendingStateExists = await SecureStore.getItemAsync(KEY_PENDING_OAUTH_STATE);
+  if (pendingStateExists && !code) {
+    await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
+    const wrapped = new StravaError("unknown", "Strava authorization failed: no code in callback URL");
+    stravaLog("warn", "strava auth prompt errored", {
+      flow: "strava_connect",
+      step: "auth_prompt_error",
+      resultType: result.type,
+      errorMessage: wrapped.message,
+    });
+    captureStravaError(wrapped, "strava_connect", "auth_prompt_error", { resultType: result.type });
+    throw wrapped;
+  }
 
-  await saveTokens(
-    data.access_token as string,
-    data.refresh_token as string,
-    data.expires_at as number,
-  );
-
-  const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
-  const athleteName =
-    [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
-
-  await saveStravaConnection(athleteId, athleteName);
-
-  stravaBreakcrumb("connectStrava succeeded", { athleteId });
-  stravaLog("info", "strava connect succeeded", {
-    flow: "strava_connect",
-    step: "success",
-    athleteId,
-  });
-
-  return { athleteId, athleteName };
+  return null;
 }
 
 export async function disconnect(): Promise<void> {
