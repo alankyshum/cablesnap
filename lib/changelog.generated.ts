@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.62",
+    "date": "2026-07-05",
+    "versionCode": 132,
+    "body": "- **Workout templates no longer overlap** — on the Templates list, cards sometimes rendered stacked on top of each other (on both phones and tablets). They now lay out cleanly in a proper grid."
+  },
+  {
     "version": "0.26.61",
     "date": "2026-07-04",
     "versionCode": 131,

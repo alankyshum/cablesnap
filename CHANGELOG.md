@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.62 — 2026-07-05
+<!-- versionCode: 132 -->
+
 - **Workout templates no longer overlap** — on the Templates list, cards sometimes rendered stacked on top of each other (on both phones and tablets). They now lay out cleanly in a proper grid.
 
 ## v0.26.61 — 2026-07-04
