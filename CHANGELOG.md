@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Double-Progression suggestions for your workouts** — CableSnap now suggests progressive-overload progressions for weighted exercises, letting you increase reps within your target range before suggesting a weight increase. This includes support for rep-range parsing, warmup set filtering, and a dedicated explainer modal. (BLD-2984)
 
 ## v0.26.62 — 2026-07-05
 <!-- versionCode: 132 -->

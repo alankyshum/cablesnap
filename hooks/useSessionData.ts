@@ -20,7 +20,7 @@ import {
   getExerciseNotesBatch,
   getPreferredSubstitutesBatch,
 } from "../lib/db";
-import { parseTemplateTargetReps } from "../lib/db/templates";
+import { parseTemplateTargetReps, parseTemplateRepRange } from "../lib/db/templates";
 import type { WorkoutSession, Exercise } from "../lib/types";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
 import { epley, suggest, type Suggestion } from "../lib/rm";
@@ -115,13 +115,14 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
 
     const exerciseIds = [...new Set(sets.map((s) => s.exercise_id))];
 
-    const [prevCache, exerciseMeta, recentByExercise, exerciseNotes, plateauWindowByExercise, preferredSubstitutesMap] = await Promise.all([
+    const [prevCache, exerciseMeta, recentByExercise, exerciseNotes, plateauWindowByExercise, preferredSubstitutesMap, currentTemplate] = await Promise.all([
       getPreviousSetsBatch(exerciseIds, id),
       getExercisesByIds(exerciseIds),
       getRecentExerciseSetsBatch(exerciseIds, 2),
       getExerciseNotesBatch(exerciseIds),
       getPlateauWindowBatch(exerciseIds, 4),
       getPreferredSubstitutesBatch(exerciseIds),
+      sess.template_id ? getTemplateById(sess.template_id) : Promise.resolve(null),
     ]);
 
     const key = exerciseIds.sort().join(",");
@@ -334,7 +335,11 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
         if (timeBased) return [eid, null];
         const ex = exerciseMeta[eid];
         const bw = ex ? ex.equipment === "bodyweight" : false;
-        return [eid, suggest(recent, derived, bw)];
+        const templateExercise = currentTemplate?.exercises?.find((te) => te.exercise_id === eid);
+        const repRange = templateExercise
+          ? parseTemplateRepRange(templateExercise.target_reps, 1)
+          : null;
+        return [eid, suggest(recent, derived, bw, repRange)];
       } catch {
         return [eid, null];
       }
