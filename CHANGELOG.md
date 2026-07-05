@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Internal: Sentry dashboard no longer polluted by CI/audit events** — the localhost event filter now also checks `event.request.url` (populated by the web SDK), so HeadlessChrome daily-audit errors at `localhost:8081` are correctly discarded before reaching the real-user error dashboard. (BLD-2991)
 
 ## v0.26.63 — 2026-07-05
 <!-- versionCode: 133 -->

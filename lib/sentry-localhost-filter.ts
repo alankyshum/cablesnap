@@ -49,13 +49,14 @@ function isLocalUrl(urlString: string): boolean {
  */
 export function filterLocalhostEvents(event: ErrorEvent): ErrorEvent | null {
   const urlTag = event.tags?.['url'];
+  const requestUrl = event.request?.url;
 
-  // No url tag → fail-open: send the event.
-  if (urlTag === undefined || urlTag === null) {
+  // No url tag or request url → fail-open: send the event.
+  if ((urlTag === undefined || urlTag === null) && (requestUrl === undefined || requestUrl === null)) {
     return event;
   }
 
-  const urlString = String(urlTag);
+  const urlString = String(urlTag ?? requestUrl);
 
   // Local host → drop the event (returns null to Sentry SDK).
   if (isLocalUrl(urlString)) {
