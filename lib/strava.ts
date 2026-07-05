@@ -302,11 +302,30 @@ function buildActivityDescription(
   return lines.join("\n") + "\n\n\n—\nTracked with CableSnap · https://github.com/alankyshum/cablesnap";
 }
 
+function isStravaAppInactive(body: string): boolean {
+  if (!body) return false;
+  try {
+    const parsed = JSON.parse(body);
+    return !!(
+      parsed &&
+      Array.isArray(parsed.errors) &&
+      parsed.errors.some(
+        (e: { code?: string; resource?: string }) =>
+          e &&
+          (e.code === "Inactive" || e.code === "inactive") &&
+          (e.resource === "Application" || e.resource === "application")
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Returns the Strava activity ID on success, or null when the activity
  * already exists on Strava (HTTP 409) but we cannot resolve its ID.
  * Callers must treat null as an idempotent "already synced" result.
- */
+ * */
 async function uploadActivity(
   sessionId: string
 ): Promise<string | null> {
@@ -369,6 +388,15 @@ async function uploadActivity(
     });
     const resolvedId = await resolveExistingActivityId(accessToken, sessionId);
     return resolvedId;
+  }
+
+  if (response.status === 403) {
+    const body = await response.text().catch(() => "");
+    const isInactive = isStravaAppInactive(body);
+    const errCode = isInactive ? "app_inactive" : "config";
+    const err = new StravaError(errCode, `Strava API error 403: ${body}`, 403);
+    captureStravaError(err, "strava_upload", "api_call", { sessionId, status: response.status, responseBody: body });
+    throw err;
   }
 
   if (!response.ok) {
@@ -434,9 +462,14 @@ export type SyncResult =
   | { status: "failed"; error: Error }
   | { status: "skipped" };
 
-/** Returns true if the upload error represents a permanent auth revocation. */
-function isPermanentAuthError(err: unknown): boolean {
-  return err instanceof Error && err.message.includes("Strava access revoked");
+/** Returns true if the upload error represents a permanent config or auth failure. */
+function isPermanentError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if (err.message.includes("Strava access revoked")) return true;
+  if (err instanceof StravaError) {
+    return err.code === "app_inactive" || err.code === "config" || err.code === "auth_revoked";
+  }
+  return false;
 }
 
 export async function syncSessionToStrava(sessionId: string): Promise<SyncResult> {
@@ -457,7 +490,8 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     await markSyncFailed(sessionId, error.message);
-    if (isPermanentAuthError(err)) {
+    if (isPermanentError(err)) {
+      await markSyncPermanentlyFailed(sessionId);
       return { status: "failed", error };
     }
     // Transient failure -- reconcile queue will retry
@@ -526,8 +560,8 @@ export async function reconcileStravaQueue(): Promise<void> {
       const message = err instanceof Error ? err.message : String(err);
       await markSyncFailed(entry.session_id, message);
 
-      // Check if we've now hit max retries
-      if (entry.retry_count + 1 >= MAX_RETRIES) {
+      // Check if we've now hit max retries or if it is a permanent error
+      if (isPermanentError(err) || entry.retry_count + 1 >= MAX_RETRIES) {
         await markSyncPermanentlyFailed(entry.session_id);
       }
     }
