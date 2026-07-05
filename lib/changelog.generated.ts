@@ -10,6 +10,18 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.63",
+    "date": "2026-07-05",
+    "versionCode": 133,
+    "body": "- **Double-Progression suggestions for your workouts** — CableSnap now suggests progressive-overload progressions for weighted exercises, letting you increase reps within your target range before suggesting a weight increase. This includes support for rep-range parsing, warmup set filtering, and a dedicated explainer modal. (BLD-2984)"
+  },
+  {
+    "version": "0.26.62",
+    "date": "2026-07-05",
+    "versionCode": 132,
+    "body": "- **Workout templates no longer overlap** — on the Templates list, cards sometimes rendered stacked on top of each other (on both phones and tablets). They now lay out cleanly in a proper grid."
+  },
+  {
     "version": "0.26.61",
     "date": "2026-07-04",
     "versionCode": 131,
