@@ -23,6 +23,11 @@ marker) at release time.
 ## Unreleased
 
 - **Smarter 'Next' pill within your rep range** — for exercises with a target rep range (e.g. 8–12), CableSnap now walks your reps up to the top of the range before suggesting a weight increase (then resets reps to the bottom). Warmup sets are excluded, and the suggestion explainer describes the reset. (BLD-2985)
+
+## v0.26.64 — 2026-07-05
+<!-- versionCode: 134 -->
+
+- **No misleading retry prompts on Strava status changes** — when Strava's application integration becomes Inactive, CableSnap now correctly classifies the 403 Forbidden error as a permanent failure instead of misleading you with "will retry" toast alerts and settings prompts. This stops the wasted retry loop while preserving valid user connections. (BLD-2995)
 - **Internal: Sentry dashboard no longer polluted by CI/audit events** — the localhost event filter now also checks `event.request.url` (populated by the web SDK), so HeadlessChrome daily-audit errors at `localhost:8081` are correctly discarded before reaching the real-user error dashboard. (BLD-2991)
 
 ## v0.26.63 — 2026-07-05

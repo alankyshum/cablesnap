@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable max-lines */
+/* eslint-disable max-lines-per-function */
 import * as fs from "fs";
 import * as path from "path";
 
@@ -517,6 +518,104 @@ describe("Strava Integration — Behavioral", () => {
     expect(db.markSyncFailed).toHaveBeenCalledWith("s5", expect.stringContaining("revoked"));
   });
 
+  it("(BLD-2995) upload returns 403 Inactive → returns 'failed', marks permanently failed, does not disconnect", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Row", weight: 70, reps: 10, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "s-inactive", name: "Back", started_at: Date.now(), duration_seconds: 1800,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+
+    const inactiveBody = JSON.stringify({
+      message: "Forbidden",
+      errors: [{ resource: "Application", field: "Status", code: "Inactive" }]
+    });
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      text: async () => inactiveBody,
+    });
+
+    db.deleteStravaConnection.mockClear();
+    db.markSyncPermanentlyFailed.mockClear();
+
+    const result = await strava.syncSessionToStrava("s-inactive");
+
+    expect(result.status).toBe("failed");
+    expect((result as any).error.code).toBe("app_inactive");
+    expect(db.markSyncFailed).toHaveBeenCalledWith("s-inactive", expect.stringContaining("Inactive"));
+    expect(db.markSyncPermanentlyFailed).toHaveBeenCalledWith("s-inactive");
+    expect(db.deleteStravaConnection).not.toHaveBeenCalled();
+  });
+
+  it("(BLD-2995) upload returns 403 with non-JSON body → treated as permanent config error", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Row", weight: 70, reps: 10, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "s-non-json", name: "Back", started_at: Date.now(), duration_seconds: 1800,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      text: async () => "Forbidden (non-JSON response)",
+    });
+
+    db.deleteStravaConnection.mockClear();
+    db.markSyncPermanentlyFailed.mockClear();
+
+    const result = await strava.syncSessionToStrava("s-non-json");
+
+    expect(result.status).toBe("failed");
+    expect((result as any).error.code).toBe("config");
+    expect(db.markSyncPermanentlyFailed).toHaveBeenCalledWith("s-non-json");
+    expect(db.deleteStravaConnection).not.toHaveBeenCalled();
+  });
+
+  it("(BLD-2995) reconcileQueue: permanent app_inactive/config error short-circuits immediately", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getPendingOrFailedSyncs.mockResolvedValue([
+      { session_id: "s-retry-inactive", retry_count: 0, status: "failed" },
+    ]);
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+
+    const inactiveBody = JSON.stringify({
+      message: "Forbidden",
+      errors: [{ resource: "Application", field: "Status", code: "Inactive" }]
+    });
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      text: async () => inactiveBody,
+    });
+
+    db.markSyncPermanentlyFailed.mockClear();
+
+    await strava.reconcileStravaQueue();
+
+    expect(db.markSyncFailed).toHaveBeenCalledWith("s-retry-inactive", expect.stringContaining("Inactive"));
+    expect(db.markSyncPermanentlyFailed).toHaveBeenCalledWith("s-retry-inactive");
+  });
+
   it("reconcileStravaQueue retries failed entries and marks permanently failed after max retries", async () => {
     db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
     db.getPendingOrFailedSyncs.mockResolvedValue([
@@ -952,9 +1051,11 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
         .toMatch(/strava is having trouble/i);
     });
 
-    it("maps config errors to a contact-support message", () => {
+    it("maps config and app_inactive errors to a temporarily unavailable message", () => {
       expect(strava.getStravaUserMessage(new strava.StravaError("config", "Strava proxy URL not configured")))
-        .toMatch(/isn't set up correctly.*contact support/i);
+        .toMatch(/strava sync is temporarily unavailable/i);
+      expect(strava.getStravaUserMessage(new strava.StravaError("app_inactive", "app is inactive")))
+        .toMatch(/strava sync is temporarily unavailable/i);
     });
 
     it("falls back to generic retry message for unknown errors (no raw API text leaks)", () => {

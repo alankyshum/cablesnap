@@ -9,6 +9,7 @@ export type StravaErrorCode =
   | "rate_limit"
   | "server"
   | "config"
+  | "app_inactive"
   | "unknown";
 
 export class StravaError extends Error {
@@ -57,7 +58,8 @@ export function getStravaUserMessage(err: unknown): string {
       case "server":
         return "Strava is having trouble right now. Please try again soon.";
       case "config":
-        return "Strava isn't set up correctly. Please contact support.";
+      case "app_inactive":
+        return "Strava sync is temporarily unavailable. We're working on it — your workout is saved.";
       case "unknown":
       default:
         return "Something went wrong connecting to Strava. Please try again.";
