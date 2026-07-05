@@ -471,3 +471,7 @@ Delete the release (which also cleans up the tag), fix the issue, then redo from
 gh release delete vX.Y.Z --yes --cleanup-tag
 # Fix issue, rebuild APK, then redo from Step 6
 ```
+
+### Local changelog entries merged under released version header during rebase
+If a scheduled release runs on remote while you have local changes, rebasing onto `main` can accidentally merge your local bullets under the newly tagged version in `CHANGELOG.md` instead of keeping them under `## Unreleased` (since your changes are not yet shipped in that release).
+Always double-check `CHANGELOG.md` after rebasing to make sure local pending/unreleased changes remain under the `## Unreleased` section.

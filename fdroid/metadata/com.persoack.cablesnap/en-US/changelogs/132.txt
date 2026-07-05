@@ -1,0 +1,1 @@
+- **Workout templates no longer overlap** — on the Templates list, cards sometimes rendered stacked on top of each other (on both phones and tablets). They now lay out cleanly in a proper grid.

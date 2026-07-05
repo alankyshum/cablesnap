@@ -138,3 +138,29 @@ describe('filterLocalhostEvents — environment tag does NOT determine filtering
     expect(filterLocalhostEvents(event)).toBe(event);
   });
 });
+
+describe('filterLocalhostEvents — request.url support for Web client', () => {
+  it('drops an event whose request.url is localhost:8081', () => {
+    const event = {
+      type: undefined,
+      request: { url: 'http://localhost:8081/progress' },
+    } as unknown as ErrorEvent;
+    expect(filterLocalhostEvents(event)).toBeNull();
+  });
+
+  it('drops an event whose request.url has 127.0.0.1 or 0.0.0.0', () => {
+    const event = {
+      type: undefined,
+      request: { url: 'http://127.0.0.1:8081/foo' },
+    } as unknown as ErrorEvent;
+    expect(filterLocalhostEvents(event)).toBeNull();
+  });
+
+  it('sends an event whose request.url is a production https URL', () => {
+    const event = {
+      type: undefined,
+      request: { url: 'https://app.example.com/home' },
+    } as unknown as ErrorEvent;
+    expect(filterLocalhostEvents(event)).toBe(event);
+  });
+});
