@@ -81,7 +81,34 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment-retry2.outputs.page_url || steps.deployment-retry1.outputs.page_url || steps.deployment.outputs.page_url }}
     steps:
+      # Attempt 1
       - id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      # Back-off before retry 1 (~60 s) — only runs if attempt 1 failed
+      - name: Back-off before retry 1
+        if: steps.deployment.outcome == 'failure'
+        run: |
+          echo "::warning::deploy-pages failed on attempt 1 — waiting 60 s before retry 1 of 2..."
+          sleep 60
+
+      # Attempt 2
+      - id: deployment-retry1
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      # Back-off before retry 2 (~120 s) — only runs if both prior attempts failed
+      - name: Back-off before retry 2
+        if: steps.deployment.outcome == 'failure' && steps.deployment-retry1.outcome == 'failure'
+        run: |
+          echo "::warning::deploy-pages failed on attempt 2 — waiting 120 s before retry 2 of 2..."
+          sleep 120
+
+      # Attempt 3 (final) — no continue-on-error; job fails if this also fails
+      - id: deployment-retry2
+        if: steps.deployment.outcome == 'failure' && steps.deployment-retry1.outcome == 'failure'
         uses: actions/deploy-pages@v4
