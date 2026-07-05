@@ -302,11 +302,30 @@ function buildActivityDescription(
   return lines.join("\n") + "\n\n\n—\nTracked with CableSnap · https://github.com/alankyshum/cablesnap";
 }
 
+function isStravaAppInactive(body: string): boolean {
+  if (!body) return false;
+  try {
+    const parsed = JSON.parse(body);
+    return !!(
+      parsed &&
+      Array.isArray(parsed.errors) &&
+      parsed.errors.some(
+        (e: { code?: string; resource?: string }) =>
+          e &&
+          (e.code === "Inactive" || e.code === "inactive") &&
+          (e.resource === "Application" || e.resource === "application")
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Returns the Strava activity ID on success, or null when the activity
  * already exists on Strava (HTTP 409) but we cannot resolve its ID.
  * Callers must treat null as an idempotent "already synced" result.
- */
+ * */
 async function uploadActivity(
   sessionId: string
 ): Promise<string | null> {
@@ -373,27 +392,7 @@ async function uploadActivity(
 
   if (response.status === 403) {
     const body = await response.text().catch(() => "");
-    let isInactive = false;
-    try {
-      if (body) {
-        const parsed = JSON.parse(body);
-        if (
-          parsed &&
-          Array.isArray(parsed.errors) &&
-          parsed.errors.some(
-            (e: { code?: string; resource?: string }) =>
-              e &&
-              (e.code === "Inactive" || e.code === "inactive") &&
-              (e.resource === "Application" || e.resource === "application")
-          )
-        ) {
-          isInactive = true;
-        }
-      }
-    } catch {
-      // Defensive parse: ignore parsing errors and proceed
-    }
-
+    const isInactive = isStravaAppInactive(body);
     const errCode = isInactive ? "app_inactive" : "config";
     const err = new StravaError(errCode, `Strava API error 403: ${body}`, 403);
     captureStravaError(err, "strava_upload", "api_call", { sessionId, status: response.status, responseBody: body });

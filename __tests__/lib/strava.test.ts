@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable max-lines */
+/* eslint-disable max-lines-per-function */
 import * as fs from "fs";
 import * as path from "path";
 
