@@ -3,7 +3,6 @@ import { Pressable, StyleSheet, View, type ViewStyle, type GestureResponderEvent
 import { Text } from "@/components/ui/text";
 import { Card } from "@/components/ui/card";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { flowCardStyle } from "./ui/FlowContainer";
 import type { Difficulty } from "../lib/types";
 import { DIFFICULTY_LABELS } from "../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -61,7 +60,7 @@ export function difficultyBadge(d: Difficulty): MetaBadge {
 }
 
 const styles = StyleSheet.create({
-  card: { marginBottom: 8, ...flowCardStyle, padding: 12 },
+  card: { marginBottom: 8, padding: 12 },
   content: { flexDirection: "row", alignItems: "center", gap: 8 },
   body: { flex: 1, gap: 6 },
   chipRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
