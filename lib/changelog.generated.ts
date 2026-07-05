@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.64",
+    "date": "2026-07-05",
+    "versionCode": 134,
+    "body": "- **No misleading retry prompts on Strava status changes** — when Strava's application integration becomes Inactive, CableSnap now correctly classifies the 403 Forbidden error as a permanent failure instead of misleading you with \"will retry\" toast alerts and settings prompts. This stops the wasted retry loop while preserving valid user connections. (BLD-2995)\n- **Internal: Sentry dashboard no longer polluted by CI/audit events** — the localhost event filter now also checks `event.request.url` (populated by the web SDK), so HeadlessChrome daily-audit errors at `localhost:8081` are correctly discarded before reaching the real-user error dashboard. (BLD-2991)"
+  },
+  {
     "version": "0.26.63",
     "date": "2026-07-05",
     "versionCode": 133,
