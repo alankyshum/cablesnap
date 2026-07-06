@@ -12,7 +12,14 @@
 #   0  smoke PASSED — vision pipeline still flags the known regression.
 #   2  smoke FAILED — vision pipeline did NOT emit a matching finding;
 #      the daily audit must NOT trust today's HEAD findings (alarm).
-#   3  configuration error — fixture missing, no API key, malformed args.
+#   3  configuration error — fixture missing, malformed args, missing
+#      dependency (curl/python3/base64), or forced API_PROVIDER= with its
+#      matching key unset. These are genuine errors even in a keyless sandbox.
+#   4  no vision API key configured — neither ANTHROPIC_API_KEY nor
+#      OPENAI_API_KEY is set AND API_PROVIDER was not forced. In a keyless
+#      sandbox the pipeline was never invoked; this is an infra/config gap,
+#      not a pipeline degradation. Set AUDIT_ALLOW_NO_VISION_KEY=1 in
+#      daily-audit.sh to treat this as a loudly-warned SKIPPED run.
 #
 # This is the *primary* trust anchor of the daily audit loop. If a vision
 # model regression silently degrades the pipeline, this smoke is what
@@ -82,9 +89,11 @@ if [[ -z "$PROVIDER" ]]; then
   elif [[ -n "${OPENAI_API_KEY:-}" ]]; then
     PROVIDER="openai"
   else
-    echo "[regression-smoke] CONFIG ERROR: no vision API key set." >&2
-    echo "[regression-smoke] Set ANTHROPIC_API_KEY or OPENAI_API_KEY." >&2
-    exit 3
+    echo "[regression-smoke] CONFIG ERROR: no vision API key configured." >&2
+    echo "[regression-smoke] Set ANTHROPIC_API_KEY (preferred) or OPENAI_API_KEY." >&2
+    echo "[regression-smoke] In a keyless sandbox, set AUDIT_ALLOW_NO_VISION_KEY=1 in" >&2
+    echo "[regression-smoke] the daily audit environment to opt into SKIPPED/UNVERIFIED mode." >&2
+    exit 4
   fi
 fi
 

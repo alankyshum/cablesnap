@@ -72,6 +72,8 @@ function buildSandbox(opts: {
   prefixExitCode?: number;
   smokeExitCode: number;
   dropPrefixCapture?: boolean;
+  /** Pass AUDIT_ALLOW_NO_VISION_KEY=1 into the daily-audit.sh environment (BLD-3039). */
+  allowNoVisionKey?: boolean;
 }): { dir: string; run: () => RunResult } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bld-1023-"));
 
@@ -197,6 +199,7 @@ esac
       PREFIX_EXIT_CODE: String(opts.prefixExitCode ?? 0),
       SMOKE_EXIT_CODE: String(opts.smokeExitCode),
       DROP_PREFIX_CAPTURE: opts.dropPrefixCapture ? "1" : "0",
+      ...(opts.allowNoVisionKey ? { AUDIT_ALLOW_NO_VISION_KEY: "1" } : {}),
     };
     const proc = spawnSync("bash", [path.join(dir, "scripts", "daily-audit.sh")], {
       cwd: dir,
@@ -330,5 +333,114 @@ describe("daily-audit.sh — BLD-966 set -e ordering + BLD-1023 wrapper-fixture"
     } finally {
       cleanup(dir);
     }
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // BLD-3039: distinguish "no vision key" (exit 4) from "pipeline degraded"
+  // ──────────────────────────────────────────────────────────────────────────
+
+  it("AC6 (BLD-3039): smokeRC=4 + AUDIT_ALLOW_NO_VISION_KEY=1 → exit 0, SKIPPED banner, no PASS", () => {
+    const { dir, run } = buildSandbox({
+      headExitCode: 0,
+      smokeExitCode: 4,
+      allowNoVisionKey: true,
+    });
+    try {
+      const r = run();
+      // Audit should complete successfully (capture ran, anchor was skipped).
+      expect(r.status).toBe(0);
+      // Must print SKIPPED/UNVERIFIED status — never PASS.
+      expect(r.combined).toContain("regression-smoke: SKIPPED (UNVERIFIED — no vision key)");
+      expect(r.combined).not.toContain("regression-smoke: PASS");
+      // Must emit the loud SKIPPED/UNVERIFIED warning banner.
+      expect(r.combined).toMatch(/SKIPPED.*no vision API key|UNVERIFIED/i);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it("AC7 (BLD-3039): smokeRC=4 WITHOUT flag → exit 4, names missing keys, mentions opt-in, no 'degraded' wording", () => {
+    const { dir, run } = buildSandbox({
+      headExitCode: 0,
+      smokeExitCode: 4,
+      allowNoVisionKey: false,
+    });
+    try {
+      const r = run();
+      // Must abort with the smoke's exit code (4).
+      expect(r.status).toBe(4);
+      // Must name the missing keys.
+      expect(r.combined).toMatch(/ANTHROPIC_API_KEY|OPENAI_API_KEY/);
+      // Must mention the sandbox opt-in.
+      expect(r.combined).toContain("AUDIT_ALLOW_NO_VISION_KEY");
+      // Must NOT use "vision pipeline degraded" / "silent degradation" wording
+      // (that message is reserved for the real alarm, RC 2).
+      expect(r.combined).not.toMatch(/vision.pipeline.*(degrad|silent)/i);
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  it("AC8 (BLD-3039): smokeRC=2 (real degradation) → unchanged: exit 2, FAILED/trust-anchor message", () => {
+    const { dir, run } = buildSandbox({
+      headExitCode: 0,
+      smokeExitCode: 2,
+    });
+    try {
+      const r = run();
+      expect(r.status).toBe(2);
+      expect(r.combined).toMatch(/regression-smoke FAILED|trust anchor/);
+      // SKIPPED wording must NOT appear on the real-degradation path.
+      expect(r.combined).not.toContain("SKIPPED");
+    } finally {
+      cleanup(dir);
+    }
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // BLD-3047: Direct exit-4 unit test running the REAL scripts/regression-smoke.sh
+  // ──────────────────────────────────────────────────────────────────────────
+
+  it("regression-smoke.sh unit: exits 4 with clean error message when no vision API key is configured", () => {
+    const REGRESSION_SMOKE = path.join(REPO_ROOT, "scripts", "regression-smoke.sh");
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "bld-3047-"));
+    const tempPng = path.join(tempDir, "fixture.png");
+    fs.writeFileSync(tempPng, "fake png bytes");
+
+    const env = { ...process.env };
+    delete env.ANTHROPIC_API_KEY;
+    delete env.OPENAI_API_KEY;
+    delete env.API_PROVIDER;
+
+    try {
+      const proc = spawnSync("bash", [REGRESSION_SMOKE, tempPng], {
+        env,
+        encoding: "utf8",
+      });
+
+      expect(proc.status).toBe(4);
+      expect(proc.stderr).toContain("no vision API key configured");
+      expect(proc.stderr).toContain("AUDIT_ALLOW_NO_VISION_KEY=1");
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("regression-smoke.sh unit: exits 3 if fixture PNG is missing", () => {
+    const REGRESSION_SMOKE = path.join(REPO_ROOT, "scripts", "regression-smoke.sh");
+    const missingPng = path.join(os.tmpdir(), "nonexistent-fixture-bld-3047.png");
+
+    const env = { ...process.env };
+    delete env.ANTHROPIC_API_KEY;
+    delete env.OPENAI_API_KEY;
+    delete env.API_PROVIDER;
+
+    const proc = spawnSync("bash", [REGRESSION_SMOKE, missingPng], {
+      env,
+      encoding: "utf8",
+    });
+
+    expect(proc.status).toBe(3);
+    expect(proc.stderr).toContain("fixture not found");
   });
 });
