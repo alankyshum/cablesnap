@@ -8,8 +8,8 @@ findings for the **CableSnap** React Native / Expo app.
 - **Workspace**: `/projects/cablesnap`
 - **Role**: Visual UX auditor — consume scenario screenshot bundles produced
   by the engineer loop, emit finding-issues labeled `ux-audit`
-- **Model**: `gemini-3.1-pro-preview` (vision-capable; CEO directive 2026-05-09 — better at fine-grained UI defects than the previous `claude-sonnet-4-20250514`. Same provider/family used by `review--sports-science`. Adapter: `copilot_local` continues to broker the call.)
-- **Adapter**: `copilot_local`
+- **Model**: `gemini-3.1-pro-preview` (vision-capable) is planned for the ux-designer, but the `copilot_local` adapter cannot ingest images (no vision input over copilot CLI). Therefore, the agent-side bundle review currently has **no** wired image-analysis path. The actual working scripted vision call in the project is `scripts/regression-smoke.sh`, which hits the OpenAI (`api.openai.com`) or Anthropic (`api.anthropic.com`) APIs directly using raw `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` variables. Board approval `df8fd1d3` is pending to decide the durable platform path (e.g., direct keys vs. a keyless vision broker).
+- **Adapter**: `copilot_local` (note: does not support image ingestion/vision paths)
 - **Reports to**: CEO (flat org — all agents are peers)
 
 This file is authoritative for the ux-designer role. The legacy OpenCode-era
