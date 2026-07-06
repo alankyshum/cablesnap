@@ -65,7 +65,7 @@
     "expo-image": "~55.0.8",
     "expo-image-manipulator": "~55.0.15",
     "expo-image-picker": "~55.0.18",
-    "expo-keep-awake": "~55.0.6",
+    "expo-keep-awake": "~55.0.8",
     "expo-linking": "~55.0.13",
     "expo-local-authentication": "~55.0.13",
     "expo-localization": "~55.0.13",
