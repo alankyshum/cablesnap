@@ -52,35 +52,20 @@ export function runChangelogGateCheck(options: {
   changedFiles: string[];
   baseContent: string | null;
   headContent: string | null;
-  skipChangelogEnv: boolean;
-  hasSkipChangelogCommitMsg: boolean;
   isDependabotBranch: boolean;
   isDependabotAuthor: boolean;
-  hasSkipChangelogBranchName: boolean;
 }): CheckResult {
   const {
     changedFiles,
     baseContent,
     headContent,
-    skipChangelogEnv,
-    hasSkipChangelogCommitMsg,
     isDependabotBranch,
     isDependabotAuthor,
-    hasSkipChangelogBranchName,
   } = options;
 
   // 1. Check escape hatches/exemptions
-  if (skipChangelogEnv) {
-    return { passed: true, reason: "Bypassed via environment variable SKIP_CHANGELOG." };
-  }
-  if (hasSkipChangelogBranchName) {
-    return { passed: true, reason: "Bypassed via skip-changelog in branch name." };
-  }
   if (isDependabotBranch || isDependabotAuthor) {
     return { passed: true, reason: "Bypassed for Dependabot changes." };
-  }
-  if (hasSkipChangelogCommitMsg) {
-    return { passed: true, reason: "Bypassed via skip-changelog in commit message." };
   }
 
   // 2. Classify changed files
@@ -131,20 +116,28 @@ use one of the escape hatches below.`,
   };
 }
 
+function execGitCommand(command: string): string {
+  try {
+    return execSync(command, { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    throw new Error(`Git command execution failed: "${command}".\nDetails: ${errorMsg}`);
+  }
+}
+
 function main(): void {
   try {
     // Determine base and head SHAs
-    const remoteBranch = execSync(
-      'git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/main"',
-      { encoding: "utf8" }
-    ).trim();
+    const remoteBranch = execGitCommand(
+      'git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/main"'
+    );
 
     // Find the merge base (where our branch diverged from the remote/origin branch)
     let baseSha = "";
     try {
-      baseSha = execSync(`git merge-base "${remoteBranch}" HEAD`, { encoding: "utf8" }).trim();
+      baseSha = execGitCommand(`git merge-base "${remoteBranch}" HEAD`);
     } catch {
-      baseSha = execSync('git rev-parse origin/main', { encoding: "utf8" }).trim();
+      baseSha = execGitCommand('git rev-parse origin/main');
     }
 
     const headSha = "HEAD";
@@ -155,10 +148,8 @@ function main(): void {
     }
 
     // Get list of changed files
-    const changedFiles = execSync(`git diff --name-only "${baseSha}" "${headSha}"`, { encoding: "utf8" })
-      .trim()
-      .split("\n")
-      .filter(Boolean);
+    const changedFilesOutput = execGitCommand(`git diff --name-only "${baseSha}" "${headSha}"`);
+    const changedFiles = changedFilesOutput.split("\n").filter(Boolean);
 
     // Skip check if no changes are being pushed
     if (changedFiles.length === 0) {
@@ -181,22 +172,12 @@ function main(): void {
     }
 
     // Check escape hatches/exemptions
-    const skipChangelogEnv =
-      process.env.SKIP_CHANGELOG === "true" ||
-      process.env.SKIP_CHANGELOG === "1" ||
-      process.env.skip_changelog === "true";
-
-    const branchName = execSync("git rev-parse --abbrev-ref HEAD", { encoding: "utf8" }).trim();
+    const branchName = execGitCommand("git rev-parse --abbrev-ref HEAD");
     const isDependabotBranch = branchName.startsWith("dependabot/");
-    const hasSkipChangelogBranchName = branchName.includes("skip-changelog");
 
-    let hasSkipChangelogCommitMsg = false;
     let isDependabotAuthor = false;
     try {
-      const commitMessages = execSync(`git log "${baseSha}..${headSha}" --format="%B"`, { encoding: "utf8" });
-      hasSkipChangelogCommitMsg = /skip-changelog/i.test(commitMessages);
-
-      const authors = execSync(`git log "${baseSha}..${headSha}" --format="%an"`, { encoding: "utf8" });
+      const authors = execGitCommand(`git log "${baseSha}..${headSha}" --format="%an"`);
       isDependabotAuthor = /dependabot/i.test(authors);
     } catch {
       // Fallback if git log fails
@@ -206,11 +187,8 @@ function main(): void {
       changedFiles,
       baseContent,
       headContent,
-      skipChangelogEnv,
-      hasSkipChangelogCommitMsg,
       isDependabotBranch,
       isDependabotAuthor,
-      hasSkipChangelogBranchName,
     });
 
     if (result.passed) {
@@ -222,9 +200,7 @@ function main(): void {
       console.error(result.message);
       console.error(`
 💡 Escape hatches:
-  - Set environment variable: SKIP_CHANGELOG=true git push
-  - Include 'skip-changelog' in any of your commit messages
-  - Include 'skip-changelog' in your branch name
+  - Dependabot authored branches bypass this check automatically.
   - Bypass hooks entirely (governance escape hatch only): git push --no-verify
 `);
       process.exit(1);

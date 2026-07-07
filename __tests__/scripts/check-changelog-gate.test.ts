@@ -2,7 +2,7 @@ import {
   isUserFacing,
   extractUnreleasedBullets,
   runChangelogGateCheck,
-} from "../check-changelog-gate";
+} from "../../scripts/check-changelog-gate";
 
 describe("isUserFacing", () => {
   it("classifies user-facing paths correctly", () => {
@@ -15,7 +15,7 @@ describe("isUserFacing", () => {
     expect(isUserFacing("plugins/sentry.js")).toBe(true);
   });
 
-  it("classifies internal/override paths as exempt (false)", () => {
+  it("classifies non-user-facing paths as exempt", () => {
     expect(isUserFacing("app/screens/__tests__/Workout.test.tsx")).toBe(false);
     expect(isUserFacing("lib/changelog.generated.ts")).toBe(false);
     expect(isUserFacing("e2e/scenario.spec.ts")).toBe(false);
@@ -65,11 +65,7 @@ Some explanatory text.
 ### Some sub-heading
 - Another bullet under sub-heading.
 `;
-    // Stopping at ##, but ### or text doesn't stop it (as long as it's not ##).
-    // Let's verify our implementation behavior.
-    // In our implementation, we stop at any heading starting with "## ".
-    // If it's "### ", it doesn't stop.
-    // Let's see: text or "- Another bullet" under "### " will count.
+    // Heading '###' does not terminate section; only a heading level-2 ('## ') ends '## Unreleased'.
     expect(extractUnreleasedBullets(content)).toBe(2);
   });
 });
@@ -79,11 +75,8 @@ describe("runChangelogGateCheck", () => {
     changedFiles: [],
     baseContent: null,
     headContent: null,
-    skipChangelogEnv: false,
-    hasSkipChangelogCommitMsg: false,
     isDependabotBranch: false,
     isDependabotAuthor: false,
-    hasSkipChangelogBranchName: false,
   };
 
   it("passes when no files changed", () => {
@@ -156,26 +149,6 @@ describe("runChangelogGateCheck", () => {
     expect(res.reason).toContain("Changelog gate passed");
   });
 
-  it("bypasses when SKIP_CHANGELOG env is true", () => {
-    const res = runChangelogGateCheck({
-      ...defaultOptions,
-      changedFiles: ["app/screens/Workout.tsx"],
-      skipChangelogEnv: true,
-    });
-    expect(res.passed).toBe(true);
-    expect(res.reason).toContain("Bypassed via environment variable");
-  });
-
-  it("bypasses when skip-changelog is in branch name", () => {
-    const res = runChangelogGateCheck({
-      ...defaultOptions,
-      changedFiles: ["app/screens/Workout.tsx"],
-      hasSkipChangelogBranchName: true,
-    });
-    expect(res.passed).toBe(true);
-    expect(res.reason).toContain("Bypassed via skip-changelog in branch name");
-  });
-
   it("bypasses for Dependabot changes", () => {
     const res = runChangelogGateCheck({
       ...defaultOptions,
@@ -184,15 +157,5 @@ describe("runChangelogGateCheck", () => {
     });
     expect(res.passed).toBe(true);
     expect(res.reason).toContain("Bypassed for Dependabot changes");
-  });
-
-  it("bypasses when skip-changelog is in commit message", () => {
-    const res = runChangelogGateCheck({
-      ...defaultOptions,
-      changedFiles: ["app/screens/Workout.tsx"],
-      hasSkipChangelogCommitMsg: true,
-    });
-    expect(res.passed).toBe(true);
-    expect(res.reason).toContain("Bypassed via skip-changelog in commit message");
   });
 });
