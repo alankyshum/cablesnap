@@ -1,5 +1,6 @@
 import React from 'react'
 import { fireEvent, waitFor } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 import { renderScreen } from '../helpers/render'
 import { createFoodEntry, createDailyLog, createMacroTargets, resetIds } from '../helpers/factories'
 import type { DailyLog, FoodEntry, MacroTargets } from '../../lib/types'
@@ -231,5 +232,16 @@ describe('Nutrition Logging', () => {
     )
     expect(await findByText('Something went wrong')).toBeTruthy()
     ;(console.error as jest.Mock).mockRestore()
+  })
+
+  it('SectionList reserves the floating tab bar viewport and keeps 16 scroll-bottom clearance', async () => {
+    const { getByTestId, findByText } = renderScreen(<Nutrition />)
+    await findByText('Lunch')
+    const list = getByTestId('nutrition-scroll-view')
+    const style = list.props.contentContainerStyle
+    const listStyle = StyleSheet.flatten(list.props.style)
+    expect(listStyle.marginBottom).toBe(88) // FLOATING_TAB_BAR_HEIGHT
+    const flatStyle = StyleSheet.flatten(style)
+    expect(flatStyle.paddingBottom).toBe(16)
   })
 })

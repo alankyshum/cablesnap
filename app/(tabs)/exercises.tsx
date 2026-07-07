@@ -88,8 +88,11 @@ export default function Exercises() {
   const toggle = useCallback((f: FilterType) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(f)) next.delete(f);
-      else next.add(f);
+      if (next.has(f)) {
+        next.delete(f);
+      } else {
+        next.add(f);
+      }
       return next;
     });
   }, []);
@@ -226,12 +229,14 @@ export default function Exercises() {
         />
       </View>
       <FlatList
+        testID="exercises-list"
         data={filtered}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         numColumns={1}
         ListEmptyComponent={empty}
-        contentContainerStyle={{ paddingBottom: tabBarHeight }}
+        style={{ marginBottom: tabBarHeight }}
+        contentContainerStyle={{ paddingBottom: 0 }}
       />
       <ExerciseFilterSheet
         isVisible={filterSheet.isVisible}
@@ -243,18 +248,12 @@ export default function Exercises() {
     </View>
   );
 
-  if (!layout.atLeastMedium) {
-    return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {list}
-      </View>
-    );
-  }
-
   return (
-    <View style={[styles.container, styles.wideRow, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, layout.atLeastMedium && styles.wideRow, { backgroundColor: colors.background }]}>
       {list}
-      <ExerciseDetailPane detail={detail} colors={colors} profileGender={profileGender} bottomInset={tabBarHeight} />
+      {layout.atLeastMedium && (
+        <ExerciseDetailPane detail={detail} colors={colors} profileGender={profileGender} bottomInset={tabBarHeight} />
+      )}
     </View>
   );
 }

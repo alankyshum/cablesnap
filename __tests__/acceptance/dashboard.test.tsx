@@ -1,5 +1,6 @@
 import React from 'react'
 import { fireEvent, waitFor } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 import { renderScreen } from '../helpers/render'
 import {
   createSession,
@@ -432,6 +433,17 @@ describe('Dashboard Acceptance', () => {
       await waitFor(() => {
         expect(getByLabelText('Create new program')).toBeTruthy()
       })
+    })
+
+    it('ScrollView reserves the floating tab bar viewport and keeps 80 scroll-bottom clearance', async () => {
+      const { getByTestId } = renderScreen(<Dashboard />)
+      // Wait for data load if needed
+      const scroll = getByTestId('home-scroll-view')
+      const style = scroll.props.contentContainerStyle
+      expect(style).not.toBeInstanceOf(Array)
+      const scrollStyle = StyleSheet.flatten(scroll.props.style)
+      expect(scrollStyle.marginBottom).toBe(88) // FLOATING_TAB_BAR_HEIGHT (with 0 inset in test environment)
+      expect(style.paddingBottom).toBe(80)
     })
   })
 })

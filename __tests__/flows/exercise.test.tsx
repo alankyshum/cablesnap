@@ -1,5 +1,6 @@
 import React from 'react'
 import { fireEvent, waitFor } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 import { renderScreen } from '../helpers/render'
 import { createExercise, resetIds } from '../helpers/factories'
 import type { Exercise } from '../../lib/types'
@@ -207,5 +208,16 @@ describe('Exercise Browser', () => {
     // With TanStack Query, errors are caught and retried; the screen remains mounted
     expect(queryByText).toBeDefined()
     ;(console.error as jest.Mock).mockRestore()
+  })
+
+  it('FlatList reserves the floating tab bar viewport and keeps 0 scroll-bottom clearance', async () => {
+    const { getByTestId, findByText } = renderScreen(<Exercises />)
+    await findByText('Bench Press')
+    const list = getByTestId('exercises-list')
+    const style = list.props.contentContainerStyle
+    expect(style).not.toBeInstanceOf(Array)
+    const listStyle = StyleSheet.flatten(list.props.style)
+    expect(listStyle.marginBottom).toBe(88) // FLOATING_TAB_BAR_HEIGHT
+    expect(style.paddingBottom).toBe(0)
   })
 })
