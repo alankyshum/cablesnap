@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, Share, StyleSheet, View, FlatList } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -27,6 +27,7 @@ import { useSessionPacing } from "../../../hooks/useSessionPacing";
 import type { ShareCardExercise, ShareCardPR } from "../../../components/ShareCard";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
+import { isStravaConnected } from "../../../lib/strava";
 
 export default function SummaryRoute() {
   // BLD-660: wrap the Summary view in a route-local ErrorBoundary so a crash
@@ -67,6 +68,11 @@ function Summary() {
       return () => sub.remove();
     }, [router])
   );
+
+  const [stravaConnected, setStravaConnected] = useState(false);
+  useEffect(() => {
+    isStravaConnected().then(setStravaConnected).catch(() => {});
+  }, []);
 
   const data = useSummaryData(id);
   const { session, grouped, prs, repPrs, increases, comparison, unit, volume, setsBreakdown, newAchievements, completedSetCount, primaryMuscles, secondaryMuscles } = data;
@@ -214,6 +220,21 @@ function Summary() {
             setImageLoading={actions.setImageLoading}
             shareCardRef={actions.shareCardRef}
             handleCaptureAndShare={actions.handleCaptureAndShare}
+            stravaPreviewVisible={actions.stravaPreviewVisible}
+            setStravaPreviewVisible={actions.setStravaPreviewVisible}
+            stravaImageLoading={actions.stravaImageLoading}
+            setStravaImageLoading={actions.setStravaImageLoading}
+            stravaCardRef={actions.stravaCardRef}
+            handleCaptureStravaAndShare={actions.handleCaptureStravaAndShare}
+            achievementPreviewVisible={actions.achievementPreviewVisible}
+            setAchievementPreviewVisible={actions.setAchievementPreviewVisible}
+            achievementImageLoading={actions.achievementImageLoading}
+            setAchievementImageLoading={actions.setAchievementImageLoading}
+            achievementCardRef={actions.achievementCardRef}
+            handleCaptureAchievementAndShare={actions.handleCaptureAchievementAndShare}
+            newAchievements={newAchievements}
+            promoCaption={data.promoCaption}
+            promoEnabled={data.promoEnabled}
             shareCardDate={shareCardDate}
             duration={duration}
             completedCount={completedSetCount}
@@ -222,6 +243,8 @@ function Summary() {
             rating={actions.rating}
             shareCardPrs={shareCardPrs}
             shareCardExercises={shareCardExercises}
+            stravaActivityId={data.stravaActivityId}
+            stravaSynced={data.stravaSynced}
           />
         }
       />
@@ -231,6 +254,12 @@ function Summary() {
         onShareImage={actions.handleShareImage}
         imageDisabled={completedSetCount === 0}
         onDismiss={() => {}}
+        onShareStravaImage={() => actions.handleStravaImage(shareCardPrs.length > 0, shareCardExercises.length)}
+        stravaDisabled={completedSetCount === 0}
+        stravaConnected={stravaConnected}
+        onConnectStrava={() => router.push('/(tabs)/settings')}
+        onShareAchievementImage={() => actions.handleAchievementImage(newAchievements.length)}
+        hasAchievements={newAchievements.length > 0}
       />
     </>
   );

@@ -1,3 +1,4 @@
+/* eslint-env jest */
 // We rely on moduleNameMapper in jest.config.js to intercept
 // react-native-reanimated and react-native-worklets before they load native code.
 
@@ -29,6 +30,10 @@ jest.mock(
 // Mock @shopify/react-native-skia — its ESM entry imports native modules that
 // Jest cannot transform. Tests don't render via Skia anyway; charts/fonts are
 // stubbed at the victory-native level.
+if (typeof window !== 'undefined' && !window.dispatchEvent) {
+  window.dispatchEvent = () => {};
+}
+
 jest.mock('@shopify/react-native-skia', () => ({
   matchFont: () => null,
   useFont: () => null,

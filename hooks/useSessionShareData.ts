@@ -4,7 +4,7 @@ import BottomSheet from "@gorhom/bottom-sheet";
 import type { ShareCardExercise, ShareCardPR } from "@/components/ShareCard";
 import { toDisplay } from "@/lib/units";
 import { formatTime } from "@/lib/format";
-import { getBodySettings } from "@/lib/db";
+import { getBodySettings, getEffectivePromoCaption, getShareSettings, getSyncLogForSession } from "@/lib/db";
 import type { ExerciseGroup } from "@/hooks/useSessionDetail";
 
 type SessionLike = {
@@ -20,15 +20,65 @@ export function useSessionShareData(
   groups: ExerciseGroup[],
   prs: PR[],
   completedSetCount: number,
+  sessionId?: string,
 ) {
   const shareSheetRef = useRef<BottomSheet>(null);
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
+  const [promoCaption, setPromoCaption] = useState<string>("");
+  const [promoEnabled, setPromoEnabled] = useState<boolean>(false);
+  const [stravaActivityId, setStravaActivityId] = useState<string | null>(null);
+  const [stravaSynced, setStravaSynced] = useState<boolean>(false);
 
   useEffect(() => {
+    let cancelled = false;
+
+    // Reset state before/at fetch when sessionId changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset stale strava state on sessionId change
+    setStravaActivityId(null);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset stale strava state on sessionId change
+    setStravaSynced(false);
+
     getBodySettings()
-      .then((s) => setUnit(s.weight_unit as "kg" | "lb"))
+      .then((s) => {
+        if (!cancelled) setUnit(s.weight_unit as "kg" | "lb");
+      })
       .catch(() => {});
-  }, []);
+    getEffectivePromoCaption()
+      .then((c) => {
+        if (!cancelled) setPromoCaption(c);
+      })
+      .catch(() => {});
+    getShareSettings()
+      .then((s) => {
+        if (!cancelled) setPromoEnabled(!!s.promo_caption_enabled);
+      })
+      .catch(() => {});
+    if (sessionId) {
+      const activeSessionId = sessionId;
+      getSyncLogForSession(sessionId)
+        .then((log) => {
+          if (!cancelled && activeSessionId === sessionId) {
+            if (log && log.status === "synced" && log.strava_activity_id) {
+              setStravaActivityId(log.strava_activity_id);
+              setStravaSynced(true);
+            } else {
+              setStravaActivityId(null);
+              setStravaSynced(false);
+            }
+          }
+        })
+        .catch(() => {
+          if (!cancelled && activeSessionId === sessionId) {
+            setStravaActivityId(null);
+            setStravaSynced(false);
+          }
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
 
   const duration = session?.duration_seconds ? formatTime(session.duration_seconds) : "0:00";
   const volumeRaw = groups.reduce((sum, g) => {
@@ -103,6 +153,10 @@ export function useSessionShareData(
     shareCardDate,
     shareCardPrs,
     shareCardExercises,
+    promoCaption,
+    promoEnabled,
+    stravaActivityId,
+    stravaSynced,
     handleShareButtonPress,
     handleShareText,
   };

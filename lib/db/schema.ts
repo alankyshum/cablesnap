@@ -424,6 +424,14 @@ export const stravaSyncLog = sqliteTable("strava_sync_log", {
   index("idx_strava_sync_log_status").on(table.status),
 ]);
 
+export const shareSettings = sqliteTable("share_settings", {
+  id: integer("id").primaryKey().default(1),
+  promo_caption: text("promo_caption").notNull().default(""),
+  promo_caption_enabled: integer("promo_caption_enabled").notNull().default(0),
+  strava_description_enabled: integer("strava_description_enabled").notNull().default(1),
+  updated_at: integer("updated_at").notNull(),
+});
+
 // ─── Strength Goals ─────────────────────────────────────────────────────────
 
 export const strengthGoals = sqliteTable("strength_goals", {

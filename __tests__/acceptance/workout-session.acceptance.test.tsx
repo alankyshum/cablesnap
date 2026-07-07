@@ -89,6 +89,9 @@ jest.mock('../../lib/db', () => ({
   getPreferredSubstitutesBatch: jest.fn().mockResolvedValue({}),
   getPreferredSubstitute: jest.fn().mockResolvedValue(null),
   setPreferredSubstitute: jest.fn().mockResolvedValue(undefined),
+  getEffectivePromoCaption: jest.fn().mockResolvedValue(""),
+  getShareSettings: jest.fn().mockResolvedValue({ promo_caption_enabled: 0 }),
+  getSyncLogForSession: jest.fn().mockResolvedValue(null),
 }))
 
 jest.mock('../../lib/programs', () => ({

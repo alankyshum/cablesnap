@@ -6,6 +6,7 @@ import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { spacing, radii } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
+import { stravaLog } from "../lib/strava-telemetry";
 
 type Props = {
   sheetRef: React.RefObject<BottomSheet | null>;
@@ -13,6 +14,12 @@ type Props = {
   onShareImage: () => void;
   imageDisabled?: boolean;
   onDismiss: () => void;
+  onShareStravaImage?: () => void;
+  stravaDisabled?: boolean;
+  stravaConnected?: boolean;
+  onConnectStrava?: () => void;
+  onShareAchievementImage?: () => void;
+  hasAchievements?: boolean;
 };
 
 type OptionProps = {
@@ -66,9 +73,15 @@ export default function ShareSheet({
   onShareImage,
   imageDisabled,
   onDismiss,
+  onShareStravaImage,
+  stravaDisabled,
+  stravaConnected,
+  onConnectStrava,
+  onShareAchievementImage,
+  hasAchievements = false,
 }: Props) {
   const colors = useThemeColors();
-  const snapPoints = useMemo(() => ["30%"], []);
+  const snapPoints = useMemo(() => [hasAchievements ? "60%" : "45%"], [hasAchievements]);
   const showImageOption = Platform.OS !== "web";
 
   const renderBackdrop = useCallback(
@@ -121,6 +134,38 @@ export default function ShareSheet({
               onShareImage();
             }}
             disabled={imageDisabled}
+          />
+        )}
+        {showImageOption && (
+          <ShareOption
+            icon="run-fast"
+            label={stravaConnected ? "Share Strava Image" : "Connect Strava"}
+            description={
+              stravaConnected
+                ? "Generate a Strava workout card image"
+                : "Open settings to connect Strava"
+            }
+            onPress={() => {
+              sheetRef.current?.close();
+              if (stravaConnected && onShareStravaImage) {
+                onShareStravaImage();
+              } else if (onConnectStrava) {
+                stravaLog("info", "connect_strava_cta_tapped");
+                onConnectStrava();
+              }
+            }}
+            disabled={stravaDisabled}
+          />
+        )}
+        {showImageOption && hasAchievements && (
+          <ShareOption
+            icon="trophy-variant"
+            label="Share Achievement Recap"
+            description="Generate an achievement recap card image"
+            onPress={() => {
+              sheetRef.current?.close();
+              onShareAchievementImage?.();
+            }}
           />
         )}
       </View>

@@ -271,6 +271,9 @@ jest.mock("../../lib/db", () => ({
   getSessionById: jest.fn(),
   getSessionSets: jest.fn(),
   getBodySettings: jest.fn(),
+  getEffectivePromoCaption: jest.fn(),
+  getShareSettings: jest.fn(),
+  getSyncLogForSession: jest.fn(),
 }));
 jest.mock("@sentry/react-native", () => ({
   __esModule: true,
@@ -306,6 +309,7 @@ describe("Strava Integration — Behavioral", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     global.fetch = mockFetch;
+    db.getSyncLogForSession.mockResolvedValue(null);
     // Default: non-web platform (set by jest setup)
   });
 
@@ -385,6 +389,10 @@ describe("Strava Integration — Behavioral", () => {
       id: "s1", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
     });
     db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+    db.getShareSettings.mockResolvedValue({
+      id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: Date.now(),
+    });
     // Token is valid (expires far in future)
     SecureStore.getItemAsync.mockImplementation(async (key: string) => {
       if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
@@ -407,7 +415,7 @@ describe("Strava Integration — Behavioral", () => {
     expect(body.external_id).toBe("cablesnap-s1");
     // BLD-1205: description must include CableSnap footer
     expect(body.description).toContain("Tracked with CableSnap");
-    expect(body.description).toContain("https://github.com/alankyshum/cablesnap");
+    expect(body.description).toContain("cablesnap.app");
   });
 
   it("syncSessionToStrava skips when not connected", async () => {
@@ -684,6 +692,10 @@ describe("Strava Integration — Behavioral", () => {
       id: sessionId, name: "Test Session", started_at: Date.now(), duration_seconds: 3600,
     });
     db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+    db.getShareSettings.mockResolvedValue({
+      id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: Date.now(),
+    });
     SecureStore.getItemAsync.mockImplementation(async (key: string) => {
       if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
       if (key === "strava_access_token") return "valid-token";
@@ -928,6 +940,10 @@ describe("Strava Integration — Behavioral", () => {
         id: sessionId, name: "Test Session", started_at: Date.now(), duration_seconds: 3600,
       });
       db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+      db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+      db.getShareSettings.mockResolvedValue({
+        id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: Date.now(),
+      });
       SecureStore.getItemAsync.mockImplementation(async (key: string) => {
         if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
         if (key === "strava_access_token") return "valid-token";
@@ -1002,7 +1018,6 @@ describe("Strava Integration — Behavioral", () => {
           source: "strava_activity_sync",
           phase: "post-connect",
           sessionId,
-          athleteId: 1,
           setCount: 1,
           completedCount: 1,
           status: "queued",
@@ -1028,7 +1043,6 @@ describe("Strava Integration — Behavioral", () => {
           source: "strava_activity_sync",
           phase: "post-connect",
           sessionId,
-          athleteId: 1,
         }),
       );
     });
@@ -1072,6 +1086,247 @@ describe("Strava Integration — Behavioral", () => {
         }),
       );
     });
+
+    it("uploadActivity omits only promo caption when strava_description_enabled=false", async () => {
+      const sessionId = "s-no-desc";
+      db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+      db.getSessionSets.mockResolvedValue([
+        { exercise_name: "Bench", weight: 80, reps: 8, completed: true, set_type: "working" },
+      ]);
+      db.getSessionById.mockResolvedValue({
+        id: sessionId, name: "Push", started_at: Date.now(), duration_seconds: 1800,
+      });
+      db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+      db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+      db.getShareSettings.mockResolvedValue({
+        id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 0, updated_at: Date.now(),
+      });
+      SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+        if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+        if (key === "strava_access_token") return "valid-token";
+        return null;
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 55555 }),
+      });
+
+      const result = await strava.syncSessionToStrava(sessionId);
+
+      expect(result.status).toBe("synced");
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body).toHaveProperty("description");
+      expect(body.description).toContain("Bench: 80kg × 8");
+      expect(body.description).not.toContain("cablesnap.app");
+    });
+  });
+
+  describe("updateActivityDescription", () => {
+    beforeEach(() => {
+      SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+        if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+        if (key === "strava_access_token") return "valid-token";
+        return null;
+      });
+    });
+
+    it("happy path — PUT succeeds", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ id: 123 }) });
+
+      await strava.updateActivityDescription("123", "New description");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://www.strava.com/api/v3/activities/123",
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({ description: "New description" }),
+        })
+      );
+    });
+
+    it("401 → disconnects and throws", async () => {
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 401, text: async () => "Unauthorized" });
+
+      await expect(strava.updateActivityDescription("123", "Desc")).rejects.toThrow("revoked");
+      expect(db.deleteStravaConnection).toHaveBeenCalled();
+    });
+
+    it("403 app_inactive → throws StravaError(app_inactive), no Sentry", async () => {
+      const Sentry = require("@sentry/react-native");
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: async () => '{"message":"Application Status Inactive","errors":[{"resource":"Application","field":"status","code":"inactive"}]}',
+      });
+
+      await expect(strava.updateActivityDescription("123", "Desc")).rejects.toMatchObject({
+        name: "StravaError",
+        code: "app_inactive",
+      });
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+    });
+
+    it("403 actionable → Sentry captured, queued", async () => {
+      const Sentry = require("@sentry/react-native");
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: async () => "Forbidden",
+      });
+
+      await expect(strava.updateActivityDescription("123", "Desc")).rejects.toMatchObject({
+        name: "StravaError",
+        code: "auth_expired",
+      });
+      expect(Sentry.captureException).toHaveBeenCalled();
+    });
+
+    describe("Phase 4 integration", () => {
+      beforeEach(() => {
+        db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+        db.getSessionSets.mockResolvedValue([
+          { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+        ]);
+        db.getSessionById.mockResolvedValue({
+          id: "s-phase4", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
+        });
+        db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+        db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+        db.getShareSettings.mockResolvedValue({
+          id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: 2000,
+        });
+        SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+          if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+          if (key === "strava_access_token") return "valid-token";
+          return null;
+        });
+      });
+
+      it("no PUT on fresh upload", async () => {
+        db.getSyncLogForSession.mockResolvedValue(null);
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ id: "12345" }),
+        });
+
+        const result = await strava.syncSessionToStrava("s-phase4");
+        expect(result.status).toBe("synced");
+        // Verify only POST /activities is called, NO PUT on activities/12345
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockFetch.mock.calls[0][0]).toContain("/activities");
+        expect(mockFetch.mock.calls[0][1].method).toBe("POST");
+      });
+
+      it("PUT on post-sync caption edit", async () => {
+        const Sentry = require("@sentry/react-native");
+        db.getSyncLogForSession.mockResolvedValue({
+          status: "synced",
+          strava_activity_id: "12345",
+          synced_at: 1000, // synced_at is before shareSettings.updated_at (2000)
+        });
+        // Mock getActivity to return a different description
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ description: "Old description" }),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ id: "12345" }),
+          });
+
+        const result = await strava.syncSessionToStrava("s-phase4");
+        expect(result.status).toBe("synced");
+        // Verify GET and PUT are called
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(mockFetch.mock.calls[0][0]).toContain("/activities/12345");
+        expect(mockFetch.mock.calls[0][1].method).toBe("GET");
+        expect(mockFetch.mock.calls[1][0]).toContain("/activities/12345");
+        expect(mockFetch.mock.calls[1][1].method).toBe("PUT");
+
+        // Verify analytics
+        expect(Sentry.logger.info).toHaveBeenCalledWith(
+          "strava_description_updated",
+          expect.objectContaining({ sessionId: "s-phase4", activityId: "12345" })
+        );
+      });
+
+      it("PUT skipped when unchanged", async () => {
+        db.getSyncLogForSession.mockResolvedValue({
+          status: "synced",
+          strava_activity_id: "12345",
+          synced_at: 1000,
+        });
+        // Build expected description
+        const expectedDesc = "Squat: 100kg × 5\n\n\n—\nTracked with CableSnap · cablesnap.app";
+        // Mock getActivity to return exactly that description
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ description: expectedDesc }),
+        });
+
+        const result = await strava.syncSessionToStrava("s-phase4");
+        expect(result.status).toBe("synced");
+        // Verify GET is called but PUT is skipped
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockFetch.mock.calls[0][0]).toContain("/activities/12345");
+        expect(mockFetch.mock.calls[0][1].method).toBe("GET");
+      });
+
+      it("409 resolution path updates description if different", async () => {
+        db.getSyncLogForSession.mockResolvedValue(null);
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: false,
+            status: 409,
+            text: async () => '{"message":"Record Already Exists"}',
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => [{ id: "12345" }], // resolveExistingActivityId
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ description: "Old description" }), // getActivity
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ id: "12345" }), // updateActivityDescription
+          });
+
+        const result = await strava.syncSessionToStrava("s-phase4");
+        expect(result.status).toBe("synced");
+        expect(result.activityId).toBe("12345");
+        // Verify sequence of fetch calls
+        expect(mockFetch.mock.calls[0][1].method).toBe("POST");
+        expect(mockFetch.mock.calls[1][0]).toContain("/athlete/activities"); // lookup
+        expect(mockFetch.mock.calls[2][0]).toContain("/activities/12345"); // GET
+        expect(mockFetch.mock.calls[2][1].method).toBe("GET");
+        expect(mockFetch.mock.calls[3][0]).toContain("/activities/12345"); // PUT
+        expect(mockFetch.mock.calls[3][1].method).toBe("PUT");
+      });
+
+      it("failure in description update is logged and does not fail the sync", async () => {
+        db.getSyncLogForSession.mockResolvedValue({
+          status: "synced",
+          strava_activity_id: "12345",
+          synced_at: 1000,
+        });
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({ description: "Old description" }),
+          })
+          .mockResolvedValueOnce({
+            ok: false,
+            status: 500,
+            text: async () => "Internal Server Error",
+          });
+
+        const result = await strava.syncSessionToStrava("s-phase4");
+        expect(result.status).toBe("synced"); // Still returns synced!
+      });
+    });
   });
 });
 
@@ -1088,6 +1343,7 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     global.fetch = mockFetch;
+    db.getSyncLogForSession.mockResolvedValue(null);
   });
 
   afterAll(() => {
@@ -1137,7 +1393,7 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
     );
     expect(Sentry.logger.info).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ flow: "strava_connect", step: "success", athleteId: 42 }),
+      expect.objectContaining({ flow: "strava_connect", step: "success" }),
     );
 
     scanLoggerCallsForSecrets();

@@ -30,6 +30,9 @@ jest.mock("../../lib/db", () => ({
   buildAchievementContext: jest.fn(),
   getEarnedAchievementIds: jest.fn(),
   saveEarnedAchievements: jest.fn(),
+  getEffectivePromoCaption: jest.fn().mockResolvedValue(""),
+  getShareSettings: jest.fn().mockResolvedValue({ promo_caption_enabled: false }),
+  getSyncLogForSession: jest.fn().mockResolvedValue(null),
 }));
 
 jest.mock("../../lib/achievements", () => ({
@@ -56,11 +59,17 @@ function mockHappyPath(): void {
   db.buildAchievementContext.mockResolvedValue({});
   db.getEarnedAchievementIds.mockResolvedValue([]);
   db.saveEarnedAchievements.mockResolvedValue(undefined);
+  db.getEffectivePromoCaption.mockResolvedValue("");
+  db.getShareSettings.mockResolvedValue({ promo_caption_enabled: false });
+  db.getSyncLogForSession.mockResolvedValue(null);
 }
 
 describe("useSummaryData — defense-in-depth error state (BLD-1636)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    db.getEffectivePromoCaption.mockResolvedValue("");
+    db.getShareSettings.mockResolvedValue({ promo_caption_enabled: false });
+    db.getSyncLogForSession.mockResolvedValue(null);
   });
 
   it("captures a cold-worker 'Sync operation timeout' thrown by the first query into `error` (no unhandled rejection)", async () => {

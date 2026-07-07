@@ -11,6 +11,12 @@ import { render } from '@testing-library/react-native'
 import SummaryFooter from '../../components/session/summary/SummaryFooter'
 import { scrim } from '../../constants/design-tokens'
 
+jest.mock('../../components/ui/bna-toast', () => ({
+  useToast: () => ({
+    toast: jest.fn(),
+  }),
+}));
+
 jest.mock('../../components/ShareCard', () => {
   const React = require('react')
   return {
@@ -45,6 +51,21 @@ function makeProps(overrides: Partial<React.ComponentProps<typeof SummaryFooter>
     setPreviewVisible: jest.fn(),
     imageLoading: false,
     setImageLoading: jest.fn(),
+    stravaPreviewVisible: false,
+    setStravaPreviewVisible: jest.fn(),
+    stravaImageLoading: false,
+    setStravaImageLoading: jest.fn(),
+    stravaCardRef: { current: null },
+    handleCaptureStravaAndShare: jest.fn(),
+    achievementPreviewVisible: false,
+    setAchievementPreviewVisible: jest.fn(),
+    achievementImageLoading: false,
+    setAchievementImageLoading: jest.fn(),
+    achievementCardRef: { current: null },
+    handleCaptureAchievementAndShare: jest.fn(),
+    newAchievements: [],
+    promoCaption: '',
+    promoEnabled: false,
     shareCardRef: { current: null },
     handleCaptureAndShare: jest.fn(),
     shareCardDate: '2026-01-01',

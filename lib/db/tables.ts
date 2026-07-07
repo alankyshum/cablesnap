@@ -8,7 +8,7 @@ const VALID_TABLES = new Set([
   "macro_targets", "error_log", "body_weight", "body_measurements",
   "body_settings", "programs", "program_days", "program_log",
   "interaction_log", "progress_photos", "achievements_earned",
-  "strava_connection", "strava_sync_log",
+  "strava_connection", "strava_sync_log", "share_settings",
   "meal_templates", "meal_template_items", "app_settings",
   "program_schedule", "strength_goals", "water_logs",
   "gym_profiles", "cable_stacks", "stack_calibrations",
@@ -322,6 +322,14 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
       UNIQUE(session_id)
     );
     CREATE INDEX IF NOT EXISTS idx_strava_sync_log_status ON strava_sync_log(status);
+
+    CREATE TABLE IF NOT EXISTS share_settings (
+      id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+      promo_caption TEXT NOT NULL DEFAULT '',
+      promo_caption_enabled INTEGER NOT NULL DEFAULT 0,
+      strava_description_enabled INTEGER NOT NULL DEFAULT 1,
+      updated_at INTEGER NOT NULL
+    );
 
 
     CREATE TABLE IF NOT EXISTS strength_goals (

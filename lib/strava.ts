@@ -29,6 +29,9 @@ import {
   getSessionById,
   getSessionSets,
   getBodySettings,
+  getEffectivePromoCaption,
+  getShareSettings,
+  getSyncLogForSession,
 } from "./db";
 export {
   StravaError,
@@ -220,13 +223,12 @@ export async function exchangeCodeForTokens(
   }
 
   if (!tokenResponse.ok) {
-    const body = await tokenResponse.text().catch(() => "");
     const err = new StravaError(
       classifyHttpStatus(tokenResponse.status),
       `Token exchange failed: ${tokenResponse.status}`,
       tokenResponse.status,
     );
-    captureStravaError(err, "strava_connect", "token_exchange", { redirectUri: REDIRECT_URI_FOR_STRAVA, proxyUrl, clientId, status: tokenResponse.status, responseBody: body });
+    captureStravaError(err, "strava_connect", "token_exchange", { redirectUri: REDIRECT_URI_FOR_STRAVA, proxyUrl, clientId, status: tokenResponse.status });
     throw err;
   }
 
@@ -280,7 +282,8 @@ function buildActivityDescription(
     completed: boolean;
     set_type: string;
   }>,
-  weightUnit: "kg" | "lb"
+  weightUnit: "kg" | "lb",
+  promoCaption?: string
 ): string {
   const completedSets = sets.filter((s) => s.completed);
   if (completedSets.length === 0) return "";
@@ -299,7 +302,11 @@ function buildActivityDescription(
     lines.push(`${name}: ${setDescs.join(", ")}`);
   }
 
-  return lines.join("\n") + "\n\n\n—\nTracked with CableSnap · https://github.com/alankyshum/cablesnap";
+  const description = lines.join("\n");
+  if (promoCaption && promoCaption.trim().length > 0) {
+    return description + "\n\n\n—\n" + promoCaption.trim();
+  }
+  return description;
 }
 
 function isStravaAppInactive(body: string): boolean {
@@ -319,6 +326,51 @@ function isStravaAppInactive(body: string): boolean {
   } catch {
     return false;
   }
+}
+
+async function handleUpload403(response: Response, sessionId: string): Promise<never> {
+  const body = await response.text().catch(() => "");
+  if (isStravaAppInactive(body)) {
+    stravaLog("warn", "strava upload blocked — app inactive (known permanent 403)", {
+      flow: "strava_upload",
+      step: "api_call",
+      sessionId,
+      status: 403,
+      source: "strava_activity_sync",
+      phase: "post-connect",
+    });
+    throw new StravaError("app_inactive", "Strava app is inactive. Please contact support.", 403);
+  }
+  const err = new StravaError("auth_expired", "Strava API error 403", 403);
+  captureStravaError(err, "strava_upload", "api_call", { sessionId, status: 403 });
+  throw err;
+}
+
+async function handleUpload409(accessToken: string, sessionId: string, description: string | undefined): Promise<string | null> {
+  stravaLog("info", "strava upload duplicate (409) — resolving existing activity", {
+    flow: "strava_upload",
+    step: "duplicate_409",
+    sessionId,
+  });
+  const resolvedId = await resolveExistingActivityId(accessToken, sessionId);
+  if (resolvedId && description !== undefined) {
+    try {
+      const activity = await getActivity(resolvedId);
+      if (activity && activity.description !== description) {
+        await updateActivityDescription(resolvedId, description);
+        stravaLog("info", "strava_description_updated", { sessionId, activityId: resolvedId });
+      }
+    } catch (err) {
+      stravaLog("warn", "strava 409 description update failed — non-blocking", {
+        flow: "strava_upload",
+        step: "409_description_update_failed",
+        sessionId,
+        activityId: resolvedId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return resolvedId;
 }
 
 /**
@@ -348,10 +400,28 @@ async function uploadActivity(
   const bodySettings = await getBodySettings();
   const weightUnit = bodySettings.weight_unit as "kg" | "lb";
 
-  const description = buildActivityDescription(sets, weightUnit);
+  const { promoCaption, stravaDescriptionEnabled } = await getShareSettingsForUpload();
+  const description = buildActivityDescription(
+    sets,
+    weightUnit,
+    stravaDescriptionEnabled ? promoCaption : undefined
+  );
+
   // BLD-630: anchor Strava activity start to first-completed-set.
   const startDate = new Date(session.clock_started_at ?? session.started_at).toISOString();
   const elapsedTime = session.duration_seconds ?? 0;
+
+  const bodyPayload: Record<string, unknown> = {
+    name: session.name || "Strength Training",
+    type: "WeightTraining",
+    sport_type: "WeightTraining",
+    start_date_local: startDate,
+    elapsed_time: elapsedTime,
+    external_id: `cablesnap-${sessionId}`,
+  };
+  if (description && description.trim().length > 0) {
+    bodyPayload.description = description;
+  }
 
   const response = await fetch(`${STRAVA_API_BASE}/activities`, {
     method: "POST",
@@ -359,15 +429,7 @@ async function uploadActivity(
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      name: session.name || "Strength Training",
-      type: "WeightTraining",
-      sport_type: "WeightTraining",
-      start_date_local: startDate,
-      elapsed_time: elapsedTime,
-      description,
-      external_id: `cablesnap-${sessionId}`,
-    }),
+    body: JSON.stringify(bodyPayload),
   });
 
   if (response.status === 401) {
@@ -381,22 +443,7 @@ async function uploadActivity(
   // Sentry with this unactionable error. Log at warn level for signal,
   // throw so the caller treats it as a permanent failure.
   if (response.status === 403) {
-    const body = await response.text().catch(() => "");
-    if (isStravaAppInactive(body)) {
-      stravaLog("warn", "strava upload blocked — app inactive (known permanent 403)", {
-        flow: "strava_upload",
-        step: "api_call",
-        sessionId,
-        status: 403,
-        source: "strava_activity_sync",
-        phase: "post-connect",
-      });
-      throw new StravaError("app_inactive", "Strava app is inactive. Please contact support.", 403);
-    }
-    // Actionable / unknown 403 — keep existing Sentry capture (sanitized, no raw body)
-    const err = new StravaError("auth_expired", "Strava API error 403", 403);
-    captureStravaError(err, "strava_upload", "api_call", { sessionId, status: 403 });
-    throw err;
+    return handleUpload403(response, sessionId);
   }
 
   // BLD-1240: 409 = activity with this external_id already exists on Strava.
@@ -404,13 +451,7 @@ async function uploadActivity(
   // so the queue entry can be marked `synced`. If resolution fails, return null
   // (caller marks synced with no activityId — still success, never an error).
   if (response.status === 409) {
-    stravaLog("info", "strava upload duplicate (409) — resolving existing activity", {
-      flow: "strava_upload",
-      step: "duplicate_409",
-      sessionId,
-    });
-    const resolvedId = await resolveExistingActivityId(accessToken, sessionId);
-    return resolvedId;
+    return handleUpload409(accessToken, sessionId, description);
   }
 
   if (!response.ok) {
@@ -425,6 +466,133 @@ async function uploadActivity(
 
   const activity = await response.json();
   return String(activity.id);
+}
+
+async function getShareSettingsForUpload(): Promise<{ promoCaption: string; stravaDescriptionEnabled: boolean }> {
+  try {
+    const promoCaption = await getEffectivePromoCaption();
+    const raw = await getShareSettings();
+    return {
+      promoCaption,
+      stravaDescriptionEnabled: raw.strava_description_enabled === 1,
+    };
+  } catch {
+    return { promoCaption: "", stravaDescriptionEnabled: true };
+  }
+}
+
+/**
+ * Update the description of an existing Strava activity.
+ * Used when user edits promo caption AFTER an activity was already synced,
+ * or when a 409 resolves to an existing activity.
+ * Do NOT call automatically on fresh upload — POST /activities already includes description.
+ */
+export async function updateActivityDescription(
+  activityId: string,
+  description: string
+): Promise<void> {
+  if (!description || description.trim().length === 0) {
+    return;
+  }
+  const accessToken = await getValidAccessToken();
+  if (!accessToken) {
+    throw new Error("No valid Strava access token");
+  }
+
+  const response = await fetch(`${STRAVA_API_BASE}/activities/${activityId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ description }),
+  });
+
+  if (response.status === 401) {
+    captureStravaError(new Error("Strava access revoked"), "strava_update_description", "api_call", { activityId });
+    await disconnect();
+    throw new Error("Strava access revoked. Please reconnect.");
+  }
+
+  if (response.status === 403) {
+    const body = await response.text().catch(() => "");
+    if (isStravaAppInactive(body)) {
+      stravaLog("warn", "strava description update blocked — app inactive (known permanent 403)", {
+        flow: "strava_update_description",
+        step: "api_call",
+        activityId,
+        status: 403,
+      });
+      throw new StravaError("app_inactive", "Strava app is inactive. Please contact support.", 403);
+    }
+    const err = new StravaError("auth_expired", "Strava API error 403", 403);
+    captureStravaError(err, "strava_update_description", "api_call", { activityId, status: 403 });
+    throw err;
+  }
+
+  if (!response.ok) {
+    const err = new StravaError(
+      classifyHttpStatus(response.status),
+      `Strava API error ${response.status}`,
+      response.status,
+    );
+    captureStravaError(err, "strava_update_description", "api_call", { activityId, status: response.status });
+    throw err;
+  }
+}
+
+/**
+ * Fetches the activity details from Strava.
+ */
+async function getActivity(
+  activityId: string
+): Promise<{ description: string } | null> {
+  const accessToken = await getValidAccessToken();
+  if (!accessToken) {
+    throw new Error("No valid Strava access token");
+  }
+
+  const response = await fetch(`${STRAVA_API_BASE}/activities/${activityId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (response.status === 401) {
+    captureStravaError(new Error("Strava access revoked"), "strava_get_activity", "api_call", { activityId });
+    await disconnect();
+    throw new Error("Strava access revoked. Please reconnect.");
+  }
+
+  if (response.status === 403) {
+    const body = await response.text().catch(() => "");
+    if (isStravaAppInactive(body)) {
+      stravaLog("warn", "strava get activity blocked — app inactive (known permanent 403)", {
+        flow: "strava_get_activity",
+        step: "api_call",
+        activityId,
+        status: 403,
+      });
+      throw new StravaError("app_inactive", "Strava app is inactive. Please contact support.", 403);
+    }
+    const err = new StravaError("auth_expired", "Strava API error 403", 403);
+    captureStravaError(err, "strava_get_activity", "api_call", { activityId, status: 403 });
+    throw err;
+  }
+
+  if (!response.ok) {
+    const err = new StravaError(
+      classifyHttpStatus(response.status),
+      `Strava API error ${response.status}`,
+      response.status,
+    );
+    captureStravaError(err, "strava_get_activity", "api_call", { activityId, status: response.status });
+    throw err;
+  }
+
+  const data = await response.json();
+  return { description: data.description ?? "" };
 }
 
 /**
@@ -489,6 +657,100 @@ function isPermanentError(err: unknown): boolean {
   return false;
 }
 
+async function handlePostSyncDescriptionUpdate(
+  sessionId: string,
+  syncLog: { strava_activity_id: string; synced_at: number | null },
+  sets: Array<{
+    exercise_name?: string | null;
+    weight: number | null;
+    reps: number | null;
+    completed: boolean;
+    set_type: string;
+  }>
+): Promise<SyncResult> {
+  const shareSettings = await getShareSettings();
+  const isEditedPostSync = syncLog.synced_at && shareSettings.updated_at > syncLog.synced_at;
+  if (!isEditedPostSync) {
+    return { status: "synced", activityId: syncLog.strava_activity_id };
+  }
+
+  const bodySettings = await getBodySettings();
+  const weightUnit = bodySettings.weight_unit as "kg" | "lb";
+  const promoCaption = await getEffectivePromoCaption();
+  const newDesc = buildActivityDescription(
+    sets,
+    weightUnit,
+    shareSettings.strava_description_enabled ? promoCaption : undefined
+  );
+
+  if (!newDesc) {
+    stravaLog("info", "strava description update skipped — empty description", {
+      flow: "strava_update_description",
+      step: "skip_empty",
+      sessionId,
+      activityId: syncLog.strava_activity_id,
+    });
+    await markSyncSuccess(sessionId, syncLog.strava_activity_id);
+    return { status: "synced", activityId: syncLog.strava_activity_id };
+  }
+
+  try {
+    const activity = await getActivity(syncLog.strava_activity_id);
+    if (activity && activity.description === newDesc) {
+      stravaLog("info", "strava description update skipped — unchanged", {
+        flow: "strava_update_description",
+        step: "skip_unchanged",
+        sessionId,
+        activityId: syncLog.strava_activity_id,
+      });
+      await markSyncSuccess(sessionId, syncLog.strava_activity_id);
+      return { status: "synced", activityId: syncLog.strava_activity_id };
+    }
+
+    await updateActivityDescription(syncLog.strava_activity_id, newDesc);
+    stravaLog("info", "strava_description_updated", { sessionId, activityId: syncLog.strava_activity_id });
+    await markSyncSuccess(sessionId, syncLog.strava_activity_id);
+  } catch (err) {
+    stravaLog("warn", "strava description update failed — non-blocking", {
+      flow: "strava_update_description",
+      step: "update_failed",
+      sessionId,
+      activityId: syncLog.strava_activity_id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+  return { status: "synced", activityId: syncLog.strava_activity_id };
+}
+
+async function handleUploadFailure(
+  sessionId: string,
+  err: unknown,
+  setCount: number,
+  completedCount: number
+): Promise<SyncResult> {
+  const error = err instanceof Error ? err : new Error(String(err));
+  await markSyncFailed(sessionId, error.message);
+  const isPermanent = isPermanentError(err);
+
+  stravaLog(isPermanent ? "error" : "warn", "strava upload failed post-connect", {
+    source: "strava_activity_sync",
+    phase: "post-connect",
+    sessionId,
+    setCount,
+    completedCount,
+    status: isPermanent ? "failed" : "queued",
+    errorCode: error instanceof StravaError ? error.code : undefined,
+    retryInfo: isPermanent ? "permanent" : "will_retry",
+  });
+
+  if (isPermanent) {
+    await markSyncPermanentlyFailed(sessionId);
+    return { status: "failed", error };
+  }
+
+  return { status: "queued", error };
+}
+
 export async function syncSessionToStrava(sessionId: string): Promise<SyncResult> {
   stravaLog("info", "strava upload started", { flow: "strava_upload", step: "start", sessionId });
   if (Platform.OS === "web") return { status: "skipped" };
@@ -500,9 +762,18 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
   const completed = sets.filter((s) => s.completed);
   if (completed.length === 0) return { status: "skipped" };
 
+  // Check if already synced and potentially edited post-sync
+  const syncLog = await getSyncLogForSession(sessionId);
+  if (syncLog && syncLog.status === "synced" && syncLog.strava_activity_id) {
+    return handlePostSyncDescriptionUpdate(
+      sessionId,
+      syncLog as { strava_activity_id: string; synced_at: number | null },
+      sets
+    );
+  }
+
   await createSyncLogEntry(sessionId);
 
-  const athleteId = connection.athlete_id;
   const setCount = sets.length;
   const completedCount = completed.length;
 
@@ -510,30 +781,7 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
   try {
     activityId = await uploadActivity(sessionId);
   } catch (err) {
-    const error = err instanceof Error ? err : new Error(String(err));
-    await markSyncFailed(sessionId, error.message);
-    const isPermanent = isPermanentError(err);
-
-    // BLD-3063: structured Sentry log for connection-succeeded-but-sync-failed
-    stravaLog(isPermanent ? "error" : "warn", "strava upload failed post-connect", {
-      source: "strava_activity_sync",
-      phase: "post-connect",
-      sessionId,
-      athleteId,
-      setCount,
-      completedCount,
-      status: isPermanent ? "failed" : "queued",
-      errorCode: error instanceof StravaError ? error.code : undefined,
-      retryInfo: isPermanent ? "permanent" : "will_retry",
-    });
-
-    if (isPermanent) {
-      await markSyncPermanentlyFailed(sessionId);
-      return { status: "failed", error };
-    }
-
-    // Transient failure -- reconcile queue will retry
-    return { status: "queued", error };
+    return handleUploadFailure(sessionId, err, setCount, completedCount);
   }
 
   // Upload succeeded (or 409 duplicate) -- activity exists on Strava.
@@ -558,7 +806,6 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
       flow: "strava_upload",
       step: "duplicate_409_skipped",
       sessionId,
-      athleteId,
       source: "strava_activity_sync",
       phase: "post-connect",
     });
@@ -570,7 +817,6 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
     step: "success",
     sessionId,
     activityId,
-    athleteId,
   });
   return { status: "synced", activityId };
 }
@@ -609,7 +855,6 @@ export async function reconcileStravaQueue(): Promise<void> {
         source: "strava_activity_sync",
         phase: "reconcile",
         sessionId: entry.session_id,
-        athleteId: connection.athlete_id,
         status: entry.status,
         retryCount: entry.retry_count,
         retryInfo: isPermanent ? "permanent" : "will_retry",

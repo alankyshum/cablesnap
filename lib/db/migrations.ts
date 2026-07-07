@@ -375,6 +375,22 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Migration: extending uq_set_media_set_id to composite failed: ${msg}`, { cause: err });
   }
+  // BLD-STRAVA-SHARE Phase 1: share_settings singleton table (additive, no impact on existing schema).
+  try {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS share_settings (
+        id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        promo_caption TEXT NOT NULL DEFAULT '',
+        promo_caption_enabled INTEGER NOT NULL DEFAULT 0,
+        strava_description_enabled INTEGER NOT NULL DEFAULT 1,
+        updated_at INTEGER NOT NULL
+      )
+    `);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Migration: creating share_settings table failed: ${msg}`, { cause: err });
+  }
+
   migrateBreadcrumb("phase_3_complete");
 
   // ─────────────────────────────────────────────────────────────────────────

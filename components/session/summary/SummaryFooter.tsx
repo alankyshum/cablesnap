@@ -1,15 +1,23 @@
-import { ActivityIndicator, Dimensions, Modal, Platform, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, Modal, Platform, StyleSheet, TextInput, View, Linking } from "react-native";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import ShareCard from "@/components/ShareCard";
 import type { ShareCardExercise, ShareCardPR } from "@/components/ShareCard";
+import StravaShareCard from "@/components/share/StravaShareCard";
+import AchievementRecapCard from "@/components/share/AchievementRecapCard";
+import type { AchievementDef } from "@/lib/achievements";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { RefObject } from "react";
 import { fontSizes, scrim } from "@/constants/design-tokens";
+import { saveShareSettings } from "@/lib/db";
+import { syncSessionToStrava } from "@/lib/strava";
+import { useToast } from "@/components/ui/bna-toast";
+import { stravaLog } from "../../../lib/strava-telemetry";
 
 type Props = {
   colors: ThemeColors;
-  session: { completed_at?: number | null; name?: string | null };
+  session: { id?: string; completed_at?: number | null; name?: string | null };
   completedSetCount: number;
   // Template modal
   templateModalVisible: boolean;
@@ -29,6 +37,24 @@ type Props = {
   setImageLoading: (v: boolean) => void;
   shareCardRef: RefObject<View | null>;
   handleCaptureAndShare: () => void;
+  // Strava share preview
+  stravaPreviewVisible: boolean;
+  setStravaPreviewVisible: (v: boolean) => void;
+  stravaImageLoading: boolean;
+  setStravaImageLoading: (v: boolean) => void;
+  stravaCardRef: RefObject<View | null>;
+  handleCaptureStravaAndShare: () => void;
+  // Achievement share preview
+  achievementPreviewVisible: boolean;
+  setAchievementPreviewVisible: (v: boolean) => void;
+  achievementImageLoading: boolean;
+  setAchievementImageLoading: (v: boolean) => void;
+  achievementCardRef: RefObject<View | null>;
+  handleCaptureAchievementAndShare: (achievementCount: number) => void;
+  newAchievements: AchievementDef[];
+  // Promo caption
+  promoCaption: string;
+  promoEnabled: boolean;
   // Share card data
   shareCardDate: string;
   duration: string;
@@ -38,6 +64,8 @@ type Props = {
   rating: number | null;
   shareCardPrs: ShareCardPR[];
   shareCardExercises: ShareCardExercise[];
+  stravaActivityId?: string | null;
+  stravaSynced?: boolean;
 };
 
 export default function SummaryFooter({
@@ -47,12 +75,118 @@ export default function SummaryFooter({
   onDone, onViewDetails, onSharePress,
   previewVisible, setPreviewVisible, imageLoading, setImageLoading,
   shareCardRef, handleCaptureAndShare,
+  stravaPreviewVisible, setStravaPreviewVisible,
+  stravaImageLoading, setStravaImageLoading,
+  stravaCardRef, handleCaptureStravaAndShare,
+  achievementPreviewVisible, setAchievementPreviewVisible,
+  achievementImageLoading, setAchievementImageLoading,
+  achievementCardRef, handleCaptureAchievementAndShare,
+  newAchievements,
+  promoCaption, promoEnabled,
   shareCardDate, duration, completedCount, volumeDisplay, unit, rating,
   shareCardPrs, shareCardExercises,
+  stravaActivityId,
+  stravaSynced,
 }: Props) {
+  const { toast } = useToast();
+  const [editedCaption, setEditedCaption] = useState(promoCaption);
+  const [editedPromoEnabled, setEditedPromoEnabled] = useState(promoEnabled);
+  const [isCapturing, setIsCapturing] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ephemeral caption sync from prop
+    setEditedCaption(promoCaption);
+  }, [promoCaption]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- ephemeral promoEnabled sync from prop
+    setEditedPromoEnabled(promoEnabled);
+  }, [promoEnabled]);
+
+  const hasEditedThisSession = useRef(false);
+
+  const commitCaptionEditLog = useCallback(() => {
+    if (hasEditedThisSession.current) {
+      stravaLog("info", "promo_caption_edited", { sessionId: session.id, captionLength: editedCaption.length });
+      hasEditedThisSession.current = false;
+    }
+  }, [session.id, editedCaption.length]);
+
+  const handleCaptionChange = (text: string) => {
+    setEditedCaption(text);
+    hasEditedThisSession.current = true;
+  };
+
+  const handleTogglePromoEnabled = (enabled: boolean) => {
+    setEditedPromoEnabled(enabled);
+    if (!enabled) {
+      stravaLog("info", "promo_caption_disabled");
+    }
+  };
+
+  const handleSaveDefaultCaption = async () => {
+    commitCaptionEditLog();
+    try {
+      await saveShareSettings({
+        promo_caption: editedCaption,
+        promo_caption_enabled: editedPromoEnabled ? 1 : 0,
+      });
+      toast({ description: "Saved as default caption" });
+      stravaLog("info", "promo_caption_saved_default", { captionLength: editedCaption.length });
+      if (session.id && stravaSynced) {
+        syncSessionToStrava(session.id).catch((err) => {
+          if (__DEV__) console.warn("Background Strava description sync failed:", err);
+        });
+      }
+    } catch {
+      toast({ description: "Failed to save caption" });
+    }
+  };
+
+  const localCaptureStravaAndShare = async () => {
+    commitCaptionEditLog();
+    setIsCapturing(true);
+    // Give React Native a frame to render the static view
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    try {
+      await handleCaptureStravaAndShare();
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  const localCaptureAchievementAndShare = async () => {
+    commitCaptionEditLog();
+    setIsCapturing(true);
+    // Give React Native a frame to render the static view
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    try {
+      await handleCaptureAchievementAndShare(newAchievements.length);
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
   return (
     <>
       <View style={styles.actions}>
+        {stravaSynced && stravaActivityId && (
+          <Button
+            variant="outline"
+            onPress={() => {
+              stravaLog("info", "view_on_strava_tapped", { sessionId: session.id, activityId: stravaActivityId });
+              const url = `https://www.strava.com/activities/${stravaActivityId}`;
+              Linking.openURL(url).catch((err) => {
+                if (__DEV__) console.warn("Failed to open Strava link:", err);
+              });
+            }}
+            style={styles.actionBtn}
+            accessibilityRole="button"
+            accessibilityLabel="View on Strava"
+            accessibilityHint="Open this activity on Strava"
+            label="View on Strava"
+          />
+        )}
         {session.completed_at && (
           <Button
             variant="outline"
@@ -73,68 +207,381 @@ export default function SummaryFooter({
         <Button variant="ghost" onPress={onViewDetails} accessibilityRole="button" accessibilityHint="View detailed workout breakdown" label="View Details" />
       </View>
 
-      {/* Save as Template Modal */}
-      <Modal visible={templateModalVisible} transparent animationType="fade" onRequestClose={() => setTemplateModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text variant="title" style={{ color: colors.onSurface, marginBottom: 16 }}>Save as Template</Text>
-            <TextInput
-              value={templateName}
-              onChangeText={(t) => setTemplateName(t.slice(0, 100))}
-              placeholder="Template name"
-              placeholderTextColor={colors.onSurfaceDisabled}
-              maxLength={100}
-              style={[styles.modalInput, { color: colors.onSurface, backgroundColor: colors.surfaceVariant, borderColor: colors.outline }]}
-              autoFocus
-              accessibilityLabel="Template name"
-            />
-            <View style={styles.modalActions}>
-              <Button variant="ghost" onPress={() => setTemplateModalVisible(false)} label="Cancel" />
-              <Button variant="default" onPress={handleSaveAsTemplate} loading={saving} disabled={saving || !templateName.trim()} label="Save" />
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <SaveTemplateModal
+        visible={templateModalVisible}
+        onClose={() => setTemplateModalVisible(false)}
+        colors={colors}
+        templateName={templateName}
+        onNameChange={(t) => setTemplateName(t.slice(0, 100))}
+        handleSaveAsTemplate={handleSaveAsTemplate}
+        saving={saving}
+      />
 
-      {/* Share card preview modal */}
-      <Modal
+      <SharePreviewModal
         visible={previewVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => { setPreviewVisible(false); setImageLoading(false); }}
-        {...(Platform.OS !== 'web' ? { accessibilityViewIsModal: true } : {})}
-      >
-        <View style={styles.previewOverlay} testID="summary-preview-overlay">
-          <View style={styles.previewContainer} testID="summary-preview-container">
-            <View style={styles.previewScrollContent}>
-              <View ref={shareCardRef} collapsable={false} style={styles.shareCardWrapper} testID="summary-share-card-wrapper">
-                <ShareCard
-                  name={session?.name ?? "Workout"}
-                  date={shareCardDate}
-                  duration={duration}
-                  sets={completedCount}
-                  volume={volumeDisplay}
-                  unit={unit}
-                  rating={rating}
-                  prs={shareCardPrs}
-                  exercises={shareCardExercises}
-                />
-              </View>
-            </View>
-            <View style={styles.previewActions} testID="summary-preview-actions">
-              {imageLoading ? (
-                <ActivityIndicator size="large" color={colors.primary} />
-              ) : (
-                <>
-                  <Button variant="default" onPress={handleCaptureAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Capture and share the workout card image" label="Share" />
-                  <Button variant="outline" onPress={() => { setPreviewVisible(false); setImageLoading(false); }} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Cancel and close the preview" label="Cancel" />
-                </>
-              )}
-            </View>
+        onClose={() => { setPreviewVisible(false); setImageLoading(false); }}
+        colors={colors}
+        shareCardRef={shareCardRef}
+        session={session}
+        shareCardDate={shareCardDate}
+        duration={duration}
+        completedCount={completedCount}
+        volumeDisplay={volumeDisplay}
+        unit={unit}
+        rating={rating}
+        shareCardPrs={shareCardPrs}
+        shareCardExercises={shareCardExercises}
+        imageLoading={imageLoading}
+        handleCaptureAndShare={handleCaptureAndShare}
+      />
+
+      <StravaPreviewModal
+        visible={stravaPreviewVisible}
+        onClose={() => {
+          commitCaptionEditLog();
+          setStravaPreviewVisible(false);
+          setStravaImageLoading(false);
+          stravaLog("info", "strava_share_image_cancelled", { sessionId: session.id });
+        }}
+        colors={colors}
+        stravaCardRef={stravaCardRef}
+        session={session}
+        shareCardDate={shareCardDate}
+        duration={duration}
+        completedCount={completedCount}
+        volumeDisplay={volumeDisplay}
+        unit={unit}
+        shareCardPrs={shareCardPrs}
+        shareCardExercises={shareCardExercises}
+        editedCaption={editedCaption}
+        editedPromoEnabled={editedPromoEnabled}
+        isCapturing={isCapturing}
+        setEditedCaption={handleCaptionChange}
+        setEditedPromoEnabled={handleTogglePromoEnabled}
+        handleSaveDefaultCaption={handleSaveDefaultCaption}
+        stravaImageLoading={stravaImageLoading}
+        localCaptureStravaAndShare={localCaptureStravaAndShare}
+        onCaptionBlur={commitCaptionEditLog}
+      />
+
+      <AchievementPreviewModal
+        visible={achievementPreviewVisible}
+        onClose={() => {
+          commitCaptionEditLog();
+          setAchievementPreviewVisible(false);
+          setAchievementImageLoading(false);
+        }}
+        colors={colors}
+        achievementCardRef={achievementCardRef}
+        newAchievements={newAchievements}
+        session={session}
+        shareCardDate={shareCardDate}
+        editedCaption={editedCaption}
+        editedPromoEnabled={editedPromoEnabled}
+        isCapturing={isCapturing}
+        setEditedCaption={handleCaptionChange}
+        setEditedPromoEnabled={handleTogglePromoEnabled}
+        handleSaveDefaultCaption={handleSaveDefaultCaption}
+        achievementImageLoading={achievementImageLoading}
+        localCaptureAchievementAndShare={localCaptureAchievementAndShare}
+        onCaptionBlur={commitCaptionEditLog}
+      />
+    </>
+  );
+}
+
+function SaveTemplateModal({
+  visible,
+  onClose,
+  colors,
+  templateName,
+  onNameChange,
+  handleSaveAsTemplate,
+  saving,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  colors: ThemeColors;
+  templateName: string;
+  onNameChange: (t: string) => void;
+  handleSaveAsTemplate: () => void;
+  saving: boolean;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <Text variant="title" style={{ color: colors.onSurface, marginBottom: 16 }}>Save as Template</Text>
+          <TextInput
+            value={templateName}
+            onChangeText={onNameChange}
+            placeholder="Template name"
+            placeholderTextColor={colors.onSurfaceDisabled}
+            maxLength={100}
+            style={[styles.modalInput, { color: colors.onSurface, backgroundColor: colors.surfaceVariant, borderColor: colors.outline }]}
+            autoFocus
+            accessibilityLabel="Template name"
+          />
+          <View style={styles.modalActions}>
+            <Button variant="ghost" onPress={onClose} label="Cancel" />
+            <Button variant="default" onPress={handleSaveAsTemplate} loading={saving} disabled={saving || !templateName.trim()} label="Save" />
           </View>
         </View>
-      </Modal>
-    </>
+      </View>
+    </Modal>
+  );
+}
+
+function SharePreviewModal({
+  visible,
+  onClose,
+  colors,
+  shareCardRef,
+  session,
+  shareCardDate,
+  duration,
+  completedCount,
+  volumeDisplay,
+  unit,
+  rating,
+  shareCardPrs,
+  shareCardExercises,
+  imageLoading,
+  handleCaptureAndShare,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  colors: ThemeColors;
+  shareCardRef: RefObject<View | null>;
+  session: { name?: string | null };
+  shareCardDate: string;
+  duration: string;
+  completedCount: number;
+  volumeDisplay: string;
+  unit: "kg" | "lb";
+  rating: number | null;
+  shareCardPrs: ShareCardPR[];
+  shareCardExercises: ShareCardExercise[];
+  imageLoading: boolean;
+  handleCaptureAndShare: () => void;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      {...(Platform.OS !== 'web' ? { accessibilityViewIsModal: true } : {})}
+    >
+      <View style={styles.previewOverlay} testID="summary-preview-overlay">
+        <View style={styles.previewContainer} testID="summary-preview-container">
+          <View style={styles.previewScrollContent}>
+            <View ref={shareCardRef} collapsable={false} style={styles.shareCardWrapper} testID="summary-share-card-wrapper">
+              <ShareCard
+                name={session?.name ?? "Workout"}
+                date={shareCardDate}
+                duration={duration}
+                sets={completedCount}
+                volume={volumeDisplay}
+                unit={unit}
+                rating={rating}
+                prs={shareCardPrs}
+                exercises={shareCardExercises}
+              />
+            </View>
+          </View>
+          <View style={styles.previewActions} testID="summary-preview-actions">
+            {imageLoading ? (
+              <ActivityIndicator size="large" color={colors.primary} />
+            ) : (
+              <>
+                <Button variant="default" onPress={handleCaptureAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Capture and share the workout card image" label="Share" />
+                <Button variant="outline" onPress={onClose} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Cancel and close the preview" label="Cancel" />
+              </>
+            )}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function StravaPreviewModal({
+  visible,
+  onClose,
+  colors,
+  stravaCardRef,
+  session,
+  shareCardDate,
+  duration,
+  completedCount,
+  volumeDisplay,
+  unit,
+  shareCardPrs,
+  shareCardExercises,
+  editedCaption,
+  editedPromoEnabled,
+  isCapturing,
+  setEditedCaption,
+  setEditedPromoEnabled,
+  handleSaveDefaultCaption,
+  stravaImageLoading,
+  localCaptureStravaAndShare,
+  onCaptionBlur,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  colors: ThemeColors;
+  stravaCardRef: RefObject<View | null>;
+  session: { name?: string | null };
+  shareCardDate: string;
+  duration: string;
+  completedCount: number;
+  volumeDisplay: string;
+  unit: "kg" | "lb";
+  shareCardPrs: ShareCardPR[];
+  shareCardExercises: ShareCardExercise[];
+  editedCaption: string;
+  editedPromoEnabled: boolean;
+  isCapturing: boolean;
+  setEditedCaption: (c: string) => void;
+  setEditedPromoEnabled: (e: boolean) => void;
+  handleSaveDefaultCaption: () => void;
+  stravaImageLoading: boolean;
+  localCaptureStravaAndShare: () => void;
+  onCaptionBlur?: () => void;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      {...(Platform.OS !== 'web' ? { accessibilityViewIsModal: true } : {})}
+    >
+      <View style={styles.previewOverlay} testID="summary-strava-preview-overlay">
+        <View style={styles.previewContainer} testID="summary-strava-preview-container">
+          <View style={styles.previewScrollContent}>
+            <View ref={stravaCardRef} collapsable={false} style={styles.stravaCardWrapper} testID="summary-strava-share-card-wrapper">
+              <StravaShareCard
+                name={session?.name ?? "Workout"}
+                date={shareCardDate}
+                duration={duration}
+                sets={completedCount}
+                volume={volumeDisplay}
+                unit={unit}
+                prs={shareCardPrs}
+                exercises={shareCardExercises}
+                promoCaption={editedCaption}
+                promoEnabled={editedPromoEnabled}
+                interactive={!isCapturing}
+                onCaptionChange={setEditedCaption}
+                onToggleEnabled={setEditedPromoEnabled}
+                onCaptionBlur={onCaptionBlur}
+              />
+            </View>
+          </View>
+          {editedPromoEnabled && (
+            <View style={styles.captionEditRow}>
+              <View style={{ flex: 1 }} />
+              <Button variant="ghost" onPress={handleSaveDefaultCaption} label="Save as default" />
+            </View>
+          )}
+          <View style={styles.previewActions} testID="summary-strava-preview-actions">
+            {stravaImageLoading ? (
+              <ActivityIndicator size="large" color={colors.primary} />
+            ) : (
+              <>
+                <Button variant="default" onPress={localCaptureStravaAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Capture and share the Strava workout card image" label="Share" />
+                <Button variant="outline" onPress={onClose} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Cancel and close the preview" label="Cancel" />
+              </>
+            )}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function AchievementPreviewModal({
+  visible,
+  onClose,
+  colors,
+  achievementCardRef,
+  newAchievements,
+  session,
+  shareCardDate,
+  editedCaption,
+  editedPromoEnabled,
+  isCapturing,
+  setEditedCaption,
+  setEditedPromoEnabled,
+  handleSaveDefaultCaption,
+  achievementImageLoading,
+  localCaptureAchievementAndShare,
+  onCaptionBlur,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  colors: ThemeColors;
+  achievementCardRef: RefObject<View | null>;
+  newAchievements: AchievementDef[];
+  session: { name?: string | null };
+  shareCardDate: string;
+  editedCaption: string;
+  editedPromoEnabled: boolean;
+  isCapturing: boolean;
+  setEditedCaption: (c: string) => void;
+  setEditedPromoEnabled: (e: boolean) => void;
+  handleSaveDefaultCaption: () => void;
+  achievementImageLoading: boolean;
+  localCaptureAchievementAndShare: () => void;
+  onCaptionBlur?: () => void;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      {...(Platform.OS !== 'web' ? { accessibilityViewIsModal: true } : {})}
+    >
+      <View style={styles.previewOverlay} testID="summary-achievement-preview-overlay">
+        <View style={styles.previewContainer} testID="summary-achievement-preview-container">
+          <View style={styles.previewScrollContent}>
+            <View ref={achievementCardRef} collapsable={false} style={styles.achievementCardWrapper} testID="summary-achievement-share-card-wrapper">
+              <AchievementRecapCard
+                achievements={newAchievements}
+                sessionName={session?.name ?? "Workout"}
+                date={shareCardDate}
+                promoCaption={editedCaption}
+                promoEnabled={editedPromoEnabled}
+                interactive={!isCapturing}
+                onCaptionChange={setEditedCaption}
+                onToggleEnabled={setEditedPromoEnabled}
+                onCaptionBlur={onCaptionBlur}
+              />
+            </View>
+          </View>
+          {editedPromoEnabled && (
+            <View style={styles.captionEditRow}>
+              <View style={{ flex: 1 }} />
+              <Button variant="ghost" onPress={handleSaveDefaultCaption} label="Save as default" />
+            </View>
+          )}
+          <View style={styles.previewActions} testID="summary-achievement-preview-actions">
+            {achievementImageLoading ? (
+              <ActivityIndicator size="large" color={colors.primary} />
+            ) : (
+              <>
+                <Button variant="default" onPress={localCaptureAchievementAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Capture and share the achievement recap card image" label="Share" />
+                <Button variant="outline" onPress={onClose} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Cancel and close the preview" label="Cancel" />
+              </>
+            )}
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -149,6 +596,10 @@ const styles = StyleSheet.create({
   previewContainer: { width: "100%", maxWidth: 400, maxHeight: Dimensions.get("window").height * 0.85, borderRadius: 16, overflow: "hidden" },
   previewScrollContent: { alignItems: "center", padding: 8 },
   shareCardWrapper: { alignSelf: "center", transform: [{ scale: 0.3 }] },
+  stravaCardWrapper: { alignSelf: "center", transform: [{ scale: 0.3 }] },
+  achievementCardWrapper: { alignSelf: "center", transform: [{ scale: 0.3 }] },
   previewActions: { flexDirection: "row", justifyContent: "center", gap: 12, paddingVertical: 16, paddingHorizontal: 24, backgroundColor: scrim.light },
   previewBtn: { flex: 1, borderRadius: 8 },
+  captionEditRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: scrim.light },
+  captionInput: { flex: 1, borderWidth: 1, borderRadius: 8, padding: 8, fontSize: fontSizes.sm },
 });

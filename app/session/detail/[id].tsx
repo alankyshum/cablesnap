@@ -1,4 +1,5 @@
 import { StyleSheet, View, FlatList } from "react-native";
+import { useState, useEffect } from "react";
 import { useRouter, Stack, useLocalSearchParams } from "expo-router";
 import ExercisePickerSheet from "@/components/ExercisePickerSheet";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { EditableExerciseGroupRow } from "@/components/session/detail/EditableEx
 import { TemplateModal } from "@/components/session/detail/TemplateModal";
 import { EditedPill } from "@/components/session/EditedPill";
 import { SessionDetailShareOverlay } from "@/components/session/detail/SessionDetailShareOverlay";
+import { isStravaConnected } from "@/lib/strava";
 
 export default function SessionDetail() {
   const layout = useLayout();
@@ -38,8 +40,13 @@ export default function SessionDetail() {
     onSessionDeleted: () => router.back(),
   });
 
+  const [stravaConnected, setStravaConnected] = useState(false);
+  useEffect(() => {
+    isStravaConnected().then(setStravaConnected).catch(() => {});
+  }, []);
+
   // ── Share state (BLD-891) ──
-  const share = useSessionShareData(session, groups, prs, completedSetCount);
+  const share = useSessionShareData(session, groups, prs, completedSetCount, id);
   const renderItem = ({ item: group, index }: { item: ExerciseGroup | (typeof edit.draft)[number]; index: number }) => {
     if (edit.editing) {
       const dg = group as (typeof edit.draft)[number];
@@ -91,6 +98,9 @@ export default function SessionDetail() {
               onOpenTemplate={openTemplateModal}
               onShare={share.handleShareButtonPress}
               colors={colors}
+              stravaActivityId={share.stravaActivityId}
+              stravaSynced={share.stravaSynced}
+              sessionId={id}
             />
           ),
         }}
@@ -174,6 +184,8 @@ export default function SessionDetail() {
         shareSheetRef={share.shareSheetRef}
         onShareText={share.handleShareText}
         imageDisabled={completedSetCount === 0}
+        stravaConnected={stravaConnected}
+        onConnectStrava={() => router.push('/(tabs)/settings')}
         sessionName={session.name ?? "Workout"}
         shareCardDate={share.shareCardDate}
         duration={share.duration}
@@ -183,7 +195,12 @@ export default function SessionDetail() {
         rating={rating}
         shareCardPrs={share.shareCardPrs}
         shareCardExercises={share.shareCardExercises}
+        promoCaption={share.promoCaption}
+        promoEnabled={share.promoEnabled}
         colors={colors}
+        sessionId={id}
+        stravaSynced={share.stravaSynced}
+        stravaActivityId={share.stravaActivityId}
       />
     </>
   );

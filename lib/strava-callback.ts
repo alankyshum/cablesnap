@@ -169,11 +169,10 @@ export async function completeStravaCallback(
 
     await saveStravaConnection(athleteId, athleteName);
 
-    stravaBreakcrumb("connectStrava succeeded", { athleteId });
+    stravaBreakcrumb("connectStrava succeeded");
     stravaLog("info", "strava connect succeeded", {
       flow: "strava_connect",
       step: "success",
-      athleteId,
     });
 
     return { athleteId, athleteName };

@@ -20,6 +20,7 @@ import SessionPreferencesCard from '../../components/settings/SessionPreferences
 import HydrationCard from '../../components/settings/HydrationCard';
 import FrequencyGoalPicker from '../../components/settings/FrequencyGoalPicker';
 import IntegrationsCard from '../../components/settings/IntegrationsCard';
+import ShareSettingsCard from '../../components/settings/ShareSettingsCard';
 import CSVExportCard from '../../components/settings/CSVExportCard';
 import AppearanceCard from '../../components/settings/AppearanceCard';
 import UnitsCard from '../../components/settings/UnitsCard';
@@ -314,6 +315,8 @@ export default function Settings() {
             setStravaLoading={setStravaLoading}
             bareContent
           />
+          <Separator style={styles.tileDivider} />
+          <ShareSettingsCard colors={colors} bareContent />
         </SettingsTile>
 
         {/* ── 7. Data & Backup ── */}

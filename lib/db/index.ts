@@ -347,6 +347,14 @@ export {
 export type { StravaConnection, StravaSyncLog, StravaSyncStatus } from "./strava";
 
 export {
+  getShareSettings,
+  saveShareSettings,
+  getEffectivePromoCaption,
+  DEFAULT_PROMO_CAPTION,
+} from "./share-settings";
+export type { ShareSettingsRow } from "./share-settings";
+
+export {
   getDailyNutritionTotals,
   getWeeklyNutritionAverages,
   getNutritionAdherence,

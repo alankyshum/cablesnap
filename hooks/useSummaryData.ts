@@ -15,6 +15,9 @@ import {
   buildAchievementContext,
   getEarnedAchievementIds,
   saveEarnedAchievements,
+  getEffectivePromoCaption,
+  getShareSettings,
+  getSyncLogForSession,
 } from "../lib/db";
 import { evaluateAchievements } from "../lib/achievements";
 import type { AchievementDef } from "../lib/achievements";
@@ -84,6 +87,10 @@ export function useSummaryData(id: string | undefined) {
   const [completedSetCount, setCompletedSetCount] = useState(0);
   const [primaryMuscles, setPrimaryMuscles] = useState<MuscleGroup[]>([]);
   const [secondaryMuscles, setSecondaryMuscles] = useState<MuscleGroup[]>([]);
+  const [promoCaption, setPromoCaption] = useState<string>("");
+  const [promoEnabled, setPromoEnabled] = useState<boolean>(false);
+  const [stravaActivityId, setStravaActivityId] = useState<string | null>(null);
+  const [stravaSynced, setStravaSynced] = useState<boolean>(false);
   // BLD-1636: defense-in-depth. The data load runs in an async IIFE inside
   // useEffect, so a throw here (e.g. a cold-worker `Sync operation timeout`
   // from a drizzle sync `.get()`) becomes an UNHANDLED promise rejection that
@@ -96,8 +103,15 @@ export function useSummaryData(id: string | undefined) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    // Reset state before/at fetch when id changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset stale strava state on id change
+    setStravaActivityId(null);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset stale strava state on id change
+    setStravaSynced(false);
+
     if (!id) return;
     let cancelled = false;
+    const activeId = id;
     const cancelRef = { current: false };
     (async () => {
       try {
@@ -112,6 +126,35 @@ export function useSummaryData(id: string | undefined) {
         if (!sess) return;
         setSession(sess);
         setUnit(settings.weight_unit);
+
+        getEffectivePromoCaption()
+          .then((c) => {
+            if (!cancelled) setPromoCaption(c);
+          })
+          .catch(() => {});
+        getShareSettings()
+          .then((s) => {
+            if (!cancelled) setPromoEnabled(!!s.promo_caption_enabled);
+          })
+          .catch(() => {});
+        getSyncLogForSession(id)
+          .then((log) => {
+            if (!cancelled && activeId === id) {
+              if (log && log.status === "synced" && log.strava_activity_id) {
+                setStravaActivityId(log.strava_activity_id);
+                setStravaSynced(true);
+              } else {
+                setStravaActivityId(null);
+                setStravaSynced(false);
+              }
+            }
+          })
+          .catch(() => {
+            if (!cancelled && activeId === id) {
+              setStravaActivityId(null);
+              setStravaSynced(false);
+            }
+          });
 
         const [setsData, prData, repPrData, durationPrData, incData, compData, setCount] = await Promise.all([
           getSessionSets(id),
@@ -233,6 +276,8 @@ export function useSummaryData(id: string | undefined) {
     unit, volume, setsBreakdown,
     newAchievements, completedSetCount,
     primaryMuscles, secondaryMuscles,
+    promoCaption, promoEnabled,
+    stravaActivityId, stravaSynced,
     error,
   };
 }

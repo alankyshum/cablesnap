@@ -7,6 +7,7 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
 
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 import { SessionDetailHeaderActions } from '@/components/session/detail/SessionDetailHeaderActions';
 
 const defaultColors = {
@@ -50,5 +51,68 @@ describe('SessionDetailHeaderActions — share button (BLD-891)', () => {
     rerender(<SessionDetailHeaderActions {...baseProps} showEditButton={false} />);
     expect(queryByLabelText('Share workout')).toBeNull();
     expect(queryByLabelText('Edit workout')).toBeNull();
+  });
+});
+
+describe('SessionDetailHeaderActions — View on Strava button', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('shows View on Strava only when synced and activityId is present, is hidden when pending/failed/no-log', () => {
+    // 1. When synced + activityId: should be visible
+    const { queryByLabelText, rerender } = render(
+      <SessionDetailHeaderActions
+        {...baseProps}
+        stravaSynced={true}
+        stravaActivityId="123456"
+      />
+    );
+    expect(queryByLabelText('View on Strava')).toBeTruthy();
+
+    // 2. Hidden when not synced (even if activityId is present)
+    rerender(
+      <SessionDetailHeaderActions
+        {...baseProps}
+        stravaSynced={false}
+        stravaActivityId="123456"
+      />
+    );
+    expect(queryByLabelText('View on Strava')).toBeNull();
+
+    // 3. Hidden when no activityId (even if synced)
+    rerender(
+      <SessionDetailHeaderActions
+        {...baseProps}
+        stravaSynced={true}
+        stravaActivityId={null}
+      />
+    );
+    expect(queryByLabelText('View on Strava')).toBeNull();
+
+    // 4. Hidden when pending/failed (e.g., unsynced/no-log)
+    rerender(
+      <SessionDetailHeaderActions
+        {...baseProps}
+        stravaSynced={false}
+        stravaActivityId={null}
+      />
+    );
+    expect(queryByLabelText('View on Strava')).toBeNull();
+  });
+
+  it('pressing View on Strava opens https://www.strava.com/activities/${activityId}', () => {
+    const openURLMock = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const { getByLabelText } = render(
+      <SessionDetailHeaderActions
+        {...baseProps}
+        stravaSynced={true}
+        stravaActivityId="123456"
+      />
+    );
+
+    const btn = getByLabelText('View on Strava');
+    fireEvent.press(btn);
+
+    expect(openURLMock).toHaveBeenCalledWith('https://www.strava.com/activities/123456');
+    openURLMock.mockRestore();
   });
 });

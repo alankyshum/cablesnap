@@ -6,6 +6,7 @@ import * as FileSystem from "expo-file-system";
 import { captureRef } from "react-native-view-shot";
 import { useToast } from "@/components/ui/bna-toast";
 import { createTemplateFromSession, updateSession } from "@/lib/db";
+import { stravaLog } from "../lib/strava-telemetry";
 
 export function useSummaryActions(id: string | undefined) {
   const { toast } = useToast();
@@ -16,8 +17,14 @@ export function useSummaryActions(id: string | undefined) {
   const [saving, setSaving] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+  const [stravaPreviewVisible, setStravaPreviewVisible] = useState(false);
+  const [stravaImageLoading, setStravaImageLoading] = useState(false);
+  const [achievementPreviewVisible, setAchievementPreviewVisible] = useState(false);
+  const [achievementImageLoading, setAchievementImageLoading] = useState(false);
   const shareSheetRef = useRef<BottomSheet>(null);
   const shareCardRef = useRef<View>(null);
+  const stravaCardRef = useRef<View>(null);
+  const achievementCardRef = useRef<View>(null);
 
   const handleShareImage = useCallback(() => {
     setImageLoading(true);
@@ -41,6 +48,63 @@ export function useSummaryActions(id: string | undefined) {
       }
     }
   }, [toast]);
+
+  const handleStravaImage = useCallback((hasPrs: boolean, exerciseCount: number) => {
+    setStravaImageLoading(false);
+    setStravaPreviewVisible(true);
+    stravaLog("info", "strava_share_image_tapped", {
+      sessionId: id,
+      hasPrs,
+      exerciseCount,
+    });
+  }, [id]);
+
+  const handleCaptureStravaAndShare = useCallback(async () => {
+    if (!stravaCardRef.current) return;
+    let uri: string | null = null;
+    try {
+      setStravaImageLoading(true);
+      uri = await captureRef(stravaCardRef, { format: "png", quality: 1.0 });
+      await Sharing.shareAsync(uri, { mimeType: "image/png" });
+      stravaLog("info", "strava_share_image_shared", { sessionId: id });
+    } catch {
+      toast({ description: "Unable to generate image" });
+    } finally {
+      setStravaImageLoading(false);
+      setStravaPreviewVisible(false);
+      if (uri) {
+        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      }
+    }
+  }, [id, toast]);
+
+  const handleAchievementImage = useCallback((achievementCount: number) => {
+    setAchievementImageLoading(false);
+    setAchievementPreviewVisible(true);
+    stravaLog("info", "achievement_recap_tapped", {
+      sessionId: id,
+      achievementCount,
+    });
+  }, [id]);
+
+  const handleCaptureAchievementAndShare = useCallback(async (achievementCount: number) => {
+    if (!achievementCardRef.current) return;
+    let uri: string | null = null;
+    try {
+      setAchievementImageLoading(true);
+      uri = await captureRef(achievementCardRef, { format: "png", quality: 1.0 });
+      await Sharing.shareAsync(uri, { mimeType: "image/png" });
+      stravaLog("info", "achievement_recap_shared", { sessionId: id, achievementCount });
+    } catch {
+      toast({ description: "Unable to generate image" });
+    } finally {
+      setAchievementImageLoading(false);
+      setAchievementPreviewVisible(false);
+      if (uri) {
+        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      }
+    }
+  }, [id, toast]);
 
   const handleShareButtonPress = useCallback(() => {
     shareSheetRef.current?.snapToIndex(0);
@@ -90,8 +154,15 @@ export function useSummaryActions(id: string | undefined) {
     saving,
     previewVisible, setPreviewVisible,
     imageLoading, setImageLoading,
-    shareSheetRef, shareCardRef,
-    handleShareImage, handleCaptureAndShare, handleShareButtonPress,
+    stravaPreviewVisible, setStravaPreviewVisible,
+    stravaImageLoading, setStravaImageLoading,
+    achievementPreviewVisible, setAchievementPreviewVisible,
+    achievementImageLoading, setAchievementImageLoading,
+    shareSheetRef, shareCardRef, stravaCardRef, achievementCardRef,
+    handleShareImage, handleCaptureAndShare,
+    handleStravaImage, handleCaptureStravaAndShare,
+    handleAchievementImage, handleCaptureAchievementAndShare,
+    handleShareButtonPress,
     handleRatingChange, handleNotesSave, handleSaveAsTemplate,
   };
 }

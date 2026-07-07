@@ -30,6 +30,9 @@ jest.mock('../../lib/db', () => ({
   getEarnedAchievementIds: jest.fn().mockResolvedValue([]),
   saveEarnedAchievements: jest.fn().mockResolvedValue(undefined),
   updateSession: jest.fn().mockResolvedValue(undefined),
+  getEffectivePromoCaption: jest.fn().mockResolvedValue(""),
+  getShareSettings: jest.fn().mockResolvedValue({ promo_caption_enabled: 0 }),
+  getSyncLogForSession: jest.fn().mockResolvedValue(null),
 }))
 
 jest.mock('expo-router', () => ({

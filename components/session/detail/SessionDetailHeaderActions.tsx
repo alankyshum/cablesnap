@@ -1,7 +1,8 @@
-import { TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View, Linking } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { stravaLog } from "../../../lib/strava-telemetry";
 
 type Props = {
   editing: boolean;
@@ -15,6 +16,9 @@ type Props = {
   onOpenTemplate: () => void;
   onShare: () => void;
   colors: ThemeColors;
+  stravaActivityId?: string | null;
+  stravaSynced?: boolean;
+  sessionId?: string;
 };
 
 /**
@@ -37,6 +41,9 @@ export function SessionDetailHeaderActions({
   onOpenTemplate,
   onShare,
   colors,
+  stravaActivityId,
+  stravaSynced,
+  sessionId,
 }: Props) {
   if (editing) {
     const saveDisabled = !dirty || saving;
@@ -62,6 +69,23 @@ export function SessionDetailHeaderActions({
   if (!showEditButton) return null;
   return (
     <View style={{ flexDirection: "row", gap: 4 }}>
+      {stravaSynced && stravaActivityId && (
+        <TouchableOpacity
+          onPress={() => {
+            stravaLog("info", "view_on_strava_tapped", { sessionId, activityId: stravaActivityId });
+            const url = `https://www.strava.com/activities/${stravaActivityId}`;
+            Linking.openURL(url).catch((err) => {
+              if (__DEV__) console.warn("Failed to open Strava link:", err);
+            });
+          }}
+          accessibilityLabel="View on Strava"
+          accessibilityHint="Open this activity on Strava"
+          hitSlop={8}
+          style={{ padding: 8 }}
+        >
+          <MaterialCommunityIcons name="open-in-new" size={22} color="#FC6100" />
+        </TouchableOpacity>
+      )}
       <TouchableOpacity
         onPress={onShare}
         accessibilityLabel="Share workout"
