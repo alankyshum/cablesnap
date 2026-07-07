@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.65",
+    "date": "2026-07-07",
+    "versionCode": 135,
+    "body": "- **List items on other tab screens no longer hide behind bottom bar** — on the Workouts, Exercises, and Nutrition screens, list content is no longer partially obscured or clipped behind the floating bottom navigation bar. The scrollable area now ends cleanly above the bar so every row and element stays fully visible and tappable at all scroll offsets. (BLD-3068)\n- **Settings rows no longer hide behind the bottom bar** — on the Settings screen, list rows (like \"Manage gyms, cable stacks, and marker calibrations\") are no longer partially obscured or clipped behind the floating bottom navigation bar at the top of the list. The scrollable area now ends cleanly above the bar so every row stays fully visible and tappable. (BLD-3065)\n- Stop reporting the known-permanent Strava \"app inactive\" 403 to Sentry as an exception (BLD-3063)"
+  },
+  {
     "version": "0.26.64",
     "date": "2026-07-05",
     "versionCode": 134,
