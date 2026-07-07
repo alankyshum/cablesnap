@@ -519,6 +519,7 @@ describe("Strava Integration — Behavioral", () => {
   });
 
   it("(BLD-2995) upload returns 403 Inactive → returns 'failed', marks permanently failed, does not disconnect", async () => {
+    const Sentry = require("@sentry/react-native");
     db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
     db.getSessionSets.mockResolvedValue([
       { exercise_name: "Row", weight: 70, reps: 10, completed: true, set_type: "working" },
@@ -553,9 +554,18 @@ describe("Strava Integration — Behavioral", () => {
     expect(db.markSyncFailed).toHaveBeenCalledWith("s-inactive", expect.stringContaining("Inactive"));
     expect(db.markSyncPermanentlyFailed).toHaveBeenCalledWith("s-inactive");
     expect(db.deleteStravaConnection).not.toHaveBeenCalled();
+
+    // BLD-3063: Sentry.captureException is NOT called for app_inactive errors
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+    // BLD-3063: A stravaLog("warn", ...) is emitted instead
+    expect(Sentry.logger.warn).toHaveBeenCalledWith(
+      "strava_upload_app_inactive",
+      { sessionId: "s-inactive", status: 403, code: "app_inactive" }
+    );
   });
 
   it("(BLD-2995) upload returns 403 with non-JSON body → treated as permanent config error", async () => {
+    const Sentry = require("@sentry/react-native");
     db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
     db.getSessionSets.mockResolvedValue([
       { exercise_name: "Row", weight: 70, reps: 10, completed: true, set_type: "working" },
@@ -585,6 +595,11 @@ describe("Strava Integration — Behavioral", () => {
     expect((result as any).error.code).toBe("config");
     expect(db.markSyncPermanentlyFailed).toHaveBeenCalledWith("s-non-json");
     expect(db.deleteStravaConnection).not.toHaveBeenCalled();
+
+    // BLD-3063: Sentry.captureException IS still called for genuine config errors
+    expect(Sentry.captureException).toHaveBeenCalled();
+    // BLD-3063: logger.warn is NOT called
+    expect(Sentry.logger.warn).not.toHaveBeenCalled();
   });
 
   it("(BLD-2995) reconcileQueue: permanent app_inactive/config error short-circuits immediately", async () => {

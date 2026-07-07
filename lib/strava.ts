@@ -395,7 +395,13 @@ async function uploadActivity(
     const isInactive = isStravaAppInactive(body);
     const errCode = isInactive ? "app_inactive" : "config";
     const err = new StravaError(errCode, `Strava API error 403: ${body}`, 403);
-    captureStravaError(err, "strava_upload", "api_call", { sessionId, status: response.status, responseBody: body });
+    if (isInactive) {
+      // Known-permanent, human-actionable (reactivate Strava app). Do not spam
+      // Sentry with an exception per upload — log at warn for visibility only.
+      stravaLog("warn", "strava_upload_app_inactive", { sessionId, status: 403, code: errCode });
+    } else {
+      captureStravaError(err, "strava_upload", "api_call", { sessionId, status: response.status, responseBody: body });
+    }
     throw err;
   }
 
