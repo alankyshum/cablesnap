@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Stop reporting the known-permanent Strava "app inactive" 403 to Sentry as an exception (BLD-3063)
 
 ## v0.26.64 — 2026-07-05
 <!-- versionCode: 134 -->
