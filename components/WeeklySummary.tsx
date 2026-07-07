@@ -7,7 +7,7 @@ import {
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, AlertCircle, RotateCcw } from "lucide-react-native";
 import Animated from "react-native-reanimated";
 
 import { useWeeklySummary, formatWeekRange } from "@/hooks/useWeeklySummary";
@@ -23,21 +23,39 @@ export default function WeeklySummary() {
     data, loading, error, expanded, setExpanded,
     weekOffset, weekStartMs, unit, canGoBack, canGoForward,
     navigateWeek, handleShare, expandAnimStyle, volChange,
+    refetch,
   } = useWeeklySummary();
 
   if (error) {
     return (
-      <View accessibilityLabel="Weekly summary unavailable">
+      <View accessibilityLabel="Weekly summary unavailable" testID="weekly-summary-error">
       <Card
-        style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}
+        style={StyleSheet.flatten([
+          styles.card,
+          {
+            backgroundColor: colors.surface,
+            borderLeftWidth: 4,
+            borderLeftColor: colors.error,
+          },
+        ])}
       >
-        <CardContent>
-          <Text
-            variant="body"
-            style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
-          >
-            Couldn&apos;t load summary
-          </Text>
+        <CardContent style={styles.errorContent}>
+          <View style={styles.errorTextRow}>
+            <AlertCircle size={20} color={colors.error} style={{ marginRight: 8 }} />
+            <Text
+              variant="body"
+              style={{ color: colors.onSurfaceVariant }}
+            >
+              Couldn&apos;t load summary
+            </Text>
+          </View>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={RotateCcw}
+            onPress={refetch}
+            accessibilityLabel="Retry loading summary"
+          />
         </CardContent>
       </Card>
       </View>
@@ -186,5 +204,16 @@ const styles = StyleSheet.create({
   },
   expandedContent: {
     paddingTop: 0,
+  },
+  errorContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+  },
+  errorTextRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
   },
 });
