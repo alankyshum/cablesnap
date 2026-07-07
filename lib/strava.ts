@@ -265,6 +265,13 @@ export async function isStravaConnected(): Promise<boolean> {
 
 // ---- Activity Upload ----
 
+/** Detects the known permanent "Application Status Inactive" 403 from Strava.
+ *  BLD-3063: prevents re-polluting Sentry with this unactionable error.
+ */
+function isStravaAppInactiveError(body: string): boolean {
+  return /Application Status Inactive|code["']?\s*:\s*["']?inactive/i.test(body);
+}
+
 function formatSetDesc(s: { weight: number | null; reps: number | null }, weightUnit: string): string {
   if (s.weight && s.reps) return `${s.weight}${weightUnit} × ${s.reps}`;
   if (s.reps) return `${s.reps} reps`;
@@ -357,6 +364,29 @@ async function uploadActivity(
     throw new Error("Strava access revoked. Please reconnect.");
   }
 
+  // BLD-3063: 403 with "Application Status Inactive" is a known permanent
+  // failure (client_id deactivated on Strava dashboard). Do NOT re-pollute
+  // Sentry with this unactionable error. Log at warn level for signal,
+  // throw so the caller treats it as a permanent failure.
+  if (response.status === 403) {
+    const body = await response.text().catch(() => "");
+    if (isStravaAppInactiveError(body)) {
+      stravaLog("warn", "strava upload blocked — app inactive (known permanent 403)", {
+        flow: "strava_upload",
+        step: "api_call",
+        sessionId,
+        status: 403,
+        source: "strava_activity_sync",
+        phase: "post-connect",
+      });
+      throw new StravaError("app_inactive", "Strava app is inactive. Please contact support.", 403);
+    }
+    // Actionable / unknown 403 — keep existing Sentry capture (sanitized, no raw body)
+    const err = new StravaError("auth_revoked", "Strava API error 403", 403);
+    captureStravaError(err, "strava_upload", "api_call", { sessionId, status: 403 });
+    throw err;
+  }
+
   // BLD-1240: 409 = activity with this external_id already exists on Strava.
   // Treat as an idempotent re-sync: attempt to resolve the existing activity ID
   // so the queue entry can be marked `synced`. If resolution fails, return null
@@ -372,9 +402,12 @@ async function uploadActivity(
   }
 
   if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    const err = new Error(`Strava API error ${response.status}: ${body}`);
-    captureStravaError(err, "strava_upload", "api_call", { sessionId, status: response.status, responseBody: body });
+    const err = new StravaError(
+      classifyHttpStatus(response.status),
+      `Strava API error ${response.status}`,
+      response.status,
+    );
+    captureStravaError(err, "strava_upload", "api_call", { sessionId, status: response.status });
     throw err;
   }
 
@@ -434,15 +467,20 @@ export type SyncResult =
   | { status: "failed"; error: Error }
   | { status: "skipped" };
 
-/** Returns true if the upload error represents a permanent auth revocation. */
+/** Returns true if the upload error represents a permanent auth revocation or app suspension. */
 function isPermanentAuthError(err: unknown): boolean {
-  return err instanceof Error && err.message.includes("Strava access revoked");
+  if (!(err instanceof Error)) return false;
+  return (
+    err.message.includes("Strava access revoked") ||
+    err.message.includes("Strava app is inactive")
+  );
 }
 
 export async function syncSessionToStrava(sessionId: string): Promise<SyncResult> {
   stravaLog("info", "strava upload started", { flow: "strava_upload", step: "start", sessionId });
-  const connected = await isStravaConnected();
-  if (!connected) return { status: "skipped" };
+  if (Platform.OS === "web") return { status: "skipped" };
+  const connection = await getStravaConnection();
+  if (!connection) return { status: "skipped" };
 
   // Check for completed sets first
   const sets = await getSessionSets(sessionId);
@@ -451,13 +489,33 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
 
   await createSyncLogEntry(sessionId);
 
+  const athleteId = connection.athlete_id;
+  const setCount = sets.length;
+  const completedCount = completed.length;
+
   let activityId: string | null;
   try {
     activityId = await uploadActivity(sessionId);
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     await markSyncFailed(sessionId, error.message);
-    if (isPermanentAuthError(err)) {
+    const isPermanent = isPermanentAuthError(err);
+
+    // BLD-3063: structured Sentry log for connection-succeeded-but-sync-failed
+    stravaLog(isPermanent ? "error" : "warn", "strava upload failed post-connect", {
+      source: "strava_activity_sync",
+      phase: "post-connect",
+      sessionId,
+      athleteId,
+      setCount,
+      completedCount,
+      status: isPermanent ? "failed" : "queued",
+      errorCode: error instanceof StravaError ? error.code : undefined,
+      retryInfo: isPermanent ? "permanent" : "will_retry",
+    });
+
+    if (isPermanent) {
+      await markSyncPermanentlyFailed(sessionId);
       return { status: "failed", error };
     }
     // Transient failure -- reconcile queue will retry
@@ -486,6 +544,9 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
       flow: "strava_upload",
       step: "duplicate_409_skipped",
       sessionId,
+      athleteId,
+      source: "strava_activity_sync",
+      phase: "post-connect",
     });
     return { status: "skipped" };
   }
@@ -495,6 +556,7 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
     step: "success",
     sessionId,
     activityId,
+    athleteId,
   });
   return { status: "synced", activityId };
 }
@@ -502,8 +564,8 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
 export async function reconcileStravaQueue(): Promise<void> {
   if (Platform.OS === "web") return;
 
-  const connected = await isStravaConnected();
-  if (!connected) return;
+  const connection = await getStravaConnection();
+  if (!connection) return;
 
   const pendingOrFailed = await getPendingOrFailedSyncs();
 
@@ -525,6 +587,24 @@ export async function reconcileStravaQueue(): Promise<void> {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       await markSyncFailed(entry.session_id, message);
+
+      const isPermanent = isPermanentAuthError(err);
+
+      // BLD-3063: structured Sentry log for queue-reconcile failures post-connect
+      stravaLog("warn", "strava queue reconciliation failed for entry", {
+        source: "strava_activity_sync",
+        phase: "reconcile",
+        sessionId: entry.session_id,
+        athleteId: connection.athlete_id,
+        status: entry.status,
+        retryCount: entry.retry_count,
+        retryInfo: isPermanent ? "permanent" : "will_retry",
+      });
+
+      if (isPermanent) {
+        await markSyncPermanentlyFailed(entry.session_id);
+        continue;
+      }
 
       // Check if we've now hit max retries
       if (entry.retry_count + 1 >= MAX_RETRIES) {

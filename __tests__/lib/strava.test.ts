@@ -297,6 +297,7 @@ beforeEach(() => {
   SecureStore.deleteItemAsync.mockImplementation(async (key: string) => { delete secureStoreMockData[key]; });
 });
 
+// eslint-disable-next-line max-lines-per-function
 describe("Strava Integration — Behavioral", () => {
   const mockFetch = jest.fn();
   const originalFetch = global.fetch;
@@ -413,6 +414,21 @@ describe("Strava Integration — Behavioral", () => {
     const result = await strava.syncSessionToStrava("s1");
     expect(result).toEqual({ status: "skipped" });
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("syncSessionToStrava skips on web even if a stray Strava row exists", async () => {
+    const { Platform } = require("react-native");
+    const originalOS = Platform.OS;
+    (Platform as { OS: string }).OS = "web";
+    try {
+      db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+      const result = await strava.syncSessionToStrava("s-web");
+      expect(result).toEqual({ status: "skipped" });
+      expect(db.createSyncLogEntry).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
+    } finally {
+      (Platform as { OS: string }).OS = originalOS;
+    }
   });
 
   it("syncSessionToStrava returns queued (not throw) on transient API error", async () => {
@@ -766,6 +782,167 @@ describe("Strava Integration — Behavioral", () => {
 
       // A real server-side error MUST still reach Sentry
       expect(Sentry.captureException).toHaveBeenCalled();
+    });
+  });
+
+  // BLD-3063: known permanent "Application Status Inactive" 403 must NOT
+  // re-pollute Sentry, but actionable 403s still get captured.
+  describe("(BLD-3063) uploadActivity — 403 handling", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sentry = require("@sentry/react-native");
+
+    function setupSyncMocks(sessionId: string) {
+      db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+      db.getSessionSets.mockResolvedValue([
+        { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+      ]);
+      db.getSessionById.mockResolvedValue({
+        id: sessionId, name: "Test Session", started_at: Date.now(), duration_seconds: 3600,
+      });
+      db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+      SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+        if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+        if (key === "strava_access_token") return "valid-token";
+        return null;
+      });
+    }
+
+    it("app_inactive 403 → captureException NOT called, warn log emitted, status=failed", async () => {
+      const sessionId = "bld-3063-inactive";
+      setupSyncMocks(sessionId);
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: async () => '{"message":"Application Status Inactive","errors":[{"resource":"Application","field":"status","code":"inactive"}]}',
+      });
+
+      const result = await strava.syncSessionToStrava(sessionId);
+
+      expect(result.status).toBe("failed");
+      expect((result as any).error.message).toContain("inactive");
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(Sentry.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("app inactive"),
+        expect.objectContaining({
+          flow: "strava_upload",
+          step: "api_call",
+          source: "strava_activity_sync",
+          phase: "post-connect",
+        }),
+      );
+      expect(db.markSyncPermanentlyFailed).toHaveBeenCalledWith(sessionId);
+      expect(db.markSyncFailed).toHaveBeenCalledWith(sessionId, expect.stringContaining("inactive"));
+    });
+
+    it("actionable 403 (not app_inactive) → captureException IS called, status=queued", async () => {
+      const sessionId = "bld-3063-actionable";
+      setupSyncMocks(sessionId);
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: async () => '{"message":"Forbidden"}',
+      });
+
+      const result = await strava.syncSessionToStrava(sessionId);
+
+      expect(result.status).toBe("queued");
+      expect(Sentry.captureException).toHaveBeenCalled();
+      // Verify sanitized log shape: no raw body in capture extras
+      const call = Sentry.captureException.mock.calls.find(
+        (c: unknown[]) => (c[1] as { tags?: { flow?: string } })?.tags?.flow === "strava_upload"
+      );
+      expect(call).toBeDefined();
+      expect((call![1] as { extra?: Record<string, unknown> }).extra?.responseBody).toBeUndefined();
+      expect((call![0] as Error).message).not.toContain("Forbidden");
+    });
+
+    it("structured Sentry log emitted on transient upload failure post-connect", async () => {
+      const sessionId = "bld-3063-log-test";
+      setupSyncMocks(sessionId);
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        text: async () => "Internal Server Error",
+      });
+
+      const result = await strava.syncSessionToStrava(sessionId);
+
+      expect(result.status).toBe("queued");
+      expect(Sentry.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("strava upload failed post-connect"),
+        expect.objectContaining({
+          source: "strava_activity_sync",
+          phase: "post-connect",
+          sessionId,
+          athleteId: 1,
+          setCount: 1,
+          completedCount: 1,
+          status: "queued",
+          retryInfo: "will_retry",
+        }),
+      );
+    });
+
+    it("structured Sentry log emitted on unresolved duplicate (skipped) post-connect", async () => {
+      const sessionId = "bld-3063-dup-test";
+      setupSyncMocks(sessionId);
+      // POST /activities → 409
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 409, text: async () => '{"message":"Record Already Exists"}' });
+      // GET /athlete/activities → empty
+      mockFetch.mockResolvedValueOnce({ ok: true, json: async () => [] });
+
+      const result = await strava.syncSessionToStrava(sessionId);
+
+      expect(result.status).toBe("skipped");
+      expect(Sentry.logger.info).toHaveBeenCalledWith(
+        expect.stringContaining("duplicate"),
+        expect.objectContaining({
+          source: "strava_activity_sync",
+          phase: "post-connect",
+          sessionId,
+          athleteId: 1,
+        }),
+      );
+    });
+
+    it("app_inactive 403 during reconcileQueue → immediately permanently failed, no retry", async () => {
+      const sessionId = "bld-3063-reconcile-inactive";
+      db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+      db.getPendingOrFailedSyncs.mockResolvedValue([
+        { session_id: sessionId, retry_count: 0, status: "pending" },
+      ]);
+      db.getSessionSets.mockResolvedValue([
+        { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+      ]);
+      db.getSessionById.mockResolvedValue({
+        id: sessionId, name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
+      });
+      db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+      SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+        if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+        if (key === "strava_access_token") return "valid-token";
+        return null;
+      });
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: async () => '{"message":"Application Status Inactive","errors":[{"resource":"Application","field":"status","code":"inactive"}]}',
+      });
+
+      await strava.reconcileStravaQueue();
+
+      expect(db.markSyncFailed).toHaveBeenCalledWith(sessionId, expect.stringContaining("inactive"));
+      expect(db.markSyncPermanentlyFailed).toHaveBeenCalledWith(sessionId);
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(Sentry.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("strava queue reconciliation failed for entry"),
+        expect.objectContaining({
+          source: "strava_activity_sync",
+          phase: "reconcile",
+          sessionId,
+          retryInfo: "permanent",
+        }),
+      );
     });
   });
 });

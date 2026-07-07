@@ -9,6 +9,7 @@ export type StravaErrorCode =
   | "rate_limit"
   | "server"
   | "config"
+  | "app_inactive"
   | "unknown";
 
 export class StravaError extends Error {
@@ -58,6 +59,8 @@ export function getStravaUserMessage(err: unknown): string {
         return "Strava is having trouble right now. Please try again soon.";
       case "config":
         return "Strava isn't set up correctly. Please contact support.";
+      case "app_inactive":
+        return "Strava app access is inactive. Please contact support.";
       case "unknown":
       default:
         return "Something went wrong connecting to Strava. Please try again.";
@@ -99,7 +102,8 @@ export function getStravaSupportAction(
 ): StravaSupportAction | undefined {
   const isConfig = err instanceof StravaError && err.code === "config";
   const isUnknown = err instanceof StravaError && err.code === "unknown";
-  if (isConfig || isUnknown) {
+  const isAppInactive = err instanceof StravaError && err.code === "app_inactive";
+  if (isConfig || isUnknown || isAppInactive) {
     return {
       label: "Get help",
       onPress: () => {
