@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Settings rows no longer hide behind the bottom bar** — on the Settings screen, list rows (like "Manage gyms, cable stacks, and marker calibrations") are no longer partially obscured or clipped behind the floating bottom navigation bar at the top of the list. The scrollable area now ends cleanly above the bar so every row stays fully visible and tappable. (BLD-3065)
 
 ## v0.26.64 — 2026-07-05
 <!-- versionCode: 134 -->
