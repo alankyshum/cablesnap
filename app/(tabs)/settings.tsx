@@ -171,11 +171,17 @@ export default function Settings() {
   return (
     <ScrollView
       testID="settings-scroll-view"
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.background,
+          marginBottom: tabBarHeight,
+        },
+      ]}
       contentContainerStyle={{
         paddingTop: spacing.base,
         paddingHorizontal: layout.horizontalPadding,
-        paddingBottom: tabBarHeight + SETTINGS_SCROLL_EXTRA_BOTTOM,
+        paddingBottom: SETTINGS_SCROLL_EXTRA_BOTTOM,
       }}
     >
       {/*

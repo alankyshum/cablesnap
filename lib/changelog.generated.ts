@@ -10,6 +10,30 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.65",
+    "date": "2026-07-07",
+    "versionCode": 135,
+    "body": "- **List items on other tab screens no longer hide behind bottom bar** — on the Workouts, Exercises, and Nutrition screens, list content is no longer partially obscured or clipped behind the floating bottom navigation bar. The scrollable area now ends cleanly above the bar so every row and element stays fully visible and tappable at all scroll offsets. (BLD-3068)\n- **Settings rows no longer hide behind the bottom bar** — on the Settings screen, list rows (like \"Manage gyms, cable stacks, and marker calibrations\") are no longer partially obscured or clipped behind the floating bottom navigation bar at the top of the list. The scrollable area now ends cleanly above the bar so every row stays fully visible and tappable. (BLD-3065)\n- Stop reporting the known-permanent Strava \"app inactive\" 403 to Sentry as an exception (BLD-3063)"
+  },
+  {
+    "version": "0.26.64",
+    "date": "2026-07-05",
+    "versionCode": 134,
+    "body": "- **No misleading retry prompts on Strava status changes** — when Strava's application integration becomes Inactive, CableSnap now correctly classifies the 403 Forbidden error as a permanent failure instead of misleading you with \"will retry\" toast alerts and settings prompts. This stops the wasted retry loop while preserving valid user connections. (BLD-2995)\n- **Internal: Sentry dashboard no longer polluted by CI/audit events** — the localhost event filter now also checks `event.request.url` (populated by the web SDK), so HeadlessChrome daily-audit errors at `localhost:8081` are correctly discarded before reaching the real-user error dashboard. (BLD-2991)"
+  },
+  {
+    "version": "0.26.63",
+    "date": "2026-07-05",
+    "versionCode": 133,
+    "body": "- **Double-Progression suggestions for your workouts** — CableSnap now suggests progressive-overload progressions for weighted exercises, letting you increase reps within your target range before suggesting a weight increase. This includes support for rep-range parsing, warmup set filtering, and a dedicated explainer modal. (BLD-2984)"
+  },
+  {
+    "version": "0.26.62",
+    "date": "2026-07-05",
+    "versionCode": 132,
+    "body": "- **Workout templates no longer overlap** — on the Templates list, cards sometimes rendered stacked on top of each other (on both phones and tablets). They now lay out cleanly in a proper grid."
+  },
+  {
     "version": "0.26.61",
     "date": "2026-07-04",
     "versionCode": 131,

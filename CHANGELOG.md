@@ -22,6 +22,29 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.65 — 2026-07-07
+<!-- versionCode: 135 -->
+
+- **List items on other tab screens no longer hide behind bottom bar** — on the Workouts, Exercises, and Nutrition screens, list content is no longer partially obscured or clipped behind the floating bottom navigation bar. The scrollable area now ends cleanly above the bar so every row and element stays fully visible and tappable at all scroll offsets. (BLD-3068)
+- **Settings rows no longer hide behind the bottom bar** — on the Settings screen, list rows (like "Manage gyms, cable stacks, and marker calibrations") are no longer partially obscured or clipped behind the floating bottom navigation bar at the top of the list. The scrollable area now ends cleanly above the bar so every row stays fully visible and tappable. (BLD-3065)
+- Stop reporting the known-permanent Strava "app inactive" 403 to Sentry as an exception (BLD-3063)
+
+## v0.26.64 — 2026-07-05
+<!-- versionCode: 134 -->
+
+- **No misleading retry prompts on Strava status changes** — when Strava's application integration becomes Inactive, CableSnap now correctly classifies the 403 Forbidden error as a permanent failure instead of misleading you with "will retry" toast alerts and settings prompts. This stops the wasted retry loop while preserving valid user connections. (BLD-2995)
+- **Internal: Sentry dashboard no longer polluted by CI/audit events** — the localhost event filter now also checks `event.request.url` (populated by the web SDK), so HeadlessChrome daily-audit errors at `localhost:8081` are correctly discarded before reaching the real-user error dashboard. (BLD-2991)
+
+## v0.26.63 — 2026-07-05
+<!-- versionCode: 133 -->
+
+- **Double-Progression suggestions for your workouts** — CableSnap now suggests progressive-overload progressions for weighted exercises, letting you increase reps within your target range before suggesting a weight increase. This includes support for rep-range parsing, warmup set filtering, and a dedicated explainer modal. (BLD-2984)
+
+## v0.26.62 — 2026-07-05
+<!-- versionCode: 132 -->
+
 - **Workout templates no longer overlap** — on the Templates list, cards sometimes rendered stacked on top of each other (on both phones and tablets). They now lay out cleanly in a proper grid.
 
 ## v0.26.61 — 2026-07-04

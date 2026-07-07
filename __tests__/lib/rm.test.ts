@@ -52,7 +52,7 @@ describe("1RM formulas", () => {
 
 describe("suggest (progressive overload)", () => {
   function makeSets(
-    sessions: { id: string; started: number; sets: { weight: number; reps: number; rpe?: number | null; completed?: number }[] }[]
+    sessions: { id: string; started: number; sets: { weight: number; reps: number; rpe?: number | null; completed?: number; set_type?: string | null }[] }[]
   ): HistorySet[] {
     return sessions.flatMap((s) =>
       s.sets.map((set) => ({
@@ -62,6 +62,7 @@ describe("suggest (progressive overload)", () => {
         rpe: set.rpe ?? null,
         completed: set.completed ?? 1,
         started_at: s.started,
+        set_type: set.set_type ?? null,
       }))
     );
   }
@@ -225,6 +226,133 @@ describe("suggest (progressive overload)", () => {
     if ("reps" in expected && expected.reps !== undefined) expect(result!.reps).toBe(expected.reps);
     if ("reasonContains" in expected && expected.reasonContains)
       expect(result!.reason).toContain(expected.reasonContains);
+  });
+
+  describe("Double-Progression Suggestions", () => {
+    it("GIVEN a weighted exercise with template range '8-12' and last session all sets completed at 20 kg x 10, suggests rep_increase to 11", () => {
+      const sets = makeSets([
+        { id: "s2", started: 2000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
+        { id: "s1", started: 1000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
+      ]);
+      const res = suggest(sets, 2.5, false, { min: 8, max: 12 });
+      expect(res).toEqual({
+        type: "rep_increase",
+        weight: 20,
+        reps: 11,
+        reason: "Build reps toward 12 before adding weight",
+      });
+    });
+
+    it("GIVEN the same exercise with last session all sets completed at 20 kg x 12, suggests weight_and_rep_reset to 22.5 kg x 8", () => {
+      const sets = makeSets([
+        { id: "s2", started: 2000, sets: [{ weight: 20, reps: 12 }, { weight: 20, reps: 12 }] },
+        { id: "s1", started: 1000, sets: [{ weight: 20, reps: 12 }, { weight: 20, reps: 12 }] },
+      ]);
+      const res = suggest(sets, 2.5, false, { min: 8, max: 12 });
+      expect(res).toEqual({
+        type: "weight_and_rep_reset",
+        weight: 22.5,
+        reps: 8,
+        reason: "Hit 12 reps — add 2.5 and reset to 8",
+      });
+    });
+
+    it("GIVEN a degenerate range '10-10', falls back to linear progression", () => {
+      const sets = makeSets([
+        { id: "s2", started: 2000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
+        { id: "s1", started: 1000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
+      ]);
+      const res = suggest(sets, 2.5, false, { min: 10, max: 10 });
+      expect(res).toEqual({
+        type: "increase",
+        weight: 22.5,
+        reps: null,
+        reason: "All sets completed — increase by 2.5",
+      });
+    });
+
+    it("GIVEN any set had RPE >= 9.5, maintain wins over double progression", () => {
+      const sets = makeSets([
+        { id: "s2", started: 2000, sets: [{ weight: 20, reps: 10, rpe: 9.5 }, { weight: 20, reps: 10 }] },
+        { id: "s1", started: 1000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
+      ]);
+      const res = suggest(sets, 2.5, false, { min: 8, max: 12 });
+      expect(res).toEqual({
+        type: "maintain",
+        weight: 20,
+        reps: null,
+        reason: "RPE ≥ 9.5 last session — maintain",
+      });
+    });
+
+    it("GIVEN a bodyweight exercise, the existing rep_increase path is unchanged", () => {
+      const sets = makeSets([
+        { id: "s2", started: 2000, sets: [{ weight: 10, reps: 10 }, { weight: 10, reps: 10 }] },
+        { id: "s1", started: 1000, sets: [{ weight: 10, reps: 8 }, { weight: 10, reps: 8 }] },
+      ]);
+      const res = suggest(sets, 0, true, { min: 8, max: 12 });
+      expect(res).toEqual({
+        type: "rep_increase",
+        weight: 0,
+        reps: 11,
+        reason: "Bodyweight — increase reps",
+      });
+    });
+
+    it("GIVEN a warmup set at low reps + working sets at range max, excludes warmups and weight bump fires", () => {
+      const sets = makeSets([
+        {
+          id: "s2",
+          started: 2000,
+          sets: [
+            { weight: 40, reps: 6, set_type: "warmup" },
+            { weight: 100, reps: 12, set_type: "normal" },
+            { weight: 100, reps: 12, set_type: "normal" },
+          ],
+        },
+        {
+          id: "s1",
+          started: 1000,
+          sets: [
+            { weight: 40, reps: 6, set_type: "warmup" },
+            { weight: 100, reps: 12, set_type: "normal" },
+            { weight: 100, reps: 12, set_type: "normal" },
+          ],
+        },
+      ]);
+      const res = suggest(sets, 2.5, false, { min: 8, max: 12 });
+      expect(res).toEqual({
+        type: "weight_and_rep_reset",
+        weight: 102.5,
+        reps: 8,
+        reason: "Hit 12 reps — add 2.5 and reset to 8",
+      });
+    });
+
+    it("tech-lead #5 REGRESSION: iterates existing cases and asserts undefined/null range produces identical output", () => {
+      for (const c of cases) {
+        const setsList = makeSets(c.sessions);
+        const withoutRange = suggest(setsList, c.step, c.bodyweight);
+        const withUndefRange = suggest(setsList, c.step, c.bodyweight, undefined);
+        const withNullRange = suggest(setsList, c.step, c.bodyweight, null);
+        expect(withUndefRange).toEqual(withoutRange);
+        expect(withNullRange).toEqual(withoutRange);
+      }
+    });
+  });
+
+  describe("parseTemplateRepRange parser tests", () => {
+    const { parseTemplateRepRange } = require("../../lib/db/templates");
+    it("parses valid ranges correctly", () => {
+      expect(parseTemplateRepRange("8-12", 1)).toEqual({ min: 8, max: 12 });
+      expect(parseTemplateRepRange("8 - 12", 1)).toEqual({ min: 8, max: 12 });
+      expect(parseTemplateRepRange("8–12", 1)).toEqual({ min: 8, max: 12 });
+    });
+
+    it("returns null for non-ranges or degenerate", () => {
+      expect(parseTemplateRepRange("10", 1)).toBeNull();
+      expect(parseTemplateRepRange("30-60s", 1)).toBeNull();
+    });
   });
 });
 

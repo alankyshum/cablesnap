@@ -356,29 +356,81 @@ FINDINGS_OUT="$SMOKE_FINDINGS" \
   scripts/regression-smoke.sh "$PREFIX_FIXTURE_PNG"
 SMOKE_RC=$?
 set -e
+SMOKE_SKIPPED=0
 
 if [[ $SMOKE_RC -ne 0 ]]; then
-  echo "[daily-audit] 🚨 FATAL: regression-smoke FAILED (vision-pipeline trust anchor)." >&2
-  echo "[daily-audit] Today's HEAD findings MUST NOT be trusted." >&2
-  exit $SMOKE_RC
+  if [[ $SMOKE_RC -eq 4 ]]; then
+    if [[ "${AUDIT_ALLOW_NO_VISION_KEY:-}" == "1" ]]; then
+      # Opt-in sandbox mode: no key is present but the operator has explicitly
+      # accepted running without the vision trust anchor. Emit a loud,
+      # unmistakable warning and continue — but never upgrade this to PASS.
+      echo "" >&2
+      echo "╔══════════════════════════════════════════════════════════════════╗" >&2
+      echo "║  WARNING: regression-smoke SKIPPED — no vision API key set      ║" >&2
+      echo "║                                                                  ║" >&2
+      echo "║  The vision-pipeline trust anchor was NOT run today.             ║" >&2
+      echo "║  Audit trust status: UNVERIFIED                                  ║" >&2
+      echo "║  HEAD findings were captured but NOT validated by the smoke.     ║" >&2
+      echo "║                                                                  ║" >&2
+      echo "║  To restore the trust anchor, set one of:                        ║" >&2
+      echo "║    ANTHROPIC_API_KEY   (preferred — powers regression-smoke.sh)  ║" >&2
+      echo "║    OPENAI_API_KEY      (fallback)                                ║" >&2
+      echo "╚══════════════════════════════════════════════════════════════════╝" >&2
+      echo "" >&2
+      SMOKE_SKIPPED=1
+    else
+      # No key AND the operator has NOT opted in — this is a misconfiguration
+      # that must not silently produce an unverified audit. Abort with a
+      # message that names the missing keys and explains the sandbox opt-in.
+      echo "[daily-audit] 🚨 FATAL: regression-smoke aborted — no vision API key configured." >&2
+      echo "[daily-audit] Set ANTHROPIC_API_KEY (preferred) or OPENAI_API_KEY to enable" >&2
+      echo "[daily-audit] the vision-pipeline trust anchor." >&2
+      echo "[daily-audit] In a keyless sandbox, set AUDIT_ALLOW_NO_VISION_KEY=1 to opt into" >&2
+      echo "[daily-audit] SKIPPED/UNVERIFIED mode (the audit will complete but trust status" >&2
+      echo "[daily-audit] will be marked UNVERIFIED — never PASS)." >&2
+      exit $SMOKE_RC
+    fi
+  else
+    echo "[daily-audit] 🚨 FATAL: regression-smoke FAILED (vision-pipeline trust anchor)." >&2
+    echo "[daily-audit] Today's HEAD findings MUST NOT be trusted." >&2
+    exit $SMOKE_RC
+  fi
 fi
 
-# Smoke passed. If HEAD or pre-fix scenarios failed, surface that — the
-# pipeline itself is healthy, so a HEAD failure is a real regression.
+# Smoke passed (or was explicitly skipped as UNVERIFIED). If HEAD or pre-fix
+# scenarios failed, surface that — a HEAD failure still matters even in an
+# UNVERIFIED run. However, never upgrade an UNVERIFIED run to a trusted PASS.
+SMOKE_STATUS_LABEL="PASS (findings → $SMOKE_FINDINGS)"
+if [[ $SMOKE_SKIPPED -eq 1 ]]; then
+  SMOKE_STATUS_LABEL="SKIPPED (UNVERIFIED — no vision key)"
+fi
+
 if [[ $HEAD_RC -ne 0 ]]; then
-  echo "[daily-audit] HEAD scenarios failed (rc=$HEAD_RC) but smoke PASSED — vision pipeline is healthy, the HEAD failure is a real regression." >&2
-  echo "[daily-audit] regression-smoke: PASS (findings → $SMOKE_FINDINGS)"
+  if [[ $SMOKE_SKIPPED -eq 1 ]]; then
+    echo "[daily-audit] HEAD scenarios failed (rc=$HEAD_RC) and smoke was SKIPPED/UNVERIFIED — treat HEAD findings with caution." >&2
+  else
+    echo "[daily-audit] HEAD scenarios failed (rc=$HEAD_RC) but smoke PASSED — vision pipeline is healthy, the HEAD failure is a real regression." >&2
+  fi
+  echo "[daily-audit] regression-smoke: $SMOKE_STATUS_LABEL"
   exit $HEAD_RC
 fi
 
 if [[ $PREFIX_RC -ne 0 ]]; then
-  echo "[daily-audit] pre-fix fixture spec failed (rc=$PREFIX_RC) but smoke PASSED — vision pipeline is healthy, the fixture-spec failure needs investigation." >&2
-  echo "[daily-audit] regression-smoke: PASS (findings → $SMOKE_FINDINGS)"
+  if [[ $SMOKE_SKIPPED -eq 1 ]]; then
+    echo "[daily-audit] pre-fix fixture spec failed (rc=$PREFIX_RC) and smoke was SKIPPED/UNVERIFIED." >&2
+  else
+    echo "[daily-audit] pre-fix fixture spec failed (rc=$PREFIX_RC) but smoke PASSED — vision pipeline is healthy, the fixture-spec failure needs investigation." >&2
+  fi
+  echo "[daily-audit] regression-smoke: $SMOKE_STATUS_LABEL"
   exit $PREFIX_RC
 fi
 
 echo ""
 echo "[daily-audit] bundles ready at $HEAD_COPY and $PINNED_OUT"
-echo "[daily-audit] regression-smoke: PASS (findings → $SMOKE_FINDINGS)"
-echo "[daily-audit] next step: scripts/audit-bundle.sh uploads to GH Releases,"
-echo "[daily-audit] then ux-designer agent pulls + reviews."
+echo "[daily-audit] regression-smoke: $SMOKE_STATUS_LABEL"
+if [[ $SMOKE_SKIPPED -eq 1 ]]; then
+  echo "[daily-audit] NOTE: audit trust status is UNVERIFIED — vision pipeline was not validated today."
+else
+  echo "[daily-audit] next step: scripts/audit-bundle.sh uploads to GH Releases,"
+  echo "[daily-audit] then ux-designer agent pulls + reviews."
+fi

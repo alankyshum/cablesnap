@@ -46,6 +46,31 @@ export function parseTemplateTargetReps(targetReps: string, setNumber: number): 
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+export function parseTemplateRepRange(
+  targetReps: string | null | undefined,
+  setNumber: number,
+): { min: number; max: number } | null {
+  if (!targetReps) return null;
+  const tokens = targetReps
+    .split(",")
+    .map((token) => token.trim())
+    .filter(Boolean);
+  const token = tokens[setNumber - 1] ?? tokens[tokens.length - 1] ?? "";
+
+  if (token.toLowerCase().includes("s")) return null;
+
+  const match = token.match(/^(\d+)\s*[-–—]\s*(\d+)$/);
+  if (!match) return null;
+
+  const min = Number.parseInt(match[1], 10);
+  const max = Number.parseInt(match[2], 10);
+
+  if (Number.isFinite(min) && Number.isFinite(max)) {
+    return { min, max };
+  }
+  return null;
+}
+
 export function parseTemplateSetTypes(raw: string | null | undefined, targetSets: number): SetType[] {
   if (!raw) return normalizeTemplateSetTypes(undefined, targetSets);
   try {

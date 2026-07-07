@@ -1,5 +1,6 @@
 import React from 'react'
 import { fireEvent, waitFor } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 import { renderScreen } from '../helpers/render'
 
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
@@ -445,7 +446,7 @@ describe('Settings Screen Acceptance', () => {
 
   // ── Scroll padding rhythm (BLD-1106 regression + BLD-2034 tokenization) ──────
 
-  it('ScrollView contentContainerStyle is a flat object with paddingBottom === FLOATING_TAB_BAR_HEIGHT + SETTINGS_SCROLL_EXTRA_BOTTOM', () => {
+  it('ScrollView reserves the floating tab bar viewport and keeps extra scroll-bottom clearance', () => {
     const { getByTestId } = renderScreen(<Settings />)
     const scroll = getByTestId('settings-scroll-view')
     // contentContainerStyle must be a single flat object — no style-array merge ambiguity.
@@ -461,8 +462,10 @@ describe('Settings Screen Acceptance', () => {
     expect(style).not.toBeInstanceOf(Array)
     // Inset is a spacing-token expression, not an ad-hoc literal, and preserves the
     // validated foldable clearance.
+    const scrollStyle = StyleSheet.flatten(scroll.props.style)
     expect(SETTINGS_SCROLL_EXTRA_BOTTOM).toBe(spacing.xxl * 5)
     expect(SETTINGS_SCROLL_EXTRA_BOTTOM).toBeGreaterThanOrEqual(96)
-    expect(style.paddingBottom).toBe(FLOATING_TAB_BAR_HEIGHT + SETTINGS_SCROLL_EXTRA_BOTTOM)
+    expect(scrollStyle.marginBottom).toBe(FLOATING_TAB_BAR_HEIGHT)
+    expect(style.paddingBottom).toBe(SETTINGS_SCROLL_EXTRA_BOTTOM)
   })
 })
