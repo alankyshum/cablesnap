@@ -85,3 +85,7 @@ node_modules.bak/
 # runs). These are not source artifacts and must never be committed; each run
 # creates and tears down its own worktree automatically.
 .paperclip/worktrees/
+
+# Android debug skill local env
+.android-env.sh
+modules/expo-wearos-bridge/android/build/
