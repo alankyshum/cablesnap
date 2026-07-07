@@ -6,7 +6,7 @@ import { fontSizes } from "@/constants/design-tokens";
 import { EditableSetRow } from "./EditableSetRow";
 import { useIntensityMode } from "@/hooks/useIntensityMode";
 
-type DraftSet = {
+export type DraftSet = {
   key: string;
   set_number: number;
   weight: number | null;
