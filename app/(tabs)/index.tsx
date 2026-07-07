@@ -184,7 +184,15 @@ export default function Workouts() {
   return (
     // bounded list — ScrollView is intentional: renders fixed sub-components (stats, banners, templates/programs), not unbounded .map()
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight + 80 }}>
+      <ScrollView
+        testID="home-scroll-view"
+        style={{ flex: 1, marginBottom: tabBarHeight }}
+        contentContainerStyle={{
+          paddingHorizontal: layout.horizontalPadding,
+          paddingVertical: 16,
+          paddingBottom: 80,
+        }}
+      >
         {/* Full-width header section: always single column */}
         <StatsRow colors={colors} streak={data?.streak ?? 0} progress={progress} prCount={(data?.recentPRs ?? []).length} />
         <ErrorBoundary>

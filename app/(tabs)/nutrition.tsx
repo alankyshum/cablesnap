@@ -78,10 +78,10 @@ export default function Nutrition() {
         testID="nutrition-scroll-view"
         sections={sections}
         keyExtractor={(item) => item.id}
-        style={styles.scroll}
+        style={[styles.scroll, { marginBottom: tabBarHeight }]}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingHorizontal: layout.horizontalPadding, paddingBottom: tabBarHeight + 16 },
+          { paddingHorizontal: layout.horizontalPadding, paddingBottom: 16 },
         ]}
         stickySectionHeadersEnabled={false}
         renderSectionHeader={({ section }) => (
