@@ -56,6 +56,18 @@ if [ -f "scripts/check-changelog-parity.sh" ]; then
   fi
 fi
 
+# ─── CHANGELOG Unreleased Bullet Gate (BLD-3078) ────────────────
+# Blocks push if user-facing code changes are being pushed without a
+# corresponding bullet point under '## Unreleased' in CHANGELOG.md.
+# Mirrors the CI 'changelog-gate' workflow check to catch missing entries
+# before pushing.
+if [ -f "scripts/check-changelog-gate.ts" ]; then
+  echo "📝 Verifying CHANGELOG ## Unreleased bullet (BLD-3078)..."
+  if ! npx tsx scripts/check-changelog-gate.ts; then
+    exit 1
+  fi
+fi
+
 # ─── Exercise Illustration Bundle Gate (BLD-561) ────────────────
 # Blocks push if assets/exercise-illustrations/**/*.webp exceeds the hard-fail
 # bundle budget (R2 plan: target ≤8MB, hard fail >12MB).
