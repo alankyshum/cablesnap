@@ -235,6 +235,9 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         currentPhase = "probe";
         await instance.execAsync("SELECT 1");
         currentPhase = "pragma";
+        // BLD-3119: set busy_timeout to prevent "database is locked" errors
+        // during migrations or concurrent write attempts.
+        await instance.execAsync("PRAGMA busy_timeout = 5000");
         await instance.execAsync("PRAGMA journal_mode = WAL");
         // BLD-1094: enable foreign-key enforcement on every connection so
         // the FK declarations in lib/db/tables.ts (strava_sync_log,
@@ -282,6 +285,8 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         if (Platform.OS === "web") {
           try {
             const instance = await SQLite.openDatabaseAsync(":memory:");
+            // BLD-3119: set busy_timeout for web in-memory fallback.
+            await instance.execAsync("PRAGMA busy_timeout = 5000");
             // BLD-1094: same pragma on the web in-memory fallback.
             await instance.execAsync("PRAGMA foreign_keys = ON");
             dbBreadcrumb("pre_migrate", { db_name: ":memory:" });

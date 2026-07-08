@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Prevent transient database-locked errors** — SQLite connection initialization now sets a 5-second busy timeout before running database migrations or schema upgrades. This allows CableSnap to automatically wait out momentary lock contention and prevent transient "database is locked" errors. (BLD-3119)
 
 ## v0.26.65 — 2026-07-07
 <!-- versionCode: 135 -->
