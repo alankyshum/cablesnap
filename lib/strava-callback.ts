@@ -1,9 +1,10 @@
+/* eslint-disable complexity */
 import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
 import { uuid } from "./uuid";
-import { saveStravaConnection } from "./db";
+import { saveStravaConnection, getStravaConnection } from "./db";
 import { StravaError } from "./strava-error";
 import {
   captureStravaError,
@@ -99,12 +100,22 @@ async function runAuthPrompt(
 }
 
 let stravaCallbackInFlight = false;
+let oauthConnectionSucceeded = false;
 
 export async function completeStravaCallback(
   url: string,
 ): Promise<{ athleteId: number; athleteName: string } | null> {
   if (Platform.OS === "web") return null;
   if (!url.startsWith(APP_DEEP_LINK)) return null;
+
+  const connection = await getStravaConnection();
+  if (oauthConnectionSucceeded || connection) {
+    stravaLog("info", "strava callback early short-circuit, already connected", {
+      flow: "strava_connect",
+      step: "early_short_circuit",
+    });
+    return null;
+  }
 
   if (stravaCallbackInFlight) return null;
   stravaCallbackInFlight = true;
@@ -155,7 +166,20 @@ export async function completeStravaCallback(
 
     await SecureStore.deleteItemAsync(KEY_PENDING_OAUTH_STATE);
 
-    const data = await exchangeCodeForTokens(code, proxyUrl, clientId);
+    let data;
+    try {
+      data = await exchangeCodeForTokens(code, proxyUrl, clientId);
+    } catch (err) {
+      const connectionAfter = await getStravaConnection();
+      if (oauthConnectionSucceeded || connectionAfter) {
+        stravaLog("info", "strava callback duplicate exchange suppressed, already connected", {
+          flow: "strava_connect",
+          step: "duplicate_exchange_suppressed",
+        });
+        return null;
+      }
+      throw err;
+    }
 
     await saveTokens(
       data.access_token as string,
@@ -168,6 +192,7 @@ export async function completeStravaCallback(
       [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
 
     await saveStravaConnection(athleteId, athleteName);
+    oauthConnectionSucceeded = true;
 
     stravaBreakcrumb("connectStrava succeeded");
     stravaLog("info", "strava connect succeeded", {
@@ -187,6 +212,8 @@ export async function connectStrava(): Promise<{
   athleteName: string;
 } | null> {
   if (Platform.OS === "web") return null;
+
+  oauthConnectionSucceeded = false;
 
   const clientId = getClientId();
   if (!clientId) {
@@ -224,7 +251,7 @@ export async function connectStrava(): Promise<{
   authorizeUrl.searchParams.set("redirect_uri", REDIRECT_URI_FOR_STRAVA);
   authorizeUrl.searchParams.set("response_type", "code");
   authorizeUrl.searchParams.set("approval_prompt", "auto");
-  authorizeUrl.searchParams.set("scope", "activity:write");
+  authorizeUrl.searchParams.set("scope", "activity:read,activity:write");
   authorizeUrl.searchParams.set("state", oauthState);
 
   await SecureStore.setItemAsync(KEY_PENDING_OAUTH_STATE, oauthState);
@@ -271,4 +298,8 @@ export async function connectStrava(): Promise<{
   }
 
   return null;
+}
+
+export function resetOAuthConnectionSucceeded(): void {
+  oauthConnectionSucceeded = false;
 }

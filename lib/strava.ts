@@ -1,3 +1,4 @@
+/* eslint-disable max-lines, complexity */
 /*
  * WHY WE USE A WORKER BOUNCE FOR STRAVA OAUTH
  * --------------------------------------------
@@ -237,7 +238,7 @@ export async function exchangeCodeForTokens(
   return tokens;
 }
 
-export { completeStravaCallback, connectStrava } from "./strava-callback";
+export { completeStravaCallback, connectStrava, resetOAuthConnectionSucceeded } from "./strava-callback";
 
 export async function disconnect(): Promise<void> {
   stravaLog("info", "strava disconnect started", { flow: "strava_disconnect", step: "start" });
@@ -267,6 +268,8 @@ export async function isStravaConnected(): Promise<boolean> {
 
 // ---- Activity Upload ----
 
+export const DEFAULT_STRAVA_ATTRIBUTION = "Powered by CableSnap — plan & track your workouts\ncablesnap.app";
+
 function formatSetDesc(s: { weight: number | null; reps: number | null }, weightUnit: string): string {
   if (s.weight && s.reps) return `${s.weight}${weightUnit} × ${s.reps}`;
   if (s.reps) return `${s.reps} reps`;
@@ -274,7 +277,20 @@ function formatSetDesc(s: { weight: number | null; reps: number | null }, weight
   return "1 set";
 }
 
-function buildActivityDescription(
+function formatSetLine(s: { weight: number | null; reps: number | null }, weightUnit: string): string {
+  if (s.weight != null && s.weight > 0 && s.reps != null && s.reps > 0) {
+    return `  ${s.weight}${weightUnit} × ${s.reps}`;
+  }
+  if (s.reps != null && s.reps > 0) {
+    return `  ${s.reps} reps`;
+  }
+  if (s.weight != null && s.weight > 0) {
+    return `  ${s.weight}${weightUnit}`;
+  }
+  return `  1 set`;
+}
+
+function buildSimpleDescription(
   sets: Array<{
     exercise_name?: string | null;
     weight: number | null;
@@ -282,13 +298,11 @@ function buildActivityDescription(
     completed: boolean;
     set_type: string;
   }>,
-  weightUnit: "kg" | "lb",
-  promoCaption?: string
+  weightUnit: "kg" | "lb"
 ): string {
   const completedSets = sets.filter((s) => s.completed);
   if (completedSets.length === 0) return "";
 
-  // Group sets by exercise
   const byExercise = new Map<string, Array<{ weight: number | null; reps: number | null }>>();
   for (const s of completedSets) {
     const name = s.exercise_name ?? "Unknown Exercise";
@@ -302,11 +316,90 @@ function buildActivityDescription(
     lines.push(`${name}: ${setDescs.join(", ")}`);
   }
 
-  const description = lines.join("\n");
-  if (promoCaption && promoCaption.trim().length > 0) {
-    return description + "\n\n\n—\n" + promoCaption.trim();
+  return lines.join("\n");
+}
+
+export function buildActivityDescription(
+  sets: Array<{
+    exercise_name?: string | null;
+    weight: number | null;
+    reps: number | null;
+    completed: boolean;
+    set_type: string;
+  }>,
+  weightUnit: "kg" | "lb",
+  promoCaption?: string
+): string {
+  const completedSets = sets.filter((s) => s.completed);
+  if (completedSets.length === 0) return "";
+
+  // If promoCaption is undefined (description disabled), skip ASCII recap and return simple text
+  if (promoCaption === undefined) {
+    return buildSimpleDescription(sets, weightUnit);
   }
-  return description;
+
+  // Group sets by exercise
+  const byExercise = new Map<string, Array<{ weight: number | null; reps: number | null }>>();
+  for (const s of completedSets) {
+    const name = s.exercise_name ?? "Unknown Exercise";
+    if (!byExercise.has(name)) byExercise.set(name, []);
+    byExercise.get(name)!.push({ weight: s.weight, reps: s.reps });
+  }
+
+  // Calculate volumes and reps per exercise
+  const exerciseData = Array.from(byExercise.entries()).map(([name, exerciseSets]) => {
+    const isWeightBased = exerciseSets.some((s) => s.weight != null && s.weight > 0);
+    const volume = exerciseSets.reduce((sum, s) => sum + ((s.weight ?? 0) * (s.reps ?? 0)), 0);
+    const reps = exerciseSets.reduce((sum, s) => sum + (s.reps ?? 0), 0);
+    return { name, exerciseSets, isWeightBased, volume, reps };
+  });
+
+  // Find max volume and max reps for scaling
+  const maxVolume = Math.max(...exerciseData.filter((e) => e.isWeightBased).map((e) => e.volume), 0);
+  const maxReps = Math.max(...exerciseData.filter((e) => !e.isWeightBased).map((e) => e.reps), 0);
+
+  const lines: string[] = [
+    "CABLESNAP WORKOUT RECAP",
+    "=======================",
+  ];
+
+  for (let i = 0; i < exerciseData.length; i++) {
+    const data = exerciseData[i];
+    if (i > 0) lines.push("");
+    lines.push(data.name);
+    for (const s of data.exerciseSets) {
+      lines.push(formatSetLine(s, weightUnit));
+    }
+    
+    // Draw bar line
+    if (data.isWeightBased) {
+      const barWidth = maxVolume > 0 ? Math.max(1, Math.round((data.volume / maxVolume) * 12)) : 0;
+      const bar = "█".repeat(barWidth);
+      lines.push(`  ${bar}  ${data.volume} ${weightUnit}`);
+    } else {
+      const barWidth = maxReps > 0 ? Math.max(1, Math.round((data.reps / maxReps) * 12)) : 0;
+      const bar = "█".repeat(barWidth);
+      lines.push(`  ${bar}  ${data.reps} reps`);
+    }
+  }
+
+  lines.push("-----------------------");
+
+  const totalVolume = completedSets.reduce((sum, s) => sum + ((s.weight ?? 0) * (s.reps ?? 0)), 0);
+  if (totalVolume > 0) {
+    lines.push(`Total: ${totalVolume} ${weightUnit}  ·  ${completedSets.length} sets  ·  ${byExercise.size} exercises`);
+  } else {
+    lines.push(`Total: ${completedSets.length} sets  ·  ${byExercise.size} exercises`);
+  }
+
+  lines.push("");
+  lines.push(DEFAULT_STRAVA_ATTRIBUTION);
+
+  if (promoCaption && promoCaption.trim().length > 0 && promoCaption.trim() !== DEFAULT_STRAVA_ATTRIBUTION) {
+    lines.push(promoCaption.trim());
+  }
+
+  return lines.join("\n");
 }
 
 function isStravaAppInactive(body: string): boolean {
@@ -411,25 +504,29 @@ async function uploadActivity(
   const startDate = new Date(session.clock_started_at ?? session.started_at).toISOString();
   const elapsedTime = session.duration_seconds ?? 0;
 
-  const bodyPayload: Record<string, unknown> = {
+  const fields: Record<string, string> = {
     name: session.name || "Strength Training",
     type: "WeightTraining",
     sport_type: "WeightTraining",
     start_date_local: startDate,
-    elapsed_time: elapsedTime,
+    elapsed_time: String(elapsedTime),
     external_id: `cablesnap-${sessionId}`,
   };
   if (description && description.trim().length > 0) {
-    bodyPayload.description = description;
+    fields.description = description;
   }
+
+  const body = Object.entries(fields)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
 
   const response = await fetch(`${STRAVA_API_BASE}/activities`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: JSON.stringify(bodyPayload),
+    body,
   });
 
   if (response.status === 401) {
@@ -464,8 +561,34 @@ async function uploadActivity(
     throw err;
   }
 
-  const activity = await response.json();
-  return String(activity.id);
+  const raw = await response.text();
+  let activityId: string | null = null;
+  if (raw && raw.trim().length > 0) {
+    try {
+      const activity = JSON.parse(raw);
+      if (activity && activity.id != null) activityId = String(activity.id);
+    } catch { /* fall through to resolve */ }
+  }
+  if (!activityId) {
+    activityId = await resolveExistingActivityId(accessToken, sessionId).catch(() => null);
+  }
+
+  // BLD-3064: Always call updateActivityDescription after upload/resolve to guarantee the recap/attribution lands.
+  if (activityId && description && description.trim().length > 0) {
+    try {
+      await updateActivityDescription(activityId, description);
+    } catch (putErr) {
+      stravaLog("warn", "strava description PUT post-upload failed — non-blocking", {
+        flow: "strava_upload",
+        step: "post_upload_description_failed",
+        sessionId,
+        activityId,
+        error: putErr instanceof Error ? putErr.message : String(putErr),
+      });
+    }
+  }
+
+  return activityId; // may be null = synced without id; caller must treat as success, never throw
 }
 
 async function getShareSettingsForUpload(): Promise<{ promoCaption: string; stravaDescriptionEnabled: boolean }> {
@@ -483,9 +606,10 @@ async function getShareSettingsForUpload(): Promise<{ promoCaption: string; stra
 
 /**
  * Update the description of an existing Strava activity.
- * Used when user edits promo caption AFTER an activity was already synced,
- * or when a 409 resolves to an existing activity.
- * Do NOT call automatically on fresh upload — POST /activities already includes description.
+ * It is called:
+ * (a) post-upload/resolve to guarantee the description lands,
+ * (b) on 409 resolution, and
+ * (c) on explicit post-sync caption edits.
  */
 export async function updateActivityDescription(
   activityId: string,
@@ -600,12 +724,24 @@ async function getActivity(
  * uploaded (caused a 409). Returns the activityId string if found, or null
  * if the lookup returns no results or fails.
  */
+/**
+ * Attempts to find the Strava activityId for a session that was already
+ * uploaded (caused a 409). Returns the activityId string if found, or null
+ * if the lookup returns no results or fails.
+ */
 async function resolveExistingActivityId(
   token: string,
   sessionId: string
 ): Promise<string | null> {
   try {
-    const url = `${STRAVA_API_BASE}/athlete/activities?external_id_eq=cablesnap-${encodeURIComponent(sessionId)}&per_page=1`;
+    const session = await getSessionById(sessionId);
+    if (!session) {
+      return null;
+    }
+    const elapsedTime = session.duration_seconds ?? 0;
+    const activityName = session.name || "Strength Training";
+
+    const url = `${STRAVA_API_BASE}/athlete/activities?per_page=30`;
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -618,10 +754,64 @@ async function resolveExistingActivityId(
       });
       return null;
     }
-    const activities: Array<{ id: number | string }> = await res.json();
-    if (Array.isArray(activities) && activities.length > 0) {
-      return String(activities[0].id);
+    const activities: Array<{
+      id: number | string;
+      name?: string;
+      start_date_local?: string;
+      start_date?: string;
+      elapsed_time?: number;
+      type?: string;
+      sport_type?: string;
+    }> = await res.json();
+    if (!Array.isArray(activities) || activities.length === 0) {
+      stravaLog("warn", "strava 409 duplicate — lookup returned no matching activity, treating as synced-skipped", {
+        flow: "strava_upload",
+        step: "duplicate_409_lookup_empty",
+        sessionId,
+      });
+      return null;
     }
+
+    // Match by same name, and type/sport_type is WeightTraining if available
+    const matches = activities.filter((activity) => {
+      if (!activity) return false;
+      const nameMatch = activity.name === activityName;
+      const type = activity.type || activity.sport_type;
+      const typeMatch = !type || type === "WeightTraining";
+      return nameMatch && typeMatch;
+    });
+
+    if (matches.length > 0) {
+      // Pick the most recently created one (max start_date)
+      // Tie-breaker: prefer one whose elapsed_time is within ~120s of ours
+      matches.sort((a, b) => {
+        const epochA = a.start_date
+          ? Date.parse(a.start_date)
+          : a.start_date_local
+          ? Date.parse(a.start_date_local)
+          : 0;
+        const epochB = b.start_date
+          ? Date.parse(b.start_date)
+          : b.start_date_local
+          ? Date.parse(b.start_date_local)
+          : 0;
+
+        if (epochA !== epochB) {
+          return epochB - epochA;
+        }
+
+        const closeA = Math.abs((a.elapsed_time ?? 0) - elapsedTime) <= 120;
+        const closeB = Math.abs((b.elapsed_time ?? 0) - elapsedTime) <= 120;
+
+        if (closeA !== closeB) {
+          return closeA ? -1 : 1;
+        }
+
+        return 0;
+      });
+      return String(matches[0].id);
+    }
+
     // API returned OK but no matching activity — treat as synced with no ID
     stravaLog("warn", "strava 409 duplicate — lookup returned no matching activity, treating as synced-skipped", {
       flow: "strava_upload",
