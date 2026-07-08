@@ -68,6 +68,17 @@ describe("BLD-1094 — getDatabase() enables PRAGMA foreign_keys = ON", () => {
     expect(fkIdx).toBeGreaterThan(journalIdx);
   });
 
+  it("issues PRAGMA busy_timeout = 5000 before journal_mode on the main path", async () => {
+    const helpers = require("../../../lib/db/helpers");
+    await helpers.getDatabase();
+
+    const timeoutIdx = execCalls.findIndex((s) => /PRAGMA\s+busy_timeout\s*=\s*5000/i.test(s));
+    const journalIdx = execCalls.findIndex((s) => s.includes("journal_mode"));
+
+    expect(timeoutIdx).toBeGreaterThanOrEqual(0);
+    expect(journalIdx).toBeGreaterThan(timeoutIdx);
+  });
+
   it("the web in-memory fallback also enables PRAGMA foreign_keys = ON", async () => {
     // Make the primary openDatabaseAsync throw to force the fallback path on web.
     const expoSqlite = require("expo-sqlite") as { openDatabaseAsync: jest.Mock };
@@ -83,5 +94,26 @@ describe("BLD-1094 — getDatabase() enables PRAGMA foreign_keys = ON", () => {
     await helpers.getDatabase();
 
     expect(execCalls.some((s) => /PRAGMA\s+foreign_keys\s*=\s*ON/i.test(s))).toBe(true);
+  });
+
+  it("the web in-memory fallback also enables PRAGMA busy_timeout = 5000 before PRAGMA foreign_keys = ON", async () => {
+    // Make the primary openDatabaseAsync throw to force the fallback path on web.
+    const expoSqlite = require("expo-sqlite") as { openDatabaseAsync: jest.Mock };
+    expoSqlite.openDatabaseAsync.mockReset();
+    expoSqlite.openDatabaseAsync
+      .mockImplementationOnce(() => Promise.reject(new Error("simulated open failure")))
+      .mockImplementationOnce(() => Promise.resolve(mockDb));
+
+    // Force Platform.OS = 'web' so the fallback branch is taken.
+    jest.doMock("react-native", () => ({ Platform: { OS: "web" } }));
+    const helpers = require("../../../lib/db/helpers");
+
+    await helpers.getDatabase();
+
+    const timeoutIdx = execCalls.findIndex((s) => /PRAGMA\s+busy_timeout\s*=\s*5000/i.test(s));
+    const fkIdx = execCalls.findIndex((s) => /PRAGMA\s+foreign_keys\s*=\s*ON/i.test(s));
+
+    expect(timeoutIdx).toBeGreaterThanOrEqual(0);
+    expect(fkIdx).toBeGreaterThan(timeoutIdx);
   });
 });
