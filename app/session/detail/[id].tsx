@@ -1,7 +1,6 @@
 import { StyleSheet, View, FlatList } from "react-native";
 import { useState, useEffect } from "react";
 import { useRouter, Stack, useLocalSearchParams } from "expo-router";
-import ExercisePickerSheet from "@/components/ExercisePickerSheet";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useLayout } from "@/lib/layout";
@@ -10,14 +9,13 @@ import { useSessionEdit } from "@/hooks/useSessionEdit";
 import { useSessionShareData } from "@/hooks/useSessionShareData";
 import { SummaryCard } from "@/components/session/detail/SummaryCard";
 import { RatingNotesCard } from "@/components/session/detail/RatingNotesCard";
-import { ExerciseGroupRow } from "@/components/session/detail/ExerciseGroupRow";
 import { SessionDetailHeaderActions } from "@/components/session/detail/SessionDetailHeaderActions";
 import { PRsCard } from "@/components/session/detail/PRsCard";
-import { EditableExerciseGroupRow } from "@/components/session/detail/EditableExerciseGroupRow";
-import { TemplateModal } from "@/components/session/detail/TemplateModal";
 import { EditedPill } from "@/components/session/EditedPill";
 import { SessionDetailShareOverlay } from "@/components/session/detail/SessionDetailShareOverlay";
 import { isStravaConnected } from "@/lib/strava";
+import { SessionDetailRow } from "@/components/session/detail/SessionDetailRow";
+import { SessionDetailFooter } from "@/components/session/detail/SessionDetailFooter";
 
 export default function SessionDetail() {
   const layout = useLayout();
@@ -48,23 +46,21 @@ export default function SessionDetail() {
   // ── Share state (BLD-891) ──
   const share = useSessionShareData(session, groups, prs, completedSetCount, id);
   const renderItem = ({ item: group, index }: { item: ExerciseGroup | (typeof edit.draft)[number]; index: number }) => {
-    if (edit.editing) {
-      const dg = group as (typeof edit.draft)[number];
-      return (
-        <EditableExerciseGroupRow
-          exerciseName={dg.name}
-          sets={dg.sets}
-          onChangeWeight={(setIdx, v) => edit.updateSet(index, setIdx, { weight: v })}
-          onChangeReps={(setIdx, v) => edit.updateSet(index, setIdx, { reps: v })}
-          onChangeRpe={(setIdx, v) => edit.updateSet(index, setIdx, { rpe: v })}
-          onToggleCompleted={(setIdx, v) => edit.updateSet(index, setIdx, { completed: v })}
-          onRemoveSet={(setIdx) => edit.removeSet(index, setIdx)}
-          onAddSet={() => edit.addSet(index)}
-          onRemoveExercise={() => edit.removeExercise(index)}
-        />
-      );
-    }
-    return <ExerciseGroupRow group={group as ExerciseGroup} groups={groups} linkIds={linkIds} palette={palette} colors={colors} />;
+    return (
+      <SessionDetailRow
+        group={group}
+        index={index}
+        editing={edit.editing}
+        updateSet={edit.updateSet}
+        removeSet={edit.removeSet}
+        addSet={edit.addSet}
+        removeExercise={edit.removeExercise}
+        groups={groups}
+        linkIds={linkIds}
+        palette={palette}
+        colors={colors}
+      />
+    );
   };
   if (!session) {
     return (
@@ -144,40 +140,22 @@ export default function SessionDetail() {
         }
         renderItem={renderItem}
         ListFooterComponent={
-          <>
-            {edit.editing && edit.isEmpty && (
-              <Button
-                variant="outline"
-                onPress={edit.deleteWholeSession}
-                style={styles.repeatButton}
-                accessibilityLabel="Delete workout"
-                label="Delete workout"
-              />
-            )}
-            {edit.editing && (
-              <Button
-                variant="outline"
-                onPress={() => edit.setPickerVisible(true)}
-                style={styles.repeatButton}
-                accessibilityLabel="Add exercise"
-                label="+ Add exercise"
-              />
-            )}
-            <TemplateModal
-              visible={templateModalVisible}
-              templateName={templateName}
-              onNameChange={setTemplateName}
-              onSave={handleSaveAsTemplate}
-              onClose={closeTemplateModal}
-              saving={saving}
-              colors={colors}
-            />
-            <ExercisePickerSheet
-              visible={edit.pickerVisible}
-              onDismiss={() => edit.setPickerVisible(false)}
-              onPick={(ex) => edit.addExercise(ex)}
-            />
-          </>
+          <SessionDetailFooter
+            editing={edit.editing}
+            isEmpty={edit.isEmpty}
+            pickerVisible={edit.pickerVisible}
+            setPickerVisible={edit.setPickerVisible}
+            deleteWholeSession={edit.deleteWholeSession}
+            addExercise={edit.addExercise}
+            templateModalVisible={templateModalVisible}
+            templateName={templateName}
+            setTemplateName={setTemplateName}
+            handleSaveAsTemplate={handleSaveAsTemplate}
+            closeTemplateModal={closeTemplateModal}
+            saving={saving}
+            colors={colors}
+            styles={styles}
+          />
         }
       />
       <SessionDetailShareOverlay
