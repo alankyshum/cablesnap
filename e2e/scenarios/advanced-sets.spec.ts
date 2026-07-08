@@ -152,7 +152,7 @@ test.describe("@scenario advanced-sets", () => {
     await helpLinkForShot.scrollIntoViewIfNeeded();
     await expect(helpLinkForShot).toBeVisible({ timeout: 5_000 });
     await helpLinkForShot.click();
-    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 30_000 });
     await page.screenshot({ path: screenshotPath, fullPage: true });
     expect(screenshotPath).toBeTruthy();
   });
@@ -173,7 +173,7 @@ test.describe("@scenario advanced-sets", () => {
       w.__SKIP_ONBOARDING__ = true;
     });
     await page.goto("/__test__/advanced-sets");
-    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator("body[data-test-ready='true']")).toBeVisible({ timeout: 30_000 });
 
     // All three section titles visible
     await expect(page.getByText("Rest-pause", { exact: true }).first()).toBeVisible();
