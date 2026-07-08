@@ -5,7 +5,7 @@ import { useWeeklySummary } from '@/hooks/useWeeklySummary';
 
 jest.mock('@/hooks/useWeeklySummary', () => ({
   useWeeklySummary: jest.fn(),
-  formatWeekRange: (ms: number) => 'Jul 6 - Jul 12',
+  formatWeekRange: () => 'Jul 6 - Jul 12',
   formatNumber: (n?: number) => n != null ? n.toLocaleString() : '0',
 }));
 
