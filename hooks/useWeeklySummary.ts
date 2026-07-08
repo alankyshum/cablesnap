@@ -247,5 +247,6 @@ export function useWeeklySummary() {
     handleShare,
     expandAnimStyle,
     volChange,
+    refetch: loadData,
   };
 }

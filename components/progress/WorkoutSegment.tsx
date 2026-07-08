@@ -197,9 +197,6 @@ export default function WorkoutSegment() {
       <View style={{ flex: 1 }}>
         <View style={styles.toggleRow}>{toggleButton}</View>
         {gymFilter}
-        <View style={{ padding: 16 }}>
-          <WeeklySummary />
-        </View>
         <View style={[styles.center, { flex: 1 }]}>
           <WorkoutEmptyState />
         </View>
