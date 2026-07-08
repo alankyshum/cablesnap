@@ -251,7 +251,7 @@ export async function connectStrava(): Promise<{
   authorizeUrl.searchParams.set("redirect_uri", REDIRECT_URI_FOR_STRAVA);
   authorizeUrl.searchParams.set("response_type", "code");
   authorizeUrl.searchParams.set("approval_prompt", "auto");
-  authorizeUrl.searchParams.set("scope", "activity:read,activity:write");
+  authorizeUrl.searchParams.set("scope", "activity:read_all,activity:write");
   authorizeUrl.searchParams.set("state", oauthState);
 
   await SecureStore.setItemAsync(KEY_PENDING_OAUTH_STATE, oauthState);

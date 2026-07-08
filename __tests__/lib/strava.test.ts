@@ -321,7 +321,7 @@ describe("Strava Integration — Behavioral", () => {
   it("connectStrava exchanges auth code for tokens via proxy and saves connection", async () => {
     WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({
       type: "success",
-      url: "cablesnap://strava-callback?code=auth-code-123&scope=activity%3Aread%2Cactivity%3Awrite&state=mock-state-uuid",
+      url: "cablesnap://strava-callback?code=auth-code-123&scope=activity%3Aread_all%2Cactivity%3Awrite&state=mock-state-uuid",
     });
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -1552,7 +1552,7 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
   it("connectStrava emits lifecycle logs and never leaks tokens or auth codes", async () => {
     WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({
       type: "success",
-      url: `cablesnap://strava-callback?code=${SECRET_AUTH_CODE}&scope=activity%3Aread%2Cactivity%3Awrite&state=mock-state-uuid`,
+      url: `cablesnap://strava-callback?code=${SECRET_AUTH_CODE}&scope=activity%3Aread_all%2Cactivity%3Awrite&state=mock-state-uuid`,
     });
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -1792,7 +1792,7 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
       // Default: browser returns success with a code
       WebBrowser.openAuthSessionAsync.mockResolvedValue({
         type: "success",
-        url: "cablesnap://strava-callback?code=auth-code-xyz&scope=activity%3Aread%2Cactivity%3Awrite&state=mock-state-uuid",
+        url: "cablesnap://strava-callback?code=auth-code-xyz&scope=activity%3Aread_all%2Cactivity%3Awrite&state=mock-state-uuid",
       });
     });
 
