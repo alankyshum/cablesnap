@@ -1,16 +1,19 @@
 /**
- * BLD-2446 — Sentry localhost/CI event filter.
+ * BLD-2446 / BLD-3124 — Sentry localhost/CI event filter.
  *
  * The Sentry real-user dashboard was polluted by CI/E2E traffic originating
- * from localhost:8081 (Metro dev server). Real users on iOS/Android never
- * hit localhost. This module provides a `beforeSend` hook that drops any
- * event whose `url` tag host resolves to a local-only address.
+ * from localhost:8081 (Metro dev server) or HeadlessChrome in CI. Real users
+ * on iOS/Android never run on localhost or in HeadlessChrome. This module
+ * provides a `beforeSend` hook that drops any event whose `url` tag host
+ * resolves to a local-only address, or whose browser context/user-agent
+ * indicates a headless browser environment.
  *
  * Design decisions:
- *   - Filter on URL host, NOT on `environment` tag. The `environment` tag is
- *     forgeable by misconfigured CI (proven by REACT-NATIVE-F in BLD-2444).
- *   - Fail-open: if the `url` tag is absent or the URL is malformed, the
- *     event is sent unchanged. We never silently swallow real errors.
+ *   - Filter on URL host and Headless/User-Agent, NOT on `environment` tag.
+ *     The `environment` tag is forgeable by misconfigured CI (proven by
+ *     REACT-NATIVE-F in BLD-2444).
+ *   - Fail-open: if the local-only/headless signals are absent, the event is
+ *     sent unchanged. We never silently swallow real errors.
  *   - The filter is a pure function so it can be unit-tested without
  *     initialising the Sentry SDK.
  */
@@ -38,8 +41,38 @@ function isLocalUrl(urlString: string): boolean {
 }
 
 /**
+ * Returns `true` if the event context or user-agent headers indicate a
+ * headless browser environment (such as HeadlessChrome in E2E tests).
+ */
+function isHeadlessEvent(event: ErrorEvent): boolean {
+  // Check browser name in contexts
+  const contexts = event.contexts as Record<string, Record<string, string>> | undefined;
+  const browserName = contexts?.browser?.name;
+  if (typeof browserName === 'string' && browserName.includes('Headless')) {
+    return true;
+  }
+
+  // Check User-Agent in request headers (case-insensitive key)
+  const request = event.request as Record<string, unknown> | undefined;
+  const headers = request?.headers as Record<string, string> | undefined;
+  if (headers && typeof headers === 'object') {
+    const userAgentKey = Object.keys(headers).find(
+      (key) => key.toLowerCase() === 'user-agent'
+    );
+    if (userAgentKey) {
+      const userAgent = String(headers[userAgentKey]);
+      if (userAgent.includes('Headless')) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
  * Sentry `beforeSend` callback that drops CI/dev events originating from
- * a localhost URL.
+ * a localhost URL or headless browser environment.
  *
  * Usage:
  *   Sentry.init({ ..., beforeSend: filterLocalhostEvents });
@@ -48,6 +81,12 @@ function isLocalUrl(urlString: string): boolean {
  * @returns The event unchanged, or `null` to drop it.
  */
 export function filterLocalhostEvents(event: ErrorEvent): ErrorEvent | null {
+  // 1. Headless environment check → drop immediately
+  if (isHeadlessEvent(event)) {
+    return null;
+  }
+
+  // 2. Localhost URL check
   const urlTag = event.tags?.['url'];
   const requestUrl = event.request?.url;
 
