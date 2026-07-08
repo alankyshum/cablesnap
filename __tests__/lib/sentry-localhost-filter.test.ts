@@ -164,3 +164,73 @@ describe('filterLocalhostEvents — request.url support for Web client', () => {
     expect(filterLocalhostEvents(event)).toBe(event);
   });
 });
+
+describe('filterLocalhostEvents — BLD-3124: Headless / User-Agent detection', () => {
+  it('drops an event with browser.name containing Headless and no localhost URL', () => {
+    const event = {
+      type: undefined,
+      contexts: {
+        browser: {
+          name: 'HeadlessChrome',
+        },
+      },
+    } as unknown as ErrorEvent;
+    expect(filterLocalhostEvents(event)).toBeNull();
+  });
+
+  it('drops an event with browser.name being exactly Headless', () => {
+    const event = {
+      type: undefined,
+      contexts: {
+        browser: {
+          name: 'Headless',
+        },
+      },
+    } as unknown as ErrorEvent;
+    expect(filterLocalhostEvents(event)).toBeNull();
+  });
+
+  it('drops an event with a Headless User-Agent in headers (case-insensitive key)', () => {
+    const event1 = {
+      type: undefined,
+      request: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/120.0.0.0 Safari/537.36',
+        },
+      },
+    } as unknown as ErrorEvent;
+    expect(filterLocalhostEvents(event1)).toBeNull();
+
+    const event2 = {
+      type: undefined,
+      request: {
+        headers: {
+          'user-agent': 'HeadlessChrome/120.0.0.0',
+        },
+      },
+    } as unknown as ErrorEvent;
+    expect(filterLocalhostEvents(event2)).toBeNull();
+  });
+
+  it('keeps a production event with a real User-Agent, real URL, and environment=production', () => {
+    const event = {
+      type: undefined,
+      environment: 'production',
+      tags: {
+        url: 'https://app.example.com/home',
+      },
+      request: {
+        url: 'https://app.example.com/home',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        },
+      },
+      contexts: {
+        browser: {
+          name: 'Mobile Safari',
+        },
+      },
+    } as unknown as ErrorEvent;
+    expect(filterLocalhostEvents(event)).toBe(event);
+  });
+});
