@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.71",
+    "date": "2026-07-09",
+    "versionCode": 139,
+    "body": "- **Replaced placeholder domain `cablesnap.app` with official GitHub repository URL** — updated the in-app promo captions, Strava description templates, share cards, and associated tests to point directly to the GitHub repository.\n- **Release builds now refuse to run locally without the production keystore, preventing accidental debug-signed releases (production releases go through CI).**"
+  },
+  {
     "version": "0.26.70",
     "date": "2026-07-09",
     "versionCode": 138,
