@@ -72,12 +72,22 @@ node -e "
 "
 
 # 2. app.config.ts ----------------------------------------------------------
-sed -i "s/version: \"[^\"]*\"/version: \"$VERSION\"/" app.config.ts
-sed -i "s/versionCode: [0-9]*/versionCode: $VCODE/" app.config.ts
+if [ "$(uname)" = "Darwin" ]; then
+    sed -i "" "s/version: \"[^\"]*\"/version: \"$VERSION\"/" app.config.ts
+    sed -i "" "s/versionCode: [0-9]*/versionCode: $VCODE/" app.config.ts
+else
+    sed -i "s/version: \"[^\"]*\"/version: \"$VERSION\"/" app.config.ts
+    sed -i "s/versionCode: [0-9]*/versionCode: $VCODE/" app.config.ts
+fi
 
 # 3. fdroid metadata --------------------------------------------------------
-sed -i "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.persoack.cablesnap.yml
-sed -i "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.persoack.cablesnap.yml
+if [ "$(uname)" = "Darwin" ]; then
+    sed -i "" "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.persoack.cablesnap.yml
+    sed -i "" "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.persoack.cablesnap.yml
+else
+    sed -i "s/CurrentVersion: .*/CurrentVersion: $VERSION/" fdroid/metadata/com.persoack.cablesnap.yml
+    sed -i "s/CurrentVersionCode: .*/CurrentVersionCode: $VCODE/" fdroid/metadata/com.persoack.cablesnap.yml
+fi
 
 # 4. CHANGELOG.md — promote `## Unreleased` to `## vVERSION — DATE` ---------
 # Idempotent: if the top version section is already `## v$VERSION`, skip.
@@ -89,14 +99,15 @@ else
     DATE=$(date -u +%Y-%m-%d)
     NEW_HEADER="## v$VERSION — $DATE"
     MARKER="<!-- versionCode: $VCODE -->"
-    PLACEHOLDER=$'## Unreleased\n\n_No user-facing changes yet._\n'
 
     awk -v new_header="$NEW_HEADER" \
-        -v marker="$MARKER" \
-        -v placeholder="$PLACEHOLDER" '
+        -v marker="$MARKER" '
       BEGIN { promoted = 0 }
       /^##[[:space:]]+Unreleased[[:space:]]*$/ && promoted == 0 {
-        printf "%s\n", placeholder
+        print "## Unreleased"
+        print ""
+        print "_No user-facing changes yet._"
+        print ""
         print new_header
         print marker
         promoted = 1
