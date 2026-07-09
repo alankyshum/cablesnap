@@ -29,7 +29,7 @@
     "prebuild:apk": "npm run changelog:gen",
     "build:apk": "eas build -p android --profile preview --local",
     "prebuild:apk:prod": "npm run changelog:gen",
-    "build:apk:prod": "eas build -p android --profile production --local",
+    "build:apk:prod": "node scripts/assert-prod-keystore.js && eas build -p android --profile production --local",
     "prebuild:apk:cloud": "npm run changelog:gen",
     "build:apk:cloud": "eas build -p android --profile preview",
     "install:apk": "adb install -r $(ls -t *.apk | head -1)",

@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Replaced placeholder domain `cablesnap.app` with official GitHub repository URL** — updated the in-app promo captions, Strava description templates, share cards, and associated tests to point directly to the GitHub repository.
+- **Release builds now refuse to run locally without the production keystore, preventing accidental debug-signed releases (production releases go through CI).**
 
 ## v0.26.70 — 2026-07-09
 <!-- versionCode: 138 -->
