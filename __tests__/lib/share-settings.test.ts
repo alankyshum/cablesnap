@@ -187,8 +187,10 @@ describe("Share Settings — Structural", () => {
     expect(indexSrc).toContain("ShareSettingsRow");
   });
 
-  it("buildActivityDescription no longer contains hardcoded old footer string", () => {
-    expect(stravaSrc).not.toContain("https://github.com/alankyshum/cablesnap");
+  it("strava.ts attribution uses the canonical GitHub repo URL (not the dead cablesnap.app placeholder)", () => {
+    expect(stravaSrc).toContain("DEFAULT_STRAVA_ATTRIBUTION");
+    expect(stravaSrc).toContain("https://github.com/alankyshum/cablesnap");
+    expect(stravaSrc).not.toContain("cablesnap.app");
   });
 
   it("updateActivityDescription exists in lib/strava.ts", () => {
