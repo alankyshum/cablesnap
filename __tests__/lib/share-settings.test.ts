@@ -188,7 +188,13 @@ describe("Share Settings — Structural", () => {
   });
 
   it("buildActivityDescription no longer contains hardcoded old footer string", () => {
-    expect(stravaSrc).not.toContain("https://github.com/alankyshum/cablesnap");
+    // The old hardcoded footer was appended inline in buildActivityDescription as
+    // "…\n—\nTracked with CableSnap · https://github.com/alankyshum/cablesnap".
+    // It was replaced by the configurable promo-caption system + DEFAULT_STRAVA_ATTRIBUTION.
+    // Assert the specific old footer form is gone — NOT the bare repo URL, which is a
+    // legitimate attribution constant (DEFAULT_STRAVA_ATTRIBUTION) referenced elsewhere.
+    expect(stravaSrc).not.toContain("—\nTracked with CableSnap");
+    expect(stravaSrc).not.toContain("Tracked with CableSnap · https://github.com/alankyshum/cablesnap");
   });
 
   it("updateActivityDescription exists in lib/strava.ts", () => {
