@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.67 — 2026-07-09
+<!-- versionCode: 137 -->
+
 - **Segmented control touch targets are now larger and easier to tap** — individual segment toggle buttons in the segmented control (such as weight kg/lb and measurement cm/in Settings units switches) now have an interactive height of at least 44px to meet accessibility guidelines and prevent missed taps. (BLD-3195)
 - **Strava token refresh terminal failure handling** — when a Strava token refresh fails with a 400 Bad Request error (e.g. revoked, expired, or rotated refresh token), the connection is cleanly disconnected and the sync is marked as failed, ending any infinite retry loop. This terminal state is logged at warn level and no longer reported to Sentry as an exception. (BLD-3178)
 - **"Start a workout" button no longer shows a double-border** — on the Progress empty-state screen, the primary "Start a workout" call-to-action now renders as a single clean filled button, matching the rest of the app's primary buttons instead of showing an extra outline ring around the fill. (BLD-3192)
