@@ -10,9 +10,9 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
-    "version": "0.26.68",
+    "version": "0.26.69",
     "date": "2026-07-09",
-    "versionCode": 138,
+    "versionCode": 139,
     "body": "- **Manual \"Sync to Strava\" for past workouts** — you can now trigger a manual sync or sync again for any past workout from the workout detail screen, allowing you to upload workouts that failed to sync initially.\n- **Form-encoded Strava upload with recap and attribution** — workout uploads to Strava are now form-encoded and include a detailed recap with exercise attribution and activity:read_all id capture.\n- **Fixed no-op Share button on workout detail** — the Share button on the workout detail screen now works correctly and opens the system share sheet.\n- **Per-user Sentry telemetry and structured Strava sync-outcome logging** — Sentry telemetry is now tagged with unique per-user identifiers, and Strava sync outcomes are logged with structured events for more precise debugging."
   },
   {
