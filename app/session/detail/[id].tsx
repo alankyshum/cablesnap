@@ -179,6 +179,7 @@ export default function SessionDetail() {
         sessionId={id}
         stravaSynced={share.stravaSynced}
         stravaActivityId={share.stravaActivityId}
+        onRefreshSyncLog={share.refreshSyncLog}
       />
     </>
   );

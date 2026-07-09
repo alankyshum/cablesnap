@@ -134,7 +134,7 @@ export default function SummaryFooter({
       toast({ description: "Saved as default caption" });
       stravaLog("info", "promo_caption_saved_default", { captionLength: editedCaption.length });
       if (session.id && stravaSynced) {
-        syncSessionToStrava(session.id).catch((err) => {
+        syncSessionToStrava(session.id, "post_workout").catch((err) => {
           if (__DEV__) console.warn("Background Strava description sync failed:", err);
         });
       }

@@ -2,14 +2,14 @@ import React, { useCallback, useMemo } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import BottomSheet, { BottomSheetBackdrop } from "@gorhom/bottom-sheet";
+import { BottomSheetBackdrop, BottomSheetModal } from "@gorhom/bottom-sheet";
 import { spacing, radii } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 import { stravaLog } from "../lib/strava-telemetry";
 
 type Props = {
-  sheetRef: React.RefObject<BottomSheet | null>;
+  sheetRef: React.RefObject<BottomSheetModal | null>;
   onShareText: () => void;
   onShareImage: () => void;
   imageDisabled?: boolean;
@@ -20,6 +20,9 @@ type Props = {
   onConnectStrava?: () => void;
   onShareAchievementImage?: () => void;
   hasAchievements?: boolean;
+  onSyncToStrava?: () => void;
+  syncStravaDisabled?: boolean;
+  syncToStravaLabel?: string;
 };
 
 type OptionProps = {
@@ -79,9 +82,12 @@ export default function ShareSheet({
   onConnectStrava,
   onShareAchievementImage,
   hasAchievements = false,
+  onSyncToStrava,
+  syncStravaDisabled,
+  syncToStravaLabel,
 }: Props) {
   const colors = useThemeColors();
-  const snapPoints = useMemo(() => [hasAchievements ? "60%" : "45%"], [hasAchievements]);
+  const snapPoints = useMemo(() => [hasAchievements ? 480 : 350], [hasAchievements]);
   const showImageOption = Platform.OS !== "web";
 
   const renderBackdrop = useCallback(
@@ -97,14 +103,12 @@ export default function ShareSheet({
   );
 
   return (
-    <BottomSheet
+    <BottomSheetModal
       ref={sheetRef}
-      index={-1}
       snapPoints={snapPoints}
       enablePanDownToClose
-      onChange={(index: number) => {
-        if (index === -1) onDismiss();
-      }}
+      enableDynamicSizing={false}
+      onDismiss={onDismiss}
       backdropComponent={renderBackdrop}
       backgroundStyle={{ backgroundColor: colors.surface }}
       handleIndicatorStyle={{ backgroundColor: colors.onSurfaceVariant }}
@@ -120,7 +124,7 @@ export default function ShareSheet({
           label="Share as Text"
           description="Copy workout summary as text"
           onPress={() => {
-            sheetRef.current?.close();
+            sheetRef.current?.dismiss();
             onShareText();
           }}
         />
@@ -130,7 +134,7 @@ export default function ShareSheet({
             label="Share as Image"
             description="Generate a workout card image"
             onPress={() => {
-              sheetRef.current?.close();
+              sheetRef.current?.dismiss();
               onShareImage();
             }}
             disabled={imageDisabled}
@@ -146,7 +150,7 @@ export default function ShareSheet({
                 : "Open settings to connect Strava"
             }
             onPress={() => {
-              sheetRef.current?.close();
+              sheetRef.current?.dismiss();
               if (stravaConnected && onShareStravaImage) {
                 onShareStravaImage();
               } else if (onConnectStrava) {
@@ -157,19 +161,31 @@ export default function ShareSheet({
             disabled={stravaDisabled}
           />
         )}
+        {showImageOption && stravaConnected && onSyncToStrava && (
+          <ShareOption
+            icon="sync"
+            label={syncToStravaLabel || "Sync to Strava"}
+            description="Upload workout activity data directly to Strava"
+            onPress={() => {
+              sheetRef.current?.dismiss();
+              onSyncToStrava();
+            }}
+            disabled={syncStravaDisabled}
+          />
+        )}
         {showImageOption && hasAchievements && (
           <ShareOption
             icon="trophy-variant"
             label="Share Achievement Recap"
             description="Generate an achievement recap card image"
             onPress={() => {
-              sheetRef.current?.close();
+              sheetRef.current?.dismiss();
               onShareAchievementImage?.();
             }}
           />
         )}
       </View>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 }
 

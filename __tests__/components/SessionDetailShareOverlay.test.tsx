@@ -4,7 +4,7 @@ import { SessionDetailShareOverlay } from '../../components/session/detail/Sessi
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { saveShareSettings } from '../../lib/db';
-import type BottomSheet from '@gorhom/bottom-sheet';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import type { ThemeColors } from '../../hooks/useThemeColors';
 
 // Setup mocks
@@ -20,8 +20,18 @@ jest.mock('expo-file-system', () => ({
   deleteAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
+const mockSuccess = jest.fn();
+const mockError = jest.fn();
+const mockInfo = jest.fn();
+const mockToastFn = jest.fn();
+
 jest.mock('@/components/ui/bna-toast', () => ({
-  useToast: () => ({ toast: jest.fn() }),
+  useToast: () => ({
+    toast: mockToastFn,
+    success: mockSuccess,
+    error: mockError,
+    info: mockInfo,
+  }),
 }));
 
 jest.mock('../../lib/db', () => ({
@@ -32,10 +42,14 @@ const mockSyncSessionToStrava = jest.fn().mockResolvedValue({ status: "synced" }
 jest.mock('../../lib/strava', () => ({
   syncSessionToStrava: (...args: unknown[]) => mockSyncSessionToStrava(...args),
   isStravaConnected: jest.fn().mockResolvedValue(true),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getStravaUserMessage: jest.fn((err: any) => err?.message || "Friendly error"),
 }));
 jest.mock('@/lib/strava', () => ({
   syncSessionToStrava: (...args: unknown[]) => mockSyncSessionToStrava(...args),
   isStravaConnected: jest.fn().mockResolvedValue(true),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getStravaUserMessage: jest.fn((err: any) => err?.message || "Friendly error"),
 }));
 
 jest.mock('../../lib/strava-telemetry', () => ({
@@ -59,14 +73,29 @@ jest.mock('@gorhom/bottom-sheet', () => {
       React.useImperativeHandle(ref, () => ({
         snapToIndex: jest.fn(),
         close: jest.fn(),
+        present: jest.fn(),
+        dismiss: jest.fn(),
       }));
       return <View testID="bottom-sheet">{props.children}</View>;
     }
   );
   BottomSheet.displayName = 'BottomSheet';
+
+  const BottomSheetModal = React.forwardRef(
+    (props: { children: React.ReactNode; onDismiss?: () => void }, ref: React.Ref<unknown>) => {
+      React.useImperativeHandle(ref, () => ({
+        present: jest.fn(),
+        dismiss: jest.fn(),
+      }));
+      return <View testID="bottom-sheet">{props.children}</View>;
+    }
+  );
+  BottomSheetModal.displayName = 'BottomSheetModal';
+
   return {
     __esModule: true,
     default: BottomSheet,
+    BottomSheetModal,
     BottomSheetBackdrop: () => null,
   };
 });
@@ -88,7 +117,7 @@ describe('SessionDetailShareOverlay', () => {
   } as unknown as ThemeColors;
 
   const defaultProps = {
-    shareSheetRef: createRef<BottomSheet | null>(),
+    shareSheetRef: createRef<BottomSheetModal | null>(),
     onShareText: jest.fn(),
     imageDisabled: false,
     stravaConnected: true,
@@ -105,6 +134,7 @@ describe('SessionDetailShareOverlay', () => {
     promoCaption: 'My Custom Promo',
     promoEnabled: true,
     colors: defaultColors,
+    onRefreshSyncLog: jest.fn(),
   };
 
   beforeEach(() => {
@@ -222,6 +252,69 @@ describe('SessionDetailShareOverlay', () => {
     });
 
     jest.useRealTimers();
+  });
+
+  describe("manual upload to Strava", () => {
+    it("handles happy path sync outcome", async () => {
+      mockSyncSessionToStrava.mockResolvedValueOnce({ status: "synced", activityId: "12345" });
+      const onRefreshSyncLog = jest.fn();
+      const props = { ...defaultProps, sessionId: "sess-123", onRefreshSyncLog };
+      const { getByText } = render(<SessionDetailShareOverlay {...props} />);
+
+      await act(async () => {
+        fireEvent.press(getByText("Sync to Strava"));
+      });
+
+      expect(mockSyncSessionToStrava).toHaveBeenCalledWith("sess-123", "manual_detail");
+      expect(mockSuccess).toHaveBeenCalledWith("Synced to Strava ✓");
+      expect(onRefreshSyncLog).toHaveBeenCalled();
+    });
+
+    it("handles queued sync outcome", async () => {
+      mockSyncSessionToStrava.mockResolvedValueOnce({ status: "queued", error: new Error("offline") });
+      const onRefreshSyncLog = jest.fn();
+      const props = { ...defaultProps, sessionId: "sess-123", onRefreshSyncLog };
+      const { getByText } = render(<SessionDetailShareOverlay {...props} />);
+
+      await act(async () => {
+        fireEvent.press(getByText("Sync to Strava"));
+      });
+
+      expect(mockSyncSessionToStrava).toHaveBeenCalledWith("sess-123", "manual_detail");
+      expect(mockInfo).toHaveBeenCalledWith("Sync queued", "Will sync when back online");
+      expect(onRefreshSyncLog).toHaveBeenCalled();
+    });
+
+    it("handles failed sync outcome", async () => {
+      const apiErr = new Error("Token exchange failed: 401");
+      mockSyncSessionToStrava.mockResolvedValueOnce({ status: "failed", error: apiErr });
+      const onRefreshSyncLog = jest.fn();
+      const props = { ...defaultProps, sessionId: "sess-123", onRefreshSyncLog };
+      const { getByText } = render(<SessionDetailShareOverlay {...props} />);
+
+      await act(async () => {
+        fireEvent.press(getByText("Sync to Strava"));
+      });
+
+      expect(mockSyncSessionToStrava).toHaveBeenCalledWith("sess-123", "manual_detail");
+      expect(mockError).toHaveBeenCalledWith("Token exchange failed: 401");
+      expect(onRefreshSyncLog).toHaveBeenCalled();
+    });
+
+    it("handles skipped sync outcome", async () => {
+      mockSyncSessionToStrava.mockResolvedValueOnce({ status: "skipped" });
+      const onRefreshSyncLog = jest.fn();
+      const props = { ...defaultProps, sessionId: "sess-123", onRefreshSyncLog };
+      const { getByText } = render(<SessionDetailShareOverlay {...props} />);
+
+      await act(async () => {
+        fireEvent.press(getByText("Sync to Strava"));
+      });
+
+      expect(mockSyncSessionToStrava).toHaveBeenCalledWith("sess-123", "manual_detail");
+      expect(mockInfo).toHaveBeenCalledWith("Already on Strava");
+      expect(onRefreshSyncLog).toHaveBeenCalled();
+    });
   });
 
   describe("analytics events", () => {

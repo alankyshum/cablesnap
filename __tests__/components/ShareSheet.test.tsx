@@ -1,7 +1,7 @@
 import React, { createRef } from 'react';
 import { Platform } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
-import type BottomSheet from '@gorhom/bottom-sheet';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import ShareSheet from '../../components/ShareSheet';
 
 let mockBottomSheetProps: Record<string, unknown> | null = null;
@@ -22,15 +22,31 @@ jest.mock('@gorhom/bottom-sheet', () => {
       React.useImperativeHandle(ref, () => ({
         snapToIndex: jest.fn(),
         close: jest.fn(),
+        present: jest.fn(),
+        dismiss: jest.fn(),
       }));
       // Always render children in test so we can query them
       return <View testID="bottom-sheet">{props.children}</View>;
     }
   );
   BottomSheet.displayName = 'BottomSheet';
+
+  const BottomSheetModal = React.forwardRef(
+    (props: { children: React.ReactNode; snapPoints: string[]; onDismiss?: () => void }, ref: React.Ref<unknown>) => {
+      mockBottomSheetProps = props as unknown as Record<string, unknown>;
+      React.useImperativeHandle(ref, () => ({
+        present: jest.fn(),
+        dismiss: jest.fn(),
+      }));
+      return <View testID="bottom-sheet">{props.children}</View>;
+    }
+  );
+  BottomSheetModal.displayName = 'BottomSheetModal';
+
   return {
     __esModule: true,
     default: BottomSheet,
+    BottomSheetModal,
     BottomSheetBackdrop: () => null,
   };
 });
@@ -42,7 +58,7 @@ jest.mock('../../lib/strava-telemetry', () => ({
 }));
 
 function renderSheet(overrides: Partial<React.ComponentProps<typeof ShareSheet>> = {}) {
-  const ref = createRef<BottomSheet | null>();
+  const ref = createRef<BottomSheetModal | null>();
   const defaultProps = {
     sheetRef: ref,
     onShareText: jest.fn(),
@@ -53,6 +69,8 @@ function renderSheet(overrides: Partial<React.ComponentProps<typeof ShareSheet>>
     onConnectStrava: jest.fn(),
     onDismiss: jest.fn(),
     imageDisabled: false,
+    onSyncToStrava: jest.fn(),
+    syncToStravaLabel: 'Sync to Strava',
     ...overrides,
   };
   const result = render(
@@ -70,10 +88,10 @@ describe('ShareSheet', () => {
     jest.clearAllMocks();
   });
 
-  it('renders snapPoints of 45%', () => {
+  it('renders snapPoints of 350', () => {
     renderSheet();
     expect(mockBottomSheetProps).not.toBeNull();
-    expect((mockBottomSheetProps as { snapPoints: string[] }).snapPoints).toEqual(['45%']);
+    expect((mockBottomSheetProps as { snapPoints: number[] }).snapPoints).toEqual([350]);
   });
 
   it('renders share options text when on native platform', () => {
@@ -156,11 +174,40 @@ describe('ShareSheet', () => {
     expect(getByLabelText('Share Strava Image').props.accessibilityState?.disabled).toBe(true);
   });
 
+  describe('Sync to Strava Option', () => {
+    it('renders Sync to Strava when connected on native', () => {
+      Platform.OS = 'ios';
+      const onSyncToStrava = jest.fn();
+      const { getByText } = renderSheet({ stravaConnected: true, onSyncToStrava, syncToStravaLabel: 'Sync to Strava' });
+      expect(getByText('Sync to Strava')).toBeTruthy();
+    });
+
+    it('triggers onSyncToStrava when pressed', () => {
+      Platform.OS = 'ios';
+      const onSyncToStrava = jest.fn();
+      const { getByText } = renderSheet({ stravaConnected: true, onSyncToStrava, syncToStravaLabel: 'Sync to Strava' });
+      fireEvent.press(getByText('Sync to Strava'));
+      expect(onSyncToStrava).toHaveBeenCalledTimes(1);
+    });
+
+    it('hides Sync to Strava when disconnected', () => {
+      Platform.OS = 'ios';
+      const { queryByText } = renderSheet({ stravaConnected: false });
+      expect(queryByText('Sync to Strava')).toBeNull();
+    });
+
+    it('hides Sync to Strava on web even if connected', () => {
+      Platform.OS = 'web';
+      const { queryByText } = renderSheet({ stravaConnected: true });
+      expect(queryByText('Sync to Strava')).toBeNull();
+    });
+  });
+
   describe('Achievement Recap Option', () => {
-    it('renders snapPoints of 60% when hasAchievements is true', () => {
+    it('renders snapPoints of 480 when hasAchievements is true', () => {
       renderSheet({ hasAchievements: true });
       expect(mockBottomSheetProps).not.toBeNull();
-      expect((mockBottomSheetProps as { snapPoints: string[] }).snapPoints).toEqual(['60%']);
+      expect((mockBottomSheetProps as { snapPoints: number[] }).snapPoints).toEqual([480]);
     });
 
     it('renders Share Achievement Recap when hasAchievements is true on native', () => {

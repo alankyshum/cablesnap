@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, Modal, StyleSheet, View } from "react-native";
-import BottomSheet from "@gorhom/bottom-sheet";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { captureRef } from "react-native-view-shot";
@@ -13,11 +13,11 @@ import StravaShareCard from "@/components/share/StravaShareCard";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import { scrim, fontSizes } from "@/constants/design-tokens";
 import { saveShareSettings } from "@/lib/db";
-import { syncSessionToStrava } from "@/lib/strava";
+import { syncSessionToStrava, getStravaUserMessage } from "@/lib/strava";
 import { stravaLog } from "../../../lib/strava-telemetry";
 
 type Props = {
-  shareSheetRef: React.RefObject<BottomSheet | null>;
+  shareSheetRef: React.RefObject<BottomSheetModal | null>;
   onShareText: () => void;
   imageDisabled: boolean;
   stravaConnected?: boolean;
@@ -38,6 +38,7 @@ type Props = {
   sessionId?: string;
   stravaSynced?: boolean;
   stravaActivityId?: string | null;
+  onRefreshSyncLog?: () => void;
 };
 
 export function SessionDetailShareOverlay({
@@ -61,11 +62,39 @@ export function SessionDetailShareOverlay({
   sessionId,
   stravaSynced,
   stravaActivityId,
+  onRefreshSyncLog,
 }: Props) {
-  const { toast } = useToast();
+  const { toast, success, error, info } = useToast();
   const shareCardRef = useRef<View>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+
+  const [syncingToStrava, setSyncingToStrava] = useState(false);
+
+  const handleSyncStrava = useCallback(async () => {
+    if (!sessionId) return;
+    setSyncingToStrava(true);
+    try {
+      const result = await syncSessionToStrava(sessionId, "manual_detail");
+      if (result.status === "synced") {
+        success("Synced to Strava ✓");
+        onRefreshSyncLog?.();
+      } else if (result.status === "queued") {
+        info("Sync queued", "Will sync when back online");
+        onRefreshSyncLog?.();
+      } else if (result.status === "failed") {
+        error(getStravaUserMessage(result.error));
+        onRefreshSyncLog?.();
+      } else if (result.status === "skipped") {
+        info("Already on Strava");
+        onRefreshSyncLog?.();
+      }
+    } catch {
+      error("Strava sync failed");
+    } finally {
+      setSyncingToStrava(false);
+    }
+  }, [sessionId, onRefreshSyncLog, success, error, info]);
 
   const stravaCardRef = useRef<View>(null);
   const [stravaPreviewVisible, setStravaPreviewVisible] = useState(false);
@@ -201,6 +230,9 @@ export function SessionDetailShareOverlay({
         stravaDisabled={imageDisabled}
         stravaConnected={stravaConnected}
         onConnectStrava={onConnectStrava}
+        onSyncToStrava={handleSyncStrava}
+        syncStravaDisabled={syncingToStrava}
+        syncToStravaLabel={stravaSynced ? "Sync to Strava again" : "Sync to Strava"}
       />
       <Modal
         visible={previewVisible}

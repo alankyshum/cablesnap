@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { View } from "react-native";
-import BottomSheet from "@gorhom/bottom-sheet";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { captureRef } from "react-native-view-shot";
@@ -21,7 +21,7 @@ export function useSummaryActions(id: string | undefined) {
   const [stravaImageLoading, setStravaImageLoading] = useState(false);
   const [achievementPreviewVisible, setAchievementPreviewVisible] = useState(false);
   const [achievementImageLoading, setAchievementImageLoading] = useState(false);
-  const shareSheetRef = useRef<BottomSheet>(null);
+  const shareSheetRef = useRef<BottomSheetModal>(null);
   const shareCardRef = useRef<View>(null);
   const stravaCardRef = useRef<View>(null);
   const achievementCardRef = useRef<View>(null);
@@ -107,7 +107,7 @@ export function useSummaryActions(id: string | undefined) {
   }, [id, toast]);
 
   const handleShareButtonPress = useCallback(() => {
-    shareSheetRef.current?.snapToIndex(0);
+    shareSheetRef.current?.present();
   }, []);
 
   const handleRatingChange = useCallback(async (newRating: number | null) => {

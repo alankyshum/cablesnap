@@ -1651,6 +1651,184 @@ describe("Strava Integration — Sentry lifecycle logs (BLD-523)", () => {
     scanLoggerCallsForSecrets();
   });
 
+  it("emits structured telemetry on a successful sync outcome", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 42 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "s1", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return SECRET_ACCESS_TOKEN;
+      return null;
+    });
+    mockFetch.mockResolvedValueOnce({ ok: true, text: async () => JSON.stringify({ id: "98765" }), json: async () => ({ id: "98765" }) });
+
+    await strava.syncSessionToStrava("s1", "manual_detail");
+
+    expect(Sentry.logger.info).toHaveBeenCalledWith(
+      "strava sync outcome",
+      expect.objectContaining({
+        source: "manual_detail",
+        sessionId: "s1",
+        connected: true,
+        completedSetCount: 1,
+        status: "synced",
+        activityId: "98765",
+        errorCode: null,
+        errorClass: null,
+        httpStatus: null,
+        retryInfo: null,
+      }),
+    );
+    
+    // Ensure no logger call has athlete_id or token in its attributes
+    const loggerMocks = [Sentry.logger.info, Sentry.logger.warn, Sentry.logger.error];
+    for (const m of loggerMocks) {
+      for (const call of m.mock.calls) {
+        if (call[0] === "strava sync outcome") {
+          const attrs = call[1];
+          if (attrs) {
+            const values = Object.values(attrs).map(String);
+            for (const val of values) {
+              expect(val).not.toContain("42");
+              expect(val).not.toContain(SECRET_ACCESS_TOKEN);
+              expect(val).not.toContain(SECRET_REFRESH_TOKEN);
+              expect(val).not.toContain(SECRET_AUTH_CODE);
+            }
+          }
+        }
+      }
+    }
+
+    scanLoggerCallsForSecrets();
+  });
+
+  it("emits structured telemetry on a failed sync outcome", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 42 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "s2", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
+    });
+    db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return SECRET_ACCESS_TOKEN;
+      return null;
+    });
+    // Return a 403 error representing app_inactive to cause a "failed" status outcome
+    mockFetch.mockResolvedValueOnce({
+      status: 403,
+      ok: false,
+      text: async () => '{"message":"Application Status Inactive","errors":[{"resource":"Application","field":"status","code":"inactive"}]}',
+    });
+
+    await strava.syncSessionToStrava("s2", "post_workout");
+
+    expect(Sentry.logger.error).toHaveBeenCalledWith(
+      "strava sync outcome",
+      expect.objectContaining({
+        source: "post_workout",
+        sessionId: "s2",
+        connected: true,
+        completedSetCount: 1,
+        status: "failed",
+        activityId: null,
+        errorCode: "app_inactive",
+        errorClass: "StravaError",
+        httpStatus: 403,
+        retryInfo: "permanent",
+      }),
+    );
+    scanLoggerCallsForSecrets();
+  });
+
+  it("syncSessionToStrava handles getStravaConnection throwing as failed outcome", async () => {
+    const dbErr = new Error("Connection failed");
+    db.getStravaConnection.mockRejectedValueOnce(dbErr);
+
+    const result = await strava.syncSessionToStrava("s-db-err-1");
+
+    expect(result.status).toBe("failed");
+    expect((result as any).error).toBe(dbErr);
+
+    expect(Sentry.logger.error).toHaveBeenCalledWith(
+      "strava sync outcome",
+      expect.objectContaining({
+        source: "post_workout",
+        sessionId: "s-db-err-1",
+        connected: false,
+        completedSetCount: 0,
+        status: "failed",
+        activityId: null,
+        errorCode: null,
+        errorClass: "Error",
+        errorMessage: "Connection failed",
+        httpStatus: null,
+        retryInfo: "will_retry",
+      }),
+    );
+
+    let outcomeLogsCount = 0;
+    const loggers = [Sentry.logger.info, Sentry.logger.warn, Sentry.logger.error];
+    for (const mockFn of loggers) {
+      for (const call of mockFn.mock.calls) {
+        if (call[0] === "strava sync outcome") {
+          outcomeLogsCount++;
+        }
+      }
+    }
+    expect(outcomeLogsCount).toBe(1);
+
+    scanLoggerCallsForSecrets();
+  });
+
+  it("syncSessionToStrava handles getSessionSets throwing as failed outcome", async () => {
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 42 });
+    const dbErr = new Error("Sets read failed");
+    db.getSessionSets.mockRejectedValueOnce(dbErr);
+
+    const result = await strava.syncSessionToStrava("s-db-err-2");
+
+    expect(result.status).toBe("failed");
+    expect((result as any).error).toBe(dbErr);
+
+    expect(Sentry.logger.error).toHaveBeenCalledWith(
+      "strava sync outcome",
+      expect.objectContaining({
+        source: "post_workout",
+        sessionId: "s-db-err-2",
+        connected: true,
+        completedSetCount: 0,
+        status: "failed",
+        activityId: null,
+        errorCode: null,
+        errorClass: "Error",
+        errorMessage: "Sets read failed",
+        httpStatus: null,
+        retryInfo: "will_retry",
+      }),
+    );
+
+    let outcomeLogsCount = 0;
+    const loggers = [Sentry.logger.info, Sentry.logger.warn, Sentry.logger.error];
+    for (const mockFn of loggers) {
+      for (const call of mockFn.mock.calls) {
+        if (call[0] === "strava sync outcome") {
+          outcomeLogsCount++;
+        }
+      }
+    }
+    expect(outcomeLogsCount).toBe(1);
+
+    scanLoggerCallsForSecrets();
+  });
+
   it("does not throw when Sentry.logger is undefined (older SDK compatibility)", async () => {
     const original = Sentry.logger;
     // Simulate older SDK without logger export
@@ -2478,5 +2656,116 @@ describe("buildActivityDescription", () => {
     expect(result).not.toContain("█");
     expect(result).not.toContain("Powered by CableSnap");
     expect(result).not.toContain("cablesnap.app");
+  });
+});
+
+describe("Strava Integration — Observability & Error Classification Fixes", () => {
+  it("A thrown exception from a local DB/settings read (e.g. getBodySettings) returns status failed and logs exactly once at error level", async () => {
+    const Sentry = require("@sentry/react-native");
+    Sentry.logger.error.mockClear();
+    Sentry.logger.warn.mockClear();
+    Sentry.logger.info.mockClear();
+
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "local-read-err-session", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
+    });
+    db.getBodySettings.mockRejectedValueOnce(new Error("Local DB error on getBodySettings"));
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+
+    const result = await strava.syncSessionToStrava("local-read-err-session");
+
+    expect(result.status).toBe("failed");
+    expect(result.error.message).toContain("Local DB error on getBodySettings");
+
+    const outcomeCalls = Sentry.logger.error.mock.calls.filter(
+      (c: any[]) => c[0] === "strava sync outcome"
+    );
+    expect(outcomeCalls.length).toBe(1);
+    expect(outcomeCalls[0][1]).toEqual(
+      expect.objectContaining({
+        status: "failed",
+        errorCode: "local_read",
+        errorMessage: "Local DB error on getBodySettings",
+      })
+    );
+  });
+
+  it("A thrown exception in handlePostSyncDescriptionUpdate returns status failed and logs exactly once at error level", async () => {
+    const Sentry = require("@sentry/react-native");
+    Sentry.logger.error.mockClear();
+    Sentry.logger.warn.mockClear();
+    Sentry.logger.info.mockClear();
+
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "already-synced-err-session", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
+    });
+    db.getSyncLogForSession.mockResolvedValue({
+      status: "synced",
+      strava_activity_id: "12345",
+      synced_at: 1000,
+    });
+    db.getShareSettings.mockRejectedValueOnce(new Error("Local DB read error on share settings"));
+
+    const result = await strava.syncSessionToStrava("already-synced-err-session");
+
+    expect(result.status).toBe("failed");
+    expect(result.error.message).toContain("Local DB read error on share settings");
+
+    const outcomeCalls = Sentry.logger.error.mock.calls.filter(
+      (c: any[]) => c[0] === "strava sync outcome"
+    );
+    expect(outcomeCalls.length).toBe(1);
+    expect(outcomeCalls[0][1]).toEqual(
+      expect.objectContaining({
+        status: "failed",
+        errorMessage: "Local DB read error on share settings",
+      })
+    );
+  });
+
+  it("A very long err.message is truncated to 300 characters in the emitted log attrs", async () => {
+    const Sentry = require("@sentry/react-native");
+    Sentry.logger.error.mockClear();
+    Sentry.logger.warn.mockClear();
+    Sentry.logger.info.mockClear();
+
+    db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+    db.getSessionSets.mockResolvedValue([
+      { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
+    ]);
+    db.getSessionById.mockResolvedValue({
+      id: "long-err-session", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
+    });
+    const longMessage = "a".repeat(500);
+    db.getBodySettings.mockRejectedValueOnce(new Error(longMessage));
+
+    SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+      if (key === "strava_token_expires_at") return String(Math.floor(Date.now() / 1000) + 7200);
+      if (key === "strava_access_token") return "valid-token";
+      return null;
+    });
+
+    const result = await strava.syncSessionToStrava("long-err-session");
+
+    expect(result.status).toBe("failed");
+
+    const outcomeCalls = Sentry.logger.error.mock.calls.filter(
+      (c: any[]) => c[0] === "strava sync outcome"
+    );
+    expect(outcomeCalls.length).toBe(1);
+    expect(outcomeCalls[0][1].errorMessage.length).toBe(300);
+    expect(outcomeCalls[0][1].errorMessage).toBe("a".repeat(300));
   });
 });

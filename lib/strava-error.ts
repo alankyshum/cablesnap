@@ -10,6 +10,7 @@ export type StravaErrorCode =
   | "server"
   | "config"
   | "app_inactive"
+  | "local_read"
   | "unknown";
 
 export class StravaError extends Error {
@@ -61,6 +62,8 @@ export function getStravaUserMessage(err: unknown): string {
         return "Strava isn't set up correctly. Please contact support.";
       case "app_inactive":
         return "Strava app access is inactive. Please contact support.";
+      case "local_read":
+        return "Failed to read workout data. Please try again.";
       case "unknown":
       default:
         return "Something went wrong connecting to Strava. Please try again.";

@@ -1152,7 +1152,7 @@ export function useSessionActions({
         // Strava sync (non-blocking — never prevents workout completion)
         try {
           const { syncSessionToStrava, getStravaUserMessage, StravaError } = await import("../lib/strava");
-          const result = await syncSessionToStrava(id!);
+          const result = await syncSessionToStrava(id!, "post_workout");
           if (result.status === "synced") {
             showToast("Synced to Strava ✓");
           } else if (result.status === "queued") {

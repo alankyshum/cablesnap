@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
+import * as Sentry from "@sentry/react-native";
 import { getDatabase, isMemoryFallback, isOnboardingComplete } from "../lib/db";
 import { setupGlobalHandler } from "../lib/errors";
 import { detectWebSharedMemorySupport, WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import { excludeFormClipsFromBackup } from "../lib/media/backup-exclusion";
+import { getOrCreateAnonUserId } from "../lib/anon-user";
 
 // BLD-565: On web, drizzle-orm/expo-sqlite calls prepareSync/executeSync
 // which internally uses `new SharedArrayBuffer(…)`.  Without a
@@ -90,6 +92,12 @@ export function useAppInit() {
 
     getDatabase()
       .then(async () => {
+        try {
+          const id = await getOrCreateAnonUserId();
+          Sentry.setUser({ id });
+        } catch (err) {
+          console.warn("Failed to set Sentry user identity:", err);
+        }
         if (Platform.OS === "web" && isMemoryFallback()) setBanner(true);
         // Allow e2e tests to bypass onboarding via window flag
         const skipOnboarding =

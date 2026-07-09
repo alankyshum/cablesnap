@@ -518,21 +518,34 @@ async function uploadActivity(
     throw new Error("No valid Strava access token");
   }
 
-  const session = await getSessionById(sessionId);
-  if (!session) {
-    throw new Error("Session not found");
+  let session;
+  let sets;
+  try {
+    session = await getSessionById(sessionId);
+    if (!session) {
+      throw new Error("Session not found");
+    }
+    sets = await getSessionSets(sessionId);
+  } catch (err) {
+    throw new StravaError("local_read", err instanceof Error ? err.message : String(err));
   }
 
-  const sets = await getSessionSets(sessionId);
   const completedSets = sets.filter((s) => s.completed);
   if (completedSets.length === 0) {
     throw new Error("No completed sets to sync");
   }
 
-  const bodySettings = await getBodySettings();
-  const weightUnit = bodySettings.weight_unit as "kg" | "lb";
+  let bodySettings;
+  let uploadSettings;
+  try {
+    bodySettings = await getBodySettings();
+    uploadSettings = await getShareSettingsForUpload();
+  } catch (err) {
+    throw new StravaError("local_read", err instanceof Error ? err.message : String(err));
+  }
 
-  const { promoCaption, stravaDescriptionEnabled } = await getShareSettingsForUpload();
+  const weightUnit = bodySettings.weight_unit as "kg" | "lb";
+  const { promoCaption, stravaDescriptionEnabled } = uploadSettings;
   const description = buildActivityDescription(
     sets,
     weightUnit,
@@ -876,12 +889,19 @@ export type SyncResult =
   | { status: "failed"; error: Error }
   | { status: "skipped" };
 
+export type StravaSyncSource = "post_workout" | "manual_detail";
+
 /** Returns true if the upload error represents a permanent config or auth failure. */
 function isPermanentError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   if (err.message.includes("Strava access revoked")) return true;
   if (err instanceof StravaError) {
-    return err.code === "app_inactive" || err.code === "config" || err.code === "auth_revoked";
+    return (
+      err.code === "app_inactive" ||
+      err.code === "config" ||
+      err.code === "auth_revoked" ||
+      err.code === "local_read"
+    );
   }
   return false;
 }
@@ -980,37 +1000,142 @@ async function handleUploadFailure(
   return { status: "queued", error };
 }
 
-export async function syncSessionToStrava(sessionId: string): Promise<SyncResult> {
-  stravaLog("info", "strava upload started", { flow: "strava_upload", step: "start", sessionId });
-  if (Platform.OS === "web") return { status: "skipped" };
-  const connection = await getStravaConnection();
-  if (!connection) return { status: "skipped" };
+export async function syncSessionToStrava(
+  sessionId: string,
+  source: StravaSyncSource = "post_workout"
+): Promise<SyncResult> {
+  stravaLog("info", "strava upload started", { flow: "strava_upload", step: "start", sessionId, source });
 
-  // Check for completed sets first
-  const sets = await getSessionSets(sessionId);
-  const completed = sets.filter((s) => s.completed);
-  if (completed.length === 0) return { status: "skipped" };
+  let stravaConnected = false;
+  let completedSetCount = 0;
 
-  // Check if already synced and potentially edited post-sync
-  const syncLog = await getSyncLogForSession(sessionId);
-  if (syncLog && syncLog.status === "synced" && syncLog.strava_activity_id) {
-    return handlePostSyncDescriptionUpdate(
+  const logOutcome = (result: SyncResult) => {
+    let activityId: string | null = null;
+    let errorCode: string | null = null;
+    let errorClass: string | null = null;
+    let httpStatus: number | null = null;
+    let retryInfo: string | null = null;
+    let errorMessage: string | null = null;
+
+    if (result.status === "synced") {
+      activityId = result.activityId;
+    } else if (result.status === "failed" || result.status === "queued") {
+      const err = result.error;
+      if (err) {
+        errorClass = err.constructor?.name || (err instanceof StravaError ? "StravaError" : "Error");
+        errorMessage = err.message ? String(err.message).slice(0, 300) : null;
+        if (err instanceof StravaError) {
+          errorCode = err.code || null;
+          httpStatus = err.status ?? null;
+        } else {
+          errorCode = null;
+          httpStatus = null;
+        }
+        const permanent = isPermanentError(err);
+        retryInfo = permanent ? "permanent" : "will_retry";
+      }
+    }
+
+    let level: "info" | "warn" | "error" = "info";
+    if (result.status === "queued") {
+      level = "warn";
+    } else if (result.status === "failed") {
+      level = "error";
+    }
+
+    stravaLog(level, "strava sync outcome", {
+      source,
       sessionId,
-      syncLog as { strava_activity_id: string; synced_at: number | null },
-      sets
-    );
+      connected: stravaConnected,
+      completedSetCount,
+      status: result.status,
+      activityId,
+      errorCode,
+      errorClass,
+      errorMessage,
+      httpStatus,
+      retryInfo,
+    });
+  };
+
+  if (Platform.OS === "web") {
+    const res: SyncResult = { status: "skipped" };
+    logOutcome(res);
+    return res;
   }
 
-  await createSyncLogEntry(sessionId);
+  let connection;
+  try {
+    connection = await getStravaConnection();
+    stravaConnected = !!connection;
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const res: SyncResult = { status: "failed", error };
+    logOutcome(res);
+    return res;
+  }
+
+  if (!connection) {
+    const res: SyncResult = { status: "skipped" };
+    logOutcome(res);
+    return res;
+  }
+
+  let sets = [];
+  try {
+    sets = await getSessionSets(sessionId);
+    completedSetCount = sets.filter((s) => s.completed).length;
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const res: SyncResult = { status: "failed", error };
+    logOutcome(res);
+    return res;
+  }
+
+  if (completedSetCount === 0) {
+    const res: SyncResult = { status: "skipped" };
+    logOutcome(res);
+    return res;
+  }
+
+  // Check if already synced and potentially edited post-sync
+  let syncLog;
+  try {
+    syncLog = await getSyncLogForSession(sessionId);
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    const res: SyncResult = { status: "failed", error };
+    logOutcome(res);
+    return res;
+  }
+  if (syncLog && syncLog.status === "synced" && syncLog.strava_activity_id) {
+    let res: SyncResult;
+    try {
+      res = await handlePostSyncDescriptionUpdate(
+        sessionId,
+        syncLog as { strava_activity_id: string; synced_at: number | null },
+        sets
+      );
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      res = { status: "failed", error };
+    }
+    logOutcome(res);
+    return res;
+  }
+
+  await Promise.resolve(createSyncLogEntry(sessionId)).catch(() => {});
 
   const setCount = sets.length;
-  const completedCount = completed.length;
+  const completedCount = completedSetCount;
 
   let activityId: string | null;
   try {
     activityId = await uploadActivity(sessionId);
   } catch (err) {
-    return handleUploadFailure(sessionId, err, setCount, completedCount);
+    const res = await handleUploadFailure(sessionId, err, setCount, completedCount);
+    logOutcome(res);
+    return res;
   }
 
   // Upload succeeded (or 409 duplicate) -- activity exists on Strava.
@@ -1038,7 +1163,9 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
       source: "strava_activity_sync",
       phase: "post-connect",
     });
-    return { status: "skipped" };
+    const res: SyncResult = { status: "skipped" };
+    logOutcome(res);
+    return res;
   }
 
   stravaLog("info", "strava upload succeeded", {
@@ -1047,7 +1174,9 @@ export async function syncSessionToStrava(sessionId: string): Promise<SyncResult
     sessionId,
     activityId,
   });
-  return { status: "synced", activityId };
+  const res: SyncResult = { status: "synced", activityId };
+  logOutcome(res);
+  return res;
 }
 
 export async function reconcileStravaQueue(): Promise<void> {

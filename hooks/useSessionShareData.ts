@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Share } from "react-native";
-import BottomSheet from "@gorhom/bottom-sheet";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import type { ShareCardExercise, ShareCardPR } from "@/components/ShareCard";
 import { toDisplay } from "@/lib/units";
 import { formatTime } from "@/lib/format";
-import { getBodySettings, getEffectivePromoCaption, getShareSettings, getSyncLogForSession } from "@/lib/db";
+import { getBodySettings, getEffectivePromoCaption, getShareSettings, getSyncLogForSession, type StravaSyncLog } from "@/lib/db";
 import type { ExerciseGroup } from "@/hooks/useSessionDetail";
 
 type SessionLike = {
@@ -22,12 +22,41 @@ export function useSessionShareData(
   completedSetCount: number,
   sessionId?: string,
 ) {
-  const shareSheetRef = useRef<BottomSheet>(null);
+  const shareSheetRef = useRef<BottomSheetModal>(null);
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
   const [promoCaption, setPromoCaption] = useState<string>("");
   const [promoEnabled, setPromoEnabled] = useState<boolean>(false);
   const [stravaActivityId, setStravaActivityId] = useState<string | null>(null);
   const [stravaSynced, setStravaSynced] = useState<boolean>(false);
+
+  const fetchSyncLog = useCallback((id: string, onDone?: (log: StravaSyncLog | null) => void) => {
+    getSyncLogForSession(id)
+      .then((log) => {
+        if (onDone) {
+          onDone(log);
+        } else if (id === sessionId) {
+          if (log && log.status === "synced" && log.strava_activity_id) {
+            setStravaActivityId(log.strava_activity_id);
+            setStravaSynced(true);
+          } else {
+            setStravaActivityId(null);
+            setStravaSynced(false);
+          }
+        }
+      })
+      .catch(() => {
+        if (id === sessionId) {
+          setStravaActivityId(null);
+          setStravaSynced(false);
+        }
+      });
+  }, [sessionId]);
+
+  const refreshSyncLog = useCallback(() => {
+    if (sessionId) {
+      fetchSyncLog(sessionId);
+    }
+  }, [sessionId, fetchSyncLog]);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,30 +84,23 @@ export function useSessionShareData(
       .catch(() => {});
     if (sessionId) {
       const activeSessionId = sessionId;
-      getSyncLogForSession(sessionId)
-        .then((log) => {
-          if (!cancelled && activeSessionId === sessionId) {
-            if (log && log.status === "synced" && log.strava_activity_id) {
-              setStravaActivityId(log.strava_activity_id);
-              setStravaSynced(true);
-            } else {
-              setStravaActivityId(null);
-              setStravaSynced(false);
-            }
-          }
-        })
-        .catch(() => {
-          if (!cancelled && activeSessionId === sessionId) {
+      fetchSyncLog(activeSessionId, (log) => {
+        if (!cancelled && activeSessionId === sessionId) {
+          if (log && log.status === "synced" && log.strava_activity_id) {
+            setStravaActivityId(log.strava_activity_id);
+            setStravaSynced(true);
+          } else {
             setStravaActivityId(null);
             setStravaSynced(false);
           }
-        });
+        }
+      });
     }
 
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, fetchSyncLog]);
 
   const duration = session?.duration_seconds ? formatTime(session.duration_seconds) : "0:00";
   const volumeRaw = groups.reduce((sum, g) => {
@@ -123,7 +145,8 @@ export function useSessionShareData(
   }, [groups, unit]);
 
   const handleShareButtonPress = useCallback(() => {
-    shareSheetRef.current?.snapToIndex(0);
+    console.log("CABLESNAP_DEBUG: handleShareButtonPress called!", !!shareSheetRef.current);
+    shareSheetRef.current?.present();
   }, []);
 
   const handleShareText = useCallback(async () => {
@@ -159,5 +182,6 @@ export function useSessionShareData(
     stravaSynced,
     handleShareButtonPress,
     handleShareText,
+    refreshSyncLog,
   };
 }
