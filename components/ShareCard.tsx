@@ -125,7 +125,7 @@ export default function ShareCard(props: ShareCardProps) {
         <Text
           style={[cardStyles.footerText, { color: colors.onSurfaceVariant }]}
         >
-          cablesnap.app
+          https://github.com/alankyshum/cablesnap
         </Text>
       </View>
     </View>

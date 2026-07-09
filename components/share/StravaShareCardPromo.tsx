@@ -32,10 +32,10 @@ export function StravaShareCardPromo({
           numberOfLines={1}
           ellipsizeMode="tail"
         >
-          {caption || "Tracked with CableSnap · cablesnap.app"}
+          {caption || "Tracked with CableSnap · https://github.com/alankyshum/cablesnap"}
         </Text>
         <Text style={[styles.url, { color: colors.onSurfaceVariant }]}>
-          cablesnap.app
+          https://github.com/alankyshum/cablesnap
         </Text>
       </View>
     );
@@ -88,7 +88,7 @@ export function StravaShareCardPromo({
         </Pressable>
       </View>
       <Text style={[styles.url, { color: colors.onSurfaceVariant }]}>
-        cablesnap.app
+        https://github.com/alankyshum/cablesnap
       </Text>
     </View>
   );

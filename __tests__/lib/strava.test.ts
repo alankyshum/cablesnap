@@ -390,7 +390,7 @@ describe("Strava Integration — Behavioral", () => {
       id: "s1", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
     });
     db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
-    db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+    db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · https://github.com/alankyshum/cablesnap");
     db.getShareSettings.mockResolvedValue({
       id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: Date.now(),
     });
@@ -433,7 +433,7 @@ describe("Strava Integration — Behavioral", () => {
     expect(/^\d+$/.test(body.elapsed_time)).toBe(true);
     // BLD-1205: description must include CableSnap footer
     expect(body.description).toContain("CABLESNAP WORKOUT RECAP");
-    expect(body.description).toContain("cablesnap.app");
+    expect(body.description).toContain("https://github.com/alankyshum/cablesnap");
   });
 
   it("syncSessionToStrava handles empty 201 body by falling back to resolveExistingActivityId", async () => {
@@ -445,7 +445,7 @@ describe("Strava Integration — Behavioral", () => {
       id: "s-empty-body", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
     });
     db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
-    db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+    db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · https://github.com/alankyshum/cablesnap");
     db.getShareSettings.mockResolvedValue({
       id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: Date.now(),
     });
@@ -758,7 +758,7 @@ describe("Strava Integration — Behavioral", () => {
       id: sessionId, name: "Test Session", started_at: Date.now(), duration_seconds: 3600,
     });
     db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
-    db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+    db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · https://github.com/alankyshum/cablesnap");
     db.getShareSettings.mockResolvedValue({
       id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: Date.now(),
     });
@@ -1101,7 +1101,7 @@ describe("Strava Integration — Behavioral", () => {
         id: sessionId, name: "Test Session", started_at: Date.now(), duration_seconds: 3600,
       });
       db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
-      db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+      db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · https://github.com/alankyshum/cablesnap");
       db.getShareSettings.mockResolvedValue({
         id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: Date.now(),
       });
@@ -1258,7 +1258,7 @@ describe("Strava Integration — Behavioral", () => {
         id: sessionId, name: "Push", started_at: Date.now(), duration_seconds: 1800,
       });
       db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
-      db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+      db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · https://github.com/alankyshum/cablesnap");
       db.getShareSettings.mockResolvedValue({
         id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 0, updated_at: Date.now(),
       });
@@ -1285,7 +1285,7 @@ describe("Strava Integration — Behavioral", () => {
       expect(mockFetch.mock.calls[0][1].headers["Content-Type"]).toBe("application/x-www-form-urlencoded");
       expect(body).toHaveProperty("description");
       expect(body.description).toContain("Bench: 80kg × 8");
-      expect(body.description).not.toContain("cablesnap.app");
+      expect(body.description).not.toContain("https://github.com/alankyshum/cablesnap");
     });
   });
 
@@ -1359,7 +1359,7 @@ describe("Strava Integration — Behavioral", () => {
           id: "s-phase4", name: "Leg Day", started_at: Date.now(), duration_seconds: 3600,
         });
         db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
-        db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+    db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · https://github.com/alankyshum/cablesnap");
         db.getShareSettings.mockResolvedValue({
           id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: 2000,
         });
@@ -1439,7 +1439,7 @@ describe("Strava Integration — Behavioral", () => {
             { exercise_name: "Squat", weight: 100, reps: 5, completed: true, set_type: "working" },
           ],
           "kg",
-          "Tracked with CableSnap · cablesnap.app"
+          "Tracked with CableSnap · https://github.com/alankyshum/cablesnap"
         );
         // Mock getActivity to return exactly that description
         mockFetch.mockResolvedValueOnce({
@@ -2538,7 +2538,7 @@ describe("Strava Integration — completeStravaCallback Behavior", () => {
         id: sessionId, name: "Test Session", started_at: Date.now(), duration_seconds: 3600,
       });
       db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
-      db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+      db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · https://github.com/alankyshum/cablesnap");
       db.getShareSettings.mockResolvedValue({
         id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: Date.now(),
       });
@@ -2638,14 +2638,14 @@ describe("buildActivityDescription", () => {
   ];
 
   it("returns correct output for ENABLED path", () => {
-    const promo = "Powered by CableSnap — plan & track your workouts\ncablesnap.app";
+    const promo = "Powered by CableSnap — plan & track your workouts\nhttps://github.com/alankyshum/cablesnap";
     const result = strava.buildActivityDescription(sets, "kg", promo);
 
     expect(result).toContain("CABLESNAP WORKOUT RECAP");
     expect(result).toContain("█");
     expect(result).toContain("Total:");
     expect(result).toContain("Powered by CableSnap — plan & track your workouts");
-    expect(result).toContain("cablesnap.app");
+    expect(result).toContain("https://github.com/alankyshum/cablesnap");
   });
 
   it("returns correct output for DISABLED path (promoCaption=undefined)", () => {
@@ -2655,7 +2655,7 @@ describe("buildActivityDescription", () => {
     expect(result).not.toContain("CABLESNAP WORKOUT RECAP");
     expect(result).not.toContain("█");
     expect(result).not.toContain("Powered by CableSnap");
-    expect(result).not.toContain("cablesnap.app");
+    expect(result).not.toContain("https://github.com/alankyshum/cablesnap");
   });
 });
 

@@ -38,7 +38,7 @@ describe('ShareCard', () => {
   it('renders CableSnap branding', () => {
     const { getByText } = renderCard();
     expect(getByText('CableSnap')).toBeTruthy();
-    expect(getByText('cablesnap.app')).toBeTruthy();
+    expect(getByText('https://github.com/alankyshum/cablesnap')).toBeTruthy();
   });
 
   it('renders stats row with duration, sets, and volume', () => {

@@ -95,7 +95,7 @@ export default function MonthlyShareCard({
         <Text
           style={[shareStyles.footerText, { color: colors.onSurfaceVariant }]}
         >
-          cablesnap.app
+          https://github.com/alankyshum/cablesnap
         </Text>
       </View>
     </View>

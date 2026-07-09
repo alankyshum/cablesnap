@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { getDrizzle } from "./helpers";
 import { shareSettings } from "./schema";
 
-export const DEFAULT_PROMO_CAPTION = "Tracked with CableSnap · cablesnap.app";
+export const DEFAULT_PROMO_CAPTION = "Tracked with CableSnap · https://github.com/alankyshum/cablesnap";
 
 export type ShareSettingsRow = {
   id: number;

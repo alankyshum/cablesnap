@@ -43,7 +43,7 @@ describe('MonthlyShareCard', () => {
   it('displays CableSnap branding', () => {
     const { getByText } = render(<MonthlyShareCard {...defaultProps} />)
     expect(getByText('CableSnap')).toBeTruthy()
-    expect(getByText('cablesnap.app')).toBeTruthy()
+    expect(getByText('https://github.com/alankyshum/cablesnap')).toBeTruthy()
   })
 
   it('has accessibility labels on stat blocks', () => {

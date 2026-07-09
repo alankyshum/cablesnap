@@ -37,7 +37,7 @@ describe('StravaShareCard', () => {
   it('renders CableSnap branding', () => {
     const { getByText } = renderCard();
     expect(getByText('CableSnap')).toBeTruthy();
-    expect(getByText('cablesnap.app')).toBeTruthy();
+    expect(getByText('https://github.com/alankyshum/cablesnap')).toBeTruthy();
   });
 
   it('renders stats row with duration, sets, and volume', () => {
@@ -95,13 +95,13 @@ describe('StravaShareCard', () => {
   it('shows promo caption when enabled', () => {
     const { getByText } = renderCard({ promoCaption: 'My custom caption', promoEnabled: true });
     expect(getByText('My custom caption')).toBeTruthy();
-    expect(getByText('cablesnap.app')).toBeTruthy();
+    expect(getByText('https://github.com/alankyshum/cablesnap')).toBeTruthy();
   });
 
   it('hides promo caption when disabled', () => {
     const { queryByText } = renderCard({ promoCaption: 'My custom caption', promoEnabled: false });
     expect(queryByText('My custom caption')).toBeNull();
-    expect(queryByText('cablesnap.app')).toBeNull();
+    expect(queryByText('https://github.com/alankyshum/cablesnap')).toBeNull();
   });
 
   describe('interactive promo modes', () => {

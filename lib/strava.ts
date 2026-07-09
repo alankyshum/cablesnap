@@ -307,7 +307,7 @@ export async function isStravaConnected(): Promise<boolean> {
 
 // ---- Activity Upload ----
 
-export const DEFAULT_STRAVA_ATTRIBUTION = "Powered by CableSnap — plan & track your workouts\ncablesnap.app";
+export const DEFAULT_STRAVA_ATTRIBUTION = "Powered by CableSnap — plan & track your workouts\nhttps://github.com/alankyshum/cablesnap";
 
 function formatSetDesc(s: { weight: number | null; reps: number | null }, weightUnit: string): string {
   if (s.weight && s.reps) return `${s.weight}${weightUnit} × ${s.reps}`;
