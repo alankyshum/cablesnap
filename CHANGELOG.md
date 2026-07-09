@@ -22,11 +22,6 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
-
-## v0.26.68 — 2026-07-09
-<!-- versionCode: 138 -->
-
 - **Manual "Sync to Strava" for past workouts** — you can now trigger a manual sync or sync again for any past workout from the workout detail screen, allowing you to upload workouts that failed to sync initially.
 - **Form-encoded Strava upload with recap and attribution** — workout uploads to Strava are now form-encoded and include a detailed recap with exercise attribution and activity:read_all id capture.
 - **Fixed no-op Share button on workout detail** — the Share button on the workout detail screen now works correctly and opens the system share sheet.

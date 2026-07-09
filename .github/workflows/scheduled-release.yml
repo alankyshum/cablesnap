@@ -175,7 +175,16 @@ jobs:
       - name: Compute next version
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         id: next_version
+        env:
+          # GH_TOKEN is used by `scripts/compute-next-release-version.sh`
+          # for the belt-and-suspenders GitHub-Release existence check
+          # inside its `version_is_poisoned` helper. GITHUB_TOKEN has
+          # repo-scoped read on releases which is sufficient — no PAT
+          # needed for this read.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
+          set -euo pipefail
           # Republish mode (BLD-1101): use the version already committed in
           # package.json. The bump/promote steps below are skipped, and the
           # tag must not yet exist.
@@ -189,23 +198,16 @@ jobs:
             echo "Republish version (from package.json): $NEXT"
             exit 0
           fi
+          # BLD-3223: bump-path next-version computation is delegated to
+          # `scripts/compute-next-release-version.sh`, which encapsulates a
+          # bounded skip loop over three independent poisoning signals
+          # (local tag, remote tag, GitHub Release). Extracted from the
+          # workflow so it can be unit-tested with stubbed git/gh (see
+          # scripts/__tests__/compute-next-release-version.test.ts).
+          # See the script's own header for the ghost-release caveat and
+          # the create-time counterpart in "Create GitHub Release with APK".
           TAG="${{ steps.latest_tag.outputs.tag }}"
-          if [ -z "$TAG" ]; then
-            NEXT="0.1.0"
-          else
-            VERSION="${TAG#v}"
-            MAJOR=$(echo "$VERSION" | cut -d. -f1)
-            MINOR=$(echo "$VERSION" | cut -d. -f2)
-            PATCH=$(echo "$VERSION" | cut -d. -f3)
-            PATCH=$((PATCH + 1))
-            NEXT="$MAJOR.$MINOR.$PATCH"
-            # Skip past any tags that already exist (e.g. created manually)
-            while git tag -l "v$NEXT" | grep -q .; do
-              echo "Tag v$NEXT already exists, incrementing..."
-              PATCH=$((PATCH + 1))
-              NEXT="$MAJOR.$MINOR.$PATCH"
-            done
-          fi
+          NEXT=$(bash scripts/compute-next-release-version.sh "$TAG")
           echo "version=$NEXT" >> "$GITHUB_OUTPUT"
           echo "Next version: $NEXT"
 
@@ -816,11 +818,47 @@ jobs:
             exit 0
           fi
 
+          # BLD-3223: capture stderr and exit code so a failing create doesn't
+          # bail out of `set -e` before we can classify the failure mode
+          # (immutable-ghost collision vs any other error). `|| create_rc=$?`
+          # neutralises the -e exit while still preserving the real rc.
+          create_rc=0
           gh release create "v$VERSION" \
             cablesnap.apk \
             cablesnap-fdroid.apk \
             cablesnap-wear.apk \
             --title "v$VERSION" \
             --target main \
-            --notes "$RELEASE_NOTES"
+            --notes "$RELEASE_NOTES" 2> gh_release_create.stderr || create_rc=$?
+          if [ "$create_rc" -ne 0 ]; then
+            cat gh_release_create.stderr >&2
+            # BLD-3223: detect GitHub Immutable-Release ghost collisions. If
+            # a prior release attempt for this exact tag partially succeeded
+            # (e.g. an internal 500 after the ref was reserved), GitHub keeps
+            # the tag_name as a permanently-reserved immutable-release ghost.
+            # The ghost is invisible to /releases, /releases/tags/... and to
+            # `gh release view` (all 404), so the "Compute next version"
+            # skip loop cannot pre-detect it. It only surfaces here as:
+            #     HTTP 422 ... pre_receive Repository rule violations found
+            #     Cannot create ref due to creations being restricted.
+            #     tag_name was used by an immutable release
+            # For the BUMP path, this is a recoverable class: bumping past
+            # the poisoned tag on the NEXT scheduled run will succeed.
+            # Emit an operator-actionable diagnostic. Republish mode is
+            # DELIBERATELY exempt from soft handling — a republish colliding
+            # with an existing/immutable tag is always a hard operator error
+            # (BLD-1101 / BLD-2316 strictness invariant), and the more
+            # obscure diagnostic below still fires plainly.
+            if grep -qE 'tag_name was used by an immutable release|creations being restricted' gh_release_create.stderr; then
+              echo "::error title=Immutable-release ghost blocks v$VERSION::GitHub's Immutable Releases feature is holding a permanent reservation on tag_name v$VERSION from a prior partial release attempt. The tag/release APIs return 404 for this version but the ref-creation is blocked at the pre_receive rule level, so no pre-check on the compute step can detect it."
+              if [ "${{ inputs.republish_current }}" != "true" ]; then
+                echo "::error::Recovery (bump path): land a commit on main that skips past v$VERSION (e.g. revert package.json / app.config.ts / fdroid metadata to the last-shipped version and re-curate '## Unreleased'), then push a lightweight placeholder tag 'v$VERSION' pointing at that commit via 'gh api -X POST repos/${{ github.repository }}/git/refs -f ref=refs/tags/v$VERSION -f sha=<merged-sha>'. The next Scheduled Release will compute the next patch and publish normally. See BLD-3223 plan doc for the reference procedure."
+              else
+                echo "::error::Recovery (republish path): republish for v$VERSION is impossible while the immutable-release ghost holds the tag_name. Bump past v$VERSION on the next scheduled run (see BLD-3223) — republish cannot recover this class."
+              fi
+            fi
+            rm -f gh_release_create.stderr
+            exit "$create_rc"
+          fi
+          rm -f gh_release_create.stderr
           echo "Released v$VERSION with phone (Play + F-Droid) and Wear OS APKs attached."
