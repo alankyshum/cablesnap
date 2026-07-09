@@ -2346,6 +2346,89 @@ describe("Strava Integration — completeStravaCallback Behavior", () => {
     expect(result).toBeNull();
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
+
+  describe("(BLD-3178) refreshAccessToken handling", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sentry = require("@sentry/react-native");
+
+    function setupSyncMocks(sessionId: string) {
+      db.getStravaConnection.mockResolvedValue({ athlete_id: 1 });
+      db.getSessionSets.mockResolvedValue([
+        { exercise_name: "Bench", weight: 80, reps: 8, completed: true, set_type: "working" },
+      ]);
+      db.getSessionById.mockResolvedValue({
+        id: sessionId, name: "Test Session", started_at: Date.now(), duration_seconds: 3600,
+      });
+      db.getBodySettings.mockResolvedValue({ weight_unit: "kg" });
+      db.getEffectivePromoCaption.mockResolvedValue("Tracked with CableSnap · cablesnap.app");
+      db.getShareSettings.mockResolvedValue({
+        id: 1, promo_caption: "", promo_caption_enabled: 1, strava_description_enabled: 1, updated_at: Date.now(),
+      });
+      SecureStore.getItemAsync.mockImplementation(async (key: string) => {
+        if (key === "strava_token_expires_at") return "0"; // forces token refresh
+        if (key === "strava_refresh_token") return "some-refresh-token";
+        return null;
+      });
+    }
+
+    it("GIVEN Strava returns 400 with invalid_grant WHEN token refresh runs THEN disconnects, warn-logs body, no Sentry capture, and status=failed", async () => {
+      const sessionId = "bld-3178-invalid-grant";
+      setupSyncMocks(sessionId);
+
+      // Mock token refresh returning 400 invalid_grant
+      const errorBody = '{"error":"invalid_grant","error_description":"refresh token expired"}';
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () => errorBody,
+      });
+
+      const result = await strava.syncSessionToStrava(sessionId);
+
+      expect(result.status).toBe("failed");
+      expect((result as any).error.message).toContain("Strava session expired");
+      expect(db.deleteStravaConnection).toHaveBeenCalled();
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(Sentry.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("token revoked or invalid (invalid_grant)"),
+        expect.objectContaining({
+          flow: "strava_refresh",
+          step: "token_refresh",
+          status: 400,
+          body: errorBody,
+        }),
+      );
+    });
+
+    it("GIVEN Strava returns 400 with app_inactive WHEN token refresh runs THEN disconnects, warn-logs body, no Sentry capture, and status=failed", async () => {
+      const sessionId = "bld-3178-app-inactive";
+      setupSyncMocks(sessionId);
+
+      // Mock token refresh returning 400 with app inactive errors structure
+      const errorBody = '{"message":"Application Status Inactive","errors":[{"resource":"Application","field":"status","code":"inactive"}]}';
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        text: async () => errorBody,
+      });
+
+      const result = await strava.syncSessionToStrava(sessionId);
+
+      expect(result.status).toBe("failed");
+      expect((result as any).error.message).toContain("inactive");
+      expect(db.deleteStravaConnection).toHaveBeenCalled();
+      expect(Sentry.captureException).not.toHaveBeenCalled();
+      expect(Sentry.logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining("app inactive"),
+        expect.objectContaining({
+          flow: "strava_refresh",
+          step: "token_refresh",
+          status: 400,
+          body: errorBody,
+        }),
+      );
+    });
+  });
 });
 
 describe("Strava Integration — IntegrationsCard wiring (BLD-505)", () => {

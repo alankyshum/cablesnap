@@ -161,9 +161,41 @@ async function refreshAccessToken(): Promise<string | null> {
     });
 
     if (!response.ok) {
-      // Token revoked or invalid — disconnect
-      if (response.status === 401 || response.status === 400) await disconnect();
-      throw new Error(`Token refresh failed: ${response.status}`);
+      const body = await response.text().catch(() => "");
+      const truncatedBody = body.substring(0, 500);
+
+      if (isStravaAppInactive(body)) {
+        stravaLog("warn", "strava refresh blocked — app inactive", {
+          flow: "strava_refresh",
+          step: "token_refresh",
+          status: response.status,
+          body: truncatedBody,
+        });
+        await disconnect();
+        throw new StravaError("app_inactive", "Strava app is inactive. Please contact support.", response.status);
+      } else if (response.status === 400 || response.status === 401) {
+        stravaLog("warn", "strava refresh failed — token revoked or invalid (invalid_grant)", {
+          flow: "strava_refresh",
+          step: "token_refresh",
+          status: response.status,
+          body: truncatedBody,
+        });
+        await disconnect();
+        throw new StravaError("auth_revoked", "Strava session expired. Please reconnect.", response.status);
+      } else {
+        const classifiedCode = classifyHttpStatus(response.status);
+        stravaLog("warn", `strava refresh failed — unexpected HTTP status (${response.status})`, {
+          flow: "strava_refresh",
+          step: "token_refresh",
+          status: response.status,
+          body: truncatedBody,
+        });
+        throw new StravaError(
+          classifiedCode,
+          `Token refresh failed: ${response.status}. Body: ${truncatedBody}`,
+          response.status
+        );
+      }
     }
 
     const data = await response.json();
@@ -171,6 +203,13 @@ async function refreshAccessToken(): Promise<string | null> {
     stravaLog("info", "strava refresh succeeded", { flow: "strava_refresh", step: "success" });
     return data.access_token;
   } catch (err) {
+    if (err instanceof StravaError && (err.code === "auth_revoked" || err.code === "app_inactive")) {
+      // BLD-3178: Propagate terminal authentication and app-inactive errors instead of swallowing
+      // to null so the upstream caller (uploadActivity / syncSessionToStrava) receives a clear signal
+      // to permanently fail the sync session instead of infinite queuing. Do not capture to Sentry.
+      throw err;
+    }
+
     if (isNetworkError(err)) {
       // Network outage during token refresh is a benign transient (device offline /
       // proxy unreachable). Do NOT report to Sentry — it is expected in an offline-

@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Strava token refresh terminal failure handling** — when a Strava token refresh fails with a 400 Bad Request error (e.g. revoked, expired, or rotated refresh token), the connection is cleanly disconnected and the sync is marked as failed, ending any infinite retry loop. This terminal state is logged at warn level and no longer reported to Sentry as an exception. (BLD-3178)
 
 ## v0.26.66 — 2026-07-09
 <!-- versionCode: 136 -->
