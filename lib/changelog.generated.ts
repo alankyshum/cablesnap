@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.66",
+    "date": "2026-07-09",
+    "versionCode": 136,
+    "body": "- **Prevent transient database-locked errors** — SQLite connection initialization now sets a 5-second busy timeout before running database migrations or schema upgrades. This allows CableSnap to automatically wait out momentary lock contention and prevent transient \"database is locked\" errors. (BLD-3119)\n- **Internal: Sentry filter drops HeadlessChrome/CI events** — the localhost and CI event filter now also drops events originating from a headless browser environment (such as HeadlessChrome in E2E/CI tests) or where the user-agent headers contain \"Headless\", preventing development and test traffic from polluting the production Sentry dashboard. (BLD-3124)\n- **Progress tab no longer shows conflicting error and empty states** — when there is no workout data, the Progress tab now shows only the \"Track your progress\" empty state. The Weekly Summary is suppressed when empty, and its error card now features a clear error icon and a working retry button so you can reload without leaving the screen. (BLD-3066)"
+  },
+  {
     "version": "0.26.65",
     "date": "2026-07-07",
     "versionCode": 135,

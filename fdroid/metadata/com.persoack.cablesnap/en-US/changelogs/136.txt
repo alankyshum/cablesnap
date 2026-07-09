@@ -1,0 +1,3 @@
+- **Prevent transient database-locked errors** — SQLite connection initialization now sets a 5-second busy timeout before running database migrations or schema upgrades. This allows CableSnap to automatically wait out momentary lock contention and prevent transient "database is locked" errors. (BLD-3119)
+- **Internal: Sentry filter drops HeadlessChrome/CI events** — the localhost and CI event filter now also drops events originating from a headless browser
+…see in-app release notes
