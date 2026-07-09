@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo } from "react";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { BottomSheetBackdrop, BottomSheetModal } from "@gorhom/bottom-sheet";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { spacing, radii } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
@@ -87,8 +87,26 @@ export default function ShareSheet({
   syncToStravaLabel,
 }: Props) {
   const colors = useThemeColors();
-  const snapPoints = useMemo(() => [hasAchievements ? 480 : 350], [hasAchievements]);
+  const { height: windowHeight } = useWindowDimensions();
   const showImageOption = Platform.OS !== "web";
+
+  const visibleCount = useMemo(() => {
+    let count = 1; // Share as Text always visible
+    if (showImageOption) {
+      count += 2; // Share as Image + Share Strava Image / Connect Strava
+      if (stravaConnected && !!onSyncToStrava) count += 1;
+      if (hasAchievements) count += 1;
+    }
+    return count;
+  }, [showImageOption, stravaConnected, onSyncToStrava, hasAchievements]);
+
+  const snapPoints = useMemo(() => {
+    const HEADER = 96;
+    const ROW = 84;
+    const sheetHeight = HEADER + visibleCount * ROW;
+    const snap = Math.min(sheetHeight, Math.round(windowHeight * 0.85));
+    return [snap];
+  }, [visibleCount, windowHeight]);
 
   const renderBackdrop = useCallback(
     (props: React.ComponentProps<typeof BottomSheetBackdrop>) => (
@@ -113,7 +131,7 @@ export default function ShareSheet({
       backgroundStyle={{ backgroundColor: colors.surface }}
       handleIndicatorStyle={{ backgroundColor: colors.onSurfaceVariant }}
     >
-      <View style={styles.container}>
+      <BottomSheetScrollView contentContainerStyle={styles.container}>
         <Text
           style={[styles.title, { color: colors.onSurface }]}
         >
@@ -184,7 +202,7 @@ export default function ShareSheet({
             }}
           />
         )}
-      </View>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 }

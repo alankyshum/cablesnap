@@ -92,10 +92,16 @@ jest.mock('@gorhom/bottom-sheet', () => {
   );
   BottomSheetModal.displayName = 'BottomSheetModal';
 
+  const BottomSheetScrollView = (props: { children: React.ReactNode }) => {
+    return <View>{props.children}</View>;
+  };
+  BottomSheetScrollView.displayName = 'BottomSheetScrollView';
+
   return {
     __esModule: true,
     default: BottomSheet,
     BottomSheetModal,
+    BottomSheetScrollView,
     BottomSheetBackdrop: () => null,
   };
 });

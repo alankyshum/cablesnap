@@ -31,6 +31,11 @@ jest.mock('@gorhom/bottom-sheet', () => {
   );
   BottomSheet.displayName = 'BottomSheet';
 
+  const BottomSheetScrollView = (props: { children: React.ReactNode; contentContainerStyle?: unknown }) => {
+    return <View testID="bottom-sheet-scrollview">{props.children}</View>;
+  };
+  BottomSheetScrollView.displayName = 'BottomSheetScrollView';
+
   const BottomSheetModal = React.forwardRef(
     (props: { children: React.ReactNode; snapPoints: string[]; onDismiss?: () => void }, ref: React.Ref<unknown>) => {
       mockBottomSheetProps = props as unknown as Record<string, unknown>;
@@ -47,6 +52,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
     __esModule: true,
     default: BottomSheet,
     BottomSheetModal,
+    BottomSheetScrollView,
     BottomSheetBackdrop: () => null,
   };
 });
@@ -88,10 +94,12 @@ describe('ShareSheet', () => {
     jest.clearAllMocks();
   });
 
-  it('renders snapPoints of 350', () => {
+  it('computes snapPoints from visible options', () => {
     renderSheet();
     expect(mockBottomSheetProps).not.toBeNull();
-    expect((mockBottomSheetProps as { snapPoints: number[] }).snapPoints).toEqual([350]);
+    const snap = (mockBottomSheetProps as { snapPoints: number[] }).snapPoints;
+    expect(snap).toHaveLength(1);
+    expect(snap[0]).toBeGreaterThan(0);
   });
 
   it('renders share options text when on native platform', () => {
@@ -204,10 +212,14 @@ describe('ShareSheet', () => {
   });
 
   describe('Achievement Recap Option', () => {
-    it('renders snapPoints of 480 when hasAchievements is true', () => {
-      renderSheet({ hasAchievements: true });
-      expect(mockBottomSheetProps).not.toBeNull();
-      expect((mockBottomSheetProps as { snapPoints: number[] }).snapPoints).toEqual([480]);
+    it('increases snapPoints when achievements add more visible options', () => {
+      renderSheet({ stravaConnected: true, onSyncToStrava: jest.fn() });
+      const snapWithout = (mockBottomSheetProps as { snapPoints: number[] }).snapPoints[0];
+
+      renderSheet({ stravaConnected: true, onSyncToStrava: jest.fn(), hasAchievements: true });
+      const snapWith = (mockBottomSheetProps as { snapPoints: number[] }).snapPoints[0];
+
+      expect(snapWith).toBeGreaterThan(snapWithout);
     });
 
     it('renders Share Achievement Recap when hasAchievements is true on native', () => {
@@ -234,6 +246,22 @@ describe('ShareSheet', () => {
       const { getByText } = renderSheet({ hasAchievements: true, onShareAchievementImage });
       fireEvent.press(getByText('Share Achievement Recap'));
       expect(onShareAchievementImage).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders all options including Sync to Strava and Share Achievement Recap when strava connected and hasAchievements', () => {
+      Platform.OS = 'ios';
+      const { getByText } = renderSheet({
+        stravaConnected: true,
+        onSyncToStrava: jest.fn(),
+        syncToStravaLabel: 'Sync to Strava',
+        hasAchievements: true,
+      });
+      expect(getByText('Share Workout')).toBeTruthy();
+      expect(getByText('Share as Text')).toBeTruthy();
+      expect(getByText('Share as Image')).toBeTruthy();
+      expect(getByText('Share Strava Image')).toBeTruthy();
+      expect(getByText('Sync to Strava')).toBeTruthy();
+      expect(getByText('Share Achievement Recap')).toBeTruthy();
     });
   });
 });
