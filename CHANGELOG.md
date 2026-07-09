@@ -22,11 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+- **Segmented control touch targets are now larger and easier to tap** — individual segment toggle buttons in the segmented control (such as weight kg/lb and measurement cm/in Settings units switches) now have an interactive height of at least 44px to meet accessibility guidelines and prevent missed taps. (BLD-3195)
 - **Strava token refresh terminal failure handling** — when a Strava token refresh fails with a 400 Bad Request error (e.g. revoked, expired, or rotated refresh token), the connection is cleanly disconnected and the sync is marked as failed, ending any infinite retry loop. This terminal state is logged at warn level and no longer reported to Sentry as an exception. (BLD-3178)
 
 ## v0.26.66 — 2026-07-09
 <!-- versionCode: 136 -->
-
 - **Prevent transient database-locked errors** — SQLite connection initialization now sets a 5-second busy timeout before running database migrations or schema upgrades. This allows CableSnap to automatically wait out momentary lock contention and prevent transient "database is locked" errors. (BLD-3119)
 - **Internal: Sentry filter drops HeadlessChrome/CI events** — the localhost and CI event filter now also drops events originating from a headless browser environment (such as HeadlessChrome in E2E/CI tests) or where the user-agent headers contain "Headless", preventing development and test traffic from polluting the production Sentry dashboard. (BLD-3124)
 - **Progress tab no longer shows conflicting error and empty states** — when there is no workout data, the Progress tab now shows only the "Track your progress" empty state. The Weekly Summary is suppressed when empty, and its error card now features a clear error icon and a working retry button so you can reload without leaving the screen. (BLD-3066)

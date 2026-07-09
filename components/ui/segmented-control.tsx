@@ -5,6 +5,8 @@ import { CORNERS, FONT_SIZE, HEIGHT } from "@/theme/globals";
 import React from "react";
 import { Pressable, TextStyle, View, ViewStyle } from "react-native";
 
+export const SEGMENT_MIN_TOUCH_TARGET = 44;
+
 export interface SegmentedControlButton {
   value: string;
   label: string;
@@ -60,6 +62,7 @@ export function SegmentedControl({
                 borderRadius: CORNERS,
                 paddingHorizontal: 8,
                 paddingVertical: 6,
+                minHeight: SEGMENT_MIN_TOUCH_TARGET,
                 backgroundColor: isActive ? activeBg : "transparent",
               },
               btn.style,
