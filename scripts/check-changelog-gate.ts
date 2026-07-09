@@ -48,12 +48,34 @@ export interface CheckResult {
   reason?: string;
 }
 
+/**
+ * BLD-3166: pure detector for the scheduled-release bot's version-bump commit.
+ *
+ * Given the NUL/RS-delimited output of
+ * `git log <range> --format=%an%x00%s%x1e`, return true iff ANY commit in the
+ * range was authored by `CableSnap Release Bot` OR has a subject matching
+ * `/^release: v\d+\.\d+\.\d+/`. The workflow uses BOTH signals in normal
+ * operation (scheduled-release.yml ~L650 sets the author, ~L665 and ~L698
+ * commit `release: v$VERSION`), and we accept either alone so the recovery
+ * loop and future author-rename refactors don't regress the gate.
+ */
+export function detectReleaseBotCommit(rangeLog: string): boolean {
+  for (const record of rangeLog.split("\x1e")) {
+    if (!record) continue;
+    const [author, subject] = record.split("\x00");
+    if (author === "CableSnap Release Bot") return true;
+    if (subject && /^release: v\d+\.\d+\.\d+/.test(subject)) return true;
+  }
+  return false;
+}
+
 export function runChangelogGateCheck(options: {
   changedFiles: string[];
   baseContent: string | null;
   headContent: string | null;
   isDependabotBranch: boolean;
   isDependabotAuthor: boolean;
+  isReleaseBotCommit?: boolean;
 }): CheckResult {
   const {
     changedFiles,
@@ -61,9 +83,17 @@ export function runChangelogGateCheck(options: {
     headContent,
     isDependabotBranch,
     isDependabotAuthor,
+    isReleaseBotCommit = false,
   } = options;
 
   // 1. Check escape hatches/exemptions
+  //    BLD-3166: release-bot's `release: v<VERSION>` commit deliberately drains
+  //    `## Unreleased` (promoting bullets into the new `## v<VERSION>` heading),
+  //    so head <= base is expected and correct — never a violation for that
+  //    commit. Must be evaluated BEFORE the user-facing/changelog checks below.
+  if (isReleaseBotCommit) {
+    return { passed: true, reason: "Bypassed for release-bot version-bump commit." };
+  }
   if (isDependabotBranch || isDependabotAuthor) {
     return { passed: true, reason: "Bypassed for Dependabot changes." };
   }
@@ -183,12 +213,32 @@ function main(): void {
       // Fallback if git log fails
     }
 
+    // BLD-3166: detect the scheduled-release bot's version-bump commit so its
+    // deliberately-drained `## Unreleased` section doesn't trip the gate. The
+    // workflow sets author name `CableSnap Release Bot` (scheduled-release.yml
+    // ~L650) and uses commit subject `release: v<VERSION>` (~L665, ~L698 for
+    // the retry loop). Match on EITHER signal so the recovery loop still
+    // passes even if a future refactor changes the author name.
+    let isReleaseBotCommit = false;
+    try {
+      const rangeLog = execGitCommand(
+        `git log "${baseSha}..${headSha}" --format=%an%x00%s%x1e`
+      );
+      isReleaseBotCommit = detectReleaseBotCommit(rangeLog);
+    } catch {
+      // Fail-safe: default to stricter gate. A false negative here only means
+      // the release-bot's push falls back to the (fixable) old behavior; the
+      // workflow will surface the failure in its CI log rather than silently
+      // shipping a bad state.
+    }
+
     const result = runChangelogGateCheck({
       changedFiles,
       baseContent,
       headContent,
       isDependabotBranch,
       isDependabotAuthor,
+      isReleaseBotCommit,
     });
 
     if (result.passed) {
