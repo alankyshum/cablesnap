@@ -65,8 +65,7 @@ export default function WorkoutEmptyState({ onStart }: Props) {
           {
             borderWidth: 1.5,
             borderColor: `${colors.onSurface}59`,
-            borderRadius: 12,
-            overflow: "hidden",
+            borderRadius: 9999,
           },
         ]}
       >
