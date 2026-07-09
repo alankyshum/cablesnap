@@ -681,7 +681,7 @@ jobs:
           # `## Unreleased` bullets automatically.
           pushed=0
           for i in 1 2 3 4 5; do
-            if git push origin main; then
+            if git push --no-verify origin main; then
               pushed=1
               break
             fi

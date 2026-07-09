@@ -77,6 +77,7 @@ describe("runChangelogGateCheck", () => {
     headContent: null,
     isDependabotBranch: false,
     isDependabotAuthor: false,
+    isReleaseCommit: false,
   };
 
   it("passes when no files changed", () => {
@@ -157,5 +158,71 @@ describe("runChangelogGateCheck", () => {
     });
     expect(res.passed).toBe(true);
     expect(res.reason).toContain("Bypassed for Dependabot changes");
+  });
+
+  it("bypasses for release-bot commit (isReleaseCommit=true) even when ## Unreleased is drained", () => {
+    // Simulates the release bot promoting ## Unreleased (3 bullets) → ## vX.Y.Z (0 bullets).
+    const baseContent = `
+## Unreleased
+
+- Fix: DB init locked error
+- Infra: Sentry filter for HeadlessChrome
+- UX: Progress tab conflicting states
+
+## v0.26.65
+`;
+    const headContent = `
+## Unreleased
+
+## v0.26.66
+
+- Fix: DB init locked error
+- Infra: Sentry filter for HeadlessChrome
+- UX: Progress tab conflicting states
+
+## v0.26.65
+`;
+    const res = runChangelogGateCheck({
+      ...defaultOptions,
+      changedFiles: ["CHANGELOG.md", "lib/changelog.generated.ts"],
+      baseContent,
+      headContent,
+      isReleaseCommit: true,
+    });
+    expect(res.passed).toBe(true);
+    expect(res.reason).toBe("Bypassed for release-bot commit.");
+  });
+
+  it("still blocks normal human push that drains ## Unreleased without adding a bullet (regression guard)", () => {
+    // Same drained-CHANGELOG scenario, but isReleaseCommit=false — gate must still reject.
+    const baseContent = `
+## Unreleased
+
+- Fix: DB init locked error
+- Infra: Sentry filter for HeadlessChrome
+- UX: Progress tab conflicting states
+
+## v0.26.65
+`;
+    const headContent = `
+## Unreleased
+
+## v0.26.66
+
+- Fix: DB init locked error
+- Infra: Sentry filter for HeadlessChrome
+- UX: Progress tab conflicting states
+
+## v0.26.65
+`;
+    const res = runChangelogGateCheck({
+      ...defaultOptions,
+      changedFiles: ["app/screens/Workout.tsx", "CHANGELOG.md"],
+      baseContent,
+      headContent,
+      isReleaseCommit: false,
+    });
+    expect(res.passed).toBe(false);
+    expect(res.message).toContain("the `## Unreleased` section did not gain any new bullet");
   });
 });

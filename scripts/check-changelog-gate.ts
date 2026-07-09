@@ -54,6 +54,7 @@ export function runChangelogGateCheck(options: {
   headContent: string | null;
   isDependabotBranch: boolean;
   isDependabotAuthor: boolean;
+  isReleaseCommit?: boolean;
 }): CheckResult {
   const {
     changedFiles,
@@ -61,11 +62,15 @@ export function runChangelogGateCheck(options: {
     headContent,
     isDependabotBranch,
     isDependabotAuthor,
+    isReleaseCommit = false,
   } = options;
 
   // 1. Check escape hatches/exemptions
   if (isDependabotBranch || isDependabotAuthor) {
     return { passed: true, reason: "Bypassed for Dependabot changes." };
+  }
+  if (isReleaseCommit) {
+    return { passed: true, reason: "Bypassed for release-bot commit." };
   }
 
   // 2. Classify changed files
@@ -183,12 +188,31 @@ function main(): void {
       // Fallback if git log fails
     }
 
+    // Detect release-bot commits: author == "CableSnap Release Bot" OR
+    // subject matches ^release: v<semver>. Mirrors the Dependabot exemption.
+    let isReleaseCommit = false;
+    try {
+      const commitLog = execGitCommand(`git log "${baseSha}..${headSha}" --format="%an|%s"`);
+      isReleaseCommit = commitLog.split("\n").filter(Boolean).some((line) => {
+        const pipeIdx = line.indexOf("|");
+        const author = pipeIdx >= 0 ? line.substring(0, pipeIdx).trim() : "";
+        const subject = pipeIdx >= 0 ? line.substring(pipeIdx + 1).trim() : "";
+        return (
+          author === "CableSnap Release Bot" ||
+          /^release: v\d+\.\d+\.\d+/.test(subject)
+        );
+      });
+    } catch {
+      // Fallback if git log fails
+    }
+
     const result = runChangelogGateCheck({
       changedFiles,
       baseContent,
       headContent,
       isDependabotBranch,
       isDependabotAuthor,
+      isReleaseCommit,
     });
 
     if (result.passed) {
