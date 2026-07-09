@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.72 — 2026-07-09
+<!-- versionCode: 140 -->
+
 - **Fixed the workout "Share" menu clipping its last option** — the share sheet now sizes to its contents and scrolls, so the "Sync to Strava" / "Sync to Strava again" action is always reachable on phones and tablets.
 
 ## v0.26.71 — 2026-07-09

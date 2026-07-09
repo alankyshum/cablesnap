@@ -1,0 +1,1 @@
+- **Fixed the workout "Share" menu clipping its last option** — the share sheet now sizes to its contents and scrolls, so the "Sync to Strava" / "Sync to Strava again" action is always reachable on phones and tablets.
