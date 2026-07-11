@@ -202,7 +202,7 @@ d("audit-handoff.sh — BLD-2109", () => {
     ).not.toThrow();
   });
 
-  describe("AC1: happy path — end state is in_review assigned to ux-designer", () => {
+  describe("AC1: happy path — end state is todo/in_progress assigned to ux-designer with REVIEW PICKUP issue", () => {
     it("exits 0", () => {
       const { dir, run } = buildSandbox({});
       try {
@@ -213,35 +213,38 @@ d("audit-handoff.sh — BLD-2109", () => {
       }
     });
 
-    it("issue ends with status=in_review", () => {
+    it("creates two issues with status=todo", () => {
       const { dir, run, readState } = buildSandbox({});
       try {
         run();
         const state = readState();
-        expect(state.issues).toHaveLength(1);
-        expect(state.issues[0].status).toBe("in_review");
+        expect(state.issues).toHaveLength(2);
+        expect(state.issues[0].status).toBe("todo");
+        expect(state.issues[1].status).toBe("todo");
       } finally {
         cleanup(dir);
       }
     });
 
-    it("issue ends with assigneeAgentId=ux-designer", () => {
+    it("both issues end with assigneeAgentId=ux-designer", () => {
       const { dir, run, readState } = buildSandbox({});
       try {
         run();
         const state = readState();
         expect(state.issues[0].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
+        expect(state.issues[1].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
       } finally {
         cleanup(dir);
       }
     });
 
-    it("issue is NEVER left in backlog", () => {
+    it("neither issue is left in backlog", () => {
       const { dir, run, readState } = buildSandbox({});
       try {
         run();
         const state = readState();
         expect(state.issues[0].status).not.toBe("backlog");
+        expect(state.issues[1].status).not.toBe("backlog");
       } finally {
         cleanup(dir);
       }
@@ -264,7 +267,7 @@ d("audit-handoff.sh — BLD-2109", () => {
       }
     });
 
-    it("update-issue PATCH carries BOTH status=in_review AND assigneeAgentId=ux-designer", () => {
+    it("update-issue PATCH carries BOTH status=todo AND assigneeAgentId=ux-designer", () => {
       const { dir, run, readCallLog } = buildSandbox({ trackCalls: true });
       try {
         run();
@@ -273,7 +276,7 @@ d("audit-handoff.sh — BLD-2109", () => {
         const patchCalls = calls.filter((c) => c.startsWith("update-issue"));
         expect(patchCalls).toHaveLength(1);
         expect(patchCalls[0]).toContain("--status");
-        expect(patchCalls[0]).toContain("in_review");
+        expect(patchCalls[0]).toContain("todo");
         expect(patchCalls[0]).toContain("--assignee-agent-id");
         expect(patchCalls[0]).toContain(UX_DESIGNER_AGENT_ID);
       } finally {
@@ -297,7 +300,7 @@ d("audit-handoff.sh — BLD-2109", () => {
   });
 
   describe("AC2: partial failure — NEVER leaves backlog", () => {
-    it("--capture-failed: issue still ends in_review assigned to ux-designer", () => {
+    it("--capture-failed: issue still ends todo assigned to ux-designer", () => {
       const { dir, run, readState } = buildSandbox({});
       try {
         const r = run([
@@ -307,7 +310,7 @@ d("audit-handoff.sh — BLD-2109", () => {
         ]);
         expect(r.status).toBe(0);
         const state = readState();
-        expect(state.issues[0].status).toBe("in_review");
+        expect(state.issues[0].status).toBe("todo");
         expect(state.issues[0].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
         expect(state.issues[0].status).not.toBe("backlog");
       } finally {
@@ -315,7 +318,7 @@ d("audit-handoff.sh — BLD-2109", () => {
       }
     });
 
-    it("--upload-failed: issue still ends in_review assigned to ux-designer", () => {
+    it("--upload-failed: issue still ends todo assigned to ux-designer", () => {
       const { dir, run, readState } = buildSandbox({});
       try {
         const r = run([
@@ -325,7 +328,7 @@ d("audit-handoff.sh — BLD-2109", () => {
         ]);
         expect(r.status).toBe(0);
         const state = readState();
-        expect(state.issues[0].status).toBe("in_review");
+        expect(state.issues[0].status).toBe("todo");
         expect(state.issues[0].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
         expect(state.issues[0].status).not.toBe("backlog");
       } finally {
@@ -374,14 +377,14 @@ d("audit-handoff.sh — BLD-2109", () => {
       }
     });
 
-    it("PATCH fail → issue status never changed to in_review (still in original state)", () => {
+    it("PATCH fail → issue status never changed to todo assigned to ux-designer", () => {
       const { dir, run, readState } = buildSandbox({ patchFail: true });
       try {
         run();
         const state = readState();
         // Issue was created but PATCH failed → status should still be 'todo'
-        // (create-issue default), not in_review.
-        expect(state.issues[0].status).not.toBe("in_review");
+        // (create-issue default), and assignee is still creating agent.
+        expect(state.issues[0].status).toBe("todo");
         // And the assignee should still be creating-agent, not ux-designer.
         expect(state.issues[0].assigneeAgentId).toBe(CREATING_AGENT_ID);
       } finally {
@@ -413,8 +416,16 @@ d("audit-handoff.sh — BLD-2109", () => {
         status: "in_review",
         assigneeAgentId: UX_DESIGNER_AGENT_ID,
       };
+      const existingPickup: ClipIssue = {
+        id: "issue-preexisting-001-pickup",
+        identifier: "BLD-2106-pickup",
+        title: "REVIEW PICKUP: AUDIT 2026-06-27 — Visual UX Review",
+        description: "ux-designer: please review [BLD-2106](/BLD/issues/BLD-2106)",
+        status: "todo",
+        assigneeAgentId: UX_DESIGNER_AGENT_ID,
+      };
       const { dir, run, readState } = buildSandbox({
-        initialState: { issues: [existingIssue], nextIdentifier: "BLD-9001", nextId: "issue-stub-002" },
+        initialState: { issues: [existingIssue, existingPickup], nextIdentifier: "BLD-9001", nextId: "issue-stub-002" },
         trackCalls: false,
       });
       try {
@@ -427,7 +438,7 @@ d("audit-handoff.sh — BLD-2109", () => {
         expect(r.status).toBe(0);
         // State must be unchanged — no new issues, no status change.
         const state = readState();
-        expect(state.issues).toHaveLength(1);
+        expect(state.issues).toHaveLength(2);
         expect(state.issues[0].status).toBe("in_review");
         expect(state.issues[0].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
       } finally {
@@ -443,8 +454,16 @@ d("audit-handoff.sh — BLD-2109", () => {
         status: "done",
         assigneeAgentId: UX_DESIGNER_AGENT_ID,
       };
+      const existingPickup: ClipIssue = {
+        id: "issue-preexisting-002-pickup",
+        identifier: "BLD-2106-pickup",
+        title: "REVIEW PICKUP: AUDIT prior",
+        description: "ux-designer: please review [BLD-2106](/BLD/issues/BLD-2106)",
+        status: "done",
+        assigneeAgentId: UX_DESIGNER_AGENT_ID,
+      };
       const { dir, run, readState } = buildSandbox({
-        initialState: { issues: [existingIssue], nextIdentifier: "BLD-9001", nextId: "issue-stub-003" },
+        initialState: { issues: [existingIssue, existingPickup], nextIdentifier: "BLD-9001", nextId: "issue-stub-003" },
       });
       try {
         const r = run([
@@ -482,8 +501,43 @@ d("audit-handoff.sh — BLD-2109", () => {
         ]);
         expect(r.status).toBe(0);
         const state = readState();
-        expect(state.issues[0].status).toBe("in_review");
+        expect(state.issues).toHaveLength(2);
+        expect(state.issues[0].status).toBe("todo");
         expect(state.issues[0].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
+        expect(state.issues[1].status).toBe("todo");
+        expect(state.issues[1].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
+      } finally {
+        cleanup(dir);
+      }
+    });
+
+    it("--issue-id pointing to a todo/ux-designer issue but REVIEW PICKUP is missing → does NOT no-op, proceeds and creates REVIEW PICKUP", () => {
+      const existingIssue: ClipIssue = {
+        id: "issue-preexisting-004",
+        identifier: "BLD-2106",
+        title: "AUDIT 2026-06-27 — Visual UX Review",
+        status: "todo",
+        assigneeAgentId: UX_DESIGNER_AGENT_ID,
+      };
+      const { dir, run, readState } = buildSandbox({
+        initialState: { issues: [existingIssue], nextIdentifier: "BLD-9001", nextId: "issue-stub-002" },
+        trackCalls: false,
+      });
+      try {
+        const r = run([
+          "--title",
+          "AUDIT 2026-06-27 — Visual UX Review",
+          "--issue-id",
+          "BLD-2106",
+        ]);
+        expect(r.status).toBe(0);
+        const state = readState();
+        expect(state.issues).toHaveLength(2);
+        expect(state.issues[0].status).toBe("todo");
+        expect(state.issues[0].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
+        expect(state.issues[1].title).toBe("REVIEW PICKUP: AUDIT 2026-06-27 — Visual UX Review");
+        expect(state.issues[1].status).toBe("todo");
+        expect(state.issues[1].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
       } finally {
         cleanup(dir);
       }
@@ -502,7 +556,7 @@ d("audit-handoff.sh — BLD-2109", () => {
         // PATCH did apply to stored state, but the script must not trust that
         // without a successful re-read.
         const state = readState();
-        expect(state.issues[0].status).toBe("in_review");
+        expect(state.issues[0].status).toBe("todo");
       } finally {
         cleanup(dir);
       }
@@ -522,14 +576,14 @@ d("audit-handoff.sh — BLD-2109", () => {
       }
     });
 
-    it("verified status != in_review (e.g. reverted to todo) → exit 4", () => {
-      // Simulate PATCH 2xx but a concurrent mutation leaving status=todo.
-      const { dir, run } = buildSandbox({ getStatusOverride: "todo" });
+    it("verified status != todo (e.g. reverted to blocked) → exit 4", () => {
+      // Simulate PATCH 2xx but a concurrent mutation leaving status=blocked.
+      const { dir, run } = buildSandbox({ getStatusOverride: "blocked" });
       try {
         const r = run();
         expect(r.status).toBe(4);
         expect(r.stderr).toMatch(/FATAL/i);
-        expect(r.stderr).toMatch(/expected in_review/i);
+        expect(r.stderr).toMatch(/expected todo/i);
       } finally {
         cleanup(dir);
       }
@@ -547,12 +601,12 @@ d("audit-handoff.sh — BLD-2109", () => {
       }
     });
 
-    it("verified status=in_review but assignee != ux-designer → exit 4 (FATAL, not WARN)", () => {
+    it("verified status=todo but assignee != ux-designer → exit 4 (FATAL, not WARN)", () => {
       // The exact failure this script prevents: status looks fine but the wake
       // would target the wrong agent. Must be fatal.
       const wrongAssignee = "00000000-0000-0000-0000-000000000000";
       const { dir, run } = buildSandbox({
-        getStatusOverride: "in_review",
+        getStatusOverride: "todo",
         getAssigneeOverride: wrongAssignee,
       });
       try {
@@ -566,7 +620,7 @@ d("audit-handoff.sh — BLD-2109", () => {
       }
     });
 
-    it("fully-correct verified end-state (in_review + ux-designer) → exit 0, VERIFIED", () => {
+    it("fully-correct verified end-state (todo + ux-designer) → exit 0, VERIFIED", () => {
       // Control case: with no overrides the re-read matches the PATCH, so the
       // strict verification passes and the script reports VERIFIED + DONE.
       const { dir, run } = buildSandbox({});
