@@ -53,6 +53,31 @@ fi
 CMD="${1:-}"; shift || true
 
 case "$CMD" in
+  list-issues)
+    status_filter=""; assignee_filter=""; project_filter=""; search_query=""
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --status)     status_filter="$2"; shift 2;;
+        --assignee)   assignee_filter="$2"; shift 2;;
+        --project)    project_filter="$2"; shift 2;;
+        -q|--search)  search_query="$2"; shift 2;;
+        *) shift;;
+      esac
+    done
+
+    jq --arg status "$status_filter" \
+       --arg assignee "$assignee_filter" \
+       --arg project "$project_filter" \
+       --arg q "$search_query" '
+      .issues[] |
+      select($status == "" or .status == $status) |
+      select($assignee == "" or .assigneeAgentId == $assignee) |
+      select($q == "" or (.title | contains($q)) or (.description // "" | contains($q)) or (.identifier == $q)) |
+      {identifier, title, status, priority}
+    ' "$STATE" 2>/dev/null || true
+    exit 0
+    ;;
+
   create-issue)
     if [[ "$CREATE_FAIL" == "1" ]]; then
       echo '{"error":"simulated create-issue failure","code":"STUB_FAIL"}' >&2
@@ -75,6 +100,11 @@ case "$CMD" in
     # Read nextIdentifier and nextId from state.
     next_id=$(jq -r '.nextId // "issue-stub-001"' "$STATE")
     next_ident=$(jq -r '.nextIdentifier // "BLD-9001"' "$STATE")
+
+    if [[ "$title" == REVIEW\ PICKUP:* ]]; then
+      next_id="${next_id}-pickup"
+      next_ident="${next_ident}-pickup"
+    fi
 
     # Append new issue to state.
     tmp=$(mktemp)
