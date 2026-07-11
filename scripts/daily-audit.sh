@@ -126,7 +126,10 @@ run_scenarios() {
   echo "[daily-audit] running scenarios: $label ($commit_sha)"
   echo "[daily-audit] specs: $*"
   echo "=========================================================="
-  E2E_USE_STATIC=1 COMMIT_SHA="$commit_sha" \
+  # BLD-3253: export CI=1 to run Playwright in CI mode (workers: 1, retries: 2).
+  # This provides parity with the stable GitHub Actions run posture (ux-audit.yml)
+  # and prevents database seed flakiness from parallel cold-boot worker contention.
+  CI=1 E2E_USE_STATIC=1 COMMIT_SHA="$commit_sha" \
     npx playwright test "$@" --project=mobile
 }
 
