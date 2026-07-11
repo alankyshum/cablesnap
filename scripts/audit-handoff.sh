@@ -172,8 +172,17 @@ if [[ -n "$ISSUE_ID" ]]; then
 
     # If already ≥ todo and assigned to ux-designer, we also require that
     # the corresponding REVIEW PICKUP issue exists before we can no-op.
+    # NOTE: cancelled is intentionally excluded from the no-op path.
+    # Step 3 verifier only accepts todo/in_progress/done; treating a cancelled
+    # issue as a no-op would allow exit 0 with ux-designer never woken.
     case "$existing_status" in
-      todo|in_review|in_progress|done|cancelled)
+      cancelled)
+        echo "[audit-handoff] FATAL: Issue $ISSUE_ID has status=cancelled — not a valid handoff end-state." >&2
+        echo "[audit-handoff] A cancelled issue cannot be handed off to ux-designer for an active audit." >&2
+        echo "[audit-handoff] ACTION REQUIRED: create a fresh AUDIT issue or re-open $ISSUE_ID manually." >&2
+        exit 4
+        ;;
+      todo|in_review|in_progress|done)
         if [[ "$existing_assignee" == "$UX_DESIGNER_AGENT_ID" ]]; then
           echo "[audit-handoff] Issue $ISSUE_ID is already $existing_status assigned to ux-designer."
           echo "[audit-handoff] Checking if corresponding REVIEW PICKUP issue exists..."

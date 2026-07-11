@@ -1,7 +1,7 @@
 /**
- * BLD-2109 — audit-handoff.sh: Daily AUDIT issue must end each run assigned
- * to ux-designer with status=in_review (NOT backlog) so the assignment-wake
- * fires.
+ * BLD-3256 / BLD-2109 — audit-handoff.sh: Daily AUDIT issue must end each run
+ * assigned to ux-designer at status=todo/in_progress (NOT backlog) so the
+ * assignment-wake fires, accompanied by a separate REVIEW PICKUP issue.
  *
  * ## Background
  * BLD-2106 (AUDIT 2026-06-28) was left in backlog assigned to ux-designer.
@@ -9,33 +9,41 @@
  * backlog issues, so ux-designer was never woken. The root cause was the
  * status transition being a manual prose step that was silently skipped.
  *
- * The fix (this script) bakes the create+transition into a single idempotent
- * helper so the status-advance is code, not prose.
+ * BLD-3256 refactored the script to use the two-issue REVIEW PICKUP pattern
+ * (origin BLD-3188) after the server began returning HTTP 422 for in_review
+ * transitions without a 'real review path' (BLD-3254):
+ *   1. Create the AUDIT issue assigned to CREATING_AGENT (claudecoder).
+ *   2. PATCH the AUDIT issue: status=todo + assigneeAgentId=ux-designer.
+ *   3. Create a separate REVIEW PICKUP todo issue assigned to ux-designer,
+ *      referencing the AUDIT issue. This fresh assignment wakes ux-designer.
  *
  * ## Auth-boundary ordering asserted here
  * The clip.sh stub tracks the call sequence so we can assert that:
  *   1. create-issue was called with assigneeAgentId = CREATING_AGENT (not ux-designer)
- *   2. update-issue was called in a single PATCH with BOTH status=in_review
+ *   2. update-issue was called in a single PATCH with BOTH status=todo
  *      AND assigneeAgentId=ux-designer
  *
  * If the test stub received create-issue with assigneeAgentId=ux-designer, a
  * real Paperclip server would assign the issue to ux-designer first, and the
  * subsequent PATCH would be denied (403) because claudecoder ≠ ux-designer.
  *
- * ## Acceptance Criteria (from BLD-2109)
- *   AC1: Normal run → end state is assigneeAgentId=ux-designer + status=in_review
+ * ## Acceptance Criteria (from BLD-3256 / BLD-2109)
+ *   AC1: Normal run → end state is two issues at todo/in_progress, both
+ *        assigned to ux-designer (AUDIT + REVIEW PICKUP)
  *   AC2: Partial failure (capture/upload) → NEVER status=backlog
  *   AC3: PATCH failure → exit non-zero (loud failure, not silent backlog)
- *   AC4: Issue already in_review or further → no-op, exit 0
+ *   AC4: Issue already ≥ todo with REVIEW PICKUP → no-op, exit 0.
+ *        cancelled AUDIT → always fatal (exit 4), never a no-op.
  *   AC5: PATCH call ordering → create with creating-agent; PATCH switches
- *        BOTH status and assignee in one call
+ *        BOTH status=todo and assignee in one call
  *   AC6: Post-PATCH verification is strict — the verified end-state must be
- *        re-read successfully AND status==in_review AND assignee==ux-designer.
- *        Any unverifiable/wrong end-state exits non-zero (exit 4), because each
- *        case independently breaks ux-designer's assignment-wake. (QD review of
- *        PR #660: a "not backlog" check + WARN-only assignee was too weak.)
+ *        re-read successfully AND status==todo/in_progress AND
+ *        assignee==ux-designer. Any unverifiable/wrong end-state exits
+ *        non-zero (exit 4), because each case independently breaks
+ *        ux-designer's assignment-wake. (QD review of PR #660: a "not backlog"
+ *        check + WARN-only assignee was too weak.)
  *
- * Refs: BLD-2109, BLD-2107, BLD-2105.
+ * Refs: BLD-3256, BLD-3254, BLD-3188, BLD-2109, BLD-2107, BLD-2105.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import * as fs from "node:fs";
@@ -538,6 +546,49 @@ d("audit-handoff.sh — BLD-2109", () => {
         expect(state.issues[1].title).toBe("REVIEW PICKUP: AUDIT 2026-06-27 — Visual UX Review");
         expect(state.issues[1].status).toBe("todo");
         expect(state.issues[1].assigneeAgentId).toBe(UX_DESIGNER_AGENT_ID);
+      } finally {
+        cleanup(dir);
+      }
+    });
+
+    it("--issue-id pointing to a cancelled ux-designer AUDIT issue with existing REVIEW PICKUP → exits 4 (not a silent no-op)", () => {
+      // Regression test for QD finding: cancelled is NOT a valid handoff end-state.
+      // Step 3 verifier only accepts todo/in_progress/done; treating a cancelled
+      // issue as a no-op would allow exit 0 with ux-designer never woken.
+      const cancelledAudit: ClipIssue = {
+        id: "issue-preexisting-cancelled-001",
+        identifier: "BLD-2106",
+        title: "AUDIT prior",
+        status: "cancelled",
+        assigneeAgentId: UX_DESIGNER_AGENT_ID,
+      };
+      const existingPickup: ClipIssue = {
+        id: "issue-preexisting-cancelled-001-pickup",
+        identifier: "BLD-2106-pickup",
+        title: "REVIEW PICKUP: AUDIT prior",
+        description: "ux-designer: please review [BLD-2106](/BLD/issues/BLD-2106)",
+        status: "todo",
+        assigneeAgentId: UX_DESIGNER_AGENT_ID,
+      };
+      const { dir, run } = buildSandbox({
+        initialState: {
+          issues: [cancelledAudit, existingPickup],
+          nextIdentifier: "BLD-9001",
+          nextId: "issue-stub-cancelled-001",
+        },
+      });
+      try {
+        const r = run([
+          "--title",
+          "AUDIT prior",
+          "--issue-id",
+          "BLD-2106",
+        ]);
+        // Must NOT exit 0 — a cancelled AUDIT is not a valid no-op end-state.
+        expect(r.status).toBe(4);
+        expect(r.stderr).toMatch(/FATAL/i);
+        expect(r.stderr).toMatch(/cancelled/i);
+        expect(r.stderr).toMatch(/ACTION REQUIRED/i);
       } finally {
         cleanup(dir);
       }
