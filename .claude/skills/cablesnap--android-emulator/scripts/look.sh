@@ -1,6 +1,6 @@
 #!/bin/bash
 # look.sh — screenshot the emulator, describe it with a local Ollama vision model,
-# and print tappable UI bounds. The agent's "eyes" when the driving model has no image input.
+# and print tappable UI bounds. Optional helper for describing a screen from a text-only shell.
 # Usage: look.sh <label> "<optional VL question>"
 #   -> writes /tmp/cs-<label>.png, prints a qwen3-vl description, then "(x,y)  'label'" tap targets.
 # Requires: adb (source .android-env.sh first), Ollama running with a vision model (default qwen3-vl:8b).
