@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Form clip player now auto-detects portrait vs landscape aspect ratio.**
 - **Form clips player fixes** — corrects clip size display (no longer showing 0.0MB), ensures switching clips remounts the player, and prevents tablet layout overflow while keeping native controls visible.
 - **Pinned exercise notes now save automatically and stick to the exercise** — a note you pin (e.g. the cable length for a machine) is saved as you type and stays attached to that exercise everywhere: reopening the template, switching templates, or swapping that exercise into another template all show the same note.
 - **Form clips now play back and show thumbnails** — tapping a form clip opens a working video player, and each clip shows a real thumbnail preview. Clips stay bound to their exercise.

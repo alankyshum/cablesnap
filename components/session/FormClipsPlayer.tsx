@@ -64,6 +64,23 @@ function PlayerBody({ clip, weightLabel, reps, onDelete, siblingClipCount, onReq
     p.play();
   });
 
+  const [aspectRatio, setAspectRatio] = React.useState<number>(() => {
+    const w = clip!.width;
+    const h = clip!.height;
+    return w && h && h > 0 ? w / h : 9 / 16;
+  });
+
+  React.useEffect(() => {
+    const sub = player.addListener("sourceLoad", (payload: unknown) => {
+      const typedPayload = payload as { videoSize?: { width: number; height: number }; videoSource?: { videoSize?: { width: number; height: number } } } | undefined;
+      const size = typedPayload?.videoSize ?? typedPayload?.videoSource?.videoSize;
+      const w = size?.width;
+      const h = size?.height;
+      if (w && h && h > 0) setAspectRatio(w / h);
+    });
+    return () => sub.remove();
+  }, [player]);
+
   const dateStr = new Date(clip!.created_at).toLocaleDateString([], {
     month: "short",
     day: "numeric",
@@ -78,7 +95,7 @@ function PlayerBody({ clip, weightLabel, reps, onDelete, siblingClipCount, onReq
       <Sentry_Mask>
         <VideoView
           player={player}
-          style={styles.video}
+          style={[styles.video, { aspectRatio }]}
           nativeControls
           contentFit="contain"
           accessibilityLabel={
@@ -146,9 +163,7 @@ const styles = StyleSheet.create({
   container: { paddingBottom: 24, alignItems: "stretch" },
   video: {
     width: "100%",
-    aspectRatio: 9 / 16,
-    // Cap height so wide (tablet) layouts don't force an overflowing/cropped
-    // frame; contentFit="contain" letterboxes to preserve aspect ratio.
+    // aspectRatio now supplied dynamically from video metadata (fallback 9/16)
     maxHeight: "70%",
     alignSelf: "center",
     // eslint-disable-next-line no-restricted-syntax
