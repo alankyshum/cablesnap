@@ -145,9 +145,14 @@ if [ -f "scripts/audit-acceptance-criteria.sh" ]; then
 fi
 
 # FTA (File Complexity Analysis) pre-push gate
-# Blocks push if any changed .ts/.tsx file exceeds the FTA score cap.
+# WARNS on changed .ts/.tsx files above FTA_SCORE_WARN (advisory only), and
+# only BLOCKS above FTA_SCORE_HARD_CAP (runaway new complexity).
+# Rationale: ~15 files repo-wide already exceed 70 (systemic pre-existing debt;
+# worst ~103.5), so a hard cap at 70 blocks routine edits with no payoff. Keep
+# 70 as an advisory warn line; hard-fail only above 110 (above today's worst).
 # FTA Score: < 50 = OK, 50-60 = Could be better, > 60 = Needs improvement
-FTA_SCORE_CAP=70
+FTA_SCORE_WARN=70
+FTA_SCORE_HARD_CAP=110
 
 # Compare HEAD against the remote tracking branch
 remote_branch=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "origin/main")
@@ -197,7 +202,7 @@ if [ -z "$output" ]; then
 fi
 
 # Parse JSON results and check for violations
-echo "$output" | FTA_SCORE_CAP="$FTA_SCORE_CAP" MAPFILE="$mapfile" node -e "
+echo "$output" | FTA_SCORE_WARN="$FTA_SCORE_WARN" FTA_SCORE_HARD_CAP="$FTA_SCORE_HARD_CAP" MAPFILE="$mapfile" node -e "
   const fs = require('fs');
   const data = JSON.parse(fs.readFileSync('/dev/stdin', 'utf8'));
   const mapText = fs.readFileSync(process.env.MAPFILE, 'utf8').trim();
@@ -206,21 +211,32 @@ echo "$output" | FTA_SCORE_CAP="$FTA_SCORE_CAP" MAPFILE="$mapfile" node -e "
     const idx = line.indexOf('=');
     if (idx > 0) fileMap[line.slice(0, idx)] = line.slice(idx + 1);
   });
-  const cap = Number(process.env.FTA_SCORE_CAP);
-  const fails = data.filter(f => f.fta_score > cap);
-  if (fails.length > 0) {
+  const warn = Number(process.env.FTA_SCORE_WARN);
+  const hardCap = Number(process.env.FTA_SCORE_HARD_CAP);
+  const describe = (f) => {
+    const basename = f.file_name.split('/').pop();
+    const orig = fileMap[basename] || basename;
+    console.log('  ' + orig);
+    console.log('    Score: ' + f.fta_score.toFixed(1) + ' ' + f.assessment);
+    console.log('    Lines: ' + f.line_count + '  Cyclomatic: ' + f.cyclo + '  Halstead Difficulty: ' + f.halstead.difficulty.toFixed(1));
     console.log('');
-    console.log('🚨 FTA Score Cap Exceeded (limit: ' + cap + ')');
+  };
+  const hardFails = data.filter(f => f.fta_score > hardCap);
+  const warns = data.filter(f => f.fta_score > warn && f.fta_score <= hardCap);
+  if (warns.length > 0) {
+    console.log('');
+    console.log('⚠️  FTA advisory — above warn line (' + warn + '), not blocking:');
     console.log('─'.repeat(70));
-    fails.forEach(f => {
-      const basename = f.file_name.split('/').pop();
-      const orig = fileMap[basename] || basename;
-      console.log('  ' + orig);
-      console.log('    Score: ' + f.fta_score.toFixed(1) + ' ' + f.assessment);
-      console.log('    Lines: ' + f.line_count + '  Cyclomatic: ' + f.cyclo + '  Halstead Difficulty: ' + f.halstead.difficulty.toFixed(1));
-      console.log('');
-    });
-    console.log('Refactor these files to reduce complexity before pushing.');
+    warns.forEach(describe);
+    console.log('Consider reducing complexity when you next touch these files.');
+    console.log('');
+  }
+  if (hardFails.length > 0) {
+    console.log('');
+    console.log('🚨 FTA Hard Cap Exceeded (limit: ' + hardCap + ')');
+    console.log('─'.repeat(70));
+    hardFails.forEach(describe);
+    console.log('This file is far above the complexity ceiling. Refactor before pushing.');
     console.log('To skip this check: git push --no-verify');
     console.log('');
     process.exit(1);
@@ -233,5 +249,5 @@ if [ $exit_code -ne 0 ]; then
   exit 1
 fi
 
-echo "✅ FTA: $file_count file(s) analyzed, all within score cap ($FTA_SCORE_CAP)"
+echo "✅ FTA: $file_count file(s) analyzed, none above hard cap ($FTA_SCORE_HARD_CAP)"
 exit 0
