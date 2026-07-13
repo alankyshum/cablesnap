@@ -233,11 +233,13 @@ export function useSessionActions({
   const [clockStartedAt, setClockStartedAt] = useState<number | null>(
     session?.clock_started_at ?? null,
   );
+  const clockStartedAtRef = useRef<number | null>(clockStartedAt);
   useEffect(() => {
     // Mirror DB anchor into local state when the session prop changes (e.g.
     // navigating to another session, or a hydration roundtrip after restart).
     // eslint-disable-next-line react-hooks/set-state-in-effect -- prop sync
     setClockStartedAt(session?.clock_started_at ?? null);
+    clockStartedAtRef.current = session?.clock_started_at ?? null;
   }, [session?.clock_started_at]);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const [exerciseNotesOpen, setExerciseNotesOpen] = useState<Record<string, boolean>>({});
@@ -470,11 +472,18 @@ export function useSessionActions({
 
     const now = Date.now();
     updateGroupSet(set.id, { completed: true, completed_at: now });
+    const wasUnanchored = clockStartedAtRef.current == null;
     // BLD-630: anchor the session clock optimistically before the DB write
     // so the elapsed timer starts ticking within the next render. The DB
     // update inside `completeSet` is authoritative for persistence/export.
     setClockStartedAt((prev) => (prev == null ? now : prev));
+    if (clockStartedAtRef.current == null) clockStartedAtRef.current = now;
     await completeSet(set.id);
+    // Issue #4: only bump home the moment the session first becomes "active".
+    if (wasUnanchored) {
+      bumpQueryVersion("home");
+      queryClient.invalidateQueries({ queryKey: ["home"] });
+    }
     // BLD-1122 AC17: completing a set changes the plateau window
     queryClient.invalidateQueries({ queryKey: ["plateau"] });
 

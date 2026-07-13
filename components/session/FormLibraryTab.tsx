@@ -32,6 +32,8 @@ import { useMediaSurfaceMounted } from "@/hooks/useMediaSurfaceMounted";
 import { getClipsForExercise, softDeleteClip } from "@/lib/media/form-clips";
 import { getMostRecentCompletedSetForExercise } from "@/lib/db/session-sets";
 import { CompareView } from "./CompareView";
+import { FormClipsPlayer } from "./FormClipsPlayer";
+import { ClipThumbImage } from "./ClipThumbImage";
 import { FormVideoSheet } from "./FormVideoSheet";
 import type { SetMediaRow } from "@/lib/db/form-clips";
 import { fontSizes, radii } from "@/constants/design-tokens";
@@ -73,6 +75,7 @@ export function FormLibraryTab({ exerciseId, onClipsChanged }: Props) {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [compareClips, setCompareClips] = useState<[SetMediaRow, SetMediaRow] | null>(null);
+  const [playerClip, setPlayerClip] = useState<SetMediaRow | null>(null);
 
   // BLD-1105: Record CTA state.
   // recordTargetResolved=false means the async resolution hasn't completed yet (hide CTA).
@@ -320,7 +323,7 @@ export function FormLibraryTab({ exerciseId, onClipsChanged }: Props) {
               clip={item}
               selectMode={selectMode}
               selected={selected.has(item.id)}
-              onPress={selectMode ? () => toggleSelect(item.id) : undefined}
+              onPress={selectMode ? () => toggleSelect(item.id) : () => setPlayerClip(item)}
               onLongPress={!selectMode ? () => { enterSelectMode(); toggleSelect(item.id); } : undefined}
               onReplace={!selectMode ? () => handleOverflowReplace(item) : undefined}
               onDelete={!selectMode ? () => handleDelete(item.id) : undefined}
@@ -361,6 +364,14 @@ export function FormLibraryTab({ exerciseId, onClipsChanged }: Props) {
           handleClipSaved();
           void clipId; // consumed upstream
         }}
+      />
+      {/* Clip player — opened by tapping a thumbnail */}
+      <FormClipsPlayer
+        isVisible={playerClip !== null}
+        clip={playerClip}
+        onClose={() => setPlayerClip(null)}
+        onDelete={(c) => { setPlayerClip(null); handleDelete(c.id); }}
+        siblingClipCount={clips.length}
       />
     </View>
   );
@@ -548,10 +559,8 @@ function ClipThumbnail({ clip, selectMode, selected, onPress, onLongPress, onRep
         accessibilityLabel={`Clip from ${dateStr}${selectMode ? (selected ? ", selected" : ", not selected") : ""}`}
         accessibilityState={selectMode ? { selected } : undefined}
       >
-        {/* Placeholder — real thumbnail generation deferred to post-save */}
-        <View style={styles.thumbPlaceholder}>
-          <MaterialCommunityIcons name="video" size={24} color={colors.onSurfaceVariant} />
-        </View>
+        {/* Real thumbnail from expo-video-thumbnails, cached */}
+        <ClipThumbImage setId={clip.id} relPath={clip.rel_path} />
         <View style={[styles.thumbOverlay, { backgroundColor: "rgba(0,0,0,0.35)" }]}>
           <Text style={styles.thumbDate}>{dateStr}</Text>
           {clip.duration_ms && (

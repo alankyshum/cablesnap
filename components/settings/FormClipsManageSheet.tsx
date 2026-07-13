@@ -30,6 +30,8 @@ import {
 } from "@/lib/media/form-clips";
 import type { SetMediaRow } from "@/lib/db/form-clips";
 import { fontSizes, radii } from "@/constants/design-tokens";
+import { FormClipsPlayer } from "@/components/session/FormClipsPlayer";
+import { ClipThumbImage } from "@/components/session/ClipThumbImage";
 
 type Props = {
   isVisible: boolean;
@@ -62,6 +64,7 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<{ totalBytes: number; count: number } | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [playerClip, setPlayerClip] = useState<SetMediaRow | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -189,6 +192,7 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
             <ExerciseClipGroup
               group={item}
               onDeleteClip={handleDeleteClip}
+              onPlayClip={setPlayerClip}
             />
           )}
         />
@@ -216,6 +220,14 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
           </Pressable>
         </View>
       )}
+
+      {/* Clip player — opened by tapping a thumbnail */}
+      <FormClipsPlayer
+        isVisible={playerClip !== null}
+        clip={playerClip}
+        onClose={() => setPlayerClip(null)}
+        onDelete={(c) => { setPlayerClip(null); handleDeleteClip(c); }}
+      />
     </View>
   );
 }
@@ -223,9 +235,10 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
 type GroupProps = {
   group: ClipGroupedByExercise;
   onDeleteClip: (clip: SetMediaRow) => void;
+  onPlayClip: (clip: SetMediaRow) => void;
 };
 
-function ExerciseClipGroup({ group, onDeleteClip }: GroupProps) {
+function ExerciseClipGroup({ group, onDeleteClip, onPlayClip }: GroupProps) {
   const colors = useThemeColors();
   return (
     <View style={styles.exerciseGroup}>
@@ -233,7 +246,7 @@ function ExerciseClipGroup({ group, onDeleteClip }: GroupProps) {
         {group.exerciseName}
       </Text>
       {group.clips.map((clip) => (
-        <ClipRow key={clip.id} clip={clip} onDelete={onDeleteClip} />
+        <ClipRow key={clip.id} clip={clip} onDelete={onDeleteClip} onPlay={onPlayClip} />
       ))}
     </View>
   );
@@ -242,9 +255,10 @@ function ExerciseClipGroup({ group, onDeleteClip }: GroupProps) {
 type ClipRowProps = {
   clip: SetMediaRow;
   onDelete: (clip: SetMediaRow) => void;
+  onPlay: (clip: SetMediaRow) => void;
 };
 
-function ClipRow({ clip, onDelete }: ClipRowProps) {
+function ClipRow({ clip, onDelete, onPlay }: ClipRowProps) {
   const colors = useThemeColors();
   const dateStr = new Date(clip.created_at).toLocaleDateString([], {
     month: "short",
@@ -260,10 +274,15 @@ function ClipRow({ clip, onDelete }: ClipRowProps) {
 
   return (
     <View style={[styles.clipRow, { borderBottomColor: colors.outline }]}>
-      {/* Thumbnail placeholder */}
-      <View style={[styles.clipThumb, { backgroundColor: colors.surfaceVariant }]}>
-        <MaterialCommunityIcons name="video" size={20} color={colors.onSurfaceVariant} />
-      </View>
+      {/* Tappable thumbnail that opens the player */}
+      <Pressable
+        style={[styles.clipThumb, { backgroundColor: colors.surfaceVariant }]}
+        onPress={() => onPlay(clip)}
+        accessibilityRole="button"
+        accessibilityLabel={`Play clip from ${dateStr}`}
+      >
+        <ClipThumbImage setId={clip.id} relPath={clip.rel_path} iconSize={20} />
+      </Pressable>
       {/* Meta */}
       <View style={styles.clipMeta}>
         <Text style={[styles.clipDate, { color: colors.onSurface }]}>{dateStr}</Text>
@@ -343,6 +362,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radii.sm ?? 6,
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },

@@ -297,7 +297,13 @@ export async function getActiveSession(): Promise<WorkoutSession | null> {
     .from(workoutSessions)
     // BLD-1089: defence-in-depth — kind='workout' excludes day_session rows;
     // completed_at IS NULL is the primary active-session predicate.
-    .where(and(sql`${workoutSessions.kind} = 'workout'`, sql`${workoutSessions.completed_at} IS NULL`))
+    // BLD-630: an active session requires at least one completed set (EXISTS
+    // subquery), which also handles legacy rows with a NULL clock_started_at.
+    .where(and(
+      sql`${workoutSessions.kind} = 'workout'`,
+      sql`${workoutSessions.completed_at} IS NULL`,
+      sql`EXISTS (SELECT 1 FROM workout_sets WHERE workout_sets.session_id = ${workoutSessions.id} AND workout_sets.completed = 1)`,
+    ))
     .orderBy(desc(workoutSessions.started_at))
     .limit(1)
     .get();

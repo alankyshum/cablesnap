@@ -35,6 +35,9 @@ export const SUPPORTED_SCENARIOS = [
   "form-clips",
   "advanced-sets",
   "store-showcase",
+  "active-gating-empty",
+  "active-gating-live",
+  "pinned-note",
 ] as const;
 
 export type ScenarioKey = (typeof SUPPORTED_SCENARIOS)[number];
@@ -193,6 +196,15 @@ export async function seedScenario(): Promise<void> {
       break;
     case "store-showcase":
       await seedStoreShowcase(db);
+      break;
+    case "active-gating-empty":
+      await seedActiveGatingEmpty(db);
+      break;
+    case "active-gating-live":
+      await seedActiveGatingLive(db);
+      break;
+    case "pinned-note":
+      await seedPinnedNote(db);
       break;
   }
 
@@ -494,4 +506,67 @@ export async function seedStoreShowcase(
       [`log-${meal.foodId}`, meal.foodId, todayStr, meal.meal, meal.servings, now - i * 1000]
     );
   }
+}
+
+/**
+ * Seeds an in-progress workout session with ZERO completed sets, so
+ * `getActiveSession()` returns `null` (the EXISTS completed-set subquery
+ * filters it out). Verifies the `active` banner is hidden on home.
+ */
+export async function seedActiveGatingEmpty(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+): Promise<void> {
+  const now = Date.now();
+  await db.runAsync(
+    `INSERT INTO workout_sessions
+       (id, name, started_at)
+     VALUES (?, ?, ?)`,
+    ["scenario-active-empty-1", "In Progress Empty", now - 600000],
+  );
+  await db.runAsync(
+    `INSERT INTO workout_sets
+       (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, exercise_position, set_type)
+     VALUES (?, ?, ?, ?, ?, ?, 0, NULL, 0, 'normal')`,
+    ["scenario-active-empty-set-1", "scenario-active-empty-1", "bench-press", 1, 60, 8],
+  );
+}
+
+/**
+ * Seeds an in-progress workout session with ONE completed set AND
+ * clock_started_at set, so `getActiveSession()` returns it. Verifies
+ * the active banner IS rendered on home.
+ */
+export async function seedActiveGatingLive(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+): Promise<void> {
+  const now = Date.now();
+  await db.runAsync(
+    `INSERT INTO workout_sessions
+       (id, name, started_at, clock_started_at)
+     VALUES (?, ?, ?, ?)`,
+    ["scenario-active-live-1", "Live Workout", now - 600000, now - 1000],
+  );
+  await db.runAsync(
+    `INSERT INTO workout_sets
+       (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, exercise_position, set_type)
+     VALUES (?, ?, ?, ?, ?, ?, 1, ?, 0, 'normal')`,
+    ["scenario-active-live-set-1", "scenario-active-live-1", "bench-press", 1, 60, 8, now - 1000],
+  );
+}
+
+/**
+ * Seeds a custom exercise with empty notes, no sessions. Used by the
+ * pinned-note-persist scenario to verify the note editor writes through
+ * a full page reload (the `exercises` table is NOT cleared by the seed
+ * reset, so the note survives `page.reload()`).
+ */
+export async function seedPinnedNote(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+): Promise<void> {
+  await db.runAsync(
+    `INSERT OR IGNORE INTO exercises
+       (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ["scenario-pinned-ex-1", "Triceps Push-down", "strength", "[]", "[]", "cable", "", "beginner", 1, ""],
+  );
 }

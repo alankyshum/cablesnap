@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -124,12 +124,51 @@ export default function ExerciseDetail() {
   const edit = useCallback(() => { if (id) router.push(`/exercise/edit/${id}`); }, [id, router]);
   // BLD-1028: local draft for off-session pinned note edit.
   const [pinnedNoteDraft, setPinnedNoteDraft] = useState<string | undefined>(undefined);
-  const savePinnedNote = useCallback(async (exerciseId: string, text: string) => {
-    await updateExerciseNote(exerciseId, text);
-    setPinnedNoteDraft(undefined);
-    // Refresh exercise so the read surface reflects the saved note.
-    bumpQueryVersion("exercises");
+  const pinnedDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pinnedPendingRef = useRef<{ exerciseId: string; text: string } | null>(null);
+  const pinnedWriteChainRef = useRef<Promise<void>>(Promise.resolve());
+
+  const enqueuePinnedWrite = useCallback((exerciseId: string, text: string) => {
+    pinnedWriteChainRef.current = pinnedWriteChainRef.current
+      .catch(() => {})
+      .then(() => updateExerciseNote(exerciseId, text))
+      .then(() => bumpQueryVersion("exercises"));
+    return pinnedWriteChainRef.current;
   }, []);
+
+  const flushPinnedNote = useCallback(async () => {
+    if (pinnedDebounceRef.current) { clearTimeout(pinnedDebounceRef.current); pinnedDebounceRef.current = null; }
+    const pending = pinnedPendingRef.current;
+    pinnedPendingRef.current = null;
+    if (pending) {
+      await enqueuePinnedWrite(pending.exerciseId, pending.text);
+    }
+  }, [enqueuePinnedWrite]);
+
+  // Debounced auto-save as the user types (600ms) — matches in-session behaviour.
+  const handlePinnedDraftChange = useCallback((exerciseId: string, text: string) => {
+    setPinnedNoteDraft(text);
+    pinnedPendingRef.current = { exerciseId, text };
+    if (pinnedDebounceRef.current) clearTimeout(pinnedDebounceRef.current);
+    pinnedDebounceRef.current = setTimeout(() => {
+      pinnedDebounceRef.current = null;
+      const p = pinnedPendingRef.current;
+      pinnedPendingRef.current = null;
+      if (p) { void enqueuePinnedWrite(p.exerciseId, p.text); }
+    }, 600);
+  }, [enqueuePinnedWrite]);
+
+  const savePinnedNote = useCallback(async (exerciseId: string, text: string) => {
+    if (pinnedDebounceRef.current) { clearTimeout(pinnedDebounceRef.current); pinnedDebounceRef.current = null; }
+    pinnedPendingRef.current = null;
+    await enqueuePinnedWrite(exerciseId, text);
+    setPinnedNoteDraft(undefined);
+  }, [enqueuePinnedWrite]);
+
+  // Flush any pending debounced write on unmount (e.g. user taps back mid-type).
+  useEffect(() => {
+    return () => { void flushPinnedNote(); };
+  }, [flushPinnedNote]);
   const remove = useCallback(async () => {
     if (!id || !d.exercise) return;
     const templates = await getTemplatesUsingExercise(id);
@@ -210,7 +249,7 @@ export default function ExerciseDetail() {
               exerciseId={id}
               exerciseName={exercise.name}
               value={pinnedNoteDraft}
-              onDraftChange={(_exId, text) => setPinnedNoteDraft(text)}
+              onDraftChange={handlePinnedDraftChange}
               onSave={(exId, text) => { void savePinnedNote(exId, text); }}
             />
           ) : exercise.notes ? (
