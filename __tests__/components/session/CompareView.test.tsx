@@ -52,6 +52,7 @@ const mockPlayerFactory = jest.fn(() => ({
   currentTime: 0,
   playing: false,
   loop: false,
+  addListener: jest.fn(() => ({ remove: jest.fn() })),
 }));
 
 jest.mock("@/hooks/useThemeColors", () => ({
