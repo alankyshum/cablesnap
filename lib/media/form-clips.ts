@@ -116,6 +116,11 @@ export async function persistRecordedClipFileOnly(
   const sourceFile = new File(uri);
   sourceFile.move(destFile);
 
+  // Read the actual file size after the move so size_bytes is always populated
+  // (the recorder does not reliably provide sizeBytes). Falls back to the passed
+  // value, then null. Fixes total-size showing 0.0 MB.
+  const readSize = destFile.size ?? sizeBytes ?? null;
+
   await excludeFromBackup(destFile.uri);
 
   return {
@@ -125,7 +130,7 @@ export async function persistRecordedClipFileOnly(
     kind: "video",
     rel_path: toRelPath(destFile.uri),
     duration_ms: durationMs,
-    size_bytes: sizeBytes,
+    size_bytes: readSize,
     width,
     height,
     created_at: Date.now(),

@@ -22,11 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Form clip player now auto-detects portrait vs landscape aspect ratio.**
+- **Form clips player fixes** — corrects clip size display (no longer showing 0.0MB), ensures switching clips remounts the player, and prevents tablet layout overflow while keeping native controls visible.
 
 ## v0.26.73 — 2026-07-13
 <!-- versionCode: 141 -->
-
 - **Pinned exercise notes now save automatically and stick to the exercise** — a note you pin (e.g. the cable length for a machine) is saved as you type and stays attached to that exercise everywhere: reopening the template, switching templates, or swapping that exercise into another template all show the same note.
 - **Form clips now play back and show thumbnails** — tapping a form clip opens a working video player, and each clip shows a real thumbnail preview. Clips stay bound to their exercise.
 - **A workout is no longer marked "Active" until you complete your first set** — opening a workout and backing out without logging a set no longer leaves a lingering active workout.
