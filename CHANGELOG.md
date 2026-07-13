@@ -27,6 +27,7 @@ marker) at release time.
 - **A workout is no longer marked "Active" until you complete your first set** — opening a workout and backing out without logging a set no longer leaves a lingering active workout.
 - **The active-workout banner now appears on the home screen instantly** — as soon as a workout becomes active it shows on Home, with no need to restart the app.
 - **Settings → Form Clips now shows thumbnails and plays clips** — each saved clip has a thumbnail and can be tapped to play.
+- **The home-screen active-workout banner now refreshes correctly when you return to Home** — after starting a workout in another tab, the banner updates on focus instead of waiting for an app restart.
 
 ## v0.26.72 — 2026-07-09
 <!-- versionCode: 140 -->
