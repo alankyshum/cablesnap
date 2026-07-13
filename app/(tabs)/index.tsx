@@ -51,7 +51,11 @@ export default function Workouts() {
     queryKey: ["gtg-today"],
     queryFn: () => getTodayQuickAddSummary(),
   });
-  useFocusRefetch(["home", "gtg-today"]);
+  // Two separate query keys — passed as separate arrays (variadic), NOT one composite
+  // array. `useFocusRefetch(["home", "gtg-today"])` would treat them as a single
+  // queryKey `["home", "gtg-today"]` that matches no live query and no bump key,
+  // causing the live active-workout banner refresh to silently no-op (BLD-3293).
+  useFocusRefetch(["home"], ["gtg-today"]);
   const queryClient = useQueryClient();
   const { info, starterMeta, quickStart, startFromTemplate, confirmDelete, confirmDeleteProgram, showTemplateOptions, showProgramOptions, importTemplates, exportTemplate } = useHomeActions();
 
