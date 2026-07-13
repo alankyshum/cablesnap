@@ -38,6 +38,7 @@ export function FormClipsPlayer({ isVisible, clip, weightLabel, reps, onClose, o
   return (
     <BottomSheet isVisible={isVisible} onClose={onClose}>
       <PlayerBody
+        key={clip.id}
         clip={clip}
         weightLabel={weightLabel}
         reps={reps}
@@ -79,6 +80,7 @@ function PlayerBody({ clip, weightLabel, reps, onDelete, siblingClipCount, onReq
           player={player}
           style={styles.video}
           nativeControls
+          contentFit="contain"
           accessibilityLabel={
             `Form clip from ${dateStr}` +
             (weightLabel ? `, ${weightLabel}` : "") +
@@ -141,8 +143,18 @@ function Sentry_Mask({ children }: { children: React.ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  container: { paddingBottom: 24 },
-  video: { width: "100%", aspectRatio: 9 / 16, borderRadius: 8 },
+  container: { paddingBottom: 24, alignItems: "stretch" },
+  video: {
+    width: "100%",
+    aspectRatio: 9 / 16,
+    // Cap height so wide (tablet) layouts don't force an overflowing/cropped
+    // frame; contentFit="contain" letterboxes to preserve aspect ratio.
+    maxHeight: "70%",
+    alignSelf: "center",
+    // eslint-disable-next-line no-restricted-syntax
+    backgroundColor: "#000",
+    borderRadius: 8,
+  },
   meta: {
     flexDirection: "row",
     flexWrap: "wrap",
