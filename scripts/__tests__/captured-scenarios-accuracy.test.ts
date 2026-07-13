@@ -214,60 +214,63 @@ const d_jq = HAS_JQ ? describe : describe.skip;
 // ---------------------------------------------------------------------------
 
 /**
- * Run the _scenarios_with_pngs() function from audit-bundle.sh in isolation
- * by sourcing it in a subshell and calling it with a test directory.
- *
- * Scenario dirs are created in a temp dir. Returns the function's output
- * (space-separated names of dirs with >=1 .png).
- */
-function runScenariosWithPngs(
-  scenarioDirs: Array<{ name: string; hasPng: boolean }>,
-): { output: string; exitCode: number | null } {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "bld-2198-fn-"));
-  const srcDir = path.join(tmpDir, "scenarios");
-  fs.mkdirSync(srcDir, { recursive: true });
+   * Run the _scenarios_with_pngs() function from audit-bundle.sh in isolation
+   * by sourcing it in a subshell and calling it with a test directory.
+   *
+   * Scenario dirs are created in a temp dir. Returns the function's output
+   * (space-separated names of dirs with >=1 .png).
+   */
+  function runScenariosWithPngs(
+    scenarioDirs: Array<{ name: string; hasPng: boolean }>,
+  ): { output: string; exitCode: number | null } {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "bld-2198-fn-"));
+    const srcDir = path.join(tmpDir, "scenarios");
+    fs.mkdirSync(srcDir, { recursive: true });
 
-  for (const s of scenarioDirs) {
-    const sDir = path.join(srcDir, s.name);
-    fs.mkdirSync(sDir, { recursive: true });
-    if (s.hasPng) {
-      fs.writeFileSync(path.join(sDir, "mobile.png"), "fake-png-bytes");
+    for (const s of scenarioDirs) {
+      const sDir = path.join(srcDir, s.name);
+      fs.mkdirSync(sDir, { recursive: true });
+      if (s.hasPng) {
+        fs.writeFileSync(path.join(sDir, "mobile.png"), "fake-png-bytes");
+      }
+      // Also write .json (mirrors real output where json always exists).
+      fs.writeFileSync(path.join(sDir, "mobile.json"), "{}");
     }
-    // Also write .json (mirrors real output where json always exists).
-    fs.writeFileSync(path.join(sDir, "mobile.json"), "{}");
+
+    // Write the bash function to a temp file to avoid TypeScript template
+    // literal interpolation issues with $ { ... } expansions.
+    const scriptPath = path.join(tmpDir, "run_scenarios.sh");
+    const script = "set -euo pipefail\n"
+      + "# Source just the function definition from audit-bundle.sh by extracting it.\n"
+      + "_scenarios_with_pngs() {\n"
+      + "  local base=\"$1\"\n"
+      + "  local result=()\n"
+      + "  while IFS= read -r -d '' dir; do\n"
+      + "    local name\n"
+      + "    name=\"$(basename \"$dir\")\"\n"
+      + "    if compgen -G \"$dir/*.png\" > /dev/null 2>&1; then\n"
+      + "      result+=(\"$name\")\n"
+      + "    fi\n"
+      + "  done < <(find \"$base\" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)\n"
+      + "  echo \"${result[*]+\"${result[*]}\"}\"\n"
+      + "}\n"
+      + "_scenarios_with_pngs \"${srcDir}\"\n";
+    fs.writeFileSync(scriptPath, script);
+    fs.chmodSync(scriptPath, 0o755);
+    fs.writeFileSync(scriptPath, script);
+    fs.chmodSync(scriptPath, 0o755);
+
+    const proc = spawnSync("bash", ["-c", `srcDir="${srcDir}" . "${scriptPath}"`], {
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+
+    cleanup(tmpDir);
+    return {
+      output: (proc.stdout || "").trim(),
+      exitCode: proc.status,
+    };
   }
-
-  // Extract the _scenarios_with_pngs function from audit-bundle.sh and call it.
-  // We source the relevant function definition and call it with $srcDir.
-  const script = `
-set -euo pipefail
-# Source just the function definition from audit-bundle.sh by extracting it.
-_scenarios_with_pngs() {
-  local base="$1"
-  local result=()
-  while IFS= read -r -d '' dir; do
-    local name
-    name="$(basename "$dir")"
-    if compgen -G "$dir/*.png" > /dev/null 2>&1; then
-      result+=("$name")
-    fi
-  done < <(find "$base" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
-  echo "\${result[*]}"
-}
-_scenarios_with_pngs "${srcDir}"
-`;
-
-  const proc = spawnSync("bash", ["-c", script], {
-    encoding: "utf8",
-    timeout: 10_000,
-  });
-
-  cleanup(tmpDir);
-  return {
-    output: (proc.stdout || "").trim(),
-    exitCode: proc.status,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Tests — audit-bundle.sh Scenarios: notes (AC1, AC2)

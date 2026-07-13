@@ -23,6 +23,7 @@ module.exports = {
   },
   env: {
     "react-native/react-native": true,
+    node: true,
   },
   rules: {
     "react/react-in-jsx-scope": "off",
@@ -67,6 +68,10 @@ module.exports = {
       },
     },
     {
+      files: ["**/*.test.*", "**/__tests__/**", "**/__mocks__/**", "scripts/*.test.*"],
+      env: { jest: true, node: true },
+    },
+    {
       files: [
         "lib/animations/**",
         "components/ui/**",
@@ -101,6 +106,18 @@ module.exports = {
             ],
           },
         ],
+      },
+    },
+    {
+      // Test doubles and jest/build config are throwaway scaffolding — the
+      // component-identity / unused-arg / empty-block rules add no value there
+      // (and CI never lints these .js files anyway; `npm run lint` uses
+      // --ext .ts,.tsx). Silence them so local `npm run lint` is clean.
+      files: ["__mocks__/**", "jest.config.js", "*.config.js"],
+      rules: {
+        "react/display-name": "off",
+        "@typescript-eslint/no-unused-vars": "off",
+        "no-empty": "off",
       },
     },
   ],

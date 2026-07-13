@@ -71,7 +71,15 @@ jest.mock("@/hooks/useThemeColors", () => ({
 jest.mock("expo-video", () => ({
   VideoView: "VideoView",
   useVideoPlayer: (_src: unknown, init?: (p: unknown) => void) => {
-    const p = { play: jest.fn(), pause: jest.fn(), seekBy: jest.fn(), playing: false, loop: false, addListener: jest.fn(() => ({ remove: jest.fn() })) };
+    const p = {
+      play: jest.fn(),
+      pause: jest.fn(),
+      seekBy: jest.fn(),
+      addListener: jest.fn(() => ({ remove: jest.fn() })),
+      removeAllListeners: jest.fn(),
+      playing: false,
+      loop: false,
+    };
     if (init) init(p);
     return p;
   },

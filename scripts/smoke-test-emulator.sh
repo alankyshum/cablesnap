@@ -23,6 +23,38 @@ set -euo pipefail
 PACKAGE="com.persoack.cablesnap"
 ACTIVITY="${PACKAGE}/.MainActivity"
 
+# Portable bounded-wait: use `timeout` if present (GNU/Linux CI), else
+# `gtimeout` (Homebrew coreutils), else pure-bash timeout fallback
+# (macOS has no coreutils timeout). The fallback backgrounds the command,
+# polls up to `secs`, then kills the process group on expiry.
+_timeout() {
+    local secs="$1"; shift
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$secs" "$@"
+    elif command -v gtimeout >/dev/null 2>&1; then
+        gtimeout "$secs" "$@"
+    else
+        # Pure-bash fallback (macOS has no coreutils timeout): run the command
+        # in the background, poll up to `secs`, then kill the process group.
+        "$@" &
+        local cmd_pid=$!
+        local waited=0
+        while kill -0 "$cmd_pid" 2>/dev/null; do
+            if [ "$waited" -ge "$secs" ]; then
+                kill -TERM "$cmd_pid" 2>/dev/null || true
+                sleep 1
+                kill -KILL "$cmd_pid" 2>/dev/null || true
+                wait "$cmd_pid" 2>/dev/null
+                return 124   # match GNU timeout's exit code on expiry
+            fi
+            sleep 1
+            waited=$((waited + 1))
+        done
+        wait "$cmd_pid"
+        return $?
+    fi
+}
+
 # ---------------------------------------------------------------------------
 # Dead-emulator detection
 # ---------------------------------------------------------------------------
@@ -60,8 +92,8 @@ BOOT_TIMEOUT_S="${EMULATOR_BOOT_TIMEOUT_S:-120}"
 restore_emulator_health() {
   echo "--- Emulator health-restore: waiting for ADB transport (timeout: ${BOOT_TIMEOUT_S}s) ---"
 
-  # Step 1: Wait for device transport to reconnect (bounded timeout via timeout(1)).
-  if ! timeout "${BOOT_TIMEOUT_S}" adb wait-for-device 2>&1; then
+  # Step 1: Wait for device transport to reconnect (bounded timeout via _timeout).
+  if ! _timeout "${BOOT_TIMEOUT_S}" adb wait-for-device 2>&1; then
     echo "::error::Emulator infrastructure failure — adb wait-for-device timed out after ${BOOT_TIMEOUT_S}s. This is a CI runner resource issue, not an app regression."
     return 1
   fi

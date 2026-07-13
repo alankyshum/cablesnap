@@ -69,7 +69,7 @@ _scenarios_with_pngs() {
       result+=("$name")
     fi
   done < <(find "$base" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
-  echo "${result[*]}"
+  echo "${result[*]+"${result[*]}"}"
 }
 NOTES="Daily scenario screenshot bundle. Commit: $SHA. Scenarios: $(_scenarios_with_pngs "$SRC_DIR")."
 

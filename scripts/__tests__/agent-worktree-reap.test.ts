@@ -19,7 +19,7 @@
  */
 
 import { spawnSync, execFileSync } from 'child_process';
-import { mkdtempSync, rmSync, writeFileSync, existsSync } from 'fs';
+import { mkdtempSync, rmSync, writeFileSync, existsSync, utimesSync } from 'fs';
 import { resolve, join } from 'path';
 import { tmpdir } from 'os';
 
@@ -71,8 +71,9 @@ describe('BLD-2251: agent-worktree.sh reap/count/guard-count', () => {
     git(join(wtRoot, 'wt-unmerged'), 'add', '.');
     git(join(wtRoot, 'wt-unmerged'), 'commit', '-qm', 'unmerged work');
     // age wt-clean and wt-unmerged past threshold
-    spawnSync('touch', ['-d', '3 days ago', join(wtRoot, 'wt-clean')]);
-    spawnSync('touch', ['-d', '3 days ago', join(wtRoot, 'wt-unmerged')]);
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    utimesSync(join(wtRoot, 'wt-clean'), threeDaysAgo, threeDaysAgo);
+    utimesSync(join(wtRoot, 'wt-unmerged'), threeDaysAgo, threeDaysAgo);
   });
 
   afterAll(() => {

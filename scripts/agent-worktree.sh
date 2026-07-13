@@ -88,11 +88,13 @@ info() { printf "${CYAN}[wt]${NC} %s\n" "$*" >&2; }
 # resolve_lexical <path>
 #
 # Canonicalise a path WITHOUT requiring it to exist on disk (lexical resolution).
-# Uses: realpath -m → readlink -m → raw path (fallback).
-# This ensures guard works on CI runners where /projects/cablesnap is absent.
+# Uses: realpath -m → readlink -m → python3 os.path.realpath (portable fallback) → raw path.
+# This ensures guard works on CI runners where /projects/cablesnap is absent AND
+# on macOS where /var/folders is a symlink to /private/var/folders.
 resolve_lexical() {
     realpath -m -- "$1" 2>/dev/null \
         || readlink -m -- "$1" 2>/dev/null \
+        || python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null \
         || printf '%s' "$1"
 }
 
@@ -309,11 +311,14 @@ cmd_guard() {
 
     # Resolve a path lexically (no filesystem existence required).
     # Prefers `realpath -m` (GNU coreutils); falls back to `readlink -m`
-    # (also GNU, older); final fallback: return the path as-is.
-    # This ensures guard works on CI runners where /projects/cablesnap is absent.
+    # (also GNU, older); final fallback: python3 os.path.realpath (portable,
+    # resolves symlinks consistently on macOS /var/folders → /private/var/folders).
+    # This ensures guard works on CI runners where /projects/cablesnap is absent
+    # AND on macOS where /var/folders is a symlink to /private/var/folders.
     resolve_lexical() {
         realpath -m -- "$1" 2>/dev/null \
             || readlink -m -- "$1" 2>/dev/null \
+            || python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null \
             || printf '%s' "$1"
     }
 
@@ -415,14 +420,11 @@ cmd_guard_count() {
     return 0
 }
 
-# A worktree is reapable if it is stale (mtime older than max-age) and safe:
-# clean, or only package-lock.json modified (a transient npm-install artefact).
-# Worktrees with real uncommitted changes or a live lockfile are kept + logged.
 reapable() {
     local d="$1" max_age_h="$2"
     [ -d "$d" ] || return 1
     local ts age dirty live_lock
-    ts="$(stat -c %Y "$d" 2>/dev/null || echo 0)"
+    ts="$(stat -c %Y "$d" 2>/dev/null || stat -f %m "$d" 2>/dev/null || echo 0)"
     age=$(( ( $(date +%s) - ts ) / 3600 ))
     [ "$age" -ge "$max_age_h" ] || return 1
     # Live lock = an agent is using it
