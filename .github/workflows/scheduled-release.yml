@@ -243,6 +243,19 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: npm ci
 
+      # Lint + unit test gate — mirrors ci.yml exactly so a red suite can never
+      # ship via the scheduled cron. Runs AFTER npm ci (node_modules ready) and
+      # BEFORE version bump/build so a failing check aborts fast and leaves main
+      # unmutated (ATOMIC RELEASE philosophy — BLD-2139).
+      - name: Lint and unit tests (release gate)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          echo "--- Lint (eslint, --max-warnings=17) ---"
+          npm run lint -- --max-warnings=17
+          echo "--- Unit tests (jest, --ci --runInBand) ---"
+          npm test -- --ci --runInBand
+
       # BLD-1185: bump package.json + app.config.ts + fdroid metadata, promote
       # `## Unreleased` → `## vX.Y.Z — DATE`, and refresh
       # `lib/changelog.generated.ts` + F-Droid sidecar — all via a single
