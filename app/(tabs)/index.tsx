@@ -51,7 +51,7 @@ export default function Workouts() {
     queryKey: ["gtg-today"],
     queryFn: () => getTodayQuickAddSummary(),
   });
-  useFocusRefetch(["home", "gtg-today"]);
+  useFocusRefetch(["home"], ["gtg-today"]);
   const queryClient = useQueryClient();
   const { info, starterMeta, quickStart, startFromTemplate, confirmDelete, confirmDeleteProgram, showTemplateOptions, showProgramOptions, importTemplates, exportTemplate } = useHomeActions();
 
