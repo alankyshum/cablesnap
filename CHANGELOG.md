@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.74 — 2026-07-14
+<!-- versionCode: 142 -->
+
 - **Form clip player now auto-detects portrait vs landscape aspect ratio.**
 - **Form clips player fixes** — corrects clip size display (no longer showing 0.0MB), ensures switching clips remounts the player, and prevents tablet layout overflow while keeping native controls visible.
 

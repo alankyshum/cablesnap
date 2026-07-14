@@ -10,10 +10,16 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.74",
+    "date": "2026-07-14",
+    "versionCode": 142,
+    "body": "- **Form clip player now auto-detects portrait vs landscape aspect ratio.**\n- **Form clips player fixes** — corrects clip size display (no longer showing 0.0MB), ensures switching clips remounts the player, and prevents tablet layout overflow while keeping native controls visible."
+  },
+  {
     "version": "0.26.73",
     "date": "2026-07-13",
     "versionCode": 141,
-    "body": "- **Pinned exercise notes now save automatically and stick to the exercise** — a note you pin (e.g. the cable length for a machine) is saved as you type and stays attached to that exercise everywhere: reopening the template, switching templates, or swapping that exercise into another template all show the same note.\n- **Form clips now play back and show thumbnails** — tapping a form clip opens a working video player, and each clip shows a real thumbnail preview. Clips stay bound to their exercise.\n- **A workout is no longer marked \"Active\" until you complete your first set** — opening a workout and backing out without logging a set no longer leaves a lingering active workout.\n- **The active-workout banner now appears on the home screen instantly** — as soon as a workout becomes active it shows on Home, with no need to restart the app.\n- **Settings → Form Clips now shows thumbnails and plays clips** — each saved clip has a thumbnail and can be tapped to play."
+    "body": "- **Pinned exercise notes now save automatically and stick to the exercise** — a note you pin (e.g. the cable length for a machine) is saved as you type and stays attached to that exercise everywhere: reopening the template, switching templates, or swapping that exercise into another template all show the same note.\n- **Form clips now play back and show thumbnails** — tapping a form clip opens a working video player, and each clip shows a real thumbnail preview. Clips stay bound to their exercise.\n- **A workout is no longer marked \"Active\" until you complete your first set** — opening a workout and backing out without logging a set no longer leaves a lingering active workout.\n- **The active-workout banner now appears on the home screen instantly** — as soon as a workout becomes active it shows on Home, with no need to restart the app.\n- **Settings → Form Clips now shows thumbnails and plays clips** — each saved clip has a thumbnail and can be tapped to play.\n- **The home-screen active-workout banner now refreshes correctly when you return to Home** — after starting a workout in another tab, the banner updates on focus instead of waiting for an app restart."
   },
   {
     "version": "0.26.72",
