@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Next-workout weight suggestions now ignore warm-up sets** — the recommended weight is based only on your working sets, so a light warm-up no longer holds back (or skews) the suggestion to add weight when you hit the top of your rep range.
 
 ## v0.26.74 — 2026-07-14
 <!-- versionCode: 142 -->
