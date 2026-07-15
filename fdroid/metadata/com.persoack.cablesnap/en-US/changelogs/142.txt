@@ -1,0 +1,2 @@
+- **Form clip player now auto-detects portrait vs landscape aspect ratio.**
+- **Form clips player fixes** — corrects clip size display (no longer showing 0.0MB), ensures switching clips remounts the player, and prevents tablet layout overflow while keeping native controls visible.
