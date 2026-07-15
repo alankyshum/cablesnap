@@ -329,6 +329,36 @@ describe("suggest (progressive overload)", () => {
       });
     });
 
+    it("GIVEN a warmup set at low reps + completed working sets without a range, excludes warmups from linear progression", () => {
+      const sets = makeSets([
+        {
+          id: "s2",
+          started: 2000,
+          sets: [
+            { weight: 40, reps: 6, set_type: "warmup" },
+            { weight: 100, reps: 8, set_type: "normal" },
+            { weight: 100, reps: 8, set_type: "normal" },
+          ],
+        },
+        {
+          id: "s1",
+          started: 1000,
+          sets: [
+            { weight: 40, reps: 6, set_type: "warmup" },
+            { weight: 100, reps: 8, set_type: "normal" },
+            { weight: 100, reps: 8, set_type: "normal" },
+          ],
+        },
+      ]);
+      const res = suggest(sets, 2.5, false);
+      expect(res).toEqual({
+        type: "increase",
+        weight: 102.5,
+        reps: null,
+        reason: "All sets completed — increase by 2.5",
+      });
+    });
+
     it("tech-lead #5 REGRESSION: iterates existing cases and asserts undefined/null range produces identical output", () => {
       for (const c of cases) {
         const setsList = makeSets(c.sessions);

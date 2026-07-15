@@ -111,14 +111,15 @@ export function suggest(
   const [, last] = sorted[0];
   const [, prior] = sorted[1];
 
-  // Filter to "attempted" sets (weight > 0 AND reps > 0)
+  // Filter to "attempted" WORKING sets (weight > 0 AND reps > 0, excluding warmups).
+  // Warm-ups must not count toward the rep-threshold / progression decision.
   const attempted = last.filter(
-    (s) => s.weight != null && s.weight > 0 && s.reps != null && s.reps > 0,
+    (s) => s.set_type !== "warmup" && s.weight != null && s.weight > 0 && s.reps != null && s.reps > 0,
   );
   if (attempted.length === 0) return null;
 
   const priorAttempted = prior.filter(
-    (s) => s.weight != null && s.weight > 0 && s.reps != null && s.reps > 0,
+    (s) => s.set_type !== "warmup" && s.weight != null && s.weight > 0 && s.reps != null && s.reps > 0,
   );
   if (priorAttempted.length === 0) return null;
 
