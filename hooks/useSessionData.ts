@@ -228,7 +228,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
       if (group.track_unilateral) {
         let existing = group.sets.find((item) => item.set_number === s.set_number);
         if (!existing) {
-          const newEntry: typeof existing = {
+          const newEntry: SetWithMeta = {
             id: s.id,
             session_id: s.session_id,
             exercise_id: s.exercise_id,

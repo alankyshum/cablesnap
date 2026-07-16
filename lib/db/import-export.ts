@@ -499,7 +499,7 @@ export async function exportAllData(
       ? filterAppSettingsRowsForSelectedCategories(rows, options.selectedCategories)
       : rows;
     if (table === "exercises") {
-      filteredRows = filteredRows.map((r: Record<string, unknown>) => {
+      filteredRows = (filteredRows as Record<string, unknown>[]).map((r) => {
         const copy = { ...r };
         if (copy.track_unilateral === 0 || copy.track_unilateral === null || copy.track_unilateral === undefined) {
           delete copy.track_unilateral;
@@ -507,7 +507,7 @@ export async function exportAllData(
         return copy;
       });
     } else if (table === "workout_sets") {
-      filteredRows = filteredRows.map((r: Record<string, unknown>) => {
+      filteredRows = (filteredRows as Record<string, unknown>[]).map((r) => {
         const copy = { ...r };
         if (copy.side === null || copy.side === undefined) {
           delete copy.side;

@@ -243,6 +243,11 @@ export async function addSet(
   };
 }
 
+/** Resolves the effective SetType for a batch-inserted set. Extracted to keep addSetsBatch lambda complexity ≤15. */
+function resolveSetTypeForBatch(setType: SetType | undefined, isWarmup?: boolean): SetType {
+  return setType ?? (isWarmup ? "warmup" : "normal");
+}
+
 export async function addSetsBatch(
   sets: {
     sessionId: string;
@@ -272,7 +277,7 @@ export async function addSetsBatch(
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => {
-    const resolvedType: SetType = s.setType ?? (s.isWarmup ? "warmup" : "normal");
+    const resolvedType: SetType = resolveSetTypeForBatch(s.setType, s.isWarmup);
     // AC1.1 / AC1.3: inherit exercise default_tempo when no explicit tempo is provided.
     const resolvedTempo = s.tempo ?? s.exerciseDefaultTempo ?? null;
     return {
