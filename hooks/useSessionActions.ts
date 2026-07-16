@@ -385,12 +385,12 @@ export function useSessionActions({
           resolvedSet.round,
           resolvedSet.tempo,
           undefined,
-          resolvedSet.set_type as any,
+          resolvedSet.set_type,
           parentGroup.exercise_position,
-          resolvedSet.attachment as any,
-          resolvedSet.mount_position as any,
-          resolvedSet.grip_type as any,
-          resolvedSet.grip_width as any,
+          resolvedSet.attachment,
+          resolvedSet.mount_position,
+          resolvedSet.grip_type,
+          resolvedSet.grip_width,
           resolvedSet.stack_id,
           resolvedSet.stack_marker,
           resolvedSet.stack_unit_at_log,
@@ -428,8 +428,8 @@ export function useSessionActions({
               const nextRight = side === "right" ? { ...(s.right || sideSet), [field]: num } : s.right;
               return {
                 ...s,
-                left: nextLeft as any,
-                right: nextRight as any,
+              left: nextLeft as SetWithMeta | undefined,
+              right: nextRight as SetWithMeta | undefined,
               };
             }),
           };
@@ -1054,7 +1054,7 @@ export function useSessionActions({
         previous: "-",
         left: setWithModifier,
         right: undefined,
-      } as any;
+      } as unknown as SetWithMeta;
       
       setGroups((prev) =>
         prev.map((g) =>

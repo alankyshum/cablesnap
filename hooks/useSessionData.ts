@@ -241,7 +241,7 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
             prefillCandidate,
             left: undefined,
             right: undefined,
-          } as any;
+          } as unknown as SetWithMeta;
           group.sets.push(newEntry!);
           existing = newEntry;
         }

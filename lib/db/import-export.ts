@@ -494,12 +494,12 @@ export async function exportAllData(
   for (let i = 0; i < tables.length; i++) {
     const table = tables[i];
     onProgress?.({ table, tableIndex: i, totalTables: tables.length });
-    const rows = await database.getAllAsync(`SELECT * FROM ${table}`);
+    const rows = await database.getAllAsync<Record<string, unknown>>(`SELECT * FROM ${table}`);
     let filteredRows = table === "app_settings"
       ? filterAppSettingsRowsForSelectedCategories(rows, options.selectedCategories)
       : rows;
     if (table === "exercises") {
-      filteredRows = filteredRows.map((r: any) => {
+      filteredRows = filteredRows.map((r: Record<string, unknown>) => {
         const copy = { ...r };
         if (copy.track_unilateral === 0 || copy.track_unilateral === null || copy.track_unilateral === undefined) {
           delete copy.track_unilateral;
@@ -507,7 +507,7 @@ export async function exportAllData(
         return copy;
       });
     } else if (table === "workout_sets") {
-      filteredRows = filteredRows.map((r: any) => {
+      filteredRows = filteredRows.map((r: Record<string, unknown>) => {
         const copy = { ...r };
         if (copy.side === null || copy.side === undefined) {
           delete copy.side;

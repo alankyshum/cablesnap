@@ -72,15 +72,6 @@ export function SetOptionsSheet({
     );
   }
 
-  const isUnilateral = (() => {
-    for (const g of groups) {
-      if (g.sets.some((s) => s.id === setId)) {
-        return g.track_unilateral === true;
-      }
-    }
-    return false;
-  })();
-
   const currentSetType = (() => {
     for (const g of groups) {
       for (const s of g.sets) {

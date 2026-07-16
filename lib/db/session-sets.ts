@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { eq, ne, sql, and, inArray, isNotNull, isNull, avg, count, asc, desc } from "drizzle-orm";
+import { eq, ne, sql, and, inArray, isNotNull, isNull, avg, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, SetType, Attachment, MountPosition, GripType, GripWidth } from "../types";
 import { isAttachment, isMountPosition } from "../cable-variant";
@@ -302,7 +302,7 @@ export async function addSetsBatch(
       stack_unit_at_log: s.stackUnitAtLog ?? null,
       stack_name_at_log: s.stackNameAtLog ?? null,
       pulley_pin: validatePulleyPin(s.pulleyPin),
-      side: s.side ?? null,
+      side: s.side,
     };
   });
   // Use prepared statements for batch insert performance

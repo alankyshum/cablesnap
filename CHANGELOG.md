@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Unilateral (per-side) set logging**: opt-in L/R tracking per exercise with separate Left/Right weight & reps inputs, neutral imbalance readout (`Left {w}×{r} · Right {w}×{r} · Difference {n}%`), copy-left-to-right affordance, and CSV/backup round-trip support.
 
 ## v0.26.75 — 2026-07-16
 <!-- versionCode: 143 -->

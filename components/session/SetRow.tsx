@@ -200,7 +200,7 @@ export type SetRowProps = {
 };
 
 export const SetRow = memo(function SetRow({
-  set, rightSet, trackUnilateral, step, unit, trackingMode, equipment,
+  set, rightSet, step, unit, trackingMode, equipment,
   onUpdate, onCheck, onDelete,
   onCycleSetType, onLongPressSetType,
   exerciseId, setIndex,

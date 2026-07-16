@@ -125,37 +125,38 @@ export default function ExerciseDetail() {
 
   const edit = useCallback(() => { if (id) router.push(`/exercise/edit/${id}`); }, [id, router]);
 
-  const [trackUnilateral, setTrackUnilateral] = useState(d.exercise?.track_unilateral ?? false);
+  // BLD-3345: derive trackUnilateral from server data; use pendingTrackUnilateral for
+  // optimistic updates only — avoids synchronous setState inside useEffect.
+  const [pendingTrackUnilateral, setPendingTrackUnilateral] = useState<boolean | null>(null);
+  const trackUnilateral = pendingTrackUnilateral ?? (d.exercise?.track_unilateral ?? false);
   const [unilateralInsight, setUnilateralInsight] = useState<{
     left: { weight: number | null; reps: number | null } | null;
     right: { weight: number | null; reps: number | null } | null;
   } | null>(null);
 
   useEffect(() => {
-    if (d.exercise) {
-      setTrackUnilateral(d.exercise.track_unilateral ?? false);
-    }
-  }, [d.exercise]);
-
-  useEffect(() => {
-    if (id && trackUnilateral) {
-      getLatestUnilateralInsight(id).then(setUnilateralInsight);
-    } else {
-      setUnilateralInsight(null);
-    }
+    let cancelled = false;
+    const fetch = id && trackUnilateral
+      ? getLatestUnilateralInsight(id)
+      : Promise.resolve(null);
+    fetch.then((insight) => {
+      if (!cancelled) setUnilateralInsight(insight);
+    });
+    return () => { cancelled = true; };
   }, [id, trackUnilateral]);
 
   const handleTrackUnilateralChange = useCallback(async (value: boolean) => {
     if (!id) return;
-    setTrackUnilateral(value);
+    setPendingTrackUnilateral(value);
     try {
       await updateTrackUnilateral(id, value);
       bumpQueryVersion("exercises");
       bumpQueryVersion("session");
+      setPendingTrackUnilateral(null);
       showToast({ description: "Track left/right separately updated" });
     } catch {
       showToast({ description: "Failed to update unilateral tracking" });
-      setTrackUnilateral(!value);
+      setPendingTrackUnilateral(null);
     }
   }, [id, showToast]);
 
