@@ -20,7 +20,7 @@
  * wire any extra prop for it.
  */
 import React, { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
-import { findNodeHandle, I18nManager, Image, Platform, Pressable, StyleSheet, View } from "react-native";
+import { findNodeHandle, I18nManager, Image, Platform, Pressable, StyleSheet, View, Alert, TouchableOpacity } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Check, Trash2 } from "lucide-react-native";
@@ -108,6 +108,8 @@ export { formatDurationDisplay } from "./timerUtils";
 
 export type SetRowProps = {
   set: SetWithMeta;
+  rightSet?: SetWithMeta;
+  trackUnilateral?: boolean;
   step: number;
   unit: "kg" | "lb";
   trackingMode: "reps" | "duration";
@@ -198,7 +200,7 @@ export type SetRowProps = {
 };
 
 export const SetRow = memo(function SetRow({
-  set, step, unit, trackingMode, equipment,
+  set, rightSet, trackUnilateral, step, unit, trackingMode, equipment,
   onUpdate, onCheck, onDelete,
   onCycleSetType, onLongPressSetType,
   exerciseId, setIndex,
@@ -255,6 +257,31 @@ export const SetRow = memo(function SetRow({
     }
     onCheck(set);
   }, [set, onCheck, fireSetCompletionFeedback]);
+
+  const handleCopyLeftToRight = useCallback(() => {
+    if (!rightSet) return;
+    const leftWeight = set.weight;
+    const leftReps = set.reps;
+    
+    const performCopy = () => {
+      if (leftWeight !== null) onUpdate(rightSet.id, "weight", String(leftWeight));
+      if (leftReps !== null) onUpdate(rightSet.id, "reps", String(leftReps));
+    };
+
+    const hasRightValue = (rightSet.weight !== null && rightSet.weight > 0) || (rightSet.reps !== null && rightSet.reps > 0);
+    if (hasRightValue) {
+      Alert.alert(
+        "Overwrite Right Side?",
+        "Do you want to overwrite your existing Right side entry with the Left side values?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Overwrite", onPress: performCopy }
+        ]
+      );
+    } else {
+      performCopy();
+    }
+  }, [set, rightSet, onUpdate]);
 
   const onWeightChange = useCallback((v: number) => onUpdate(set.id, "weight", String(v)), [set.id, onUpdate]);
   const onRepsChange = useCallback((v: number) => onUpdate(set.id, "reps", String(v)), [set.id, onUpdate]);
@@ -366,11 +393,188 @@ export const SetRow = memo(function SetRow({
     [set.id, set.reps, onManualWeightSave],
   );
 
+  const handleRightManualWeightSave = useCallback(
+    (weight: number | null) => {
+      if (rightSet) onManualWeightSave?.(rightSet.id, weight, rightSet.reps ?? null);
+    },
+    [rightSet, onManualWeightSave],
+  );
+
   // BLD-1110: RPE chip strip element, shared across Case A/B/C footer topologies.
   // BLD-2701: Pass intensityMode so chips and sheet display in the user's preferred unit.
   const rpeStrip = set.completed && captureRpe
     ? <RpeChipStrip value={set.rpe ?? null} onChange={handleRpeChange} setId={set.id} intensityMode={intensityMode} />
     : null;
+
+  if (rightSet && set.set_type === "normal") {
+    const leftWeight = set.weight;
+    const leftReps = set.reps;
+    const rightWeight = rightSet.weight;
+    const rightReps = rightSet.reps;
+
+    const leftDisplayedWeight = leftWeight ?? set.prefillCandidate?.weight ?? null;
+    const leftDisplayedReps = leftReps ?? set.prefillCandidate?.reps ?? null;
+    const rightDisplayedWeight = rightWeight ?? rightSet.prefillCandidate?.weight ?? null;
+    const rightDisplayedReps = rightReps ?? rightSet.prefillCandidate?.reps ?? null;
+
+    const showDifference = leftWeight != null && leftReps != null && rightWeight != null && rightReps != null;
+    let differenceText = "";
+    let differenceA11y = "";
+    if (showDifference) {
+      const leftVol = (leftWeight ?? 0) * (leftReps ?? 0);
+      const rightVol = (rightWeight ?? 0) * (rightReps ?? 0);
+      const maxVol = Math.max(leftVol, rightVol);
+      const diffPercent = maxVol > 0 ? Math.round((Math.abs(leftVol - rightVol) / maxVol) * 100) : 0;
+      differenceText = `Left ${leftWeight}×${leftReps} · Right ${rightWeight}×${rightReps} · Difference ${diffPercent}%`;
+      differenceA11y = `Left side ${leftWeight} ${unit} by ${leftReps} reps, Right side ${rightWeight} ${unit} by ${rightReps} reps. Difference is ${diffPercent} percent.`;
+    }
+
+    const handleCopy = () => {
+      handleCopyLeftToRight();
+    };
+
+    return (
+      <View testID={`set-${set.id}-row`} style={{ paddingVertical: 4 }}>
+        <View
+          style={[
+            styles.setRow,
+            { backgroundColor: colors.background },
+            (set.completed || rightSet.completed) && { borderColor: colors.primary },
+          ]}
+        >
+          {/* SET Number */}
+          <View style={[styles.colSet, { minHeight: 36 }]}>
+            <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>
+              {set.set_number}
+            </Text>
+          </View>
+
+          {/* Left Side */}
+          <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
+            <View style={{ flex: 1, marginHorizontal: 2 }}>
+              {isBodyweight ? (
+                <BodyweightModifierChip
+                  modifierKg={set.bodyweight_modifier_kg ?? null}
+                  unit={unit}
+                  onPress={() => onOpenBodyweightModifier?.(set.id)}
+                  onLongPress={() => onClearBodyweightModifier?.(set.id)}
+                  setNumber={set.set_number}
+                />
+              ) : (
+                <SetWeightCell
+                  setId={set.id}
+                  setNumber={set.set_number}
+                  weight={set.weight ?? null}
+                  stackMarker={set.stack_marker ?? null}
+                  stackUnit={set.stack_unit_at_log ?? null}
+                  displayedWeight={leftDisplayedWeight}
+                  step={step}
+                  unit={unit}
+                  isCable={isCable}
+                  stacks={stacksProp}
+                  accessibilityLabel={`Left weight for Set ${set.set_number}`}
+                  testID={`set-${set.set_number}-left-weight`}
+                  onWeightChange={onWeightChange}
+                  onManualWeightSave={handleManualWeightSave}
+                  onMarkerConfirm={handleMarkerConfirm}
+                />
+              )}
+            </View>
+            <View style={{ flex: 1, marginHorizontal: 2 }}>
+              <WeightPicker
+                value={leftDisplayedReps}
+                step={1}
+                onValueChange={onRepsChange}
+                accessibilityLabel={`Left reps for Set ${set.set_number}`}
+                testID={`set-${set.set_number}-left-reps`}
+                max={999}
+              />
+            </View>
+          </View>
+
+          {/* Copy Button */}
+          <TouchableOpacity
+            onPress={handleCopy}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={{ width: 36, height: 44, alignItems: "center", justifyContent: "center" }}
+            accessibilityLabel="Copy Left to Right"
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons name="arrow-right-bold-circle-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
+
+          {/* Right Side */}
+          <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
+            <View style={{ flex: 1, marginHorizontal: 2 }}>
+              {isBodyweight ? (
+                <BodyweightModifierChip
+                  modifierKg={rightSet.bodyweight_modifier_kg ?? null}
+                  unit={unit}
+                  onPress={() => onOpenBodyweightModifier?.(rightSet.id)}
+                  onLongPress={() => onClearBodyweightModifier?.(rightSet.id)}
+                  setNumber={set.set_number}
+                />
+              ) : (
+                <SetWeightCell
+                  setId={rightSet.id}
+                  setNumber={set.set_number}
+                  weight={rightSet.weight ?? null}
+                  stackMarker={rightSet.stack_marker ?? null}
+                  stackUnit={rightSet.stack_unit_at_log ?? null}
+                  displayedWeight={rightDisplayedWeight}
+                  step={step}
+                  unit={unit}
+                  isCable={isCable}
+                  stacks={stacksProp}
+                  accessibilityLabel={`Right weight for Set ${set.set_number}`}
+                  testID={`set-${set.set_number}-right-weight`}
+                  onWeightChange={(v) => onUpdate(rightSet.id, "weight", String(v))}
+                  onManualWeightSave={handleRightManualWeightSave}
+                  onMarkerConfirm={(result) => onMarkerConfirm?.(rightSet.id, result)}
+                />
+              )}
+            </View>
+            <View style={{ flex: 1, marginHorizontal: 2 }}>
+              <WeightPicker
+                value={rightDisplayedReps}
+                step={1}
+                onValueChange={(v) => onUpdate(rightSet.id, "reps", String(v))}
+                accessibilityLabel={`Right reps for Set ${set.set_number}`}
+                testID={`set-${set.set_number}-right-reps`}
+                max={999}
+              />
+            </View>
+          </View>
+
+          {/* Completed Checkmark */}
+          <Pressable
+            onPress={handleCheckPress}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={[
+              styles.circleCheck,
+              { borderColor: set.completed ? colors.primary : colors.onSurfaceVariant },
+              set.completed && { backgroundColor: colors.primary },
+              { width: 36, height: 36, borderRadius: 18, marginLeft: 6 },
+            ]}
+            accessibilityLabel={`Mark set ${set.set_number} ${set.completed ? "incomplete" : "complete"}`}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: set.completed }}
+          >
+            {set.completed && (
+              <MaterialCommunityIcons name="check" size={14} color={colors.onPrimary} />
+            )}
+          </Pressable>
+        </View>
+        {showDifference && (
+          <View style={styles.differenceFooter} accessibilityLabel={differenceA11y}>
+            <Text style={[styles.differenceText, { color: colors.onSurfaceVariant }]}>
+              {differenceText}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View testID={`set-${set.id}-row`}>
@@ -1082,5 +1286,46 @@ const styles = StyleSheet.create({
   durationCol: {
     flex: 1,
     marginHorizontal: 12,
+  },
+  differenceFooter: {
+    paddingLeft: 36,
+    paddingTop: 2,
+    paddingBottom: 4,
+  },
+  differenceText: {
+    fontSize: fontSizes.xs,
+    fontWeight: "500",
+  },
+  unilateralContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    position: "relative",
+    paddingRight: 4,
+  },
+  unilateralSide: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    width: "45%",
+  },
+  unilateralSideLabel: {
+    fontSize: fontSizes.xs,
+    fontWeight: "700",
+    width: 12,
+    textAlign: "center",
+  },
+  copyBtn: {
+    position: "absolute",
+    left: "50%",
+    marginLeft: -16,
+    padding: 8,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 32,
+    minHeight: 44,
+    zIndex: 10,
   },
 });

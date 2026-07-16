@@ -116,7 +116,7 @@ export async function getVariantSetCount(
     ? " AND (ws.attachment IS NOT NULL OR ws.mount_position IS NOT NULL)"
     : "";
   const row = await queryOne<{ n: number | null }>(
-    `SELECT COUNT(*) AS n
+    `SELECT COUNT(DISTINCT ws.session_id || '_' || ws.set_number) AS n
        FROM workout_sets ws
        JOIN workout_sessions wss ON ws.session_id = wss.id
       WHERE ws.exercise_id = ?

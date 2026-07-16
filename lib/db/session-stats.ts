@@ -15,7 +15,7 @@ export async function getSessionsByMonth(
   const end = new Date(year, month + 1, 1).getTime();
   return query<WorkoutSession & { set_count: number }>(
     `SELECT wss.*,
-            (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
+            (SELECT COUNT(DISTINCT ws.exercise_id || '_' || ws.set_number) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
      FROM workout_sessions wss
      WHERE wss.completed_at IS NOT NULL
        AND wss.kind = 'workout'
@@ -31,7 +31,7 @@ export async function searchSessions(
 ): Promise<(WorkoutSession & { set_count: number })[]> {
   return query<WorkoutSession & { set_count: number }>(
     `SELECT wss.*,
-            (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
+            (SELECT COUNT(DISTINCT ws.exercise_id || '_' || ws.set_number) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
      FROM workout_sessions wss
      WHERE wss.completed_at IS NOT NULL AND wss.kind = 'workout' AND wss.name LIKE ?
      ORDER BY wss.started_at DESC
@@ -244,7 +244,7 @@ export async function getCompletedSessionsWithSetCount(
 ): Promise<(WorkoutSession & { set_count: number })[]> {
   return query<WorkoutSession & { set_count: number }>(
     `SELECT wss.*,
-            (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
+            (SELECT COUNT(DISTINCT ws.exercise_id || '_' || ws.set_number) FROM workout_sets ws WHERE ws.session_id = wss.id AND ws.completed = 1) AS set_count
      FROM workout_sessions wss
      WHERE wss.completed_at IS NOT NULL${gymId ? " AND wss.gym_id = ?" : ""}
      ORDER BY wss.started_at DESC
@@ -917,7 +917,7 @@ export async function getFilteredSessions(
   // Paged rows
   const rows = await query<WorkoutSession & { set_count: number }>(
     `SELECT s.*,
-            (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = s.id AND ws.completed = 1) AS set_count
+            (SELECT COUNT(DISTINCT ws.exercise_id || '_' || ws.set_number) FROM workout_sets ws WHERE ws.session_id = s.id AND ws.completed = 1) AS set_count
      FROM workout_sessions s
      WHERE ${whereClause}
      ORDER BY s.started_at DESC

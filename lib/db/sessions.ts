@@ -43,6 +43,7 @@ export {
   getRestContext,
   getSourceSessionSets,
   updateExercisePositions,
+  getLatestUnilateralInsight,
 } from "./session-sets";
 export type { SourceSessionSet } from "./session-sets";
 export type { RestContext } from "./session-sets";
@@ -659,8 +660,13 @@ async function renumberSessionSets(
     groups.get(r.exercise_id)!.push(r);
   }
   for (const [, rows] of groups) {
+    let expected = 0;
+    let lastOriginalSetNumber = -1;
     for (let i = 0; i < rows.length; i++) {
-      const expected = i + 1;
+      if (rows[i].set_number !== lastOriginalSetNumber) {
+        expected++;
+        lastOriginalSetNumber = rows[i].set_number;
+      }
       if (rows[i].set_number !== expected) {
         await db.update(workoutSets)
           .set({ set_number: expected })

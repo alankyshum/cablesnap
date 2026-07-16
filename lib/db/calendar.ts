@@ -91,7 +91,7 @@ export async function getDaySessionDetails(
 ): Promise<DayDetail[]> {
   return query<DayDetail>(
     `SELECT s.id, s.name, s.started_at, s.duration_seconds,
-            (SELECT COUNT(*) FROM workout_sets ws WHERE ws.session_id = s.id AND ws.completed = 1) as set_count,
+            (SELECT COUNT(DISTINCT ws.exercise_id || '_' || ws.set_number) FROM workout_sets ws WHERE ws.session_id = s.id AND ws.completed = 1) as set_count,
             (SELECT COUNT(DISTINCT ws.exercise_id) FROM workout_sets ws WHERE ws.session_id = s.id AND ws.completed = 1) as exercise_count
      FROM workout_sessions s
      WHERE s.completed_at IS NOT NULL

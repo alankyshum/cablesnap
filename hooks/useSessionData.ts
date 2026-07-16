@@ -163,6 +163,8 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
           pinnedNoteBackfill: exerciseNotes[s.exercise_id]?.dismissed ? null : undefined,
           // BLD-1158: exercise default tempo for new-set inheritance (AC1.1).
           defaultTempo: ex?.default_tempo ?? null,
+          // BLD-3344: unilateral exercise setting
+          track_unilateral: ex?.track_unilateral ?? false,
           // BLD-2561: preferred substitute (null = no preference set).
           preferredSubstituteId: preferredSubstitutesMap[s.exercise_id] ?? null,
           preferredSubstituteName: (() => {
@@ -223,11 +225,54 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
             : `${prev.weight}×${prev.reps}`;
         }
       }
-      group.sets.push({
-        ...s,
-        previous: prevDisplay,
-        prefillCandidate,
-      });
+      if (group.track_unilateral) {
+        let existing = group.sets.find((item) => item.set_number === s.set_number);
+        if (!existing) {
+          const newEntry: typeof existing = {
+            id: s.id,
+            session_id: s.session_id,
+            exercise_id: s.exercise_id,
+            set_number: s.set_number,
+            set_type: s.set_type,
+            exercise_position: s.exercise_position,
+            completed: false,
+            completed_at: null,
+            previous: prevDisplay,
+            prefillCandidate,
+            left: undefined,
+            right: undefined,
+          } as any;
+          group.sets.push(newEntry!);
+          existing = newEntry;
+        }
+        const e = existing!;
+        if (s.side === "left") {
+          e.left = s;
+          if (s.completed) {
+            e.completed = true;
+            e.completed_at = s.completed_at;
+          }
+        } else if (s.side === "right") {
+          e.right = s;
+          if (s.completed) {
+            e.completed = true;
+            e.completed_at = s.completed_at;
+          }
+        } else {
+          e.weight = s.weight;
+          e.reps = s.reps;
+          e.completed = s.completed;
+          e.completed_at = s.completed_at;
+          e.id = s.id;
+          e.duration_seconds = s.duration_seconds;
+        }
+      } else {
+        group.sets.push({
+          ...s,
+          previous: prevDisplay,
+          prefillCandidate,
+        });
+      }
     }
     const groupList = [...map.values()];
 

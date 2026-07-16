@@ -356,31 +356,102 @@ export function useSessionActions({
   const handleUpdate = useCallback(async (
     setId: string,
     field: "weight" | "reps" | "duration_seconds",
-    val: string
+    val: string,
+    side?: "left" | "right"
   ) => {
     let resolvedSet: SetWithMeta | undefined;
+    let parentGroup: typeof groupsRef.current[0] | undefined;
     for (const g of groupsRef.current) {
       const s = g.sets.find((s) => s.id === setId);
-      if (s) { resolvedSet = s; break; }
+      if (s) {
+        resolvedSet = s;
+        parentGroup = g;
+        break;
+      }
     }
-    if (!resolvedSet) return;
+    if (!resolvedSet || !parentGroup) return;
 
     const num = val === "" ? null : parseFloat(val);
-    if (field === "weight") {
-      updateGroupSet(setId, { weight: num });
-      await updateSet(setId, num, resolvedSet.reps);
-    } else if (field === "duration_seconds") {
-      const rounded = num !== null ? Math.round(num) : null;
-      updateGroupSet(setId, { duration_seconds: rounded });
-      await updateSetDuration(setId, rounded);
+
+    if (side) {
+      let sideSet = side === "left" ? resolvedSet.left : resolvedSet.right;
+      if (!sideSet) {
+        const exerciseDefaultTempo = parentGroup.trackingMode === "duration" ? null : (parentGroup.defaultTempo ?? null);
+        sideSet = await addSet(
+          id!,
+          parentGroup.exercise_id,
+          resolvedSet.set_number,
+          resolvedSet.link_id,
+          resolvedSet.round,
+          resolvedSet.tempo,
+          undefined,
+          resolvedSet.set_type as any,
+          parentGroup.exercise_position,
+          resolvedSet.attachment as any,
+          resolvedSet.mount_position as any,
+          resolvedSet.grip_type as any,
+          resolvedSet.grip_width as any,
+          resolvedSet.stack_id,
+          resolvedSet.stack_marker,
+          resolvedSet.stack_unit_at_log,
+          resolvedSet.stack_name_at_log,
+          resolvedSet.pulley_pin,
+          exerciseDefaultTempo,
+          side
+        );
+        if (side === "left") {
+          resolvedSet.left = sideSet;
+        } else {
+          resolvedSet.right = sideSet;
+        }
+      }
+      
+      const targetId = sideSet.id;
+      if (field === "weight") {
+        await updateSet(targetId, num, sideSet.reps);
+      } else if (field === "duration_seconds") {
+        const rounded = num !== null ? Math.round(num) : null;
+        await updateSetDuration(targetId, rounded);
+      } else {
+        const rounded = num !== null ? Math.round(num) : null;
+        await updateSet(targetId, sideSet.weight, rounded);
+      }
+
+      setGroups((prev) =>
+        prev.map((g) => {
+          if (g.exercise_id !== parentGroup.exercise_id) return g;
+          return {
+            ...g,
+            sets: g.sets.map((s) => {
+              if (s.set_number !== resolvedSet.set_number) return s;
+              const nextLeft = side === "left" ? { ...(s.left || sideSet), [field]: num } : s.left;
+              const nextRight = side === "right" ? { ...(s.right || sideSet), [field]: num } : s.right;
+              return {
+                ...s,
+                left: nextLeft as any,
+                right: nextRight as any,
+              };
+            }),
+          };
+        })
+      );
     } else {
-      const rounded = num !== null ? Math.round(num) : null;
-      updateGroupSet(setId, { reps: rounded });
-      await updateSet(setId, resolvedSet.weight, rounded);
+      if (field === "weight") {
+        updateGroupSet(setId, { weight: num });
+        await updateSet(setId, num, resolvedSet.reps);
+      } else if (field === "duration_seconds") {
+        const rounded = num !== null ? Math.round(num) : null;
+        updateGroupSet(setId, { duration_seconds: rounded });
+        await updateSetDuration(setId, rounded);
+      } else {
+        const rounded = num !== null ? Math.round(num) : null;
+        updateGroupSet(setId, { reps: rounded });
+        await updateSet(setId, resolvedSet.weight, rounded);
+      }
     }
     // BLD-1122 AC17: weight/reps changes affect plateau window
     queryClient.invalidateQueries({ queryKey: ["plateau"] });
-  }, [updateGroupSet]);
+  }, [updateGroupSet, id]);
 
   /** Handle superset next-hint or rest timer for linked exercises. */
   const handleLinkedRest = useCallback(async (set: SetWithMeta) => {
@@ -409,6 +480,98 @@ export function useSessionActions({
 
   const handleCheck = useCallback(async (set: SetWithMeta) => {
     const group = groups.find((g) => g.exercise_id === set.exercise_id);
+
+    if (group?.track_unilateral) {
+      const activeGroup = groupsRef.current.find((g) => g.exercise_id === set.exercise_id);
+      const siblingSets = activeGroup?.sets.filter((s) => s.set_number === set.set_number) ?? [];
+      const leftSet = siblingSets.find((s) => s.side === "left");
+      const rightSet = siblingSets.find((s) => s.side === "right");
+
+      if (set.completed) {
+        // Uncompleting
+        if (leftSet) await uncompleteSet(leftSet.id);
+        if (rightSet) await uncompleteSet(rightSet.id);
+
+        setGroups((prev) =>
+          prev.map((g) => {
+            if (g.exercise_id !== set.exercise_id) return g;
+            return {
+              ...g,
+              sets: g.sets.map((s) => {
+                if (s.set_number !== set.set_number) return s;
+                return {
+                  ...s,
+                  completed: false,
+                  completed_at: null,
+                };
+              }),
+            };
+          })
+        );
+        queryClient.invalidateQueries({ queryKey: ["plateau"] });
+        return;
+      }
+
+      // Completing
+      const now = Date.now();
+      const leftEmpty = leftSet && (leftSet.weight === null && leftSet.reps === null);
+      const rightEmpty = rightSet && (rightSet.weight === null && rightSet.reps === null);
+
+      if (leftEmpty && rightEmpty) {
+        // Both empty: do nothing
+        return;
+      }
+
+      if (leftEmpty && leftSet) {
+        await deleteSet(leftSet.id);
+        setGroups((prev) =>
+          prev.map((g) => {
+            if (g.exercise_id !== set.exercise_id) return g;
+            return {
+              ...g,
+              sets: g.sets.filter((s) => s.id !== leftSet.id),
+            };
+          })
+        );
+      } else if (leftSet) {
+        await completeSet(leftSet.id);
+      }
+
+      if (rightEmpty && rightSet) {
+        await deleteSet(rightSet.id);
+        setGroups((prev) =>
+          prev.map((g) => {
+            if (g.exercise_id !== set.exercise_id) return g;
+            return {
+              ...g,
+              sets: g.sets.filter((s) => s.id !== rightSet.id),
+            };
+          })
+        );
+      } else if (rightSet) {
+        await completeSet(rightSet.id);
+      }
+
+      // Mark the ones that weren't deleted as completed in UI state
+      setGroups((prev) =>
+        prev.map((g) => {
+          if (g.exercise_id !== set.exercise_id) return g;
+          return {
+            ...g,
+            sets: g.sets.map((s) => {
+              if (s.set_number !== set.set_number) return s;
+              return {
+                ...s,
+                completed: true,
+                completed_at: now,
+              };
+            }),
+          };
+        })
+      );
+      queryClient.invalidateQueries({ queryKey: ["plateau"] });
+      return;
+    }
 
     if (set.completed) {
       updateGroupSet(set.id, { completed: false, completed_at: null });
@@ -569,9 +732,32 @@ export function useSessionActions({
 
   const handleAddSet = useCallback(async (exerciseId: string) => {
     const group = groups.find((g) => g.exercise_id === exerciseId);
-    const num = (group?.sets.length ?? 0) + 1;
+    const isUnilateral = group?.track_unilateral === true;
+    const num = isUnilateral
+      ? Math.max(0, ...group.sets.map((s) => s.set_number)) + 1
+      : (group?.sets.length ?? 0) + 1;
     // AC1.1 / AC1.6: pass exerciseDefaultTempo for rep-mode groups; null for duration groups.
     const exerciseDefaultTempo = group?.trackingMode === "duration" ? null : (group?.defaultTempo ?? null);
+
+    if (isUnilateral) {
+      const [leftSet, rightSet] = await Promise.all([
+        addSet(id!, exerciseId, num, null, null, null, undefined, undefined, group?.exercise_position ?? 0, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, exerciseDefaultTempo, "left"),
+        addSet(id!, exerciseId, num, null, null, null, undefined, undefined, group?.exercise_position ?? 0, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, exerciseDefaultTempo, "right")
+      ]);
+
+      const leftSetWithMeta: SetWithMeta = { ...leftSet, previous: "-" };
+      const rightSetWithMeta: SetWithMeta = { ...rightSet, previous: "-" };
+
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.exercise_id === exerciseId
+            ? { ...g, sets: [...g.sets, leftSetWithMeta, rightSetWithMeta] }
+            : g
+        )
+      );
+      return;
+    }
+
     const newSet = await addSet(id!, exerciseId, num, null, null, null, undefined, undefined, group?.exercise_position ?? 0, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, exerciseDefaultTempo);
 
     // BLD-541: smart-default the bodyweight modifier from the last session's
@@ -855,13 +1041,37 @@ export function useSessionActions({
       ...(autofilledStackWeight !== null ? { weight: autofilledStackWeight } : {}),
       previous: "-",
     };
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.exercise_id === exerciseId
-          ? { ...g, sets: [...g.sets, setWithModifier] }
-          : g
-      )
-    );
+    if (group?.track_unilateral) {
+      const unilateralSet: SetWithMeta = {
+        id: setWithModifier.id,
+        session_id: setWithModifier.session_id,
+        exercise_id: setWithModifier.exercise_id,
+        set_number: setWithModifier.set_number,
+        set_type: setWithModifier.set_type,
+        exercise_position: setWithModifier.exercise_position,
+        completed: false,
+        completed_at: null,
+        previous: "-",
+        left: setWithModifier,
+        right: undefined,
+      } as any;
+      
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.exercise_id === exerciseId
+            ? { ...g, sets: [...g.sets, unilateralSet] }
+            : g
+        )
+      );
+    } else {
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.exercise_id === exerciseId
+            ? { ...g, sets: [...g.sets, setWithModifier] }
+            : g
+        )
+      );
+    }
   }, [id, groups]);
 
   const handleDelete = useCallback(async (setId: string) => {

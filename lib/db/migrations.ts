@@ -97,6 +97,8 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // Column-pair mirrors BLD-1028 notes/notes_updated_at; avoids join on session render path.
   await addColumnIfMissing(database, "exercises", "preferred_substitute_id", "TEXT DEFAULT NULL");
   await addColumnIfMissing(database, "exercises", "preferred_substitute_updated_at", "INTEGER DEFAULT NULL");
+  // BLD-3344: unilateral exercise setting
+  await addColumnIfMissing(database, "exercises", "track_unilateral", "INTEGER NOT NULL DEFAULT 0");
   // workout_templates table
   await addColumnIfMissing(database, "workout_templates", "is_starter", "INTEGER DEFAULT 0");
   await addColumnIfMissing(database, "workout_templates", "source", "TEXT DEFAULT NULL");
@@ -171,6 +173,8 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   await addColumnIfMissing(database, "workout_sets", "stack_name_at_log", "TEXT DEFAULT NULL");
   // BLD-1114: per-set pulley pin (Setup Snapshot).
   await addColumnIfMissing(database, "workout_sets", "pulley_pin", "INTEGER DEFAULT NULL");
+  // BLD-3344: unilateral per-side logging
+  await addColumnIfMissing(database, "workout_sets", "side", "TEXT CHECK (side IS NULL OR side IN ('left', 'right'))");
   // BLD-1168: cached aggregate columns for advanced set scheme analytics.
   // DEFAULT 0 so reads on pre-backfill rows see 0 not NULL. The one-time
   // backfill in Phase 3 populates correct values for all existing rows.

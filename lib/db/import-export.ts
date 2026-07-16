@@ -495,9 +495,26 @@ export async function exportAllData(
     const table = tables[i];
     onProgress?.({ table, tableIndex: i, totalTables: tables.length });
     const rows = await database.getAllAsync(`SELECT * FROM ${table}`);
-    const filteredRows = table === "app_settings"
+    let filteredRows = table === "app_settings"
       ? filterAppSettingsRowsForSelectedCategories(rows, options.selectedCategories)
       : rows;
+    if (table === "exercises") {
+      filteredRows = filteredRows.map((r: any) => {
+        const copy = { ...r };
+        if (copy.track_unilateral === 0 || copy.track_unilateral === null || copy.track_unilateral === undefined) {
+          delete copy.track_unilateral;
+        }
+        return copy;
+      });
+    } else if (table === "workout_sets") {
+      filteredRows = filteredRows.map((r: any) => {
+        const copy = { ...r };
+        if (copy.side === null || copy.side === undefined) {
+          delete copy.side;
+        }
+        return copy;
+      });
+    }
     tableData[table] = filteredRows;
     counts[table] = filteredRows.length;
   }
@@ -736,8 +753,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     case "workout_sets": {
       const setType = normalizeSetType(row.set_type ?? (row.is_warmup ? "warmup" : "normal"));
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, tempo, set_type, duration_seconds, bodyweight_modifier_kg, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log, pulley_pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.tempo ?? null, setType, row.duration_seconds ?? null, row.bodyweight_modifier_kg ?? null, row.attachment ?? null, row.mount_position ?? null, row.grip_type ?? null, row.grip_width ?? null, row.stack_id ?? null, row.stack_marker ?? null, row.stack_unit_at_log ?? null, row.stack_name_at_log ?? null, row.pulley_pin ?? null]
+        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, tempo, set_type, duration_seconds, bodyweight_modifier_kg, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log, pulley_pin, side) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.tempo ?? null, setType, row.duration_seconds ?? null, row.bodyweight_modifier_kg ?? null, row.attachment ?? null, row.mount_position ?? null, row.grip_type ?? null, row.grip_width ?? null, row.stack_id ?? null, row.stack_marker ?? null, row.stack_unit_at_log ?? null, row.stack_name_at_log ?? null, row.pulley_pin ?? null, row.side ?? null]
       );
       return r.changes > 0;
     }

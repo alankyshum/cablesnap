@@ -90,7 +90,8 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       max_pulley_pins INTEGER DEFAULT NULL,
       default_tempo TEXT DEFAULT NULL,
       preferred_substitute_id TEXT DEFAULT NULL,
-      preferred_substitute_updated_at INTEGER DEFAULT NULL
+      preferred_substitute_updated_at INTEGER DEFAULT NULL,
+      track_unilateral INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS workout_templates (
@@ -160,7 +161,8 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
       stack_id TEXT DEFAULT NULL,
       stack_marker INTEGER DEFAULT NULL,
       stack_unit_at_log TEXT DEFAULT NULL,
-      stack_name_at_log TEXT DEFAULT NULL
+      stack_name_at_log TEXT DEFAULT NULL,
+      side TEXT CHECK (side IS NULL OR side IN ('left', 'right'))
     );
 
     CREATE TABLE IF NOT EXISTS food_entries (

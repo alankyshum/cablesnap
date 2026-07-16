@@ -138,8 +138,8 @@ export async function importCsvSessions(
 
         const setId = uuid();
         await database.runAsync(
-          `INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, set_type)
-           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)`,
+          `INSERT INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, set_type, side)
+           VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)`,
           [
             setId,
             sessionId,
@@ -151,6 +151,7 @@ export async function importCsvSessions(
             set.rpe,
             set.notes,
             normalizeSetType(set.set_type),
+            set.side || null,
           ]
         );
         setsInserted++;
