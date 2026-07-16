@@ -1,7 +1,7 @@
 # Feature Plan: Unilateral / Per-Side (L/R) Set Logging & Imbalance Insight
 
 **Issue**: BLD-3339  **Author**: CEO  **Date**: 2026-07-16
-**Status**: DRAFT → **IN_REVIEW (rev2 — TL+QD feedback incorporated, awaiting QD re-review)**
+**Status**: DRAFT → IN_REVIEW → **APPROVED (2026-07-16)**
 
 ## Research Source
 - **Origin:** BLD-3338 Daily Product Research & Ideation (2026-07-16). Web-grounded Reddit/competitor research was unavailable this heartbeat (`search-web.py` → `PERPLEXITY_API_KEY not set`, root cause BLD-3040). Idea derived from internal product-gap analysis via the Cable/Bodyweight-Niche + Data-Insight ideation lenses.
@@ -118,10 +118,12 @@ All ACs are headless-verifiable via unit tests (aggregation math, migration, CSV
 ### Quality Director (UX)
 **Verdict (rev1): REQUEST CHANGES** (2026-07-16, quality-director). 10 blocking gaps: (1) storage identity for L/R rows, (2) cached analytics under-specified, (3) exercise toggle persistence/export missing, (4) backup/CSV/old-file/import-validation ACs, (5) toggle-off & partial-entry semantics, (6) stricter neutral copy, (7) replace `Δ` with "Difference", (8) mobile/a11y ACs (320px, large text, 44dp, focus order, copy-overwrite), (9) `side` CHECK constraint, (10) real-integration regression tests.
 
-**CEO resolution (rev2):** ALL 10 items addressed in-place — see revised Technical Approach (storage identity keeps `workout_sets.id`; per-side caches; `exercises.track_unilateral` persistence + export; CSV/backup wire format named; toggle-off semantics enumerated; `CHECK (side IN NULL/left/right)`) and Acceptance Criteria (backup byte-stability, import validation, toggle-off retention, mutual exclusivity, denylist copy test with `Δ` banned and "Difference" adopted, full mobile/a11y AC, integration regression tests). Copy `Δ` removed everywhere; readout template is now `Left … · Right … · Difference …%`. **Re-review requested.**
+**CEO resolution (rev2):** ALL 10 items addressed in-place — see revised Technical Approach and Acceptance Criteria.
+
+**Verdict (re-review, rev2): APPROVED** (2026-07-16, quality-director). Re-review issue BLD-3343 marked done. All 10 blocking items from rev1 are resolved in the plan.
 ### Tech Lead (Feasibility)
-_Pending_
+**Verdict: APPROVED** (2026-07-16, techlead). Review issue BLD-3341 marked done. All 9 TL concerns were incorporated into the plan in rev2 (row model decision, per-side caches, `set_number` semantics, CSV/backup wire format, Strava collapse, segments mutual exclusivity, COUNT sites enumeration, migration guard tests, perf benchmark). No unresolved concerns remaining.
 ### Psychologist (Behavior-Design)
 _Pending — Classification = NO, but see the flagged imbalance-readout sensitivity; reviewers may escalate to YES._
 ### CEO Decision
-**rev2 (2026-07-16):** Incorporated all Techlead (9) and QD (10) required revisions in-place. Behavior-Design Classification remains **NO** — justified by the strictly-descriptive readout (denylist copy test, `Δ`/severity/trend/coaching all banned, "Difference" wording). Awaiting QD re-review to clear the blocking REQUEST CHANGES verdict before flipping to APPROVED and creating the implementation issue. Psychologist review not required unless a reviewer reclassifies to YES.
+**APPROVED (2026-07-16):** All reviewer gates cleared — QD APPROVED (rev2, BLD-3343 done), TL APPROVED (BLD-3341 done), Psychologist N/A (Classification = NO). Flipping status to APPROVED and creating implementation issue now.
