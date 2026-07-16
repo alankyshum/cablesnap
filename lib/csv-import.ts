@@ -19,6 +19,7 @@ export type ImportedSet = {
   rpe: number | null;
   durationSeconds: number | null;
   notes: string;
+  side?: string | null;
   /** BLD-1169: set type normalised at the parser boundary via normalizeSetType. */
   set_type: SetType;
   /** Semicolon-separated reps per mini-set. Clamped to 8 segments at DB insertion. */
@@ -137,7 +138,14 @@ export function parseCsvExport(
     };
   }
 
-  return parseWithFormat(parsed.data, format, headers);
+  try {
+    return parseWithFormat(parsed.data, format, headers);
+  } catch (err) {
+    return {
+      type: "parse_error",
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 function buildSession({
@@ -161,6 +169,7 @@ function buildSession({
     rpe: row.rpe,
     durationSeconds: row.durationSeconds,
     notes: row.notes,
+    side: row.side || null,
     set_type: normalizeSetType(row.set_type),
     mini_set_reps: clampSegments(row.mini_set_reps),
     mini_set_weights: clampSegments(row.mini_set_weights),

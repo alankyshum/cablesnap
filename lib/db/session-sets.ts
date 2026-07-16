@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { eq, ne, sql, and, inArray, isNotNull, isNull, avg, count, asc, desc } from "drizzle-orm";
+import { eq, ne, sql, and, inArray, isNotNull, isNull, avg, asc, desc } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import type { WorkoutSet, SetType, Attachment, MountPosition, GripType, GripWidth } from "../types";
 import { isAttachment, isMountPosition } from "../cable-variant";
@@ -52,6 +52,7 @@ export async function getSessionSets(
       stack_unit_at_log: workoutSets.stack_unit_at_log,
       stack_name_at_log: workoutSets.stack_name_at_log,
       pulley_pin: workoutSets.pulley_pin,
+      side: workoutSets.side,
       exercise_name: exercises.name,
       exercise_deleted_at: exercises.deleted_at,
       swapped_from_name: swappedExercise.name,
@@ -94,6 +95,7 @@ export async function getSessionSets(
     stack_unit_at_log: r.stack_unit_at_log ?? null,
     stack_name_at_log: r.stack_name_at_log ?? null,
     pulley_pin: r.pulley_pin ?? null,
+    side: r.side ?? null,
     exercise_name: r.exercise_name ?? undefined,
     exercise_deleted: r.exercise_deleted_at != null,
     swapped_from_name: r.swapped_from_name ?? undefined,
@@ -181,6 +183,7 @@ export async function addSet(
   // BLD-1158: exercise-level default tempo — used as fallback when tempo is
   // null and the set is rep-mode (AC1.1). Pass null for duration-mode sets (AC1.6).
   exerciseDefaultTempo?: string | null,
+  side?: "left" | "right" | null,
 ): Promise<WorkoutSet> {
   const id = uuid();
   const resolvedType: SetType = setType ?? "normal";
@@ -207,6 +210,7 @@ export async function addSet(
     stack_unit_at_log: stackUnitAtLog ?? null,
     stack_name_at_log: stackNameAtLog ?? null,
     pulley_pin: validatedPulleyPin,
+    side: side ?? null,
   });
   return {
     id,
@@ -235,6 +239,7 @@ export async function addSet(
     stack_unit_at_log: stackUnitAtLog ?? null,
     stack_name_at_log: stackNameAtLog ?? null,
     pulley_pin: validatedPulleyPin,
+    side: side ?? null,
   };
 }
 
@@ -263,6 +268,7 @@ export async function addSetsBatch(
     // BLD-1158: exercise default tempo — fallback when tempo is null and set is
     // rep-mode (AC1.1, AC1.3). Caller must pass null for duration-mode sets (AC1.6).
     exerciseDefaultTempo?: string | null;
+    side?: "left" | "right" | null;
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => {
@@ -296,12 +302,13 @@ export async function addSetsBatch(
       stack_unit_at_log: s.stackUnitAtLog ?? null,
       stack_name_at_log: s.stackNameAtLog ?? null,
       pulley_pin: validatePulleyPin(s.pulleyPin),
+      side: s.side ?? null,
     };
   });
   // Use prepared statements for batch insert performance
   await withTransaction(async (db) => {
     const stmt = await db.prepareAsync(
-      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, tempo, set_type, exercise_position, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log, pulley_pin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, link_id, round, tempo, set_type, exercise_position, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log, pulley_pin, side) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
     try {
       for (const r of results) {
@@ -314,6 +321,7 @@ export async function addSetsBatch(
           r.grip_type ?? null, r.grip_width ?? null,
           r.stack_id ?? null, r.stack_marker ?? null, r.stack_unit_at_log ?? null, r.stack_name_at_log ?? null,
           r.pulley_pin ?? null,
+          r.side ?? null,
         ]);
       }
     } finally {
@@ -532,7 +540,7 @@ async function renumberExerciseGroup(
   await db.runAsync(
     `WITH renumbered AS (
        SELECT id,
-              ROW_NUMBER() OVER (ORDER BY set_number ASC, id ASC) AS rn
+              DENSE_RANK() OVER (ORDER BY set_number ASC) AS rn
        FROM workout_sets
        WHERE session_id = ? AND exercise_id = ?
      )
@@ -733,7 +741,7 @@ export async function getSessionSetCount(
   sessionId: string
 ): Promise<number> {
   const db = await getDrizzle();
-  const row = await db.select({ count: sql<number>`COUNT(*)` })
+  const row = await db.select({ count: sql<number>`COUNT(DISTINCT ${workoutSets.exercise_id} || '_' || ${workoutSets.set_number})` })
     .from(workoutSets)
     .where(sql`${workoutSets.session_id} = ${sessionId} AND ${workoutSets.completed} = 1 AND ${workoutSets.set_type} != 'warmup'`)
     .get();
@@ -748,7 +756,7 @@ export async function getSessionSetCounts(
   const rows = await db
     .select({
       session_id: workoutSets.session_id,
-      count: count(),
+      count: sql<number>`COUNT(DISTINCT ${workoutSets.exercise_id} || '_' || ${workoutSets.set_number})`,
     })
     .from(workoutSets)
     .where(and(
@@ -1249,4 +1257,42 @@ export async function getRecentStackHistory(
   );
   if (!row) return null;
   return { stack_id: row.stack_id, stack_marker: row.stack_marker };
+}
+
+export async function getLatestUnilateralInsight(
+  exerciseId: string
+): Promise<{
+  left: { weight: number | null; reps: number | null } | null;
+  right: { weight: number | null; reps: number | null } | null;
+} | null> {
+  const database = await getDatabase();
+  const target = await database.getFirstAsync<{ session_id: string; set_number: number }>(
+    `SELECT ws.session_id, ws.set_number
+       FROM workout_sets ws
+       JOIN workout_sessions wss ON ws.session_id = wss.id
+      WHERE ws.exercise_id = ?
+        AND ws.completed = 1
+        AND ws.side IS NOT NULL
+        AND wss.completed_at IS NOT NULL
+      ORDER BY wss.started_at DESC, ws.set_number DESC
+      LIMIT 1`,
+    [exerciseId]
+  );
+
+  if (!target) return null;
+
+  const rows = await database.getAllAsync<{ weight: number | null; reps: number | null; side: string | null }>(
+    `SELECT weight, reps, side
+       FROM workout_sets
+      WHERE session_id = ? AND set_number = ? AND exercise_id = ? AND completed = 1`,
+    [target.session_id, target.set_number, exerciseId]
+  );
+
+  const left = rows.find((r) => r.side === "left") ?? null;
+  const right = rows.find((r) => r.side === "right") ?? null;
+
+  return {
+    left: left ? { weight: left.weight, reps: left.reps } : null,
+    right: right ? { weight: right.weight, reps: right.reps } : null,
+  };
 }

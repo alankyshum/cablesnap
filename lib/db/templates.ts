@@ -28,6 +28,7 @@ export type InitialSetSeed = {
   setType?: SetType;
   // BLD-1158: exercise default tempo for AC1.3 inheritance.
   exerciseDefaultTempo?: string | null;
+  side?: "left" | "right" | null;
 };
 
 export function normalizeTemplateSetTypes(setTypes: SetType[] | undefined, targetSets: number): SetType[] {
@@ -95,19 +96,32 @@ export function buildInitialSetsFromTemplate(
   const out: InitialSetSeed[] = [];
   for (const te of template.exercises ?? []) {
     const isDurationMode = (te.target_duration_seconds ?? null) != null;
+    const isUnilateral = te.exercise?.track_unilateral === true;
     for (let i = 1; i <= te.target_sets; i++) {
-      out.push({
-        sessionId,
-        exerciseId: te.exercise_id,
-        setNumber: i,
-        linkId: te.link_id ?? null,
-        round: te.link_id ? i : null,
-        exercisePosition: te.position,
-        setType: normalizeTemplateSetTypes(te.set_types, te.target_sets)[i - 1] ?? "normal",
-        // AC1.3: pass exercise default tempo for batch insert to use as fallback.
-        // Duration-mode exercises must not get tempo (AC1.6).
-        exerciseDefaultTempo: isDurationMode ? null : (te.exercise?.default_tempo ?? null),
-      });
+      if (isUnilateral) {
+        out.push({
+          sessionId,
+          exerciseId: te.exercise_id,
+          setNumber: i,
+          linkId: te.link_id ?? null,
+          round: te.link_id ? i : null,
+          exercisePosition: te.position,
+          setType: normalizeTemplateSetTypes(te.set_types, te.target_sets)[i - 1] ?? "normal",
+          exerciseDefaultTempo: isDurationMode ? null : (te.exercise?.default_tempo ?? null),
+          side: "left",
+        });
+      } else {
+        out.push({
+          sessionId,
+          exerciseId: te.exercise_id,
+          setNumber: i,
+          linkId: te.link_id ?? null,
+          round: te.link_id ? i : null,
+          exercisePosition: te.position,
+          setType: normalizeTemplateSetTypes(te.set_types, te.target_sets)[i - 1] ?? "normal",
+          exerciseDefaultTempo: isDurationMode ? null : (te.exercise?.default_tempo ?? null),
+        });
+      }
     }
   }
   return out;
@@ -169,9 +183,10 @@ export async function getTemplateById(
       exercise_start_image_uri: exercises.start_image_uri,
       exercise_end_image_uri: exercises.end_image_uri,
       exercise_progression_group: exercises.progression_group,
-      exercise_progression_order: exercises.progression_order,
-      exercise_default_tempo: exercises.default_tempo,
-    })
+       exercise_progression_order: exercises.progression_order,
+       exercise_default_tempo: exercises.default_tempo,
+       exercise_track_unilateral: exercises.track_unilateral,
+     })
     .from(templateExercises)
     .leftJoin(exercises, eq(templateExercises.exercise_id, exercises.id))
     .where(eq(templateExercises.template_id, id))
@@ -207,6 +222,7 @@ export async function getTemplateById(
           end_image_uri: r.exercise_end_image_uri,
           progression_group: r.exercise_progression_group ?? null,
           progression_order: r.exercise_progression_order ?? null,
+          track_unilateral: r.exercise_track_unilateral ?? 0,
           notes: null,
           notes_updated_at: null,
           notes_backfill_dismissed_at: null,

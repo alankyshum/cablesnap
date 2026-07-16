@@ -15,6 +15,8 @@ export type SetWithMeta = WorkoutSet & {
    * until the user expresses intent (touch picker / mark complete).
    */
   prefillCandidate?: PrefillCandidate | null;
+  left?: SetWithMeta;
+  right?: SetWithMeta;
 };
 
 export type ExerciseGroup = {
@@ -45,4 +47,6 @@ export type ExerciseGroup = {
   preferredSubstituteId?: string | null;
   /** Resolved name of the preferred substitute; null when id is null or deleted. */
   preferredSubstituteName?: string | null;
+  // BLD-3344: unilateral exercise setting
+  track_unilateral?: boolean;
 };

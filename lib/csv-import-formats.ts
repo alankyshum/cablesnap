@@ -25,6 +25,7 @@ export type ParsedCsvRow = {
   kind?: string | null;
   daySessionExerciseId?: string | null;
   daySessionDate?: string | null;
+  side?: string | null;
   /** BLD-1169: raw set_type string from CableSnap CSV; normalised at DB insertion. */
   set_type?: string | null;
   /** BLD-1176: mini-set segment data from CableSnap advanced-set CSV round-trip. */
@@ -196,6 +197,11 @@ const cablesnap: FormatDefinition = {
     const kind = row["kind"]?.trim() || "workout";
     const daySessionExerciseId = row["day_session_exercise_id"]?.trim() || null;
     const daySessionDate = row["day_session_date"]?.trim() || null;
+    const rawSide = row["side"]?.trim();
+    const side = rawSide ? rawSide.toLowerCase() : null;
+    if (side !== null && side !== "left" && side !== "right" && side !== "") {
+      throw new Error(`Invalid side value "${rawSide}" in CSV row. Expected "left", "right", or empty.`);
+    }
     return {
       date: daySessionDate || row["date"] || "",
       workoutName: kind === "day_session" ? `GTG: ${exerciseName}` : "Imported Workout",
@@ -203,6 +209,7 @@ const cablesnap: FormatDefinition = {
       setNumber: parseInt_(row["set_number"]) ?? 1,
       weight: parseFloat_(row["weight"]),
       reps: parseInt_(row["reps"]),
+      side: side === "" ? null : side,
       rpe: parseFloat_(row["set_rpe"]),
       durationSeconds: parseInt_(row["duration_seconds"]),
       notes: row["set_notes"]?.trim() ?? row["notes"]?.trim() ?? "",

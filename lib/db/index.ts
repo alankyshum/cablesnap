@@ -29,6 +29,7 @@ export {
   getPreferredSubstitute,
   setPreferredSubstitute,
   getPreferredSubstitutesBatch,
+  updateTrackUnilateral,
 } from "./exercises";
 
 export {
@@ -141,6 +142,7 @@ export {
   getSourceSessionSets,
   updateExercisePositions,
   exerciseHasHistoricalRpe,
+  getLatestUnilateralInsight,
 } from "./sessions";
 export type { RestContext } from "./sessions";
 export type { SessionEditPayload, SessionEditSetPatch } from "./sessions";

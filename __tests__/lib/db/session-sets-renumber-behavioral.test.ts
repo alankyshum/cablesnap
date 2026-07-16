@@ -49,17 +49,31 @@ function applyRunAsync(sql: string, params: unknown[]): void {
     return;
   }
 
-  // ROW_NUMBER CTE UPDATE
-  if (/ROW_NUMBER.*ORDER BY set_number ASC/is.test(normalized)) {
+  // ROW_NUMBER / DENSE_RANK CTE UPDATE
+  if (/(ROW_NUMBER|DENSE_RANK).*ORDER BY set_number ASC/is.test(normalized)) {
     // params = [sessionId, exerciseId]
     const [sessionId, exerciseId] = params as [string, string];
     const group = rows
       .filter((r) => r.session_id === sessionId && r.exercise_id === exerciseId)
       .sort((a, b) => a.set_number - b.set_number || a.id.localeCompare(b.id));
-    group.forEach((row, i) => {
-      const idx = rows.findIndex((r) => r.id === row.id);
-      if (idx !== -1) rows[idx].set_number = i + 1;
-    });
+    
+    if (/DENSE_RANK/i.test(normalized)) {
+      let rank = 0;
+      let prevSetNumber = -1;
+      group.forEach((row) => {
+        if (row.set_number !== prevSetNumber) {
+          rank++;
+          prevSetNumber = row.set_number;
+        }
+        const idx = rows.findIndex((r) => r.id === row.id);
+        if (idx !== -1) rows[idx].set_number = rank;
+      });
+    } else {
+      group.forEach((row, i) => {
+        const idx = rows.findIndex((r) => r.id === row.id);
+        if (idx !== -1) rows[idx].set_number = i + 1;
+      });
+    }
     return;
   }
 }

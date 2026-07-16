@@ -89,7 +89,7 @@ describe("deleteSet", () => {
     expect(txCalls).toBeDefined();
 
     const deleteSql = txCalls.find((c) => /^DELETE FROM workout_sets/i.test(c.sql));
-    const renumberSql = txCalls.find((c) => /ROW_NUMBER/i.test(c.sql));
+    const renumberSql = txCalls.find((c) => /DENSE_RANK/i.test(c.sql));
 
     expect(deleteSql).toBeDefined();
     expect(renumberSql).toBeDefined();
@@ -109,7 +109,7 @@ describe("deleteSet", () => {
     mockGetFirstResult = { session_id: "sess-99", exercise_id: "ex-ZZ" };
     await deleteSet("set-2");
 
-    const renumberSql = runCalls.find((c) => /ROW_NUMBER/i.test(c.sql));
+    const renumberSql = runCalls.find((c) => /DENSE_RANK/i.test(c.sql));
     expect(renumberSql?.params).toContain("sess-99");
     expect(renumberSql?.params).toContain("ex-ZZ");
   });
@@ -120,7 +120,7 @@ describe("deleteSet", () => {
 
     const deleteSql = runCalls.find((c) => /^DELETE FROM workout_sets/i.test(c.sql));
     expect(deleteSql).toBeUndefined();
-    const renumberSql = runCalls.find((c) => /ROW_NUMBER/i.test(c.sql));
+    const renumberSql = runCalls.find((c) => /DENSE_RANK/i.test(c.sql));
     expect(renumberSql).toBeUndefined();
   });
 
@@ -135,7 +135,7 @@ describe("deleteSet", () => {
     mockDb.runAsync.mockImplementation(async (sql: string, params?: unknown[]) => {
       const entry = { sql: sql.replace(/\s+/g, " ").trim(), params: params ?? [] };
       if (/^DELETE/i.test(sql)) callOrder.push("delete");
-      if (/ROW_NUMBER/i.test(sql)) callOrder.push("renumber");
+      if (/DENSE_RANK/i.test(sql)) callOrder.push("renumber");
       runCalls.push(entry);
       if (currentTxCalls) currentTxCalls.push(entry);
       return { changes: 1 };
@@ -170,7 +170,7 @@ describe("deleteSetsBatch", () => {
 
     const txCalls = txCallSequences[0];
     const deleteSql = txCalls.find((c) => /^DELETE FROM workout_sets/i.test(c.sql));
-    const renumberSql = txCalls.find((c) => /ROW_NUMBER/i.test(c.sql));
+    const renumberSql = txCalls.find((c) => /DENSE_RANK/i.test(c.sql));
     expect(deleteSql).toBeDefined();
     expect(renumberSql).toBeDefined();
     expect(txCalls.indexOf(deleteSql!)).toBeLessThan(txCalls.indexOf(renumberSql!));
@@ -184,7 +184,7 @@ describe("deleteSetsBatch", () => {
     ];
     await deleteSetsBatch(["set-A1", "set-A2", "set-B1"]);
 
-    const renumberCalls = runCalls.filter((c) => /ROW_NUMBER/i.test(c.sql));
+    const renumberCalls = runCalls.filter((c) => /DENSE_RANK/i.test(c.sql));
     // 2 distinct groups -> exactly 2 renumber calls
     expect(renumberCalls).toHaveLength(2);
   });
@@ -204,7 +204,7 @@ describe("deleteSetsBatch", () => {
     await deleteSetsBatch(["ghost-1", "ghost-2"]);
 
     const deleteSql = runCalls.find((c) => /^DELETE FROM workout_sets/i.test(c.sql));
-    const renumberSql = runCalls.find((c) => /ROW_NUMBER/i.test(c.sql));
+    const renumberSql = runCalls.find((c) => /DENSE_RANK/i.test(c.sql));
     expect(deleteSql).toBeUndefined();
     expect(renumberSql).toBeUndefined();
   });
@@ -216,7 +216,7 @@ describe("deleteSetsBatch", () => {
     ];
     await deleteSetsBatch(["A2", "B1"]);
 
-    const renumberCalls = runCalls.filter((c) => /ROW_NUMBER/i.test(c.sql));
+    const renumberCalls = runCalls.filter((c) => /DENSE_RANK/i.test(c.sql));
     expect(renumberCalls).toHaveLength(2);
 
     const paramsFlat = renumberCalls.flatMap((c) => c.params);
@@ -229,7 +229,7 @@ describe("deleteSetsBatch", () => {
     await deleteSetsBatch(["set-1"]);
 
     const deleteSql = runCalls.find((c) => /^DELETE FROM workout_sets/i.test(c.sql));
-    const renumberSql = runCalls.find((c) => /ROW_NUMBER/i.test(c.sql));
+    const renumberSql = runCalls.find((c) => /DENSE_RANK/i.test(c.sql));
     expect(deleteSql).toBeDefined();
     expect(renumberSql).toBeDefined();
   });

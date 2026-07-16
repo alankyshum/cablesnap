@@ -53,6 +53,8 @@ export const exercises = sqliteTable("exercises", {
   // A separate table is only warranted for ranked/multiple preferences (out of scope v1).
   preferred_substitute_id: text("preferred_substitute_id"),
   preferred_substitute_updated_at: integer("preferred_substitute_updated_at"),
+  // BLD-3344: unilateral exercise setting
+  track_unilateral: integer("track_unilateral").notNull().default(0),
 });
 
 export const workoutTemplates = sqliteTable("workout_templates", {
@@ -154,6 +156,8 @@ export const workoutSets = sqliteTable("workout_sets", {
   stack_name_at_log: text("stack_name_at_log"),
   // BLD-1114: per-set cable pulley pin. NULL = unset.
   pulley_pin: integer("pulley_pin"),
+  // BLD-3344: unilateral per-side logging
+  side: text("side").$type<"left" | "right">(),
   // BLD-1168: cached aggregate columns — single source of truth for all analytics surfaces.
   // Populated exclusively by recomputeSetCaches(setId) in lib/db/sets.ts.
   // DEFAULT 0 so pre-migration rows have a defined value (backfill in migrate() sets correct values).
