@@ -89,39 +89,37 @@ export function parseTemplateSetTypes(raw: string | null | undefined, targetSets
   }
 }
 
+function buildSeed(
+  te: TemplateExercise,
+  sessionId: string,
+  i: number,
+  isDurationMode: boolean,
+  side?: "left" | "right"
+): InitialSetSeed {
+  return {
+    sessionId,
+    exerciseId: te.exercise_id,
+    setNumber: i,
+    linkId: te.link_id ?? null,
+    round: te.link_id ? i : null,
+    exercisePosition: te.position,
+    setType: normalizeTemplateSetTypes(te.set_types, te.target_sets)[i - 1] ?? "normal",
+    exerciseDefaultTempo: isDurationMode ? null : (te.exercise?.default_tempo ?? null),
+    side,
+  };
+}
+
 export function buildInitialSetsFromTemplate(
   template: Pick<WorkoutTemplate, "exercises">,
   sessionId: string
 ): InitialSetSeed[] {
   const out: InitialSetSeed[] = [];
-  for (const te of template.exercises ?? []) {
-    const isDurationMode = (te.target_duration_seconds ?? null) != null;
+  const exercises = template.exercises || [];
+  for (const te of exercises) {
+    const isDurationMode = te.target_duration_seconds != null;
     const isUnilateral = te.exercise?.track_unilateral === true;
     for (let i = 1; i <= te.target_sets; i++) {
-      if (isUnilateral) {
-        out.push({
-          sessionId,
-          exerciseId: te.exercise_id,
-          setNumber: i,
-          linkId: te.link_id ?? null,
-          round: te.link_id ? i : null,
-          exercisePosition: te.position,
-          setType: normalizeTemplateSetTypes(te.set_types, te.target_sets)[i - 1] ?? "normal",
-          exerciseDefaultTempo: isDurationMode ? null : (te.exercise?.default_tempo ?? null),
-          side: "left",
-        });
-      } else {
-        out.push({
-          sessionId,
-          exerciseId: te.exercise_id,
-          setNumber: i,
-          linkId: te.link_id ?? null,
-          round: te.link_id ? i : null,
-          exercisePosition: te.position,
-          setType: normalizeTemplateSetTypes(te.set_types, te.target_sets)[i - 1] ?? "normal",
-          exerciseDefaultTempo: isDurationMode ? null : (te.exercise?.default_tempo ?? null),
-        });
-      }
+      out.push(buildSeed(te, sessionId, i, isDurationMode, isUnilateral ? "left" : undefined));
     }
   }
   return out;

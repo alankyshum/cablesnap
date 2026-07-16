@@ -185,6 +185,14 @@ const fitnotes: FormatDefinition = {
 
 // ---- Format: CableSnap workout CSV ----
 
+function parseSide(rawSide: string | undefined): "left" | "right" | null {
+  const side = rawSide?.trim().toLowerCase() || null;
+  if (side && side !== "left" && side !== "right") {
+    throw new Error(`Invalid side value "${rawSide}" in CSV row. Expected "left", "right", or empty.`);
+  }
+  return side as "left" | "right" | null;
+}
+
 const CABLESNAP_REQUIRED = ["date", "exercise", "set_number", "set_rpe", "set_notes", "link_id"];
 
 const cablesnap: FormatDefinition = {
@@ -197,11 +205,7 @@ const cablesnap: FormatDefinition = {
     const kind = row["kind"]?.trim() || "workout";
     const daySessionExerciseId = row["day_session_exercise_id"]?.trim() || null;
     const daySessionDate = row["day_session_date"]?.trim() || null;
-    const rawSide = row["side"]?.trim();
-    const side = rawSide ? rawSide.toLowerCase() : null;
-    if (side !== null && side !== "left" && side !== "right" && side !== "") {
-      throw new Error(`Invalid side value "${rawSide}" in CSV row. Expected "left", "right", or empty.`);
-    }
+    const side = parseSide(row["side"]);
     return {
       date: daySessionDate || row["date"] || "",
       workoutName: kind === "day_session" ? `GTG: ${exerciseName}` : "Imported Workout",
@@ -209,7 +213,7 @@ const cablesnap: FormatDefinition = {
       setNumber: parseInt_(row["set_number"]) ?? 1,
       weight: parseFloat_(row["weight"]),
       reps: parseInt_(row["reps"]),
-      side: side === "" ? null : side,
+      side,
       rpe: parseFloat_(row["set_rpe"]),
       durationSeconds: parseInt_(row["duration_seconds"]),
       notes: row["set_notes"]?.trim() ?? row["notes"]?.trim() ?? "",
