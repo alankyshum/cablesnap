@@ -487,9 +487,24 @@ export function useSessionActions({
 
     if (group?.track_unilateral) {
       const activeGroup = groupsRef.current.find((g) => g.exercise_id === set.exercise_id);
+      // BLD-3371 fix: the caller (ExerciseGroupSetTable.tsx:89) unwraps the
+      // grouped wrapper into `set.left || set` before passing it to SetRow, so
+      // `set` here is typically the *left-side row* — it has no `.left`/`.right`
+      // and no siblings with a `.side` field (group.sets stores wrappers, not
+      // raw side rows). Resolve the wrapper explicitly from the active group's
+      // sets by `set_number`, then read `.left`/`.right` from it. Fall back to
+      // the prior resolution paths so a future refactor that passes the wrapper
+      // directly still works.
+      const wrapper = activeGroup?.sets.find((s) => s.set_number === set.set_number);
       const siblingSets = activeGroup?.sets.filter((s) => s.set_number === set.set_number) ?? [];
-      const leftSet = set.left || siblingSets.find((s) => s.side === "left");
-      const rightSet = set.right || siblingSets.find((s) => s.side === "right");
+      const leftSet =
+        set.left ||
+        wrapper?.left ||
+        siblingSets.find((s) => s.side === "left");
+      const rightSet =
+        set.right ||
+        wrapper?.right ||
+        siblingSets.find((s) => s.side === "right");
 
       if (set.completed) {
         // Uncompleting
