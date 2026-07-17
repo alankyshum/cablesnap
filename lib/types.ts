@@ -119,6 +119,7 @@ export type Exercise = {
   // NULL = no preference set; non-null = exercise id of the preferred target.
   preferred_substitute_id?: string | null;
   preferred_substitute_updated_at?: number | null;
+  track_unilateral?: boolean;
 };
 
 export const CATEGORIES: Category[] = [
@@ -345,6 +346,7 @@ export type WorkoutSet = {
   duration_seconds: number | null;
   exercise_position: number;
   bodyweight_modifier_kg?: number | null;
+  side?: "left" | "right" | null;
   // BLD-771: per-set cable variant logging. NULL = user did not specify.
   attachment?: Attachment | null;
   mount_position?: MountPosition | null;

@@ -101,65 +101,79 @@ export function SetOptionsSheet({
         <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12 }}>
           Set Type
         </Text>
-        {SET_TYPE_CYCLE.map((type) => {
-          const label = SET_TYPE_LABELS[type];
-          const isSelected = currentSetType === type;
-          return (
-            <Pressable
-              key={type}
-              style={[
-                styles.option,
-                { backgroundColor: isSelected ? colors.primaryContainer : "transparent" },
-              ]}
-              onPress={() => { onSelectType(type); onDismiss(); }}
-              accessibilityRole="button"
-              accessibilityLabel={`${label.label} set`}
-              accessibilityState={{ selected: isSelected }}
-            >
-              {label.short ? (
-                <View
-                  style={[
-                    styles.chipPreview,
-                    {
-                      backgroundColor:
-                        type === "warmup"
-                          ? colors.surfaceVariant
-                          : type === "dropset"
-                          ? colors.tertiaryContainer
-                          : type === "failure"
-                          ? colors.errorContainer
-                          : colors.surfaceDisabled,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      fontSize: fontSizes.sm,
-                      fontWeight: "700",
-                      color:
-                        type === "warmup"
-                          ? colors.onSurfaceVariant
-                          : type === "dropset"
-                          ? colors.onTertiaryContainer
-                          : colors.onErrorContainer,
-                    }}
+        {(() => {
+          const isUnilateral = (() => {
+            for (const g of groups) {
+              for (const s of g.sets) {
+                if (s.id === setId) return g.track_unilateral === true;
+              }
+            }
+            return false;
+          })();
+          const displayedTypes = isUnilateral
+            ? SET_TYPE_CYCLE.filter((type) => type !== "rest_pause" && type !== "cluster" && type !== "myo_reps")
+            : SET_TYPE_CYCLE;
+
+          return displayedTypes.map((type) => {
+            const label = SET_TYPE_LABELS[type];
+            const isSelected = currentSetType === type;
+            return (
+              <Pressable
+                key={type}
+                style={[
+                  styles.option,
+                  { backgroundColor: isSelected ? colors.primaryContainer : "transparent" },
+                ]}
+                onPress={() => { onSelectType(type); onDismiss(); }}
+                accessibilityRole="button"
+                accessibilityLabel={`${label.label} set`}
+                accessibilityState={{ selected: isSelected }}
+              >
+                {label.short ? (
+                  <View
+                    style={[
+                      styles.chipPreview,
+                      {
+                        backgroundColor:
+                          type === "warmup"
+                            ? colors.surfaceVariant
+                            : type === "dropset"
+                            ? colors.tertiaryContainer
+                            : type === "failure"
+                            ? colors.errorContainer
+                            : colors.surfaceDisabled,
+                      },
+                    ]}
                   >
-                    {label.short}
-                  </Text>
-                </View>
-              ) : (
-                <View style={[styles.chipPreview, { backgroundColor: colors.surfaceDisabled }]}>
-                  <Text style={{ fontSize: fontSizes.sm, fontWeight: "700", color: colors.onSurface }}>
-                    —
-                  </Text>
-                </View>
-              )}
-              <Text variant="body" style={{ color: colors.onSurface, marginLeft: 12 }}>
-                {label.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+                    <Text
+                      style={{
+                        fontSize: fontSizes.sm,
+                        fontWeight: "700",
+                        color:
+                          type === "warmup"
+                            ? colors.onSurfaceVariant
+                            : type === "dropset"
+                            ? colors.onTertiaryContainer
+                            : colors.onErrorContainer,
+                      }}
+                    >
+                      {label.short}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={[styles.chipPreview, { backgroundColor: colors.surfaceDisabled }]}>
+                    <Text style={{ fontSize: fontSizes.sm, fontWeight: "700", color: colors.onSurface }}>
+                      —
+                    </Text>
+                  </View>
+                )}
+                <Text variant="body" style={{ color: colors.onSurface, marginLeft: 12 }}>
+                  {label.label}
+                </Text>
+              </Pressable>
+            );
+          });
+        })()}
 
         {/* ── Tempo row (hidden for duration-mode sets per AC1.6 / AC8) ── */}
         {!isDurationSet ? (

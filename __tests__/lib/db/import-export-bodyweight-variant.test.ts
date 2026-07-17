@@ -114,7 +114,7 @@ describe('import-export — bodyweight variant round-trip (BLD-768)', () => {
     expect(wsInsert).toBeDefined();
     // Column list ends with: ..., attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log.
     // Param indices (0-based): 16=attachment, 17=mount_position, 18=grip_type, 19=grip_width, 20=stack_id, 21=stack_marker, 22=stack_unit_at_log, 23=stack_name_at_log.
-    expect(wsInsert!.params).toHaveLength(25);
+    expect(wsInsert!.params).toHaveLength(26);
     expect(wsInsert!.params[18]).toBe('overhand');
     expect(wsInsert!.params[19]).toBe('narrow');
   });

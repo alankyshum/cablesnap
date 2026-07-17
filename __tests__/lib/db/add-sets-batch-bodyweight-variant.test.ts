@@ -62,7 +62,7 @@ describe('addSetsBatch — bodyweight variant positional binding (BLD-768)', () 
 
     expect(mockExecuteAsync).toHaveBeenCalled();
     const args = mockExecuteAsync.mock.calls.at(-1)![0] as unknown[];
-    expect(args).toHaveLength(18);
+    expect(args).toHaveLength(19);
     // Slot order: id, session_id, exercise_id, set_number, link_id, round, tempo, set_type, exercise_position,
     // attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log, pulley_pin.
     expect(args[1]).toBe('sess-1');           // session_id

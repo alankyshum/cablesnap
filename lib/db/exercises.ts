@@ -38,6 +38,7 @@ function mapRow(row: ExerciseRow): Exercise {
     // BLD-2561: persisted preferred substitute.
     preferred_substitute_id: row.preferred_substitute_id ?? undefined,
     preferred_substitute_updated_at: row.preferred_substitute_updated_at ?? undefined,
+    track_unilateral: row.track_unilateral === 1,
   };
 }
 
@@ -173,6 +174,11 @@ export async function getDefaultTempo(exerciseId: string): Promise<string | null
 export async function setDefaultTempo(exerciseId: string, tempo: string | null): Promise<void> {
   const db = await getDrizzle();
   await db.update(exercises).set({ default_tempo: tempo }).where(eq(exercises.id, exerciseId));
+}
+
+export async function updateTrackUnilateral(exerciseId: string, trackUnilateral: boolean): Promise<void> {
+  const db = await getDrizzle();
+  await db.update(exercises).set({ track_unilateral: trackUnilateral ? 1 : 0 }).where(eq(exercises.id, exerciseId));
 }
 
 export async function softDeleteCustomExercise(id: string): Promise<void> {

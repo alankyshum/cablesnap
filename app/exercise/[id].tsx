@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Text } from "@/components/ui/text";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/bna-toast";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -21,6 +22,7 @@ import {
   getTemplatesUsingExercise,
   updateExerciseNote,
   setDefaultTempo,
+  updateTrackUnilateral,
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
@@ -40,7 +42,7 @@ import ExerciseVariantFilter from "@/components/exercise/ExerciseVariantFilter";
 import { PlateauStatusCard } from "@/components/exercise/PlateauStatusCard";
 import { usePlateauStatus } from "@/hooks/usePlateauStatus";
 import { FormVideoSheet } from "@/components/session/FormVideoSheet";
-import { getMostRecentCompletedSetForExercise } from "@/lib/db/session-sets";
+import { getMostRecentCompletedSetForExercise, getLatestUnilateralInsight } from "@/lib/db/session-sets";
 import { isCableExercise } from "@/lib/cable-variant";
 import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
 import { useStrengthLevel } from "@/hooks/useStrengthLevel";
@@ -122,6 +124,43 @@ export default function ExerciseDetail() {
   }, [id, showToast]);
 
   const edit = useCallback(() => { if (id) router.push(`/exercise/edit/${id}`); }, [id, router]);
+
+  const [trackUnilateral, setTrackUnilateral] = useState(d.exercise?.track_unilateral ?? false);
+  const [unilateralInsight, setUnilateralInsight] = useState<{
+    left: { weight: number | null; reps: number | null } | null;
+    right: { weight: number | null; reps: number | null } | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (d.exercise) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTrackUnilateral(d.exercise.track_unilateral ?? false);
+    }
+  }, [d.exercise]);
+
+  useEffect(() => {
+    if (id && trackUnilateral) {
+      getLatestUnilateralInsight(id).then(setUnilateralInsight);
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUnilateralInsight(null);
+    }
+  }, [id, trackUnilateral]);
+
+  const handleTrackUnilateralChange = useCallback(async (value: boolean) => {
+    if (!id) return;
+    setTrackUnilateral(value);
+    try {
+      await updateTrackUnilateral(id, value);
+      bumpQueryVersion("exercises");
+      bumpQueryVersion("session");
+      showToast({ description: "Track left/right separately updated" });
+    } catch {
+      showToast({ description: "Failed to update unilateral tracking" });
+      setTrackUnilateral(!value);
+    }
+  }, [id, showToast]);
+
   // BLD-1028: local draft for off-session pinned note edit.
   const [pinnedNoteDraft, setPinnedNoteDraft] = useState<string | undefined>(undefined);
   const pinnedDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -288,6 +327,31 @@ export default function ExerciseDetail() {
           />
         </View>
       )}
+
+      {id && (
+        <View style={styles.section}>
+          <Switch
+            label="Track left/right separately"
+            value={trackUnilateral}
+            onValueChange={handleTrackUnilateralChange}
+            accessibilityLabel="Track left and right separately"
+          />
+        </View>
+      )}
+
+      {unilateralInsight && unilateralInsight.left && unilateralInsight.right && (() => {
+        const leftVol = (unilateralInsight.left.weight ?? 0) * (unilateralInsight.left.reps ?? 0);
+        const rightVol = (unilateralInsight.right.weight ?? 0) * (unilateralInsight.right.reps ?? 0);
+        const maxVol = Math.max(leftVol, rightVol);
+        const diff = maxVol > 0 ? Math.round((Math.abs(leftVol - rightVol) / maxVol) * 100) : 0;
+        return (
+          <View style={styles.section} accessibilityLabel={`Left and right differ by ${diff} percent`}>
+            <Text variant="body" style={{ color: colors.onSurface }}>
+              {`Left ${toDisplay(unilateralInsight.left.weight ?? 0, d.unit)} ${d.unit}x${unilateralInsight.left.reps ?? 0} · Right ${toDisplay(unilateralInsight.right.weight ?? 0, d.unit)} ${d.unit}x${unilateralInsight.right.reps ?? 0} · Difference ${diff}%`}
+            </Text>
+          </View>
+        );
+      })()}
 
       {/* Goal Progress Card — above Records/Chart for discoverability */}
       <GoalSection goalState={goalState} colors={colors} bw={d.bw} unit={d.unit} onOpenSheet={goalSheet.open} />

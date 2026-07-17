@@ -329,6 +329,65 @@ function formatSetLine(s: { weight: number | null; reps: number | null }, weight
   return `  1 set`;
 }
 
+function collapseSetsForStrava<T extends {
+  exercise_name?: string | null;
+  weight: number | null;
+  reps: number | null;
+  completed: boolean;
+  set_type: string;
+  set_number?: number | null;
+  side?: string | null;
+}>(sets: T[]): T[] {
+  const result: T[] = [];
+  const unilateralGroups = new Map<string, T[]>();
+  const bilateralSets: T[] = [];
+
+  for (const s of sets) {
+    if (s.side === "left" || s.side === "right") {
+      const key = `${s.exercise_name ?? "Unknown Exercise"}_${s.set_number ?? 0}`;
+      if (!unilateralGroups.has(key)) {
+        unilateralGroups.set(key, []);
+      }
+      unilateralGroups.get(key)!.push(s);
+    } else {
+      bilateralSets.push(s);
+    }
+  }
+
+  for (const group of unilateralGroups.values()) {
+    if (group.length === 1) {
+      result.push({
+        ...group[0],
+        volume: (group[0].weight ?? 0) * (group[0].reps ?? 0),
+      });
+    } else {
+      const left = group.find(s => s.side === "left");
+      const right = group.find(s => s.side === "right");
+      
+      const leftWeight = left?.weight ?? 0;
+      const leftReps = left?.reps ?? 0;
+      const rightWeight = right?.weight ?? 0;
+      const rightReps = right?.reps ?? 0;
+
+      const collapsedWeight = Math.max(leftWeight, rightWeight);
+      const collapsedReps = Math.max(leftReps, rightReps);
+      const collapsedVolume = (leftWeight * leftReps) + (rightWeight * rightReps);
+      
+      const base = left ?? right ?? group[0];
+      const collapsedSet = {
+        ...base,
+        weight: collapsedWeight > 0 ? collapsedWeight : null,
+        reps: collapsedReps > 0 ? collapsedReps : null,
+        completed: group.some(s => s.completed),
+        volume: collapsedVolume,
+      };
+      result.push(collapsedSet);
+    }
+  }
+
+  return [...bilateralSets, ...result];
+}
+
 function buildSimpleDescription(
   sets: Array<{
     exercise_name?: string | null;
@@ -336,17 +395,19 @@ function buildSimpleDescription(
     reps: number | null;
     completed: boolean;
     set_type: string;
+    set_number?: number | null;
+    side?: string | null;
   }>,
   weightUnit: "kg" | "lb"
 ): string {
-  const completedSets = sets.filter((s) => s.completed);
+  const completedSets = collapseSetsForStrava(sets.filter((s) => s.completed));
   if (completedSets.length === 0) return "";
 
-  const byExercise = new Map<string, Array<{ weight: number | null; reps: number | null }>>();
+  const byExercise = new Map<string, Array<{ weight: number | null; reps: number | null; volume?: number }>>();
   for (const s of completedSets) {
     const name = s.exercise_name ?? "Unknown Exercise";
     if (!byExercise.has(name)) byExercise.set(name, []);
-    byExercise.get(name)!.push({ weight: s.weight, reps: s.reps });
+    byExercise.get(name)!.push({ weight: s.weight, reps: s.reps, volume: (s as unknown as { volume?: number }).volume });
   }
 
   const lines: string[] = [];
@@ -365,11 +426,13 @@ export function buildActivityDescription(
     reps: number | null;
     completed: boolean;
     set_type: string;
+    set_number?: number | null;
+    side?: string | null;
   }>,
   weightUnit: "kg" | "lb",
   promoCaption?: string
 ): string {
-  const completedSets = sets.filter((s) => s.completed);
+  const completedSets = collapseSetsForStrava(sets.filter((s) => s.completed));
   if (completedSets.length === 0) return "";
 
   // If promoCaption is undefined (description disabled), skip ASCII recap and return simple text
@@ -378,17 +441,17 @@ export function buildActivityDescription(
   }
 
   // Group sets by exercise
-  const byExercise = new Map<string, Array<{ weight: number | null; reps: number | null }>>();
+  const byExercise = new Map<string, Array<{ weight: number | null; reps: number | null; volume?: number }>>();
   for (const s of completedSets) {
     const name = s.exercise_name ?? "Unknown Exercise";
     if (!byExercise.has(name)) byExercise.set(name, []);
-    byExercise.get(name)!.push({ weight: s.weight, reps: s.reps });
+    byExercise.get(name)!.push({ weight: s.weight, reps: s.reps, volume: (s as unknown as { volume?: number }).volume });
   }
 
   // Calculate volumes and reps per exercise
   const exerciseData = Array.from(byExercise.entries()).map(([name, exerciseSets]) => {
     const isWeightBased = exerciseSets.some((s) => s.weight != null && s.weight > 0);
-    const volume = exerciseSets.reduce((sum, s) => sum + ((s.weight ?? 0) * (s.reps ?? 0)), 0);
+    const volume = exerciseSets.reduce((sum, s) => sum + ((s as unknown as { volume?: number }).volume ?? ((s.weight ?? 0) * (s.reps ?? 0))), 0);
     const reps = exerciseSets.reduce((sum, s) => sum + (s.reps ?? 0), 0);
     return { name, exerciseSets, isWeightBased, volume, reps };
   });
@@ -424,7 +487,7 @@ export function buildActivityDescription(
 
   lines.push("-----------------------");
 
-  const totalVolume = completedSets.reduce((sum, s) => sum + ((s.weight ?? 0) * (s.reps ?? 0)), 0);
+  const totalVolume = completedSets.reduce((sum, s) => sum + ((s as unknown as { volume?: number }).volume ?? ((s.weight ?? 0) * (s.reps ?? 0))), 0);
   if (totalVolume > 0) {
     lines.push(`Total: ${totalVolume} ${weightUnit}  ·  ${completedSets.length} sets  ·  ${byExercise.size} exercises`);
   } else {

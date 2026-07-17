@@ -253,9 +253,10 @@ describe("BLOCKER 2 — importCsvSessions persists set_type and set_segments (AC
     );
     expect(setInsertCall).toBeDefined();
 
-    // The set_type parameter should be 'rest_pause', not 'normal'
+    // The set_type parameter should be 'rest_pause', not 'normal'.
+    // set_type is at params.length - 2 because side (BLD-3345) is the last param.
     const params = setInsertCall![1] as unknown[];
-    const setTypeParam = params[params.length - 1];
+    const setTypeParam = params[params.length - 2];
     expect(setTypeParam).toBe("rest_pause");
   });
 
@@ -313,12 +314,13 @@ describe("BLOCKER 2 — importCsvSessions persists set_type and set_segments (AC
     // bulkInsertSegments must NOT be called for normal sets (no mini_set_reps)
     expect(jest.mocked(setsModule.bulkInsertSegments)).not.toHaveBeenCalled();
 
-    // set_type should still be 'normal' in the workout_sets INSERT
+    // set_type should still be 'normal' in the workout_sets INSERT.
+    // set_type is at params.length - 2 because side (BLD-3345) is the last param.
     const setInsertCall = mockRunAsync.mock.calls.find(
       (call: any[]) => typeof call[0] === "string" && call[0].includes("INSERT INTO workout_sets")
     );
     const params = setInsertCall![1] as unknown[];
-    expect(params[params.length - 1]).toBe("normal");
+    expect(params[params.length - 2]).toBe("normal");
   });
 
   it("clamps segments to 8 on import (AC #260)", async () => {
