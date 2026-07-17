@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.76",
+    "date": "2026-07-17",
+    "versionCode": 144,
+    "body": "- **Unilateral / per-side (L/R) set logging & imbalance insight** — adds support for tracking left and right side sets separately for unilateral exercises, displays exact difference percentage in a descriptive readout, aggregates per-side volume correctly, and supports CSV/backup round-trip."
+  },
+  {
     "version": "0.26.75",
     "date": "2026-07-16",
     "versionCode": 143,

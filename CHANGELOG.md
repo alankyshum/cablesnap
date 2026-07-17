@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.76 — 2026-07-17
+<!-- versionCode: 144 -->
+
 - **Unilateral / per-side (L/R) set logging & imbalance insight** — adds support for tracking left and right side sets separately for unilateral exercises, displays exact difference percentage in a descriptive readout, aggregates per-side volume correctly, and supports CSV/backup round-trip.
 
 ## v0.26.75 — 2026-07-16
