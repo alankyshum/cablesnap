@@ -522,6 +522,8 @@ export function useSessionActions({
                   ...s,
                   completed: false,
                   completed_at: null,
+                  left: s.left ? { ...s.left, completed: false, completed_at: null } : undefined,
+                  right: s.right ? { ...s.right, completed: false, completed_at: null } : undefined,
                 };
               }),
             };
@@ -579,10 +581,16 @@ export function useSessionActions({
             ...g,
             sets: g.sets.map((s) => {
               if (s.set_number !== set.set_number) return s;
+              const nextLeft = (leftEmpty || !s.left) ? undefined : { ...s.left, completed: true, completed_at: now };
+              const nextRight = (rightEmpty || !s.right) ? undefined : { ...s.right, completed: true, completed_at: now };
               return {
                 ...s,
                 completed: true,
                 completed_at: now,
+                /* eslint-disable @typescript-eslint/no-explicit-any */
+                left: nextLeft as any,
+                right: nextRight as any,
+                /* eslint-enable @typescript-eslint/no-explicit-any */
               };
             }),
           };

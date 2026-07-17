@@ -284,4 +284,25 @@ describe("useSessionActions.handleCheck — unilateral persistence (BLD-3371)", 
     expect(mockDeleteSet).toHaveBeenCalledTimes(1);
     expect(mockDeleteSet).toHaveBeenCalledWith("R3");
   });
+
+  it("REGRESSION: persisted left-only unilateral row (reload+complete lifecycle) -> tapping complete calls completeSet(left.id) exactly once and does NOT create/complete a right row", async () => {
+    // Wrapper only has left ("L4") with real values entered, right is undefined (never created/persisted).
+    const wrapper = makeWrapper(1, {
+      leftId: "L4", leftWeight: 50, leftReps: 8,
+    });
+    const group = makeGroup([wrapper]);
+    const params = makeParams([group]);
+    const { result } = renderHook(() => useSessionActions(params));
+    await act(async () => { await flush(); });
+
+    // Tapping checkmark passes the unwrapped left-side row to handleCheck
+    const leftRowAsPassed = wrapper.left;
+    await act(async () => { await result.current.handleCheck(leftRowAsPassed); });
+
+    // Left must be completed exactly once.
+    expect(mockCompleteSet).toHaveBeenCalledTimes(1);
+    expect(mockCompleteSet).toHaveBeenCalledWith("L4");
+    // Right must not be completed or deleted.
+    expect(mockDeleteSet).not.toHaveBeenCalled();
+  });
 });
