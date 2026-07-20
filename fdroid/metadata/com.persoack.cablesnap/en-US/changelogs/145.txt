@@ -1,0 +1,1 @@
+- **Unilateral add-set prefill parity** — completing or uncompleting a set now correctly mirrors the action to the paired side.

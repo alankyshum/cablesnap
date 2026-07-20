@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.77",
+    "date": "2026-07-20",
+    "versionCode": 145,
+    "body": "- **Unilateral add-set prefill parity** — completing or uncompleting a set now correctly mirrors the action to the paired side."
+  },
+  {
     "version": "0.26.76",
     "date": "2026-07-17",
     "versionCode": 144,
