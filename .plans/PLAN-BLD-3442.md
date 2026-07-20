@@ -1,153 +1,144 @@
-# Feature Plan: One-Tap Repeat-Previous-Set (In-Session)
+# Feature Plan: One-tap repeat-previous-set (in-session)
 
 **Issue**: BLD-3442  **Author**: CEO  **Date**: 2026-07-20
 **Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
 
-## Problem Statement
-Reddit's #1 recurring workout-tracker complaint in 2026 is "too many taps to log a set."
-The fastest apps let a user confirm a set in 2–3 seconds by reusing prior numbers.
+## Research Source
+- **Origin:** Reddit r/fitness, r/weightroom, r/workout 2026 threads on logging speed — recurring #1 complaint "too many taps to log a set". Competitors (Strong, Liftosaur, Setgraph) converging on 1-tap / pre-logged / swipe-repeat flows.
+- **Pain point observed:** "I hate tapping 20 times"; fastest apps confirm a set in 2-3 seconds by reusing prior numbers.
+- **Frequency:** Recurring theme across multiple 2026 threads, not a one-off.
 
-CableSnap already leads on this for the common case: positional prefill from the previous
-session + a single-tap checkmark completes a prefilled row (`SetRow` checkmark →
-`useSessionActions.ts:619-671`), plus a "Last" refill pill that fills empty rows from the
-previous *session*.
+## ⚠️ Codebase Reality Check (READ FIRST — changes the whole scope)
 
-**The genuine remaining gap (codebase-verified):** when a user **adds an extra set beyond
-the previous session's set count** — e.g. a 4th set when last session had 3 — the newly added
-row has **no positional prefill candidate**. The user must dial weight and reps from scratch
-via the stepper pickers. There is no affordance to copy the set the user **just completed
-seconds ago in the current session**. Adding "one more set" is an extremely common lifting
-behavior (AMRAP finishers, feeling strong, drop sets), so this hits real users often.
+The issue's stated "genuine remaining friction" — *adding a set beyond the previous
+session's set count leaves the new row with no prefill candidate* — **is already solved
+in the current codebase for the common (bilateral) case.** Verified against
+`origin/main`:
+
+- `hooks/resolvePrefillCandidate.ts` — **priority 1 is the last in-session non-warmup
+  working set**, priority 2 is the previous-workout slot match. So a 4th set added
+  when last session had 3 already copies the just-completed 3rd set's weight/reps.
+- `hooks/useSessionActions.ts` `handleAddSet` (bilateral path, ~L978-1075) — resolves
+  that candidate and persists it via `updateSet`, and short-circuits the
+  previous-workout DB query when an in-session working set exists (AC16). It also
+  hydrates the in-memory row so the new `SetRow` renders the copied values
+  immediately.
+
+**Therefore the headline user story ("copy the set I just completed seconds ago into
+the newly added row") is NOT a net-new feature — it already ships.** Building a second,
+parallel "repeat" primitive would be redundant work and risk double-writes.
+
+### The ACTUAL remaining gaps (evidence-based)
+
+1. **Unilateral (left/right) prefill parity — REAL BUG.** In `handleAddSet`, the
+   `isUnilateral` branch (`useSessionActions.ts` ~L769-803) creates the new left set
+   and **`return`s early, before any `resolvePrefillCandidate` logic runs.** Unilateral
+   exercises get **zero** weight/reps prefill on added sets — the user dials from
+   scratch every time. This is the highest-value, lowest-risk fix and the only place
+   the issue's premise genuinely holds.
+
+2. **Discoverability / explicit affordance (optional, lower value).** The current
+   prefill is automatic and silent. There is no *visible* "repeat previous set" control
+   a user can invoke on demand — e.g. after they clear a row, or when they *don't* want
+   the auto-copied value but then change their mind. Reddit users specifically praise
+   *visible, deliberate* swipe/tap-to-repeat affordances. This is a UX-polish add, not a
+   correctness fix.
 
 ## Behavior-Design Classification (MANDATORY)
-Does this shape user behavior? (see §3.2 trigger list)
-- [ ] **YES**
-- [x] **NO** — purely a data-entry convenience. It reduces taps to record a set the user has
-  already decided to perform. No streaks, notifications, gamification, rewards, onboarding
-  hooks, progress nudges, or motivational framing. It does not encourage the user to do more
-  sets; it only makes recording a set they chose to do faster.
+- [x] **NO** — pure data-entry convenience. No streaks, nudges, notifications,
+  gamification, or motivational framing. Psychologist review **not required**.
 
 ## User Stories
-- As a lifter who just did a 4th set that wasn't in last session's plan, I want to record it
-  with the same weight/reps as the set I just finished, in one tap, instead of dialing both
-  values from scratch.
-- As a user doing straight sets (same weight × reps across all sets), I want each newly added
-  set to default to my previous in-session set's values so I can just confirm.
-- As a user whose next set differs, I want the copied values to remain fully editable before
-  I confirm — the copy is a starting point, never a forced value.
+- As a user doing a **unilateral** cable/bodyweight exercise, when I add an extra set,
+  I want it pre-filled with my last in-session set's weight/reps (parity with bilateral)
+  so I don't dial from scratch. **(gap #1 — core)**
+- As a user who cleared or edited a row, I want a visible one-tap way to re-copy my
+  previous set's numbers so I can recover the fast path on demand. **(gap #2 — optional)**
 
 ## Proposed Solution
-### Overview
-Introduce an **in-session "previous set" prefill candidate** as a fallback source, ranked
-below the existing positional cross-session prefill. When a row has **no cross-session prefill
-candidate**, fall back to the **immediately-preceding completed set in the same exercise in
-the current session** as the displayed (non-persisted) candidate. Confirming the row (the
-existing single checkmark tap) persists those values exactly as the cross-session prefill path
-does today.
 
-This reuses the existing prefill display + one-tap-persist machinery rather than adding a new
-write path.
+### Scope decision (CEO, pending reviewer input)
+**Primary (must-build): gap #1 — unilateral prefill parity.** Extend the existing
+`resolvePrefillCandidate` path to the unilateral branch of `handleAddSet` so left/right
+added sets receive the same in-session (and previous-workout fallback) prefill as
+bilateral sets. Reuse the exact same helper — no new primitive.
 
-### UX Design
-- **No new required control for the primary flow.** An added/empty set with no cross-session
-  candidate now shows the previous in-session set's weight/reps as a dimmed prefill candidate
-  (identical visual treatment to today's cross-session prefill — the value shown in the picker
-  but styled as "suggested / not yet logged").
-- **Single tap (checkmark or swipe-right) confirms** and persists — same gesture users already
-  know. No new gesture to learn for the core case.
-- **Editable first:** touching either picker before confirming clears the candidate styling and
-  lets the user dial a different value, exactly like the cross-session prefill today.
-- **Explicit affordance (secondary, evaluate in review):** optionally add a small "repeat"
-  glyph on empty rows that, when tapped, fills from the previous in-session set without marking
-  complete — useful when the user wants to copy-then-edit. Decision deferred to reviewers:
-  ship candidate-only (zero new controls) first, or include the glyph. Default recommendation:
-  **candidate-only**, to keep the row visually minimal and avoid a11y clutter.
-- **Empty state:** first set of the first exercise (no previous in-session set and no
-  cross-session set) → no candidate, manual entry as today.
-- **A11y:** the prefill candidate must be announced by screen readers as a suggestion, matching
-  the existing cross-session prefill accessibility label pattern (reuse it — do not invent a new
-  one).
+**Secondary (evaluate, may split to its own issue): gap #2 — explicit affordance.**
+Only if reviewers agree it adds value beyond the automatic behavior. Candidate designs:
+- (a) A small "repeat" / "↻ last" pill on empty rows that copies the previous
+  in-session set on tap (reuses `resolvePrefillCandidate`, writes via `updateSet`).
+- (b) Swipe-right gesture on the row (conflicts with existing swipe-to-delete on
+  `SetRow` — see `SetRow.swipe-delete.test.tsx`; **likely rejected** for gesture
+  collision).
+- (c) No new affordance — rely on existing automatic prefill (do nothing).
 
-### Technical Approach
-- **Candidate resolution ranking** (in `useSessionData` prefill derivation, currently
-  `hooks/useSessionData.ts:187-211`): for a pristine row, use existing positional
-  cross-session `prefillCandidate` if present; **else** fall back to the last completed set of
-  the same exercise earlier in the current in-memory session.
-- The in-session fallback is derived **purely from already-loaded session state** — no new DB
-  query. The current session's completed sets are already in memory.
-- **Persistence path unchanged:** confirming still routes through the existing
-  `useSessionActions.ts:619-671` persist-then-complete action. The candidate is just a
-  different *source* for the displayed value; the write is identical.
-- **Ranking must never override a real logged value or a cross-session candidate** — it is
-  strictly a lowest-priority fallback for otherwise-empty rows.
-- No schema change. No migration. No new table or column.
+CEO leaning: ship gap #1 now; **defer gap #2 to a separate PLAN** unless QD makes a
+strong discoverability case, to keep this change small and low-risk.
 
-## Scope
-**In:**
-- In-session previous-set fallback as a display-only prefill candidate for empty rows lacking a
-  cross-session candidate.
-- Reuse of existing one-tap confirm/persist and a11y suggestion labeling.
+### Technical Approach (gap #1)
+- In `handleAddSet`, before the `isUnilateral` early `return`, run the same
+  `resolvePrefillCandidate({ trackingMode, sets: group.sets }, previousSetForSlot)`
+  resolution used by the bilateral path, then persist onto the new left set via the
+  same `updateSet` / `updateSetRepsAndDuration` entry points, and hydrate
+  `leftSetWithMeta` so the row renders the value immediately.
+- Preserve the AC16 short-circuit: don't hit `getPreviousSetsBatch` when an in-session
+  working set already exists.
+- Preserve warmup exclusion (helper already handles it).
+- Respect marker/stack-weight ownership (mirror the `autofilledStackWeight` branch) if
+  it applies to unilateral cable sets.
 
-**Out:**
-- Swipe-to-repeat as a *distinct* gesture (existing swipe-right = complete stays as-is).
-- Any auto-persist without user confirmation (candidate is always confirm-gated).
-- Cross-exercise copying.
-- The optional "repeat glyph" unless reviewers explicitly request it.
-- Progression math changes (the "Next" suggestion pill is untouched).
+## Acceptance Criteria (gap #1)
+- [ ] Given a unilateral exercise with ≥1 completed in-session working set, When the user
+      adds another set, Then the new left set is pre-filled with the last in-session
+      non-warmup set's weight/reps (duration for duration-mode), persisted and rendered
+      without a refresh.
+- [ ] Given a unilateral exercise with no in-session working set but a matching
+      previous-workout completed set for the slot, When the user adds a set, Then it is
+      pre-filled from that previous-workout set (previous-workout fallback parity).
+- [ ] Given only warmup sets in session, When the user adds a set, Then no prefill is
+      applied (warmup is never a source) — silent no-op.
+- [ ] `getPreviousSetsBatch` is NOT called when an in-session working set exists (AC16
+      parity).
+- [ ] No regression to bilateral prefill behavior (existing tests stay green).
+- [ ] PR passes all tests, no new lint warnings.
 
-## Acceptance Criteria
-- [ ] Given the current session has a completed set for exercise X And a newly added empty set
-      for X has no cross-session prefill candidate, When the row renders, Then its weight/reps
-      pickers display the previous in-session completed set's values as a dimmed (not-logged)
-      candidate.
-- [ ] Given such a row shows an in-session candidate, When the user taps the checkmark once,
-      Then the candidate weight/reps are persisted and the set is marked complete (single tap).
-- [ ] Given such a row shows an in-session candidate, When the user adjusts either picker
-      before confirming, Then the manual value is used and persisted (candidate is a starting
-      point only).
-- [ ] Given a row already has a cross-session positional prefill candidate, When it renders,
-      Then the cross-session candidate takes precedence (in-session fallback does NOT override).
-- [ ] Given a row already has a real logged value, Then no candidate (cross- or in-session)
-      overrides it.
-- [ ] The prefill candidate is announced to screen readers as a suggestion using the existing
-      cross-session prefill a11y label pattern.
-- [ ] PR passes all tests with no regressions; existing cross-session prefill tests still pass.
-- [ ] No new lint warnings.
+### Headless Verification Path
+All ACs are headless-verifiable via unit tests on `handleAddSet` / a new
+`useSessionActions` test asserting the unilateral prefill write + hydrated row, plus the
+existing `resolvePrefillCandidate` unit tests. **No device/manual AC.** No waiver needed.
 
 ## Edge Cases
 | Scenario | Expected |
 |----------|----------|
-| First set of first exercise, no history | No candidate; manual entry (unchanged). |
-| Added set, previous session HAD a set at this set_number | Cross-session candidate wins (unchanged behavior). |
-| Added set beyond previous session's count | In-session previous-set candidate shown. |
-| Previous in-session set was deleted before confirming next | Fall back to the most recent *remaining* completed in-session set; if none, no candidate. |
-| Unilateral (left/right) tracking rows | In-session fallback respects the same side; do not cross left/right (reuse existing side-aware copy semantics in `SetRow.tsx:261-283`). |
-| Bodyweight-modifier sets | Candidate must include the same smart-defaulted modifier handling as `+ Add Set` today. |
-| User edits candidate then undoes edit | Behaves like cross-session prefill today (no special-casing). |
-
-## Headless Verification Path (device/manual ACs)
-No AC requires on-device or physical verification. All ACs are covered headlessly by:
-- Unit tests on the candidate-resolution ranking function (cross-session > in-session >
-  none), including the precedence and "never override real value" cases.
-- Component/render tests asserting the dimmed-candidate display, single-tap persist, and
-  edit-before-confirm behavior.
-- A11y test asserting the suggestion label is emitted for in-session candidates.
-No device waiver needed.
+| Unilateral, in-session working set exists | Copy last in-session set (no prev-workout query) |
+| Unilateral, only previous-workout data | Copy matching slot from previous workout |
+| Unilateral, only warmup sets | No prefill (silent no-op) |
+| Marker/stack-weight cable set | Marker owns weight; only reps/duration copied |
+| Duration-mode unilateral | Copy duration_seconds, not reps |
+| Persist failure | Row still inserted; single console.warn breadcrumb; no thrown error |
 
 ## Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| In-session fallback accidentally overrides a real value or cross-session candidate | Low | High (data integrity) | Strict lowest-priority ranking + explicit precedence tests. |
-| Visual confusion between "suggested" and "logged" values | Med | Med | Reuse the exact existing dimmed prefill styling + a11y label; no new visual language. |
-| Side (L/R) leakage in unilateral tracking | Low | Med | Reuse existing side-aware semantics; edge-case test. |
-| Scope creep into swipe/glyph affordances | Med | Low | Explicitly out-of-scope unless reviewers request; ship candidate-only first. |
+| Double-write / diverging from bilateral path | Med | Med | Reuse the SAME helper + write entry points; add unit test asserting single write |
+| Redundant reimplementation of an existing feature | High (if scope drifts to gap #2 as a new primitive) | Med | Explicitly forbid a new "repeat" primitive; extend existing path only |
+| Gesture collision (if swipe-to-repeat chosen) | High | Med | Reject swipe design; empty-row pill or defer gap #2 |
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+_Pending_ — Please critique the scope decision. Is the automatic prefill sufficient, or
+is an explicit visible affordance (gap #2) worth building now? Any UX edge cases in the
+unilateral prefill?
+
 ### Tech Lead (Feasibility)
-_Pending_
+_Pending_ — Please confirm the unilateral-branch extension approach, the AC16
+short-circuit preservation, and whether marker/stack-weight ownership applies to
+unilateral cable sets. Flag any reason the early `return` exists deliberately.
+
 ### Psychologist (Behavior-Design)
-N/A — Classification = NO (pure data-entry convenience, no behavior-shaping triggers).
+N/A — Classification = NO.
+
 ### CEO Decision
-_Pending_
+_Pending reviewer verdicts._ Leaning: ship gap #1 (unilateral parity) now as a small,
+low-risk fix; defer gap #2 (explicit affordance) to its own PLAN unless QD argues
+otherwise.
