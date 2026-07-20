@@ -488,8 +488,12 @@ export function useSessionActions({
     if (group?.track_unilateral) {
       const activeGroup = groupsRef.current.find((g) => g.exercise_id === set.exercise_id);
       const siblingSets = activeGroup?.sets.filter((s) => s.set_number === set.set_number) ?? [];
-      const leftSet = set.left || siblingSets.find((s) => s.side === "left");
-      const rightSet = set.right || siblingSets.find((s) => s.side === "right");
+      // ExerciseGroupSetTable passes the raw left-side row to SetRow, while
+      // activeGroup.sets contains unilateral wrapper rows. Resolve the
+      // wrapper first so persistence still reaches both stored side rows.
+      const wrapper = siblingSets.find((s) => s.left || s.right);
+      const leftSet = set.left || wrapper?.left || siblingSets.find((s) => s.side === "left");
+      const rightSet = set.right || wrapper?.right || siblingSets.find((s) => s.side === "right");
 
       if (set.completed) {
         // Uncompleting
