@@ -810,6 +810,68 @@ export function useSessionActions({
         }
       }
 
+      let defaultModifier: number | null = null;
+      if (group?.is_bodyweight) {
+        try {
+          defaultModifier = await queryClient.fetchQuery({
+            queryKey: ['bw-modifier-default', exerciseId],
+            queryFn: () => getLastBodyweightModifier(exerciseId),
+          });
+          if (defaultModifier != null) {
+            await updateSetBodyweightModifier(leftSet.id, defaultModifier);
+            queryClient.invalidateQueries({
+              queryKey: ['bw-modifier-default', exerciseId],
+            });
+          }
+        } catch {
+          defaultModifier = null;
+        }
+      }
+
+      let autofilledAttachment: typeof leftSet.attachment = null;
+      let autofilledMountPosition: typeof leftSet.mount_position = null;
+      if (group && isCableExercise({ equipment: group.equipment })) {
+        try {
+          const history = await queryClient.fetchQuery({
+            queryKey: ['variant-history', exerciseId],
+            queryFn: () => getRecentVariantHistory(exerciseId),
+          });
+          const last = getLastVariant(history);
+          if (last.attachment !== null || last.mount_position !== null) {
+            await updateSetVariant(leftSet.id, last.attachment, last.mount_position);
+            autofilledAttachment = last.attachment;
+            autofilledMountPosition = last.mount_position;
+            queryClient.invalidateQueries({
+              queryKey: ['variant-history', exerciseId],
+            });
+          }
+        } catch {
+          // Autofill is best-effort
+        }
+      }
+
+      let autofilledGripType: typeof leftSet.grip_type = null;
+      let autofilledGripWidth: typeof leftSet.grip_width = null;
+      if (group && isBodyweightGripExercise({ equipment: group.equipment, name: group.name })) {
+        try {
+          const history = await queryClient.fetchQuery({
+            queryKey: ['bodyweight-grip-history', exerciseId],
+            queryFn: () => getRecentBodyweightGripHistory(exerciseId),
+          });
+          const last = getLastBodyweightGripVariant(history);
+          if (last.grip_type !== null || last.grip_width !== null) {
+            await updateSetBodyweightVariant(leftSet.id, last.grip_type, last.grip_width);
+            autofilledGripType = last.grip_type;
+            autofilledGripWidth = last.grip_width;
+            queryClient.invalidateQueries({
+              queryKey: ['bodyweight-grip-history', exerciseId],
+            });
+          }
+        } catch {
+          // Autofill is best-effort
+        }
+      }
+
       let prefillWeight: number | null = null;
       let prefillReps: number | null = null;
       let prefillDuration: number | null = null;
@@ -878,6 +940,11 @@ export function useSessionActions({
         ...(prefillApplied
           ? { weight: prefillWeight, reps: prefillReps, duration_seconds: prefillDuration }
           : {}),
+        bodyweight_modifier_kg: defaultModifier,
+        attachment: autofilledAttachment ?? leftSet?.attachment ?? null,
+        mount_position: autofilledMountPosition ?? leftSet?.mount_position ?? null,
+        grip_type: autofilledGripType ?? leftSet?.grip_type ?? null,
+        grip_width: autofilledGripWidth ?? leftSet?.grip_width ?? null,
         stack_id: autofilledStackId ?? leftSet?.stack_id ?? null,
         stack_marker: autofilledStackMarker ?? leftSet?.stack_marker ?? null,
         stack_name_at_log: autofilledStackName ?? leftSet?.stack_name_at_log ?? null,
@@ -885,6 +952,7 @@ export function useSessionActions({
         ...(autofilledStackWeight !== null ? { weight: autofilledStackWeight } : {}),
         previous: "-",
       };
+
 
       setGroups((prev) =>
         prev.map((g) =>

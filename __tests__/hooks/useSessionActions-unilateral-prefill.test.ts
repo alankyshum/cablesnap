@@ -15,6 +15,10 @@ const mockGetRecentStackHistory = jest.fn();
 const mockFetchStacks = jest.fn();
 const mockFetchQuery = jest.fn();
 const mockUpdateSetRepsAndDuration = jest.fn().mockResolvedValue(undefined);
+const mockGetRecentVariantHistory = jest.fn();
+const mockUpdateSetVariant = jest.fn();
+const mockGetRecentBodyweightGripHistory = jest.fn();
+const mockUpdateSetBodyweightVariant = jest.fn();
 
 jest.mock("../../hooks/useActiveCalibration", () => ({
   fetchStacksWithCalibrations: (...args: any[]) => mockFetchStacks(...args),
@@ -53,10 +57,10 @@ jest.mock("../../lib/db/session-sets", () => ({
   getLastBodyweightModifier: (...args: any[]) => mockGetLastBodyweightModifier(...args),
   updateSetBodyweightModifier: (...args: any[]) => mockUpdateSetBodyweightModifier(...args),
   getPreviousSetsBatch: (...args: any[]) => mockGetPreviousSetsBatch(...args),
-  getRecentVariantHistory: jest.fn().mockResolvedValue([]),
-  updateSetVariant: jest.fn(),
-  getRecentBodyweightGripHistory: jest.fn().mockResolvedValue([]),
-  updateSetBodyweightVariant: jest.fn(),
+  getRecentVariantHistory: (...args: any[]) => mockGetRecentVariantHistory(...args),
+  updateSetVariant: (...args: any[]) => mockUpdateSetVariant(...args),
+  getRecentBodyweightGripHistory: (...args: any[]) => mockGetRecentBodyweightGripHistory(...args),
+  updateSetBodyweightVariant: (...args: any[]) => mockUpdateSetBodyweightVariant(...args),
   updateSetStackMarker: (...args: any[]) => mockUpdateSetStackMarker(...args),
   getRecentStackHistory: (...args: any[]) => mockGetRecentStackHistory(...args),
   updateSetRepsAndDuration: (...args: any[]) => mockUpdateSetRepsAndDuration(...args),
@@ -195,6 +199,10 @@ describe("useSessionActions — unilateral handleAddSet prefill parity (BLD-3445
     mockGetLastBodyweightModifier.mockResolvedValue(null);
     mockGetPreviousSetsBatch.mockResolvedValue({});
     mockFetchQuery.mockImplementation(async ({ queryFn }: any) => queryFn());
+    mockGetRecentVariantHistory.mockResolvedValue([]);
+    mockGetRecentBodyweightGripHistory.mockResolvedValue([]);
+    mockUpdateSetVariant.mockResolvedValue(undefined);
+    mockUpdateSetBodyweightVariant.mockResolvedValue(undefined);
   });
 
   it("unilateral reps-tracking: copies weight + reps from last in-session working left set", async () => {
@@ -377,7 +385,7 @@ describe("useSessionActions — unilateral handleAddSet prefill parity (BLD-3445
     const setGroupsCall = (params.setGroups as jest.Mock).mock.calls.slice(-1)[0][0];
     const updated = setGroupsCall([group]);
     const appended = updated[0].sets.slice(-1)[0];
-    expect(appended.bodyweight_modifier_kg).toBeUndefined(); // Or null, not 10
+    expect(appended.bodyweight_modifier_kg).toBeNull(); // Or null, not 10
   });
 
   it("unilateral duration-mode: copies duration_seconds instead of reps", async () => {
@@ -408,5 +416,84 @@ describe("useSessionActions — unilateral handleAddSet prefill parity (BLD-3445
     expect(appended.weight).toBe(15);
     expect(appended.duration_seconds).toBe(45);
     expect(appended.reps).toBeNull();
+  });
+
+  it("unilateral BW-modifier smart-default: resolves default modifier and applies to new left set", async () => {
+    mockGetLastBodyweightModifier.mockResolvedValue(15);
+
+    const group = makeGroup({
+      is_bodyweight: true,
+      sets: [],
+    });
+    const params = makeParams([group]);
+    const { result } = renderHook(() => useSessionActions(params));
+    await act(async () => { await flush(); });
+
+    await act(async () => {
+      await result.current.handleAddSet("ex-1");
+    });
+
+    expect(mockGetLastBodyweightModifier).toHaveBeenCalledWith("ex-1");
+    expect(mockUpdateSetBodyweightModifier).toHaveBeenCalledWith("new-left-set-id", 15);
+
+    const setGroupsCall = (params.setGroups as jest.Mock).mock.calls.slice(-1)[0][0];
+    const updated = setGroupsCall([group]);
+    const appended = updated[0].sets.slice(-1)[0];
+    expect(appended.bodyweight_modifier_kg).toBe(15);
+  });
+
+  it("unilateral cable-variant: autofills cable variant and updates left set", async () => {
+    mockGetRecentVariantHistory.mockResolvedValue([
+      { attachment: "rope", mount_position: "high" },
+    ]);
+
+    const group = makeGroup({
+      equipment: "cable",
+      sets: [],
+    });
+    const params = makeParams([group]);
+    const { result } = renderHook(() => useSessionActions(params));
+    await act(async () => { await flush(); });
+
+    await act(async () => {
+      await result.current.handleAddSet("ex-1");
+    });
+
+    expect(mockGetRecentVariantHistory).toHaveBeenCalledWith("ex-1");
+    expect(mockUpdateSetVariant).toHaveBeenCalledWith("new-left-set-id", "rope", "high");
+
+    const setGroupsCall = (params.setGroups as jest.Mock).mock.calls.slice(-1)[0][0];
+    const updated = setGroupsCall([group]);
+    const appended = updated[0].sets.slice(-1)[0];
+    expect(appended.attachment).toBe("rope");
+    expect(appended.mount_position).toBe("high");
+  });
+
+  it("unilateral bodyweight grip-variant: autofills grip variant and updates left set", async () => {
+    mockGetRecentBodyweightGripHistory.mockResolvedValue([
+      { grip_type: "underhand", grip_width: "wide" },
+    ]);
+
+    const group = makeGroup({
+      equipment: "bodyweight",
+      name: "Pullup",
+      sets: [],
+    });
+    const params = makeParams([group]);
+    const { result } = renderHook(() => useSessionActions(params));
+    await act(async () => { await flush(); });
+
+    await act(async () => {
+      await result.current.handleAddSet("ex-1");
+    });
+
+    expect(mockGetRecentBodyweightGripHistory).toHaveBeenCalledWith("ex-1");
+    expect(mockUpdateSetBodyweightVariant).toHaveBeenCalledWith("new-left-set-id", "underhand", "wide");
+
+    const setGroupsCall = (params.setGroups as jest.Mock).mock.calls.slice(-1)[0][0];
+    const updated = setGroupsCall([group]);
+    const appended = updated[0].sets.slice(-1)[0];
+    expect(appended.grip_type).toBe("underhand");
+    expect(appended.grip_width).toBe("wide");
   });
 });
