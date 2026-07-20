@@ -487,24 +487,9 @@ export function useSessionActions({
 
     if (group?.track_unilateral) {
       const activeGroup = groupsRef.current.find((g) => g.exercise_id === set.exercise_id);
-      // BLD-3371 fix: the caller (ExerciseGroupSetTable.tsx:89) unwraps the
-      // grouped wrapper into `set.left || set` before passing it to SetRow, so
-      // `set` here is typically the *left-side row* — it has no `.left`/`.right`
-      // and no siblings with a `.side` field (group.sets stores wrappers, not
-      // raw side rows). Resolve the wrapper explicitly from the active group's
-      // sets by `set_number`, then read `.left`/`.right` from it. Fall back to
-      // the prior resolution paths so a future refactor that passes the wrapper
-      // directly still works.
-      const wrapper = activeGroup?.sets.find((s) => s.set_number === set.set_number);
       const siblingSets = activeGroup?.sets.filter((s) => s.set_number === set.set_number) ?? [];
-      const leftSet =
-        set.left ||
-        wrapper?.left ||
-        siblingSets.find((s) => s.side === "left");
-      const rightSet =
-        set.right ||
-        wrapper?.right ||
-        siblingSets.find((s) => s.side === "right");
+      const leftSet = set.left || siblingSets.find((s) => s.side === "left");
+      const rightSet = set.right || siblingSets.find((s) => s.side === "right");
 
       if (set.completed) {
         // Uncompleting
@@ -522,8 +507,6 @@ export function useSessionActions({
                   ...s,
                   completed: false,
                   completed_at: null,
-                  left: s.left ? { ...s.left, completed: false, completed_at: null } : undefined,
-                  right: s.right ? { ...s.right, completed: false, completed_at: null } : undefined,
                 };
               }),
             };
@@ -581,16 +564,10 @@ export function useSessionActions({
             ...g,
             sets: g.sets.map((s) => {
               if (s.set_number !== set.set_number) return s;
-              const nextLeft = (leftEmpty || !s.left) ? undefined : { ...s.left, completed: true, completed_at: now };
-              const nextRight = (rightEmpty || !s.right) ? undefined : { ...s.right, completed: true, completed_at: now };
               return {
                 ...s,
                 completed: true,
                 completed_at: now,
-                /* eslint-disable @typescript-eslint/no-explicit-any */
-                left: nextLeft as any,
-                right: nextRight as any,
-                /* eslint-enable @typescript-eslint/no-explicit-any */
               };
             }),
           };
@@ -790,7 +767,120 @@ export function useSessionActions({
         "left"
       );
 
-      const leftSetWithMeta: SetWithMeta = { ...leftSet, previous: "-" };
+      let autofilledStackId: string | null = null;
+      let autofilledStackMarker: number | null = null;
+      let autofilledStackName: string | null = null;
+      let autofilledStackUnit: string | null = null;
+      let autofilledStackWeight: number | null = null;
+      if (group && isCableExercise({ equipment: group.equipment }) && session?.gym_id) {
+        try {
+          const lastMarker = await getRecentStackHistory(exerciseId);
+          if (lastMarker?.stack_marker != null && lastMarker.stack_id) {
+            const currentStacks: StackWithCalibrations[] =
+              await queryClient.fetchQuery({
+                queryKey: ["stack-calibrations", session.gym_id],
+                queryFn: () => fetchStacksWithCalibrations(session.gym_id as string),
+                staleTime: 60_000,
+              });
+            const matchedStack = currentStacks.find((s) => s.id === lastMarker.stack_id);
+            if (matchedStack) {
+              const resolved = resolveMarker(matchedStack.calibrations, lastMarker.stack_marker);
+              if (resolved !== null) {
+                await updateSetStackMarker(leftSet.id, {
+                  weight: resolved.weight,
+                  marker: lastMarker.stack_marker,
+                  stackId: matchedStack.id,
+                  stackName: matchedStack.name,
+                  stackUnit: matchedStack.unit ?? "",
+                });
+                autofilledStackId = matchedStack.id;
+                autofilledStackMarker = lastMarker.stack_marker;
+                autofilledStackName = matchedStack.name;
+                autofilledStackUnit = matchedStack.unit ?? null;
+                autofilledStackWeight = resolved.weight;
+              }
+            }
+          }
+        } catch {
+          // Stack marker autofill is best-effort; silently ignored on any error.
+        }
+      }
+
+      let prefillWeight: number | null = null;
+      let prefillReps: number | null = null;
+      let prefillDuration: number | null = null;
+      let prefillApplied = false;
+
+      if (group) {
+        const setsForPrefill = group.sets.map((s) => s.left || s);
+        const hasInSessionWorking = setsForPrefill.some((s) => s.set_type !== "warmup");
+
+        let previousSetForSlot: PrefillCandidate & { set_type: string | null } | null = null;
+        if (!hasInSessionWorking && id) {
+          try {
+            const batch = await getPreviousSetsBatch([exerciseId], id);
+            const match = batch[exerciseId]?.find((p) => p.set_number === num && p.completed && p.side === "left");
+            if (match) {
+              previousSetForSlot = {
+                weight: match.weight,
+                reps: match.reps,
+                duration_seconds: match.duration_seconds,
+                set_type: match.set_type,
+              };
+            }
+          } catch {
+            previousSetForSlot = null;
+          }
+        }
+
+        const candidate = resolvePrefillCandidate(
+          { trackingMode: group.trackingMode, sets: setsForPrefill },
+          previousSetForSlot,
+        );
+
+        if (candidate) {
+          const isDuration = group.trackingMode === "duration";
+          try {
+            if (autofilledStackWeight !== null) {
+              await updateSetRepsAndDuration(
+                leftSet.id,
+                candidate.reps,
+                isDuration ? candidate.duration_seconds : undefined,
+              );
+              prefillReps = candidate.reps;
+              prefillDuration = candidate.duration_seconds;
+              prefillApplied = true;
+            } else {
+              await updateSet(
+                leftSet.id,
+                candidate.weight,
+                candidate.reps,
+                isDuration ? candidate.duration_seconds : undefined,
+              );
+              prefillWeight = candidate.weight;
+              prefillReps = candidate.reps;
+              prefillDuration = candidate.duration_seconds;
+              prefillApplied = true;
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn("[BLD-682] add-set previous-workout prefill persistence failed", err);
+          }
+        }
+      }
+
+      const leftSetWithMeta: SetWithMeta = {
+        ...leftSet,
+        ...(prefillApplied
+          ? { weight: prefillWeight, reps: prefillReps, duration_seconds: prefillDuration }
+          : {}),
+        stack_id: autofilledStackId ?? leftSet?.stack_id ?? null,
+        stack_marker: autofilledStackMarker ?? leftSet?.stack_marker ?? null,
+        stack_name_at_log: autofilledStackName ?? leftSet?.stack_name_at_log ?? null,
+        stack_unit_at_log: autofilledStackUnit ?? leftSet?.stack_unit_at_log ?? null,
+        ...(autofilledStackWeight !== null ? { weight: autofilledStackWeight } : {}),
+        previous: "-",
+      };
 
       setGroups((prev) =>
         prev.map((g) =>
