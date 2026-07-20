@@ -677,9 +677,9 @@ export async function getPreviousSets(
 export async function getPreviousSetsBatch(
   exerciseIds: string[],
   currentSessionId: string
-): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: SetType; completed: boolean; rpe: number | null; pulley_pin: number | null }[]>> {
+): Promise<Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: SetType; completed: boolean; rpe: number | null; pulley_pin: number | null; side?: "left" | "right" | null }[]>> {
   if (exerciseIds.length === 0) return {};
-  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: SetType; completed: boolean; rpe: number | null; pulley_pin: number | null }[]> = {};
+  const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: SetType; completed: boolean; rpe: number | null; pulley_pin: number | null; side?: "left" | "right" | null }[]> = {};
   const db = await getDrizzle();
   // Step 1: Find all completed sessions per exercise, ordered by most recent
   const sessionRows = await db
@@ -719,6 +719,7 @@ export async function getPreviousSetsBatch(
       completed: workoutSets.completed,
       rpe: workoutSets.rpe,
       pulley_pin: workoutSets.pulley_pin,
+      side: workoutSets.side,
     })
     .from(workoutSets)
     .where(and(
@@ -732,7 +733,7 @@ export async function getPreviousSetsBatch(
     const correctSession = sessionMap[row.exercise_id];
     if (!correctSession || row.session_id !== correctSession) continue;
     if (!result[row.exercise_id]) result[row.exercise_id] = [];
-    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds, set_type: normalizeSetType(row.set_type), completed: row.completed === 1, rpe: row.rpe ?? null, pulley_pin: row.pulley_pin ?? null });
+    result[row.exercise_id].push({ set_number: row.set_number, weight: row.weight, reps: row.reps, duration_seconds: row.duration_seconds, set_type: normalizeSetType(row.set_type), completed: row.completed === 1, rpe: row.rpe ?? null, pulley_pin: row.pulley_pin ?? null, side: row.side ?? null });
   }
   return result;
 }

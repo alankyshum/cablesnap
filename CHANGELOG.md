@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Unilateral add-set prefill parity** — completing or uncompleting a set now correctly mirrors the action to the paired side.
 
 ## v0.26.76 — 2026-07-17
 <!-- versionCode: 144 -->
