@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
+  type TextStyle,
   View,
 } from "react-native";
 import Constants from "expo-constants";
@@ -23,6 +24,86 @@ type Props = {
   /** Optional override for testing; defaults to Constants.expoConfig?.version. */
   currentVersion?: string | null;
 };
+
+function parseInlineMarkdown(line: string, style: TextStyle): ReactNode[] {
+  const tokenPattern =
+    /\*\*[^*\n]+\*\*|(?<!\*)\*[^*\n]+\*(?!\*)|(?<!_)_[^_\n]+_(?!_)/g;
+  const spans: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let spanIndex = 0;
+
+  while ((match = tokenPattern.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      spans.push(
+        <Text key={`span-${spanIndex++}`} style={style}>
+          {line.slice(lastIndex, match.index)}
+        </Text>
+      );
+    }
+
+    const token = match[0];
+    const isBold = token.startsWith("**");
+    const content = token.slice(isBold ? 2 : 1, isBold ? -2 : -1);
+    spans.push(
+      <Text
+        key={`span-${spanIndex++}`}
+        style={[style, isBold ? { fontWeight: "700" } : { fontStyle: "italic" }]}
+      >
+        {content}
+      </Text>
+    );
+    lastIndex = match.index + token.length;
+  }
+
+  if (lastIndex < line.length) {
+    spans.push(
+      <Text key={`span-${spanIndex}`} style={style}>
+        {line.slice(lastIndex)}
+      </Text>
+    );
+  }
+
+  return spans;
+}
+
+function ReleaseBody({
+  body,
+  color,
+  fontSize,
+  lineHeight,
+}: {
+  body: string;
+  color: string;
+  fontSize: number;
+  lineHeight: number;
+}) {
+  const textStyle: TextStyle = { color, fontSize, lineHeight };
+
+  return (
+    <View>
+      {body.split("\n").map((line, index) => {
+        const bulletMatch = line.match(/^\s*- (.*)$/);
+        if (bulletMatch) {
+          return (
+            <View key={`line-${index}`} style={styles.bodyBulletRow}>
+              <Text style={[textStyle, styles.bodyBullet]}>•</Text>
+              <Text style={[textStyle, styles.bodyBulletText]}>
+                {parseInlineMarkdown(bulletMatch[1], textStyle)}
+              </Text>
+            </View>
+          );
+        }
+
+        return (
+          <Text key={`line-${index}`} style={textStyle}>
+            {line ? parseInlineMarkdown(line, textStyle) : "\u00a0"}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
 
 /**
  * Full-screen modal listing all release entries newest-first.
@@ -192,17 +273,14 @@ export default function ReleaseNotesModal({
                       </View>
                     ) : null}
                   </View>
-                  <Text
-                    variant="body"
-                    style={{
-                      color: colors.onSurface,
-                      fontSize: fontSizes.sm,
-                      lineHeight: 20,
-                      marginTop: 6,
-                    }}
-                  >
-                    {entry.body}
-                  </Text>
+                  <View style={{ marginTop: 6 }}>
+                    <ReleaseBody
+                      body={entry.body}
+                      color={colors.onSurface}
+                      fontSize={fontSizes.sm}
+                      lineHeight={20}
+                    />
+                  </View>
                 </View>
               );
             })}
@@ -251,5 +329,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
+  },
+  bodyBulletRow: {
+    flexDirection: "row",
+  },
+  bodyBullet: {
+    width: 16,
+  },
+  bodyBulletText: {
+    flex: 1,
   },
 });
