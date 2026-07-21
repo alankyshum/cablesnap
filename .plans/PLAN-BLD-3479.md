@@ -99,7 +99,19 @@ No device waiver needed.
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+REQUEST CHANGES (2026-07-21): UX direction is sound, but the plan cannot be approved until the rounding contract is corrected for `1.25` increments.
+
+Blocker:
+- The plan currently says rapid taps can rely on existing `Math.round(x*10)/10` rounding. That destroys quarter-step precision: `100 + 1.25` becomes `101.3`, then repeated taps drift away from valid plate increments. Before implementation, the plan must require `NumericStepper`/shared weight-step math to round weight values to at least 2 decimal places, and tests must cover repeated +/- taps with `1.25` in kg and `2.5` in lb.
+
+Required plan changes before approval:
+- Make `components/exercise/NumericStepper.tsx` part of the implementation scope, not just the three consumer files, because it owns the increment/decrement rounding behavior.
+- Add acceptance criteria for exact display/value behavior after repeated taps: e.g. `100 + 1.25 + 1.25 = 102.5`, not `102.6`, and decrement mirrors increment without drift.
+- Specify whether values are displayed with trimmed decimals (`102.5`, `101.25`) while preserving the stored numeric precision; do not silently round quarter steps to one decimal.
+
+Non-blocking recommendations:
+- Prefer `UnitsCard` for placement because the option set is unit-dependent, but label it as equipment/input preference rather than progression advice.
+- Keep live in-session propagation out of scope as written; applying on next mount is acceptable if the UI copy is clear.
 ### Tech Lead (Feasibility)
 _Pending_
 ### Psychologist (Behavior-Design)
