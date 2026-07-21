@@ -57,7 +57,8 @@ describe('ReleaseNotesModal', () => {
     expect(getByText("What's New")).toBeTruthy();
     expect(getByTestId('release-notes-entry-0.26.8')).toBeTruthy();
     expect(getByTestId('release-notes-entry-0.26.7')).toBeTruthy();
-    expect(getByText('- Shiny new thing\n- Another thing')).toBeTruthy();
+    expect(getByText('Shiny new thing')).toBeTruthy();
+    expect(getByText('Another thing')).toBeTruthy();
   });
 
   it('calls onClose when the close button is tapped', () => {
