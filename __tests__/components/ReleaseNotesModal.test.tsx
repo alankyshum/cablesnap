@@ -57,7 +57,11 @@ describe('ReleaseNotesModal', () => {
     expect(getByText("What's New")).toBeTruthy();
     expect(getByTestId('release-notes-entry-0.26.8')).toBeTruthy();
     expect(getByTestId('release-notes-entry-0.26.7')).toBeTruthy();
-    expect(getByText('- Shiny new thing\n- Another thing')).toBeTruthy();
+    // Markdown renderer splits bullets into separate rows; assert on the
+    // rendered content text nodes rather than the raw markdown string.
+    expect(getByText('Shiny new thing')).toBeTruthy();
+    expect(getByText('Another thing')).toBeTruthy();
+    expect(getByText('Previous release bullet')).toBeTruthy();
   });
 
   it('calls onClose when the close button is tapped', () => {
