@@ -99,7 +99,7 @@ describe("suggest (progressive overload)", () => {
       ],
       step: 2.5,
       bodyweight: false,
-      expected: { type: "increase", weight: 102.5 },
+      expected: { type: "rep_increase", weight: 100, reps: 9 },
     },
     {
       name: "suggests maintain when not all sets completed",
@@ -129,7 +129,7 @@ describe("suggest (progressive overload)", () => {
       ],
       step: 2.5,
       bodyweight: false,
-      expected: { type: "increase" },
+      expected: { type: "rep_increase", reps: 9 },
     },
     {
       name: "suggests maintain when weight decreased (deload)",
@@ -159,7 +159,7 @@ describe("suggest (progressive overload)", () => {
       ],
       step: 5,
       bodyweight: false,
-      expected: { type: "increase", weight: 105 },
+      expected: { type: "rep_increase", weight: 100, reps: 9 },
     },
     {
       name: "bodyweight: returns null for pure bodyweight (weight=0) since filter requires weight > 0",
@@ -243,6 +243,45 @@ describe("suggest (progressive overload)", () => {
       });
     });
 
+    it("GIVEN no rep range and last session at 10 reps, suggests reps 11", () => {
+      const sets = makeSets([
+        { id: "s2", started: 2000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
+        { id: "s1", started: 1000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
+      ]);
+      expect(suggest(sets, 2.5, false)).toEqual({
+        type: "rep_increase",
+        weight: 20,
+        reps: 11,
+        reason: "Build reps toward 12 before adding weight",
+      });
+    });
+
+    it("GIVEN no rep range and last session at 12 reps, suggests a weight increase", () => {
+      const sets = makeSets([
+        { id: "s2", started: 2000, sets: [{ weight: 20, reps: 12 }, { weight: 20, reps: 12 }] },
+        { id: "s1", started: 1000, sets: [{ weight: 20, reps: 12 }, { weight: 20, reps: 12 }] },
+      ]);
+      expect(suggest(sets, 2.5, false)).toEqual({
+        type: "increase",
+        weight: 22.5,
+        reps: null,
+        reason: "Hit 12 reps — increase by 2.5",
+      });
+    });
+
+    it("GIVEN an 8-10 rep range and last session at 10 reps, suggests a weight reset", () => {
+      const sets = makeSets([
+        { id: "s2", started: 2000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
+        { id: "s1", started: 1000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
+      ]);
+      expect(suggest(sets, 2.5, false, { min: 8, max: 10 })).toEqual({
+        type: "weight_and_rep_reset",
+        weight: 22.5,
+        reps: 8,
+        reason: "Hit 10 reps — add 2.5 and reset to 8",
+      });
+    });
+
     it("GIVEN the same exercise with last session all sets completed at 20 kg x 12, suggests weight_and_rep_reset to 22.5 kg x 8", () => {
       const sets = makeSets([
         { id: "s2", started: 2000, sets: [{ weight: 20, reps: 12 }, { weight: 20, reps: 12 }] },
@@ -257,17 +296,17 @@ describe("suggest (progressive overload)", () => {
       });
     });
 
-    it("GIVEN a degenerate range '10-10', falls back to linear progression", () => {
+    it("GIVEN a degenerate range '10-10', falls back to default threshold 12", () => {
       const sets = makeSets([
         { id: "s2", started: 2000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
         { id: "s1", started: 1000, sets: [{ weight: 20, reps: 10 }, { weight: 20, reps: 10 }] },
       ]);
       const res = suggest(sets, 2.5, false, { min: 10, max: 10 });
       expect(res).toEqual({
-        type: "increase",
-        weight: 22.5,
-        reps: null,
-        reason: "All sets completed — increase by 2.5",
+        type: "rep_increase",
+        weight: 20,
+        reps: 11,
+        reason: "Build reps toward 12 before adding weight",
       });
     });
 
@@ -329,7 +368,7 @@ describe("suggest (progressive overload)", () => {
       });
     });
 
-    it("GIVEN a warmup set at low reps + completed working sets without a range, excludes warmups from linear progression", () => {
+    it("GIVEN a warmup set at low reps + completed working sets without a range, excludes warmups", () => {
       const sets = makeSets([
         {
           id: "s2",
@@ -352,10 +391,10 @@ describe("suggest (progressive overload)", () => {
       ]);
       const res = suggest(sets, 2.5, false);
       expect(res).toEqual({
-        type: "increase",
-        weight: 102.5,
-        reps: null,
-        reason: "All sets completed — increase by 2.5",
+        type: "rep_increase",
+        weight: 100,
+        reps: 9,
+        reason: "Build reps toward 12 before adding weight",
       });
     });
 
