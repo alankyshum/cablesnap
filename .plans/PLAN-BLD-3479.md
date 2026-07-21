@@ -113,7 +113,29 @@ Non-blocking recommendations:
 - Prefer `UnitsCard` for placement because the option set is unit-dependent, but label it as equipment/input preference rather than progression advice.
 - Keep live in-session propagation out of scope as written; applying on next mount is acceptable if the UI copy is clear.
 ### Tech Lead (Feasibility)
-_Pending_
+**Verdict: APPROVED** (2026-07-21, techlead) — with 4 non-blocking recommendations.
+
+**Feasibility ✅** — Code refs verified against HEAD:
+- `hooks/useSessionData.ts:57` `useState(2.5)` confirmed; step already derived from `getBodySettings` at L111–114 (`derived = body.weight_unit === 'lb' ? 5 : 2.5`). Swapping in `resolveStep(rawStep, unit)` is a 3-line change.
+- `components/exercise/GoalSetForm.tsx:55` and `components/home/QuickAddSheet.tsx:247` confirmed.
+
+**Architecture ✅** — Global (KV) over per-exercise is correct for v1. `session.weightStep` mirrors existing `session.captureRpe` / `session.intensityMode` / `session.pulleyPinTracking` pattern in `SessionPreferencesCard.tsx` — no schema migration, no new persistence model. `lib/weightStep.ts` helper is the right abstraction level.
+
+**Complexity ✅** — Realistic ~150–250 LOC across 1 new file + 4 touched files. Single-PR scope.
+
+**Recommendations (address during implementation, not blocking):**
+
+1. **Prefer `SessionPreferencesCard` over `UnitsCard` for the control.** `UnitsCard` persists via `updateBodySettings` (SQLite `body_settings` row); adding a KV-backed control there mixes two persistence models in one card. `SessionPreferencesCard` is already the KV-based session-prefs card and is a more natural home. Defer final placement to QD if UX prefers unit-adjacency — but flag the mixing before deciding.
+
+2. **QuickAddSheet has a latent unit bug — surface it.** `QuickAddSheet.tsx:247` hard-codes both `step={2.5}` *and* `unit="kg"` — it ignores the user's weight unit today. When wiring `resolveStep`, thread the real unit through too. If trivial, fix in-PR + note in PR description. If it grows (unit isn't currently plumbed to the sheet), file a follow-up and keep scope tight. Add a line to "Risks" or "Consumers to update" noting this.
+
+3. **Rounding precision.** Existing `Math.round(v*10)/10` (1-decimal) will drift with `1.25` steps. Use `Math.round(v*100)/100` when step has 2 decimals. Add a table-driven test asserting `5 × +1.25 → 6.25` exactly.
+
+4. **Live propagation.** v1 "applies next session" is acceptable, but users changing the setting mid-session and returning to an active session will be confused. Cheap mitigation: bump `getQueryVersion()` / invalidate relevant queries on write so re-mounting screens pick it up. Otherwise add a helper text row ("Applies to new sessions").
+
+**Out-of-scope guardrail ✅** — Explicit "do not touch auto-progression" is correct and I will enforce at code review: any diff touching `lib/rm.ts` / `lib/plateau.ts` / `suggest()` will be rejected.
+
+**Headless verification ✅** — No device dependency; Jest unit + component render tests are sufficient.
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (functional input customization; no behavior-shaping triggers).
 ### CEO Decision
