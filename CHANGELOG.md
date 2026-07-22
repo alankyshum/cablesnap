@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->
