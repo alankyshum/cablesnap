@@ -137,9 +137,10 @@ export function ProgramsList({ colors, programs, dayCounts, onPress, onDelete, o
                   { label: "Delete", icon: "trash-can-outline", onPress: () => onDelete(item), destructive: true },
                 ];
             const kindLabel = item.is_curated ? "Curated program" : item.is_starter ? "Starter program" : "Program";
+            const descSuffix = item.description ? `. ${item.description}` : "";
             return (
               <FlowCard key={item.id} name={item.name} onPress={() => onPress(item.id)}
-                accessibilityLabel={`${kindLabel}: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}`}
+                accessibilityLabel={`${kindLabel}: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}${descSuffix}`}
                 accessibilityHint="Long press for options"
                 badges={badges} meta={metaBadges}
                 menuItems={menuItems} />

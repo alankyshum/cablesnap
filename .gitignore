@@ -89,3 +89,6 @@ node_modules.bak/
 # Android debug skill local env
 .android-env.sh
 modules/expo-wearos-bridge/android/build/
+
+# Jest coverage output
+coverage/

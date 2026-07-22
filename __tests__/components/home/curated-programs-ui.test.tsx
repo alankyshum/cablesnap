@@ -73,7 +73,7 @@ const BASE: Pick<Program, "current_day_id" | "created_at" | "updated_at" | "dele
 
 const PROGRAMS: Program[] = [
   { ...BASE, id: "s1", name: "Starter PPL", description: "", is_active: false, is_starter: true,  is_curated: false },
-  { ...BASE, id: "c1", name: "r/bodyweightfitness Recommended Routine", description: "", is_active: false, is_starter: false, is_curated: true },
+  { ...BASE, id: "c1", name: "r/bodyweightfitness Recommended Routine", description: "A full-body bodyweight routine.", is_active: false, is_starter: false, is_curated: true },
   { ...BASE, id: "u1", name: "My Custom Program", description: "", is_active: false, is_starter: false, is_curated: false },
 ];
 
@@ -110,8 +110,8 @@ it("AC3/AC5 — filter chips: All/Curated/Mine semantics and a11y labels", async
   expect(getByLabelText("Curated programs filter")).toBeTruthy();
   expect(getByLabelText("Mine programs filter")).toBeTruthy();
 
-  // program card a11y labels (AC5)
-  expect(getByLabelText(/Curated program: r\/bodyweightfitness Recommended Routine/)).toBeTruthy();
+  // program card a11y labels (AC5 + QD-2)
+  expect(getByLabelText(/Curated program: r\/bodyweightfitness Recommended Routine.*A full-body bodyweight routine\./)).toBeTruthy();
   expect(getByLabelText(/Starter program: Starter PPL/)).toBeTruthy();
 
   // All (default) shows everything (AC3)
