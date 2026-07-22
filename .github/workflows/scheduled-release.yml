@@ -696,10 +696,23 @@ jobs:
           # `## Unreleased` bullets automatically.
           pushed=0
           for i in 1 2 3 4 5; do
-            if git push origin main; then
+            if git push origin main 2> push_stderr.tmp; then
               pushed=1
+              rm -f push_stderr.tmp
               break
             fi
+
+            # Print captured stderr to stderr so it is visible in Actions logs
+            cat push_stderr.tmp >&2
+
+            # BLD-3505 (BLD-3504): Check if the rejection is structural branch protection
+            # rather than a concurrent push race, and exit fast if so.
+            if ! bash scripts/classify-push-rejection.sh push_stderr.tmp; then
+              rm -f push_stderr.tmp
+              exit 1
+            fi
+            rm -f push_stderr.tmp
+
             echo "::warning::Push rejected (attempt $i). Resetting onto fresh origin/main and regenerating bump..."
             git fetch origin main
             git reset --hard origin/main
