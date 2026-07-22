@@ -343,4 +343,26 @@ describe('Settings masonry — touch targets >=48px on rows (BLD-2037 P2-9)', ()
     const style = flatStyle(versionRow.props.style)
     expect(style.minHeight as number).toBeGreaterThanOrEqual(48)
   })
+
+  it('feedback buttons (Report Bug, Feature Request, Errors) have touch targets >= 44dp (BLD-3500)', async () => {
+    mockLayoutReturn = { ...mockCompactLayout }
+    const { getByTestId, findByLabelText } = renderScreen(<Settings />)
+    await waitFor(() => expect(getByTestId(MASONRY)).toBeTruthy())
+
+    const labels = [
+      'Report a bug',
+      'Request a feature',
+      'View error log, 2 errors',
+    ]
+    for (const label of labels) {
+      const button = await findByLabelText(label)
+      const child = button.children?.[0] as { props?: { style?: unknown } } | undefined
+      const stylesToTest = [
+        flatStyle(button.props.style),
+        child?.props?.style ? flatStyle(child.props.style) : {}
+      ]
+      const minHeight = stylesToTest.map(s => s.minHeight).find(h => h !== undefined)
+      expect(minHeight as number).toBeGreaterThanOrEqual(44)
+    }
+  })
 })
