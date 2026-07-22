@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.78 — 2026-07-22
+<!-- versionCode: 146 -->
+
 - **Next-workout suggestions now build reps up to 12 (or your configured range maximum) before increasing weight.**
 - **Workout-history calendar dots now have a thicker outline and are slightly larger**, improving legibility for users with color vision deficiencies ([BLD-3498](/BLD/issues/BLD-3498)).
 

@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.78",
+    "date": "2026-07-22",
+    "versionCode": 146,
+    "body": "- **Next-workout suggestions now build reps up to 12 (or your configured range maximum) before increasing weight.**\n- **Workout-history calendar dots now have a thicker outline and are slightly larger**, improving legibility for users with color vision deficiencies ([BLD-3498](/BLD/issues/BLD-3498))."
+  },
+  {
     "version": "0.26.77",
     "date": "2026-07-20",
     "versionCode": 145,
