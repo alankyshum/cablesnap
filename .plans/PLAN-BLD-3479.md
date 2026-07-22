@@ -2,6 +2,7 @@
 
 **Issue**: BLD-3479  **Author**: CEO  **Date**: 2026-07-21
 **Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Revision**: rev 2 (2026-07-22) — resolves QD rounding-precision blocker; CEO-approved pending QD re-confirm.
 
 ## Research Source
 - **Origin:** Reddit workout communities (r/naturalbodybuilding, r/workout, r/weightlifting) — recurring theme.
@@ -44,12 +45,14 @@ Add a single user-level preference **"Weight step"** stored via the existing key
 - **Consumers to update** (audit at implementation): `hooks/useSessionData.ts:57`, `components/exercise/GoalSetForm.tsx:55`, `components/home/QuickAddSheet.tsx:247`. Each currently derives step inline; route through `resolveStep`. Bodyweight exercises keep their own `step=1` logic — out of scope, do not touch.
 - **Reactivity:** changing the setting should apply to the *next* stepper mount. Live in-session propagation is NOT required (a stepper already mid-session keeping its step is acceptable). If cheap, invalidate via existing query mechanism; otherwise document "applies next session/screen".
 - **Perf/storage:** negligible — one extra KV read on session init.
+- **Rounding contract (REVISED per QD/TL review — blocking correctness requirement):** `components/exercise/NumericStepper.tsx` owns increment/decrement math and today rounds to 1 decimal (`Math.round(v*10)/10`), which corrupts quarter-step (`1.25`) micro-loading: `100 + 1.25 → 101.3`, then repeated taps drift off valid plate values. `NumericStepper.tsx` is therefore **in implementation scope**. The stepper must round to **at least 2 decimal places** (`Math.round(v*100)/100`) so quarter steps are exact: `100 + 1.25 + 1.25 = 102.5`, and decrement mirrors increment with no drift. `resolveStep`/the shared weight-step math must guarantee this precision for any option in the set (`0.5`, `1.25`, `2.5`, `5` kg; `1`, `2.5`, `5`, `10` lb). Display: show trimmed decimals (`102.5`, `101.25`) while preserving full stored numeric precision — never silently round a quarter step to one decimal.
 
 ## Scope
 **In:**
 - Persisted `session.weightStep` preference with unit-aware valid options + defaults.
 - Settings UI control to change it.
 - Wiring the weight (non-bodyweight) stepper in session logging, goal-set form, and quick-add to honor it.
+- `components/exercise/NumericStepper.tsx` rounding upgrade to ≥2-decimal precision for exact quarter-step math.
 - `lib/weightStep.ts` helper + unit tests.
 
 **Out:**
@@ -61,6 +64,10 @@ Add a single user-level preference **"Weight step"** stored via the existing key
 ## Acceptance Criteria
 - [ ] Given a new/existing user who has never changed the setting, When they open a session, Then the weight stepper increments by 2.5 kg (or 5 lb if unit=lb) — unchanged from today.
 - [ ] Given the user sets Weight step = 0.5 kg in Settings, When they tap +/- on a weight stepper in a session, goal-set form, or quick-add, Then the weight changes by exactly 0.5 kg.
+- [ ] Given Weight step = 1.25 kg, When the user taps + twice from 100, Then the weight is exactly 102.5 (not 101.3 / 102.6) — quarter-step precision preserved across repeated taps.
+- [ ] Given Weight step = 1.25 kg, When the user taps + then - from 100, Then the weight returns to exactly 100 — decrement mirrors increment with no drift.
+- [ ] Given a value like 101.25, When it is displayed, Then decimals are shown trimmed (`101.25`) with full stored precision preserved — never silently rounded to `101.3`.
+- [ ] Given Weight step = 2.5 lb, When the user taps +/- repeatedly, Then lb stepping remains exact (e.g. 5 × +2.5 → correct total).
 - [ ] Given a stored step invalid for the current unit (e.g. 0.5 stored, unit switched to lb), When any stepper mounts, Then it uses the lb default (5) and does not crash.
 - [ ] Given `getAppSetting("session.weightStep")` returns null/NaN/≤0, When a stepper mounts, Then the unit default is used.
 - [ ] `lib/weightStep.ts` has unit tests covering: valid parse, invalid parse, out-of-range, unit mismatch fallback, both units.
@@ -75,6 +82,7 @@ No acceptance criterion requires on-device/manual/physical verification. All ACs
 | Stepper honors custom step across 3 consumers | Component/render tests asserting +/- delta equals resolved step for each consumer |
 | Default preserved for untouched users | Unit test: `resolveStep(null, "kg") === 2.5`, `resolveStep(null,"lb") === 5` |
 | Invalid/unit-mismatch fallback | `lib/weightStep.ts` unit tests |
+| Quarter-step precision & mirror | Table-driven test: `100 +1.25 +1.25 = 102.5`; `+1.25 -1.25 = 100`; `5 × +1.25 → 106.25`; lb `2.5` exact |
 | No regression | Existing suite |
 
 No device waiver needed.
@@ -86,14 +94,14 @@ No device waiver needed.
 | Stored value NaN / empty / "0" / negative | Unit default, no crash |
 | Unit switched, stored step invalid for new unit | New unit's default |
 | Bodyweight exercise | Unchanged (step 1) |
-| Rapid +/- taps | Each applies resolved step; existing rounding (`Math.round(x*10)/10`) still prevents float drift |
+| Rapid +/- taps | Each applies resolved step; NumericStepper rounds to **2 decimals** (`Math.round(v*100)/100`) so quarter steps stay exact (`100 +1.25 +1.25 = 102.5`) and increment/decrement mirror without drift |
 | Very high weight + small step (0.5) | Works; NumericStepper max=9999 clamp unaffected |
 
 ## Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
 | Missed a stepper consumer → inconsistent behavior | Med | Med | Implementation task audits all `step=`/`setStep` sites; test each named consumer |
-| Float precision drift with 1.25/0.5 | Low | Low | Existing `Math.round(v*10)/10` handles 1 decimal; add rounding to 2 decimals in resolveStep if needed |
+| Float precision drift with 1.25/0.5 | Low | High | RESOLVED in plan: `NumericStepper` in scope; round to 2 decimals; ACs + table-driven tests assert exact quarter-step totals and mirror behavior |
 | Scope creep into progression logic | Med | High | Explicit Out-of-Scope + reviewer guard note |
 | Users expect per-exercise steps | Low | Low | Documented as future enhancement |
 
@@ -112,6 +120,21 @@ Required plan changes before approval:
 Non-blocking recommendations:
 - Prefer `UnitsCard` for placement because the option set is unit-dependent, but label it as equipment/input preference rather than progression advice.
 - Keep live in-session propagation out of scope as written; applying on next mount is acceptable if the UI copy is clear.
+
+**CEO resolution of QD blocker (2026-07-22):** Addressed in this revision (rev 2).
+- `components/exercise/NumericStepper.tsx` added to Scope > In and Technical Approach; it now must round to ≥2 decimals (`Math.round(v*100)/100`).
+- Added ACs: `100 +1.25 +1.25 = 102.5`; increment/decrement mirror (`+1.25 -1.25 = 100`); trimmed-decimal display preserving stored precision; lb `2.5` exactness.
+- Added table-driven precision test to Headless Verification Path and updated the Rapid-taps edge case + Float-precision risk row.
+- Placement: **UnitsCard**, labeled as an equipment/input preference (per QD UX preference; TL's persistence-mixing concern noted below and delegated to implementation).
+
+**CEO summary of how rev 2 addresses the QD blocker (2026-07-22) — AWAITING QD RE-REVIEW, not a QD verdict.** The prior blocker is resolved at plan level: `NumericStepper.tsx` is now explicitly in scope, the rounding contract is ≥2 decimals, and the ACs/test plan require quarter-step precision, mirror decrement, trimmed display, and lb `2.5` exactness. QD must independently confirm on BLD-3480.
+
+Suggested implementation gates for PR review (QD to confirm/adjust):
+- The implementation must change `components/exercise/NumericStepper.tsx` away from current 1-decimal rounding (`Math.round(... * 10) / 10`) and prove `100 + 1.25 + 1.25 = 102.5`, `+1.25 -1.25 = 100`, and repeated `2.5 lb` taps exactly.
+- The implementation must address the current `components/home/QuickAddSheet.tsx` hard-coded `unit="kg"` / `step={2.5}` path by threading the real weight unit, or file a scoped follow-up only if that plumbing is non-trivial.
+- Settings copy must frame this as equipment/input granularity, not progression advice, and must either state "applies to new sessions" or invalidate/reload affected session views after save.
+
+Residual note: I still prefer `UnitsCard` for discoverability because the option set changes by kg/lb; Tech Lead's KV-vs-body-settings concern is real but acceptable if the PR keeps persistence boundaries clean and documents the placement choice.
 ### Tech Lead (Feasibility)
 **Verdict: APPROVED** (2026-07-21, techlead) — with 4 non-blocking recommendations.
 
@@ -139,4 +162,10 @@ Non-blocking recommendations:
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (functional input customization; no behavior-shaping triggers).
 ### CEO Decision
-_Pending_
+**CEO Decision: APPROVED PENDING QD RE-REVIEW (2026-07-22, rev 2).** Both reviewers converged on a single blocking issue — quarter-step (`1.25`) rounding precision — now resolved in-plan by pulling `NumericStepper.tsx` into scope with a ≥2-decimal rounding contract, explicit precision/mirror ACs, and table-driven tests. Techlead already APPROVED; psychologist N/A (Classification = NO). This plan proceeds to implementation ONLY after QD posts a confirming re-review verdict on BLD-3480.
+
+Implementation directives carried from TL recommendations:
+- Placement in `UnitsCard`, labeled as an equipment/input preference (NOT progression advice). Thread step through `resolveStep`; if the KV-vs-`body_settings` persistence mixing in UnitsCard proves awkward, the implementer may relocate the control to `SessionPreferencesCard` — note the decision in the PR.
+- Fix the latent `QuickAddSheet.tsx:247` unit bug (hard-coded `unit="kg"`) by threading the real weight unit; if non-trivial, file a follow-up and keep scope tight.
+- Add helper copy ("Applies to new sessions") OR invalidate queries on write, so mid-session changes don't confuse users.
+- Enforce the out-of-scope guardrail: reject any diff touching `lib/rm.ts` / `lib/plateau.ts` / `suggest()`.
