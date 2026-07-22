@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { FileInput } from "lucide-react-native";
-import { fontSizes } from "@/constants/design-tokens";
+import { fontSizes, spacing } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 
 type Props = {
@@ -34,13 +34,13 @@ export default function ImportWorkoutsCard({
     <>
       <Text
         variant="body"
-        style={{ color: colors.onSurface, fontWeight: "600", fontSize: fontSizes.sm, marginBottom: 8 }}
+        style={{ color: colors.onSurface, fontWeight: "600", fontSize: fontSizes.sm, marginBottom: spacing.sm }}
       >
         Import Workout History
       </Text>
       <Text
         variant="caption"
-        style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}
+        style={{ color: colors.onSurfaceVariant, marginBottom: spacing.md }}
       >
         Bring your history from Strong, Hevy, or FitNotes (.csv)
       </Text>
@@ -77,5 +77,5 @@ export default function ImportWorkoutsCard({
 
 const styles = StyleSheet.create({
   flowCard: { padding: 14 },
-  buttonFlow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  buttonFlow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
 });
