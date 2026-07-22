@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.79",
+    "date": "2026-07-22",
+    "versionCode": 147,
+    "body": "- **Consistent spacing for Workout History Import button** — Aligns the vertical spacing and gaps around the \"Choose CSV File...\" button inside the settings card to match standard design patterns and other buttons. (BLD-3499)\n- **Added customizable weight-step increments (micro-loading)** — you can now configure the weight step (0.5 kg, 1.25 kg, 2.5 kg, 5 kg or 1 lb, 2.5 lb, 5 lb, 10 lb) in Units settings, which applies across all steppers in your workout sessions and quick-adds. ([BLD-3517](/BLD/issues/BLD-3517))\n- **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)"
+  },
+  {
     "version": "0.26.78",
     "date": "2026-07-22",
     "versionCode": 146,
