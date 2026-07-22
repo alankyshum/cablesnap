@@ -156,4 +156,38 @@ describe("stepWeight", () => {
   it("divergent: value=2, step=5, min=1 → clamps to 1", () => {
     expect(stepWeight(2, 5, -1, { min: 1 })).toBe(1);
   });
+
+  // ── Micro-loading exactness (BLD-3517 QD requirements) ───────────────────
+  describe("micro-loading exactness", () => {
+    it("preserves quarter-step precision: 100 + 1.25 + 1.25 = 102.5 (not 102.6)", () => {
+      let v = 100;
+      v = stepWeight(v, 1.25, 1, opts);
+      expect(v).toBe(101.25);
+      v = stepWeight(v, 1.25, 1, opts);
+      expect(v).toBe(102.5);
+    });
+
+    it("ensures decrement mirrors increment without drift: 100 + 1.25 - 1.25 = 100", () => {
+      let v = 100;
+      v = stepWeight(v, 1.25, 1, opts);
+      v = stepWeight(v, 1.25, -1, opts);
+      expect(v).toBe(100);
+    });
+
+    it("exact repeated additions: 5 x +1.25 from 100 = 106.25", () => {
+      let v = 100;
+      for (let i = 0; i < 5; i++) {
+        v = stepWeight(v, 1.25, 1, opts);
+      }
+      expect(v).toBe(106.25);
+    });
+
+    it("repeated 2.5 lb taps are exact", () => {
+      let v = 100;
+      for (let i = 0; i < 10; i++) {
+        v = stepWeight(v, 2.5, 1, opts);
+      }
+      expect(v).toBe(125);
+    });
+  });
 });

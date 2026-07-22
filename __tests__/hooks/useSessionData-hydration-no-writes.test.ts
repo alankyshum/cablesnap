@@ -50,10 +50,12 @@ const mockGetTemplateById = jest.fn();
 const mockGetSourceSessionSets = jest.fn();
 const mockBuildInitialSetsFromTemplate = jest.fn();
 const mockAddSetsBatch = jest.fn().mockResolvedValue([]);
+const mockGetAppSetting = jest.fn().mockResolvedValue(null);
 
 jest.mock("../../lib/db", () => ({
   addSetsBatch: (...args: any[]) => mockAddSetsBatch(...args),
   getBodySettings: (...args: any[]) => mockGetBodySettings(...args),
+  getAppSetting: (...args: any[]) => mockGetAppSetting(...args),
   getAllExercises: (...args: any[]) => mockGetAllExercises(...args),
   getMaxWeightByExercise: (...args: any[]) => mockGetMaxWeightByExercise(...args),
   getRecentExerciseSetsBatch: (...args: any[]) => mockGetRecentExerciseSetsBatch(...args),

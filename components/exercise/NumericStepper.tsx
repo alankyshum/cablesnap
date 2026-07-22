@@ -21,13 +21,13 @@ export default function NumericStepper({ value, onValueChange, min, step, unit, 
     // (pre-BLD-2674). stepWeight clamps -1.5 to 0 for value=1 step=2.5 min=0, but
     // the original code used if (next >= min) where next was the RAW computed value.
     // Off-grid near-bound inputs (raw < min) must NOT fire onValueChange.
-    const rawNext = Math.round((value - step) * 10) / 10;
+    const rawNext = Math.round((value - step) * 100) / 100;
     if (rawNext >= min) onValueChange(rawNext);
   };
 
   const increment = () => {
     // Same pattern: guard on raw next, not clamped next.
-    const rawNext = Math.round((value + step) * 10) / 10;
+    const rawNext = Math.round((value + step) * 100) / 100;
     if (rawNext <= max) onValueChange(rawNext);
   };
 

@@ -7,6 +7,8 @@ import { useToast } from "@/components/ui/bna-toast";
 import { toDisplay, toKg } from "@/lib/units";
 import { fontSizes, spacing } from "@/constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { getAppSetting } from "@/lib/db";
+import { resolveStep } from "@/lib/weightStep";
 import type { StrengthGoalRow, CreateGoalInput, UpdateGoalInput } from "@/lib/db";
 import NumericStepper from "./NumericStepper";
 
@@ -38,6 +40,18 @@ export default function GoalSetForm({
   const [targetValue, setTargetValue] = useState(getInitialValue);
   const [deadline, setDeadline] = useState<string | null>(existingGoal?.deadline ?? null);
   const [saving, setSaving] = useState(false);
+  const [weightStep, setWeightStep] = useState<number>(unit === "lb" ? 5 : 2.5);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (typeof getAppSetting === "function") {
+      getAppSetting("session.weightStep").then((val) => {
+        if (cancelled) return;
+        setWeightStep(resolveStep(val, unit));
+      }).catch(() => {});
+    }
+    return () => { cancelled = true; };
+  }, [unit, isVisible]);
 
   // Reset state when the sheet opens with new data
   React.useEffect(() => {
@@ -52,7 +66,7 @@ export default function GoalSetForm({
   }, [isVisible, existingGoal?.id]);
 
   const minValue = isBodyweight ? 1 : (unit === "lb" ? 1 : 0.5);
-  const step = isBodyweight ? 1 : (unit === "lb" ? 5 : 2.5);
+  const step = isBodyweight ? 1 : weightStep;
 
   const handleSave = useCallback(async () => {
     setSaving(true);
