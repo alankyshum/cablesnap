@@ -10,7 +10,7 @@
  *   are distinguishable in pure greyscale:
  *
  *   • Workout dot (count 1-2)  → filled circle WITH an outline ring
- *                                (borderWidth: 1, borderColor)
+ *                                (borderWidth: 1.5, borderColor) — BLD-3498: strengthened
  *   • Scheduled hollow dot     → hollow circle (transparent fill + border ring)
  *   • Rest / empty             → no dot (unchanged)
  *   • Count badge (≥ 3)        → numeric text glyph — already CVD-safe
@@ -124,23 +124,23 @@ export default function CalendarGrid({
               <>
                 {/* CVD fix: dot has both fill AND borderWidth ring so it reads as
                     a distinct shape (ringed circle) in grayscale. */}
-                <View
-                  testID={`cal-dot-${key}-0`}
-                  style={[
-                    styles.dot,
-                    { backgroundColor: dotColor },
-                    !isSel && { borderWidth: 1, borderColor: dotBorderColor },
-                  ]}
-                />
-                {count > 1 && (
-                  <View
-                    testID={`cal-dot-${key}-1`}
-                    style={[
-                      styles.dot,
-                      { backgroundColor: dotColor },
-                      !isSel && { borderWidth: 1, borderColor: dotBorderColor },
-                    ]}
-                  />
+                 <View
+                   testID={`cal-dot-${key}-0`}
+                   style={[
+                     styles.dot,
+                     { backgroundColor: dotColor },
+                     !isSel && [styles.dotBorder, { borderColor: dotBorderColor }],
+                   ]}
+                 />
+                 {count > 1 && (
+                   <View
+                     testID={`cal-dot-${key}-1`}
+                     style={[
+                       styles.dot,
+                       { backgroundColor: dotColor },
+                       !isSel && [styles.dotBorder, { borderColor: dotBorderColor }],
+                     ]}
+                   />
                 )}
               </>
             )}
@@ -208,9 +208,10 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" },
   cell: { alignItems: "center", justifyContent: "center", marginVertical: 2, minHeight: MIN_TOUCH_TARGET },
   dots: { flexDirection: "row", gap: 3, position: "absolute", bottom: 4 },
-  dot: { width: 7, height: 7, borderRadius: radii.pill },
+  dot: { width: 8, height: 8, borderRadius: radii.pill },
   /** CVD-safe luminance affordance: dark outline makes unselected dots distinguishable
-   *  without relying on the coral hue alone (WCAG 1.4.1). Applied only when !isSel. */
+   *  without relying on the coral hue alone (WCAG 1.4.1). Applied only when !isSel.
+   *  BLD-3498: strengthened from 1→1.5 for low-vision / automated CVD heuristic coverage. */
   dotBorder: { borderWidth: 1.5 },
   countBadge: { minWidth: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 2 },
   /** CVD-safe luminance affordance: dark outline on the unselected count badge (WCAG 1.4.1). */
