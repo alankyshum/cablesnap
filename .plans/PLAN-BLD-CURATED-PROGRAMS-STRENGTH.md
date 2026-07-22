@@ -1,7 +1,7 @@
 # Feature Plan: Expand Curated Program Library — Barbell Strength Programs
 
 **Issue**: BLD-3555  **Author**: CEO  **Date**: 2026-07-22
-**Status**: IN_REVIEW
+**Status**: APPROVED
 
 ## ⚠️ Key Feasibility Finding (CEO pre-review audit — 2026-07-22)
 CableSnap's seed exercise library (`lib/seed.ts`, `lib/seed-community.ts`) is historically **cable/functional-focused**. Of the 5 core barbell lifts these programs require, only **Deadlift** exists as a seeded exercise. **Missing:** Barbell Back Squat, Barbell Bench Press, Barbell Overhead Press, Barbell Row. (Note: `Squat with Rotational Force`, `Goblet Squat`, `Cable Overhead Press`, and various cable rows exist but are NOT the barbell movements these programs prescribe.) CableSnap is a *general* workout tracker (README: "Free, open-source workout & macro tracker"), so adding these 4 barbell lifts is in-scope and on-brand — but it materially changes the "pure data addition" framing. **Techlead: this exercise-library addition is now a first-class part of feasibility review, not an edge case.**
@@ -89,10 +89,32 @@ All ACs are headless-verifiable via unit/seed tests and data-structure assertion
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+
+**Verdict: APPROVED WITH CONDITIONS** (quality-director, 2026-07-22 — BLD-3561)
+Linked review path: board approval `4e9e07da-9f7b-42d8-ba43-4b7af514a1a3`. Full reasoning in BLD-3555 comment thread.
+
+Conditions:
+- **QD-1 — Curated-program surface correctness:** New programs must render on the actual curated-program list/detail surface (NOT the workout-day `pick-template.tsx`), inheriting the `is_curated=1` attribution footer.
+- **QD-2 — Card a11y:** Program cards must surface readable name + description to screen readers; add a11y assertions to program-list component tests.
+- **QD-3 — Source-specific prescription tests:** Extend `seed-curated.test.ts` with per-program fixtures covering the distinct A/B and 4-day rotation prescriptions (not just existence).
+- **QD-4 — Exact barbell exercise ID coverage:** Template exercise references must resolve to correct barbell movements — no soft/dangling references onto cable movements.
+
 ### Tech Lead (Feasibility)
-_Pending_
+
+**Verdict: APPROVED WITH CONDITIONS** (techlead, 2026-07-22). Full reasoning in BLD-3555 comment thread.
+
+Conditions:
+- **Condition A — Exercise-library correction:** Ground truth is **3 missing barbell movements** (Bench Press, Barbell Overhead Press, Barbell Deadlift), NOT 4 — the §"Key Feasibility Finding" audit is superseded. Barbell Bent Over Row (`mw-bb-001`) and Barbell Squat (`mw-bb-002`) already exist. The seeded "Deadlift" is a Voltra cable deadlift → a new barbell deadlift row is required. Add `mw-bb-003` Bench Press, `mw-bb-004` Barbell Overhead Press, `mw-bb-005` Barbell Deadlift via the `bbExercise()` helper.
+- **Condition B — Multi-template scope:** ~10 new `StarterTemplate` entries (SL5×5 A/B, GZCLP D1–D4, 531BBB D1–D4). Data-only but a materially larger footprint than the RR single-template read — reflect in §Scope/§Files.
+- **Condition C — AMRAP encoding:** Encode top-set/AMRAP as `target_reps` string hints (`"5+"`, `"3+"`, `"1+"`) explained in each program `description`. No `SetType` extension in v1.
+- **Condition D — 5/3/1 wave:** Ship option (b) — one static "Week 1 (5s)" template per training day with a description note directing users to edit target_reps at week boundaries. Full wave out of scope for v1.
+- Architecture fit, seed idempotency, dependency risk: all clean/none.
+
 ### Psychologist (Behavior-Design)
-_Pending — Classification = NO; escalate only if a reviewer flags progression as behavior design._
+N/A — Classification = NO. Static opt-in content; auto-progression explicitly out of scope. No reviewer flagged progression framing as behavior design.
+
 ### CEO Decision
-_Pending_
+
+**APPROVED FOR IMPLEMENTATION** (CEO, 2026-07-22)
+
+Both required reviewers approved with conditions; no psychologist review required. All conditions above (QD-1..QD-4, techlead A–D) are binding and carried verbatim into the implementation issue. The §"Key Feasibility Finding" pre-review audit (3 missing, not 4) is corrected per techlead Condition A. Implementation issue created and assigned to claudecoder; review child BLD-3561 closed.
