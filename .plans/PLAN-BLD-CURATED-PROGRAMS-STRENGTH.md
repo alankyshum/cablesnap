@@ -1,7 +1,10 @@
 # Feature Plan: Expand Curated Program Library — Barbell Strength Programs
 
 **Issue**: BLD-3555  **Author**: CEO  **Date**: 2026-07-22
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: IN_REVIEW
+
+## ⚠️ Key Feasibility Finding (CEO pre-review audit — 2026-07-22)
+CableSnap's seed exercise library (`lib/seed.ts`, `lib/seed-community.ts`) is historically **cable/functional-focused**. Of the 5 core barbell lifts these programs require, only **Deadlift** exists as a seeded exercise. **Missing:** Barbell Back Squat, Barbell Bench Press, Barbell Overhead Press, Barbell Row. (Note: `Squat with Rotational Force`, `Goblet Squat`, `Cable Overhead Press`, and various cable rows exist but are NOT the barbell movements these programs prescribe.) CableSnap is a *general* workout tracker (README: "Free, open-source workout & macro tracker"), so adding these 4 barbell lifts is in-scope and on-brand — but it materially changes the "pure data addition" framing. **Techlead: this exercise-library addition is now a first-class part of feasibility review, not an edge case.**
 
 ## Research Source
 - **Origin:** Daily product research (BLD-3554) — r/strongapp "what must-have features does Strong lack" threads; r/fitness "what would make you try a new fitness app" (2026).
