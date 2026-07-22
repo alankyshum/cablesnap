@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Next-workout suggestions now build reps up to 12 (or your configured range maximum) before increasing weight.**
 
 ## v0.26.77 — 2026-07-20
 <!-- versionCode: 145 -->

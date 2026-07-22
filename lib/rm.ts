@@ -58,6 +58,8 @@ export type Suggestion = {
   reason: string;
 };
 
+const DEFAULT_REP_RANGE = { max: 12 };
+
 export function suggestDouble(
   attempted: HistorySet[],
   step: number,
@@ -66,6 +68,11 @@ export function suggestDouble(
 ): Suggestion | null {
   const workingSets = attempted.filter((s) => s.set_type !== "warmup");
   if (workingSets.length === 0) return null;
+
+  // Invalid/degenerate ranges have no usable upper bound; use default progression.
+  if (repRange.min >= repRange.max) {
+    return suggestDefaultRepProgression(workingSets, step, lastWeight);
+  }
 
   const minRepsAcrossSets = Math.min(...workingSets.map((s) => s.reps!));
 
@@ -86,6 +93,31 @@ export function suggestDouble(
       reason: `Build reps toward ${repRange.max} before adding weight`,
     };
   }
+}
+
+function suggestDefaultRepProgression(
+  attempted: HistorySet[],
+  step: number,
+  lastWeight: number,
+): Suggestion {
+  const minRepsAcrossSets = Math.min(...attempted.map((s) => s.reps!));
+
+  if (minRepsAcrossSets >= DEFAULT_REP_RANGE.max) {
+    const nextWeight = Math.round((lastWeight + step) * 100) / 100;
+    return {
+      type: "increase",
+      weight: nextWeight,
+      reps: null,
+      reason: `Hit ${DEFAULT_REP_RANGE.max} reps — increase by ${step}`,
+    };
+  }
+
+  return {
+    type: "rep_increase",
+    weight: lastWeight,
+    reps: Math.min(minRepsAcrossSets + 1, DEFAULT_REP_RANGE.max),
+    reason: `Build reps toward ${DEFAULT_REP_RANGE.max} before adding weight`,
+  };
 }
 
 export function suggest(
@@ -167,8 +199,7 @@ export function suggest(
     return suggestDouble(attempted, step, repRange, lastWeight);
   }
 
-  const next = Math.round((lastWeight + step) * 100) / 100;
-  return { type: "increase", weight: next, reps: null, reason: `All sets completed — increase by ${step}` };
+  return suggestDefaultRepProgression(attempted, step, lastWeight);
 }
 
 // Duration-based progressive overload suggestion
