@@ -684,7 +684,25 @@ describe("NumericStepper — stepWeight refactor characterization (BLD-2674)", (
       <NumericStepper value={498} onValueChange={onValueChange} min={0} step={5} unit="kg" max={500} />,
     );
     // Button NOT disabled (498 < 500). But raw next = 498 + 5 = 503 > max=500 → guard blocks.
+    // BLD-2688: restored original pre-BLD-2674 guard: check rawNext >= min, not clamped next.
     fireEvent.press(getByLabelText("Increase by 5"));
     expect(onValueChange).not.toHaveBeenCalled();
+  });
+
+  // ── Micro-loading precision for NumericStepper (BLD-3517 QD requirements) ───────────────────
+  it("NumericStepper handles 1.25 kg increment and decrement perfectly", () => {
+    const onValueChangeInc = jest.fn();
+    const { getByLabelText: getByLabelTextInc } = render(
+      <NumericStepper value={100} onValueChange={onValueChangeInc} min={0} step={1.25} unit="kg" />,
+    );
+    fireEvent.press(getByLabelTextInc("Increase by 1.25"));
+    expect(onValueChangeInc).toHaveBeenCalledWith(101.25);
+
+    const onValueChangeDec = jest.fn();
+    const { getByLabelText: getByLabelTextDec } = render(
+      <NumericStepper value={101.25} onValueChange={onValueChangeDec} min={0} step={1.25} unit="kg" />,
+    );
+    fireEvent.press(getByLabelTextDec("Decrease by 1.25"));
+    expect(onValueChangeDec).toHaveBeenCalledWith(100);
   });
 });

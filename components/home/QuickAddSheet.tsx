@@ -29,6 +29,8 @@ import {
   listRecentQuickAddExercises,
 } from "@/lib/db/day-session";
 import { getActiveSession } from "@/lib/db/sessions";
+import { getBodySettings, getAppSetting } from "@/lib/db";
+import { resolveStep } from "@/lib/weightStep";
 import type { QuickAddExerciseChip } from "@/lib/db/day-session";
 import type { Exercise } from "@/lib/types";
 import * as Haptics from "expo-haptics";
@@ -68,6 +70,8 @@ export default function QuickAddSheet({
   const [editState, setEditState] = useState<EditState | null>(null);
   const [exercisePickerVisible, setExercisePickerVisible] = useState(false);
   const [committing, setCommitting] = useState(false);
+  const [unit, setUnit] = useState<"kg" | "lb">("kg");
+  const [step, setStep] = useState<number>(2.5);
 
   const snapPoints = editState ? ["75%"] : ["50%"];
 
@@ -79,13 +83,22 @@ export default function QuickAddSheet({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setEditState(null);
 
+    const getAppSettingPromise = typeof getAppSetting === "function"
+      ? getAppSetting("session.weightStep")
+      : Promise.resolve(null);
+
     Promise.all([
       listRecentQuickAddExercises(7, 6),
       getActiveSession(),
+      getBodySettings(),
+      getAppSettingPromise,
     ])
-      .then(([recentChips, activeSession]) => {
+      .then(([recentChips, activeSession, settings, rawStep]) => {
         setChips(recentChips);
         setActiveSessionId(activeSession?.id ?? null);
+        const resolvedUnit = (settings.weight_unit as "kg" | "lb") || "kg";
+        setUnit(resolvedUnit);
+        setStep(resolveStep(rawStep, resolvedUnit));
       })
       .catch(() => {
         showError("Failed to load exercises. Please try again.");
@@ -244,8 +257,8 @@ export default function QuickAddSheet({
                     value={editState.weight}
                     onValueChange={(v) => setEditState((s) => s ? { ...s, weight: v } : null)}
                     min={0}
-                    step={2.5}
-                    unit="kg"
+                    step={step}
+                    unit={unit}
                   />
                 </View>
               </View>

@@ -27,7 +27,7 @@ export function stepWeight(
   // Treat null/undefined as 0 for the purpose of stepping
   const current = value ?? 0;
   // Use integer-scaled arithmetic to avoid float drift
-  const next = Math.round((current + dir * step) * 10) / 10;
+  const next = Math.round((current + dir * step) * 100) / 100;
   // Clamp to [min, max]
   if (next < min) return min;
   if (next > max) return max;
