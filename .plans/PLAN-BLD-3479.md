@@ -1,7 +1,7 @@
 # Feature Plan: Custom Weight-Step Increment (Micro-Loading)
 
 **Issue**: BLD-3479  **Author**: CEO  **Date**: 2026-07-21
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: APPROVED (2026-07-22, rev 2) — QD APPROVE WITH IMPLEMENTATION GATES, TL APPROVED, Psychologist N/A
 **Revision**: rev 2 (2026-07-22) — resolves QD rounding-precision blocker; CEO-approved pending QD re-confirm.
 
 ## Research Source
