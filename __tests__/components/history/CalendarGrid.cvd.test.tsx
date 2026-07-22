@@ -6,8 +6,8 @@
  * visual judgment that cannot be re-run headlessly; these tests cover the
  * same risk by verifying the structural properties that make the fix work:
  *
- * Encoding contract (BLD-2721):
- *   Workout day (count > 0)  → dot present AND dot has borderWidth >= 1
+ * Encoding contract (BLD-2721, BLD-3498):
+ *   Workout day (count > 0)  → dot present AND dot has borderWidth >= 1.5
  *   Scheduled day (no workout) → hollow dot present (transparent bg + border)
  *   Rest / empty day           → NO dot present
  *   Count badge (count >= 3)   → numeric text glyph (CVD-safe by construction)
@@ -18,7 +18,7 @@
  * the specific colour values in use.
  *
  * Test scenarios:
- *  1. Workout day (count=1) — dot present, borderWidth >= 1 (filled + ring)
+ *  1. Workout day (count=1) — dot present, borderWidth >= 1.5 (filled + ring)
  *  2. Workout day (count=2) — two dots present, both bordered
  *  3. Workout day (count>=3) — count badge with numeric text (no dot-ring needed)
  *  4. Scheduled day (no workout) — hollow dot present (transparent bg + border)
@@ -161,7 +161,7 @@ function flattenStyle(style: unknown): Record<string, unknown> {
 
 describe("CalendarGrid — CVD non-colour cues (BLD-2721)", () => {
   // ── 1. Workout day (count = 1): dot present + border ring ─────────────────
-  it("workout day (count=1) renders a dot with borderWidth >= 1 (filled + ring)", () => {
+  it("workout day (count=1) renders a dot with borderWidth >= 1.5 (filled + ring)", () => {
     const workoutDay = 10;
     const key = makeKey(workoutDay);
     const dotMap = new Map([[key, 1]]);
@@ -179,7 +179,7 @@ describe("CalendarGrid — CVD non-colour cues (BLD-2721)", () => {
     // Structural CVD assertion: dot must have a border ring (non-colour cue)
     const style = flattenStyle(dot.props.style);
     expect(typeof style.borderWidth).toBe("number");
-    expect((style.borderWidth as number)).toBeGreaterThanOrEqual(1);
+    expect((style.borderWidth as number)).toBeGreaterThanOrEqual(1.5);
 
     // Structural CVD assertion: dot must have a non-transparent fill (filled)
     expect(style.backgroundColor).toBeTruthy();
@@ -187,7 +187,7 @@ describe("CalendarGrid — CVD non-colour cues (BLD-2721)", () => {
   });
 
   // ── 2. Workout day (count = 2): two dots, both bordered ───────────────────
-  it("workout day (count=2) renders two dots, both with borderWidth >= 1", () => {
+  it("workout day (count=2) renders two dots, both with borderWidth >= 1.5", () => {
     const workoutDay = 12;
     const key = makeKey(workoutDay);
     const dotMap = new Map([[key, 2]]);
@@ -199,7 +199,7 @@ describe("CalendarGrid — CVD non-colour cues (BLD-2721)", () => {
 
     for (const dot of [dot0, dot1]) {
       const style = flattenStyle(dot.props.style);
-      expect((style.borderWidth as number)).toBeGreaterThanOrEqual(1);
+      expect((style.borderWidth as number)).toBeGreaterThanOrEqual(1.5);
       expect(style.backgroundColor).not.toBe("transparent");
     }
   });
@@ -319,7 +319,7 @@ describe("CalendarGrid — CVD non-colour cues (BLD-2721)", () => {
     expect(scheduledStyle.backgroundColor).toBe("transparent");
 
     // Both have a border ring — the ring is the shared structural signal
-    expect((workoutStyle.borderWidth as number)).toBeGreaterThanOrEqual(1);
+    expect((workoutStyle.borderWidth as number)).toBeGreaterThanOrEqual(1.5);
     expect((scheduledStyle.borderWidth as number)).toBeGreaterThanOrEqual(1);
   });
 });
