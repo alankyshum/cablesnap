@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.81",
+    "date": "2026-07-23",
+    "versionCode": 149,
+    "body": "- **Added curated barbell strength programs** — Adds pre-built workout templates for popular strength programs including StrongLifts 5×5, GZCLP, and 5/3/1 Boring But Big (BBB), complete with smart defaults, built-in progression schemes, and easy program selection on the home tab. ([BLD-3562](/BLD/issues/BLD-3562))"
+  },
+  {
     "version": "0.26.80",
     "date": "2026-07-23",
     "versionCode": 148,
