@@ -68,6 +68,132 @@ describe("AC8 — curated exercise-id integrity (build-time gate)", () => {
       }
     }
   });
+
+  it("QD-3: asserts per-program prescriptions (StrongLifts 5x5, GZCLP, 5/3/1 BBB)", () => {
+    // 1. StrongLifts 5x5 (A/B alternating)
+    const sl = CURATED_PROGRAMS.find((p) => p.id === "curated-sl5x5-prog");
+    expect(sl).toBeDefined();
+    expect(sl!.days.length).toBe(3);
+    expect(sl!.days[0].template_id).toBe("curated-sl-tpl-a");
+    expect(sl!.days[1].template_id).toBe("curated-sl-tpl-b");
+    expect(sl!.days[2].template_id).toBe("curated-sl-tpl-a");
+
+    const tplA = CURATED_TEMPLATES.find((t) => t.id === "curated-sl-tpl-a");
+    const tplB = CURATED_TEMPLATES.find((t) => t.id === "curated-sl-tpl-b");
+    expect(tplA).toBeDefined();
+    expect(tplB).toBeDefined();
+
+    // Workout A: Squat, Bench, Row (all 5x5)
+    expect(tplA!.exercises.length).toBe(3);
+    expect(tplA!.exercises[0].exercise_id).toBe("mw-bb-002"); // Squat
+    expect(tplA!.exercises[0].target_sets).toBe(5);
+    expect(tplA!.exercises[0].target_reps).toBe("5");
+    expect(tplA!.exercises[1].exercise_id).toBe("mw-bb-003"); // Bench
+    expect(tplA!.exercises[1].target_sets).toBe(5);
+    expect(tplA!.exercises[1].target_reps).toBe("5");
+    expect(tplA!.exercises[2].exercise_id).toBe("mw-bb-001"); // Row
+    expect(tplA!.exercises[2].target_sets).toBe(5);
+    expect(tplA!.exercises[2].target_reps).toBe("5");
+
+    // Workout B: Squat, OHP, Deadlift (5x5, 5x5, 1x5)
+    expect(tplB!.exercises.length).toBe(3);
+    expect(tplB!.exercises[0].exercise_id).toBe("mw-bb-002"); // Squat
+    expect(tplB!.exercises[0].target_sets).toBe(5);
+    expect(tplB!.exercises[0].target_reps).toBe("5");
+    expect(tplB!.exercises[1].exercise_id).toBe("mw-bb-004"); // OHP
+    expect(tplB!.exercises[1].target_sets).toBe(5);
+    expect(tplB!.exercises[1].target_reps).toBe("5");
+    expect(tplB!.exercises[2].exercise_id).toBe("mw-bb-005"); // Deadlift
+    expect(tplB!.exercises[2].target_sets).toBe(1);
+    expect(tplB!.exercises[2].target_reps).toBe("5");
+
+    // 2. GZCLP (4-day rotation)
+    const gzclp = CURATED_PROGRAMS.find((p) => p.id === "curated-gzclp-prog");
+    expect(gzclp).toBeDefined();
+    expect(gzclp!.days.length).toBe(4);
+    for (let i = 0; i < 4; i++) {
+      expect(gzclp!.days[i].template_id).toBe(`curated-gzclp-tpl-d${i + 1}`);
+    }
+
+    const gzclpTpls = [1, 2, 3, 4].map(id => CURATED_TEMPLATES.find((t) => t.id === `curated-gzclp-tpl-d${id}`));
+    gzclpTpls.forEach(t => expect(t).toBeDefined());
+
+    // Day 1 T1 Squat (5x3+), T2 Bench (3x10), T3 Row (3x15+)
+    const d1 = gzclpTpls[0]!;
+    expect(d1.exercises[0].exercise_id).toBe("mw-bb-002"); // Squat
+    expect(d1.exercises[0].target_sets).toBe(5);
+    expect(d1.exercises[0].target_reps).toBe("3+");
+    expect(d1.exercises[1].exercise_id).toBe("mw-bb-003"); // Bench
+    expect(d1.exercises[1].target_sets).toBe(3);
+    expect(d1.exercises[1].target_reps).toBe("10");
+    expect(d1.exercises[2].exercise_id).toBe("mw-bb-001"); // Row
+    expect(d1.exercises[2].target_sets).toBe(3);
+    expect(d1.exercises[2].target_reps).toBe("15+");
+
+    // Day 2 T1 OHP (5x3+), T2 Deadlift (3x10), T3 Row (3x15+) — regression guard for
+    // BLD-3587/3589 (row must be barbell mw-bb-001, not bodyweight mw-bw-008).
+    const d2 = gzclpTpls[1]!;
+    expect(d2.exercises.length).toBe(3);
+    expect(d2.exercises[0].exercise_id).toBe("mw-bb-004"); // OHP
+    expect(d2.exercises[0].target_sets).toBe(5);
+    expect(d2.exercises[0].target_reps).toBe("3+");
+    expect(d2.exercises[1].exercise_id).toBe("mw-bb-005"); // Deadlift
+    expect(d2.exercises[1].target_sets).toBe(3);
+    expect(d2.exercises[1].target_reps).toBe("10");
+    expect(d2.exercises[2].exercise_id).toBe("mw-bb-001"); // Row (barbell)
+    expect(d2.exercises[2].target_sets).toBe(3);
+    expect(d2.exercises[2].target_reps).toBe("15+");
+
+    // Day 3 T1 Bench (5x3+), T2 Squat (3x10), T3 Row (3x15+)
+    const d3 = gzclpTpls[2]!;
+    expect(d3.exercises.length).toBe(3);
+    expect(d3.exercises[0].exercise_id).toBe("mw-bb-003"); // Bench
+    expect(d3.exercises[0].target_sets).toBe(5);
+    expect(d3.exercises[0].target_reps).toBe("3+");
+    expect(d3.exercises[1].exercise_id).toBe("mw-bb-002"); // Squat
+    expect(d3.exercises[1].target_sets).toBe(3);
+    expect(d3.exercises[1].target_reps).toBe("10");
+    expect(d3.exercises[2].exercise_id).toBe("mw-bb-001"); // Row
+    expect(d3.exercises[2].target_sets).toBe(3);
+    expect(d3.exercises[2].target_reps).toBe("15+");
+
+    // Day 4 T1 Deadlift (5x3+), T2 OHP (3x10), T3 Row (3x15+) — regression guard for
+    // BLD-3587/3589 (row must be barbell mw-bb-001, not bodyweight mw-bw-008).
+    const d4 = gzclpTpls[3]!;
+    expect(d4.exercises.length).toBe(3);
+    expect(d4.exercises[0].exercise_id).toBe("mw-bb-005"); // Deadlift
+    expect(d4.exercises[0].target_sets).toBe(5);
+    expect(d4.exercises[0].target_reps).toBe("3+");
+    expect(d4.exercises[1].exercise_id).toBe("mw-bb-004"); // OHP
+    expect(d4.exercises[1].target_sets).toBe(3);
+    expect(d4.exercises[1].target_reps).toBe("10");
+    expect(d4.exercises[2].exercise_id).toBe("mw-bb-001"); // Row (barbell)
+    expect(d4.exercises[2].target_sets).toBe(3);
+    expect(d4.exercises[2].target_reps).toBe("15+");
+
+    // 3. 5/3/1 BBB (4-day, Week 1 only)
+    const bbb = CURATED_PROGRAMS.find((p) => p.id === "curated-531bbb-prog");
+    expect(bbb).toBeDefined();
+    expect(bbb!.days.length).toBe(4);
+    for (let i = 0; i < 4; i++) {
+      expect(bbb!.days[i].template_id).toBe(`curated-531bbb-tpl-d${i + 1}`);
+    }
+
+    const bbbTpls = [1, 2, 3, 4].map(id => CURATED_TEMPLATES.find((t) => t.id === `curated-531bbb-tpl-d${id}`));
+    bbbTpls.forEach(t => expect(t).toBeDefined());
+
+    // Day 1: OHP Main (3x5+), OHP BBB (5x10), Row Accessory (5x10)
+    const b1 = bbbTpls[0]!;
+    expect(b1.exercises[0].exercise_id).toBe("mw-bb-004"); // OHP main
+    expect(b1.exercises[0].target_sets).toBe(3);
+    expect(b1.exercises[0].target_reps).toBe("5+");
+    expect(b1.exercises[1].exercise_id).toBe("mw-bb-004"); // OHP BBB
+    expect(b1.exercises[1].target_sets).toBe(5);
+    expect(b1.exercises[1].target_reps).toBe("10");
+    expect(b1.exercises[2].exercise_id).toBe("mw-bb-001"); // Row accessory
+    expect(b1.exercises[2].target_sets).toBe(5);
+    expect(b1.exercises[2].target_reps).toBe("10");
+  });
 });
 
 // ── Shared mock database factory ─────────────────────────────────────────────
