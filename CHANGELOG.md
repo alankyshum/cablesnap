@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.80 — 2026-07-23
+<!-- versionCode: 148 -->
+
 - **Feedback buttons on Settings screen are now larger and easier to tap** — the 'Report Bug', 'Feature Request', and 'Errors' buttons on the Settings screen now have a minimum touch target height of 44dp to meet accessibility guidelines and prevent missed taps. (BLD-3500)
 
 ## v0.26.79 — 2026-07-22

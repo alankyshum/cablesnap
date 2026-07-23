@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.80",
+    "date": "2026-07-23",
+    "versionCode": 148,
+    "body": "- **Feedback buttons on Settings screen are now larger and easier to tap** — the 'Report Bug', 'Feature Request', and 'Errors' buttons on the Settings screen now have a minimum touch target height of 44dp to meet accessibility guidelines and prevent missed taps. (BLD-3500)"
+  },
+  {
     "version": "0.26.79",
     "date": "2026-07-22",
     "versionCode": 147,
