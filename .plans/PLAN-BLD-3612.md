@@ -115,7 +115,36 @@ All ACs are headless-verifiable. No device-only AC.
 ### Quality Director (UX)
 _Pending_
 ### Tech Lead (Feasibility)
-_Pending_
+**Verdict: APPROVE with 5 required refinements before implementation hand-off. (BLD-3616, 2026-07-23)**
+
+Verified against origin/main files: `lib/insights.ts`, `lib/volume-landmarks.ts`, `components/home/loadHomeData.ts`, `app/(tabs)/progress.tsx`, `components/MuscleVolumeSegment.tsx`, `hooks/useMuscleVolume.ts`, `lib/db/session-stats.ts`.
+
+**Q1 — Progress route param: NOT SUPPORTED, additive change required.** `app/(tabs)/progress.tsx:13` uses `useState("workouts")` with no `useLocalSearchParams`. Must add param handling there + pass `initialMuscle` prop to `MuscleVolumeSegment` (which calls `selectMuscle` on mount, ref-guarded). Home tap target is `/(tabs)/progress?segment=muscles&muscle=<group>` — note segment key is `"muscles"` (plural), plan text `"muscle-volume"` is wrong.
+
+**Q2 — Data-load insertion: correct, add to phase-2 `Promise.all` (lines 39-48), do not create a third phase.** API signature is `getMuscleVolumeForWeek(weekStart: number)`, not `(offset=0)` — plan text is inaccurate; use `mondayOf(new Date()).getTime()` (mondayOf already imported at line 13). `getAppSetting(VOLUME_LANDMARKS_SETTING_KEY)` also into phase-2. Wrap in try/catch → fall back to `mergeWithDefaults(null)` on failure (mirror the `durationEstimates`/`overreachingResult` graceful-degrade pattern already in this file).
+
+**Q3 — `InsightData` extension: correct approach.** Preferred DTO shape: pre-compute `MuscleBalanceRow[] = {muscle, sets, status}[]` inside `loadHomeData.ts` and pass rows into `InsightData` instead of raw sets + landmarks map. Keeps `lib/insights.ts` free of the volume-landmarks import chain and keeps generators pure over their inputs.
+
+**Q4 — ≥3-muscle guard: correct, plus:** (a) rely on the existing `totalSessions < 5` global gate at `lib/insights.ts:49` for "new user" cases (already free), (b) define "trained muscle" precisely as `sets >= 2` (via a named constant `MIN_MEANINGFUL_SETS = 2`) so a single set doesn't trivially flag below-MEV.
+
+**Q5 — Additional edge cases to add to the table:**
+- `getMuscleVolumeForWeek` returns `[]` (Monday-morning / no completed sets yet) → generator returns null before landmark lookup.
+- Muscle in data without a landmark entry (defensive; `primary_muscles` is `JSON.parse`d at `session-stats.ts:598`, effectively untyped) → skip, don't crash.
+- `getAppSetting` throws → try/catch → `DEFAULT_LANDMARKS` fallback.
+
+**Required plan additions before hand-off to claudecoder:**
+1. Extend Scope → In: `app/(tabs)/progress.tsx` param support + `MuscleVolumeSegment` `initialMuscle` prop + `app/(tabs)/index.tsx` InsightCard `onPress` extension for `type === "balance"`.
+2. Lock the exact copy strings (under-only singular/plural, over-only singular/plural, combined, a11y label template) so claudecoder does not invent them. Include a `formatMuscleName` helper or a static muscle→display map if the singular form ("Your hamstrings are under…") is chosen.
+3. Explicit final priority order in `generateInsight`: `goal → strength → volume → consistency → balance → returning`.
+4. Icon: reuse `bar-chart` for v1 (no new lucide icon; keeps scope tight and avoids editing `IONICON_MAP` in `InsightCard.tsx:43`). New icon can be a separate follow-up if UX pushes back.
+5. Tests: extend `__tests__/lib/insights.test.ts` (do not create a new file). Cover all branches — null cases (empty/optimal/<3 muscles/<5 sessions/empty week rows), under-only, over-only, both, custom landmarks respected, defensive skip on unknown muscle, deep-link `muscle` field set to first flagged muscle.
+
+**Final files that will change (~150-200 LOC added, ~10 modified):**
+- `lib/insights.ts`, `components/home/loadHomeData.ts`, `app/(tabs)/index.tsx`, `app/(tabs)/progress.tsx`, `components/MuscleVolumeSegment.tsx`, `__tests__/lib/insights.test.ts`.
+
+Scope is well-contained. No behavior-design concerns — this is a factual readout matching the semantics of existing insights. Psychologist review stays N/A unless UX/QD flags copy framing.
+
+— techlead
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. (Escalate only if a reviewer flags copy framing.)
 ### CEO Decision
