@@ -204,7 +204,18 @@ export default function Workouts() {
             <DeloadNudgeCard colors={colors} result={overreachingResult!} onDismiss={dismissDeloadNudge} />
           ) : (
             insight && !insightDismissed && (
-              <InsightCard colors={colors} insight={insight} onPress={() => { if ((insight.type === "strength" || insight.type === "goal_progress") && insight.exerciseId) router.push(`/exercise/${insight.exerciseId}`); }} onDismiss={() => setInsightDismissed(true)} />
+              <InsightCard
+                colors={colors}
+                insight={insight}
+                onPress={() => {
+                  if ((insight.type === "strength" || insight.type === "goal_progress") && insight.exerciseId) {
+                    router.push(`/exercise/${insight.exerciseId}`);
+                  } else if (insight.type === "balance" && insight.muscle) {
+                    router.push(`/(tabs)/progress?segment=muscles&muscle=${insight.muscle}`);
+                  }
+                }}
+                onDismiss={() => setInsightDismissed(true)}
+              />
             )
           )}
         </ErrorBoundary>

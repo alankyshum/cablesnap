@@ -178,6 +178,35 @@ describe('MuscleVolumeSegment — Muscle Selection', () => {
       expect(await findByText('Back — 8 Week Trend')).toBeTruthy()
     })
   })
+
+  it('preselects the muscle group specified by initialMuscle prop', async () => {
+    const { findByText } = renderScreen(<MuscleVolumeSegment initialMuscle="back" />)
+    await waitFor(async () => {
+      expect(await findByText('Back — 8 Week Trend')).toBeTruthy()
+    })
+  })
+
+  it('updates preselection when initialMuscle prop changes while mounted', async () => {
+    let changeMuscle: (m: MuscleGroup) => void = () => {}
+    const TestWrapper = () => {
+      const [muscle, setMuscle] = React.useState<MuscleGroup>("chest")
+      changeMuscle = setMuscle
+      return <MuscleVolumeSegment initialMuscle={muscle} />
+    }
+
+    const { findByText } = renderScreen(<TestWrapper />)
+    await waitFor(async () => {
+      expect(await findByText('Chest — 8 Week Trend')).toBeTruthy()
+    })
+
+    await waitFor(async () => {
+      changeMuscle("back")
+    })
+
+    await waitFor(async () => {
+      expect(await findByText('Back — 8 Week Trend')).toBeTruthy()
+    })
+  })
 })
 
 // --- Empty State ---

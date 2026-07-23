@@ -9,7 +9,7 @@ import { fireEvent, waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
 import { resetIds } from '../helpers/factories'
 
-const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
+const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), setParams: jest.fn() }
 const mockParams: Record<string, string> = {}
 
 jest.mock('expo-router', () => {

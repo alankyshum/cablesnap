@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react-native";
 import { MUSCLE_LABELS } from "../lib/types";
+import type { MuscleGroup } from "../lib/types";
 import { useLayout } from "../lib/layout";
 import { useFloatingTabBarHeight } from "./FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -61,7 +62,7 @@ const MuscleRow = React.memo(function MuscleRow({
   );
 });
 
-export default function MuscleVolumeSegment() {
+export default function MuscleVolumeSegment({ initialMuscle }: { initialMuscle?: MuscleGroup }) {
   const colors = useThemeColors();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
@@ -69,7 +70,7 @@ export default function MuscleVolumeSegment() {
     offset, setOffset, data, trend, selected, selectMuscle,
     loading, error, load, monday, maxSets, hasEnoughTrend, reduced, formatRange,
     landmarks, saveLandmark, resetLandmark, resetAllLandmarks,
-  } = useMuscleVolume();
+  } = useMuscleVolume(initialMuscle);
   const [sheetVisible, setSheetVisible] = useState(false);
 
   const volumeSummary = useMemo(() => {

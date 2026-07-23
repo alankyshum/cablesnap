@@ -172,6 +172,7 @@ jest.mock('../../lib/db', () => ({
   getWeeklyWorkouts: jest.fn().mockResolvedValue({ totalVolume: 0, previousWeekVolume: null, totalDurationSeconds: 0, sessionCount: 0 }),
   getBodySettings: jest.fn().mockResolvedValue(null),
   getAppSetting: jest.fn().mockResolvedValue(null),
+  getMuscleVolumeForWeek: jest.fn().mockResolvedValue([]),
 }))
 
 const mockGetPrograms = jest.fn().mockResolvedValue([program1])
