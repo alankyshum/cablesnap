@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
 import { ScrollableTabs } from "@/components/ui/scrollable-tabs";
 import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
 import WorkoutSegment from "@/components/progress/WorkoutSegment";
@@ -7,10 +8,14 @@ import BodySegment from "@/components/progress/BodySegment";
 import NutritionSegment from "@/components/progress/NutritionSegment";
 import MonthlyReportSegment from "@/components/progress/MonthlyReportSegment";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import type { MuscleGroup } from "../../lib/types";
 
 export default function Progress() {
   const colors = useThemeColors();
-  const [segment, setSegment] = useState("workouts");
+  const { segment: paramSegment, muscle: paramMuscle } = useLocalSearchParams<{ segment?: string; muscle?: string }>();
+  const [localSegment, setLocalSegment] = useState("workouts");
+
+  const segment = paramSegment || localSegment;
 
   return (
     <View testID="progress-screen-container" style={[styles.container, { backgroundColor: colors.background }]}>
@@ -19,7 +24,10 @@ export default function Progress() {
             do NOT wrap with horizontal padding or the trailing fade gets clipped. */}
         <ScrollableTabs
           value={segment}
-          onValueChange={setSegment}
+          onValueChange={(val) => {
+            setLocalSegment(val);
+            router.setParams({ segment: undefined, muscle: undefined });
+          }}
           buttons={[
             { value: "workouts", label: "Workouts", accessibilityLabel: "Workouts progress" },
             { value: "body", label: "Body", accessibilityLabel: "Body metrics" },
@@ -34,7 +42,7 @@ export default function Progress() {
         : segment === "body"
           ? <BodySegment />
           : segment === "muscles"
-            ? <MuscleVolumeSegment />
+            ? <MuscleVolumeSegment initialMuscle={paramMuscle as MuscleGroup} />
             : segment === "nutrition"
               ? <NutritionSegment />
               : <MonthlyReportSegment />}

@@ -178,6 +178,13 @@ describe('MuscleVolumeSegment — Muscle Selection', () => {
       expect(await findByText('Back — 8 Week Trend')).toBeTruthy()
     })
   })
+
+  it('preselects the muscle group specified by initialMuscle prop', async () => {
+    const { findByText } = renderScreen(<MuscleVolumeSegment initialMuscle="back" />)
+    await waitFor(async () => {
+      expect(await findByText('Back — 8 Week Trend')).toBeTruthy()
+    })
+  })
 })
 
 // --- Empty State ---

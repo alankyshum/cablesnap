@@ -3,7 +3,10 @@
  * Each generator returns Insight | null. The prioritizer picks the top one.
  */
 
-export type InsightType = "strength" | "volume" | "consistency" | "returning" | "goal_progress";
+import type { MuscleGroup } from "./types";
+import { MUSCLE_LABELS } from "./types";
+
+export type InsightType = "strength" | "volume" | "consistency" | "returning" | "goal_progress" | "balance";
 
 export type Insight = {
   type: InsightType;
@@ -11,6 +14,8 @@ export type Insight = {
   icon: "trending-up" | "bar-chart" | "star" | "heart" | "bullseye-arrow";
   /** exercise ID for strength trend navigation */
   exerciseId?: string;
+  /** muscle group for balance navigation */
+  muscle?: MuscleGroup;
   accessibilityLabel: string;
 };
 
@@ -32,17 +37,28 @@ export type GoalInsightRow = {
   progressPct: number;
 };
 
+export type VolumeStatus = "below_mev" | "optimal" | "above_mrv";
+
+export type MuscleBalanceRow = {
+  muscle: MuscleGroup;
+  sets: number;
+  status: VolumeStatus;
+};
+
+export const MIN_MEANINGFUL_SETS = 2;
+
 export type InsightData = {
   totalSessions: number;
   timestamps: number[];
   e1rmTrends: E1RMTrendRow[];
   weeklyVolume: WeeklyVolumeRow[];
   goalInsights?: GoalInsightRow[];
+  balanceRows?: MuscleBalanceRow[];
 };
 
 /**
  * Generate the highest-priority insight from home screen data.
- * Priority: strength > volume > consistency > returning user.
+ * Priority: goal → strength → volume → consistency → balance → returning.
  * Returns null if no qualifying insight or fewer than 5 sessions.
  */
 export function generateInsight(data: InsightData): Insight | null {
@@ -53,6 +69,7 @@ export function generateInsight(data: InsightData): Insight | null {
     generateStrengthInsight(data.e1rmTrends) ??
     generateVolumeInsight(data.weeklyVolume) ??
     generateConsistencyInsight(data.timestamps) ??
+    generateBalanceInsight(data.balanceRows) ??
     generateReturningInsight(data.timestamps) ??
     null
   );
@@ -224,4 +241,46 @@ function generateReturningInsight(timestamps: number[]): Insight | null {
   }
 
   return null;
+}
+
+export function formatMuscleName(muscle: MuscleGroup): string {
+  if (muscle === "full_body") return "full body";
+  return MUSCLE_LABELS[muscle]?.toLowerCase() ?? muscle;
+}
+
+export function generateBalanceInsight(balanceRows?: MuscleBalanceRow[]): Insight | null {
+  if (!balanceRows || balanceRows.length < 3) return null;
+
+  const under = balanceRows.filter((r) => r.status === "below_mev");
+  const over = balanceRows.filter((r) => r.status === "above_mrv");
+
+  const underCount = under.length;
+  const overCount = over.length;
+
+  if (underCount === 0 && overCount === 0) return null;
+
+  // Pick first flagged muscle (under first, then over) for deep-link
+  const firstFlaggedRow = under[0] ?? over[0];
+  const firstFlaggedMuscle = firstFlaggedRow?.muscle;
+
+  let title = "";
+  if (underCount > 0 && overCount === 0) {
+    title = underCount === 1
+      ? "1 muscle is below this week's target"
+      : `${underCount} muscles are below this week's target`;
+  } else if (overCount > 0 && underCount === 0) {
+    title = overCount === 1
+      ? "1 muscle is above this week's cap"
+      : `${overCount} muscles are above this week's cap`;
+  } else {
+    title = `${underCount} below target, ${overCount} above cap this week.`;
+  }
+
+  return {
+    type: "balance",
+    title,
+    icon: "bar-chart",
+    muscle: firstFlaggedMuscle,
+    accessibilityLabel: `${title}. Tap to view muscle volume details.`,
+  };
 }

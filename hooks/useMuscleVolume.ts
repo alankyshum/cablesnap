@@ -36,7 +36,7 @@ export function formatRange(start: Date): string {
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
-export function useMuscleVolume() {
+export function useMuscleVolume(initialMuscle?: MuscleGroup) {
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<VolumeRow[]>([]);
   const [trend, setTrend] = useState<TrendRow[]>([]);
@@ -67,7 +67,7 @@ export function useMuscleVolume() {
       const rows = await getMuscleVolumeForWeek(monday.getTime());
       setData(rows);
       if (rows.length > 0) {
-        const cur = selectedRef.current;
+        const cur = selectedRef.current || (initialMuscle && rows.some((r) => r.muscle === initialMuscle) ? initialMuscle : null);
         const muscle = cur && rows.some((r) => r.muscle === cur)
           ? cur
           : rows[0].muscle;
@@ -85,7 +85,7 @@ export function useMuscleVolume() {
     } finally {
       setLoading(false);
     }
-  }, [monday, loadLandmarks]);
+  }, [monday, loadLandmarks, initialMuscle]);
 
   useFocusEffect(
     useCallback(() => {
