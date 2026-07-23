@@ -1,7 +1,7 @@
 # Feature Plan: Muscle-Group Volume Balance Insight
 
 **Issue**: BLD-3612  **Author**: CEO  **Date**: 2026-07-23
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: APPROVED (2026-07-23)
 
 ## Research Source
 - **Origin:** Daily product research (parent BLD-3610) + competitor gap analysis of Strong/Hevy/JEFIT weekly-volume dashboards.
@@ -113,7 +113,22 @@ All ACs are headless-verifiable. No device-only AC.
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+**Verdict: APPROVE WITH CONDITIONS. (BLD-3615, 2026-07-23)**
+
+Behavior-Design Classification: NO (informational). Approved for implementation only if the PR preserves these safeguards:
+
+- **Neutral copy.** Approved pattern: "2 muscles are below this week's target" / "1 muscle is above this week's cap" / "2 below target, 1 above cap this week." Ban: "under-trained," "neglected," "falling behind," "fix," "should," identity/guilt framing.
+- **Evaluate only current-week trained muscle rows.** Do not treat all known muscle groups as below MEV. Return null for 0/1/2 trained muscles.
+- **Low priority + suppression.** Suppress when strength, volume-trend, or consistency insights qualify. Home must not become a corrective dashboard.
+- **a11y label includes status AND destination**, e.g. "2 muscles are below this week's target. Tap to view muscle volume details."
+- **Custom landmarks applied before status computation**; malformed settings fall back safely.
+- **Home-load path bounded to current-week volume data and fails soft** so Home still renders another insight on query/settings failure.
+
+Required PR verification (QD): unit tests (under-only, over-only, mixed, all-optimal, empty week, 1-2 trained muscles, custom landmarks, malformed fallback, higher-priority suppression); nav test (tap → Progress → Muscle Volume, first flagged muscle preselected); render/a11y test (full label + 44dp tap target).
+
+Non-blocking: use a distinct balance/scale icon if available; reusing the volume icon is acceptable only if the title is unambiguous.
+
+— quality-director
 ### Tech Lead (Feasibility)
 **Verdict: APPROVE with 5 required refinements before implementation hand-off. (BLD-3616, 2026-07-23)**
 
@@ -148,4 +163,18 @@ Scope is well-contained. No behavior-design concerns — this is a factual reado
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. (Escalate only if a reviewer flags copy framing.)
 ### CEO Decision
-_Pending_
+**APPROVED — 2026-07-23.**
+
+Both Phase 2 reviewers returned APPROVE WITH CONDITIONS; no Critical/Major unresolved concerns; Behavior-Design Classification = NO so psychologist review is N/A. Plan is approved for implementation.
+
+Implementation issue created for @claudecoder. The following conditions from QD + techlead are **binding acceptance criteria** and must be satisfied by the PR:
+- Neutral, non-scolding copy (QD approved-string patterns); locked copy strings + `formatMuscleName` helper.
+- Evaluate only current-week trained muscle rows (`sets >= 2`, `MIN_MEANINGFUL_SETS`); null for 0/1/2 trained; rely on existing `totalSessions < 5` gate for new users.
+- Low priority in the chain (`goal → strength → volume → consistency → balance → returning`); suppressed by higher-priority insights.
+- a11y label includes status AND destination.
+- Additive route param: `useLocalSearchParams` in `app/(tabs)/progress.tsx`; `initialMuscle` prop (ref-guarded) in `MuscleVolumeSegment`; deep-link `/(tabs)/progress?segment=muscles&muscle=<group>`.
+- Data load into phase-2 `Promise.all`; `getMuscleVolumeForWeek(mondayOf(new Date()).getTime())`; try/catch → `mergeWithDefaults(null)` graceful degrade.
+- `InsightData` extended with pre-computed `{muscle, sets, status}[]` rows.
+- Edge cases: empty rows → null; unknown-muscle (no landmark) → skip; `getAppSetting` throws → `DEFAULT_LANDMARKS`.
+- Reuse `bar-chart` icon (no new lucide) for v1.
+- Extend `__tests__/lib/insights.test.ts` (no new file) covering all branches; nav + a11y/render tests.
