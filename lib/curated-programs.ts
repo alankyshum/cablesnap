@@ -250,7 +250,7 @@ export const CURATED_TEMPLATES: StarterTemplate[] = [
       },
       {
         id: "curated-gzclp-te-row-d2-t3",
-        exercise_id: "mw-bw-008",
+        exercise_id: "mw-bb-001",
         target_sets: 3,
         target_reps: "15+",
         rest_seconds: 90,
@@ -308,7 +308,7 @@ export const CURATED_TEMPLATES: StarterTemplate[] = [
       },
       {
         id: "curated-gzclp-te-row-d4-t3",
-        exercise_id: "mw-bw-008",
+        exercise_id: "mw-bb-001",
         target_sets: 3,
         target_reps: "15+",
         rest_seconds: 90,
