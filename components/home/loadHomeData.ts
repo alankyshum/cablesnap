@@ -47,7 +47,7 @@ export async function loadHomeData() {
     getWeeklyVolume(8),
     getE1RMTrends(),
     getTotalSessionCount(),
-    getMuscleVolumeForWeek(mondayOf(new Date())).catch(() => []),
+    Promise.resolve().then(() => getMuscleVolumeForWeek(mondayOf(new Date()))).catch(() => []),
     getAppSetting(VOLUME_LANDMARKS_SETTING_KEY).catch(() => null),
   ]);
 

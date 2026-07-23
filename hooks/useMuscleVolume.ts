@@ -1,5 +1,5 @@
 /* eslint-disable max-lines-per-function */
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getMuscleVolumeForWeek, getMuscleVolumeTrend } from "../lib/db";
@@ -42,6 +42,7 @@ export function useMuscleVolume(initialMuscle?: MuscleGroup) {
   const [trend, setTrend] = useState<TrendRow[]>([]);
   const [selected, setSelected] = useState<MuscleGroup | null>(null);
   const selectedRef = useRef<MuscleGroup | null>(null);
+  const lastInitialMuscleRef = useRef<MuscleGroup | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reduced, setReduced] = useState(false);
@@ -104,6 +105,13 @@ export function useMuscleVolume(initialMuscle?: MuscleGroup) {
       // trend load failure is non-critical
     }
   }, []);
+
+  useEffect(() => {
+    if (initialMuscle && initialMuscle !== lastInitialMuscleRef.current) {
+      lastInitialMuscleRef.current = initialMuscle;
+      selectMuscle(initialMuscle);
+    }
+  }, [initialMuscle, selectMuscle]);
 
   const maxSets = useMemo(() => {
     const allMrvValues = Object.values(landmarks).map((l) => l.mrv);

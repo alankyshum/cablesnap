@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { ScrollableTabs } from "@/components/ui/scrollable-tabs";
 import MuscleVolumeSegment from "../../components/MuscleVolumeSegment";
 import WorkoutSegment from "@/components/progress/WorkoutSegment";
@@ -12,6 +12,7 @@ import type { MuscleGroup } from "../../lib/types";
 
 export default function Progress() {
   const colors = useThemeColors();
+  const router = useRouter();
   const { segment: paramSegment, muscle: paramMuscle } = useLocalSearchParams<{ segment?: string; muscle?: string }>();
   const [localSegment, setLocalSegment] = useState("workouts");
 
@@ -26,7 +27,7 @@ export default function Progress() {
           value={segment}
           onValueChange={(val) => {
             setLocalSegment(val);
-            router.setParams({ segment: undefined, muscle: undefined });
+            router.setParams?.({ segment: undefined, muscle: undefined });
           }}
           buttons={[
             { value: "workouts", label: "Workouts", accessibilityLabel: "Workouts progress" },
