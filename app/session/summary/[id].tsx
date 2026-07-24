@@ -145,7 +145,7 @@ function Summary() {
   if (!session) {
     return (
       <>
-        <Stack.Screen options={{ title: "Summary" }} />
+        <Stack.Screen options={{ title: "Summary", headerLeft: () => null, headerBackVisible: false }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
           <Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text>
         </View>
@@ -166,7 +166,7 @@ function Summary() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Summary" }} />
+      <Stack.Screen options={{ title: "Summary", headerLeft: () => null, headerBackVisible: false }} />
       <FlatList
         testID="summary-scroll-view"
         data={listData}
