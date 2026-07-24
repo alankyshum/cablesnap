@@ -32,39 +32,44 @@ export default function SetsCard({ grouped, colors }: Props) {
             Sets
           </Text>
         </View>
-        {grouped.map((group) => (
-          <View key={group.name} style={styles.exerciseGroup}>
-            <Text
-              variant="body"
-              style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
-            >
-              {group.name}
-            </Text>
-            {group.sets.map((set) => (
-              <View key={set.id} style={styles.setRow}>
-                <Text variant="body" style={{ color: colors.onSurface }}>
-                  {set.weight ?? 0} × {set.reps ?? 0}
-                </Text>
-                {set.tempo && (
-                  <Text
-                    variant="caption"
-                    style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
-                  >
-                    ♩ {set.tempo}
+        {/* BLD-3660: Wrap groups in a single container with gap: 8 instead of
+            per-item marginBottom. This produces equal spacing between every
+            exercise group with no trailing space after the last group. */}
+        <View style={styles.exerciseGroupsContainer}>
+          {grouped.map((group) => (
+            <View key={group.name}>
+              <Text
+                variant="body"
+                style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
+              >
+                {group.name}
+              </Text>
+              {group.sets.map((set) => (
+                <View key={set.id} style={styles.setRow}>
+                  <Text variant="body" style={{ color: colors.onSurface }}>
+                    {set.weight ?? 0} × {set.reps ?? 0}
                   </Text>
-                )}
-                {set.rpe != null && (
-                  <Text
-                    variant="caption"
-                    style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
-                  >
-                    {formatIntensity(set.rpe, intensityMode)}
-                  </Text>
-                )}
-              </View>
-            ))}
-          </View>
-        ))}
+                  {set.tempo && (
+                    <Text
+                      variant="caption"
+                      style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
+                    >
+                      ♩ {set.tempo}
+                    </Text>
+                  )}
+                  {set.rpe != null && (
+                    <Text
+                      variant="caption"
+                      style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
+                    >
+                      {formatIntensity(set.rpe, intensityMode)}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
       </CardContent>
     </Card>
   );
@@ -73,7 +78,8 @@ export default function SetsCard({ grouped, colors }: Props) {
 const styles = StyleSheet.create({
   section: { marginBottom: 16 },
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  exerciseGroup: { marginBottom: 8 },
+  // BLD-3660: gap: 8 on the container instead of marginBottom: 8 per item.
+  exerciseGroupsContainer: { gap: 8 },
   setRow: {
     flexDirection: "row",
     alignItems: "center",

@@ -245,4 +245,28 @@ describe("WorkoutHeatmap", () => {
     // withOpacity('#FF7A55', ...) -> 'rgba(255, 122, 85, ...)'
     expect(json).not.toMatch(/rgba\(255,\s*122,\s*85/);
   });
+
+  it("applies a right margin to the day labels for consistent spacing (BLD-3642)", () => {
+    const { getByText } = renderScreen(
+      <WorkoutHeatmap data={emptyData} />
+    );
+    const wed = getByText("Wed");
+    const collectStyles = (node: typeof wed | null): Record<string, unknown> => {
+      let acc: Record<string, unknown> = {};
+      let cur: typeof wed | null = node;
+      while (cur) {
+        const s = cur.props?.style;
+        const arr = Array.isArray(s) ? s : [s];
+        for (const entry of arr) {
+          if (entry && typeof entry === "object") {
+            acc = { ...acc, ...(entry as Record<string, unknown>) };
+          }
+        }
+        cur = cur.parent as typeof wed | null;
+      }
+      return acc;
+    };
+    const flat = collectStyles(wed);
+    expect(flat.marginRight).toBe(1); // gap / 2 = 2 / 2 = 1
+  });
 });

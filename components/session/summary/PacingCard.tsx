@@ -553,7 +553,7 @@ const BAR_HEIGHT = 18;
 
 const styles = StyleSheet.create({
   card: { marginBottom: 16 },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   infoButton: { padding: 4 },
   disclosure: { marginBottom: 8, lineHeight: 18 },
   barContainer: { height: BAR_HEIGHT, flexDirection: "row", borderRadius: 4, overflow: "hidden", marginBottom: spacing.md },
