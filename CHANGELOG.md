@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Improved Nutrition tab link contrast** — Increased contrast of the 'Edit Targets' and 'Meal Templates' links in the macro-summary card to meet WCAG AA guidelines (>= 4.5:1), making them easier to read. ([BLD-3647](/BLD/issues/BLD-3647))
 
 ## v0.26.82 — 2026-07-24
 <!-- versionCode: 150 -->

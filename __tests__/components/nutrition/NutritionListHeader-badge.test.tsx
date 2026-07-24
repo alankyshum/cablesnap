@@ -38,7 +38,13 @@ jest.mock("../../../components/nutrition/MacroRow", () => {
   };
 });
 
+let mockScheme = "light";
+jest.mock("@/hooks/useColorScheme", () => ({
+  useColorScheme: () => mockScheme,
+}));
+
 import React from "react";
+import { StyleSheet } from "react-native";
 import { render } from "@testing-library/react-native";
 import { NutritionListHeader } from "../../../components/nutrition/NutritionListHeader";
 
@@ -273,5 +279,23 @@ describe("NutritionListHeader — Training-Day Macro Adjustment badge", () => {
       />
     );
     expect(byLabel("Edit macro targets")).toBeTruthy();
+  });
+
+  // ── BLD-3658: Contrast & Theme Consistency ────────────────────────────────
+
+  it("BLD-3658: uses onSurface in light mode and primary in dark mode for Edit Targets and Meal Templates links", () => {
+    mockScheme = "light";
+    const { getByText: getByTextLight } = render(<NutritionListHeader {...BASE_PROPS} />);
+    const editTargetsLight = getByTextLight("Edit Targets");
+    const mealTemplatesLight = getByTextLight("Meal Templates");
+    expect(StyleSheet.flatten(editTargetsLight.props.style).color).toBe(COLORS.onSurface);
+    expect(StyleSheet.flatten(mealTemplatesLight.props.style).color).toBe(COLORS.onSurface);
+
+    mockScheme = "dark";
+    const { getByText: getByTextDark } = render(<NutritionListHeader {...BASE_PROPS} />);
+    const editTargetsDark = getByTextDark("Edit Targets");
+    const mealTemplatesDark = getByTextDark("Meal Templates");
+    expect(StyleSheet.flatten(editTargetsDark.props.style).color).toBe(COLORS.primary);
+    expect(StyleSheet.flatten(mealTemplatesDark.props.style).color).toBe(COLORS.primary);
   });
 });

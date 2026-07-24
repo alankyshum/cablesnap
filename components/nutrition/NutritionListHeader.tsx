@@ -2,6 +2,7 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '@/components/ui/text';
 import { Card, CardContent } from '@/components/ui/card';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import type { MacroTargets } from '@/lib/types';
 import { todayKey, formatDateKey } from '@/lib/format';
 import type { HydrationUnit } from '@/lib/hydration-units';
@@ -108,6 +109,8 @@ export function NutritionListHeader({
   const adj = trainingDayAdjustment;
   const showBadge = adj?.adjusted === true;
   const showPendingNote = adj?.pendingNote != null;
+  const isDark = useColorScheme() === 'dark';
+  const linkColor = isDark ? colors.primary : colors.onSurface;
 
   return (
     <>
@@ -189,16 +192,16 @@ export function NutritionListHeader({
               onPresetPress={onWaterPreset}
               onCustomPress={onWaterCustom}
             />
-            <TouchableOpacity
+             <TouchableOpacity
               onPress={onEditTargets}
               accessibilityLabel="Edit macro targets"
               accessibilityRole="link"
               style={styles.linkRow}
             >
-              <Text variant="caption" style={{ color: colors.primary }}>
+              <Text variant="caption" style={{ color: linkColor, fontWeight: '600' }}>
                 Edit Targets
               </Text>
-              <MaterialCommunityIcons name="chevron-right" size={14} color={colors.primary} />
+              <MaterialCommunityIcons name="chevron-right" size={14} color={linkColor} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onMealTemplates}
@@ -206,10 +209,10 @@ export function NutritionListHeader({
               accessibilityRole="link"
               style={[styles.linkRow, { marginTop: 4 }]}
             >
-              <Text variant="caption" style={{ color: colors.primary }}>
+              <Text variant="caption" style={{ color: linkColor, fontWeight: '600' }}>
                 Meal Templates
               </Text>
-              <MaterialCommunityIcons name="chevron-right" size={14} color={colors.primary} />
+              <MaterialCommunityIcons name="chevron-right" size={14} color={linkColor} />
             </TouchableOpacity>
           </CardContent>
         </Card>
