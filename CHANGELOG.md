@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Calendar highlight fix** — The orange highlight circle on the workout-history calendar now centers correctly over the date digit on all screen widths. Previously the touch target spanned the full column width, causing the highlight ring to appear offset to the right. ([BLD-3654](/BLD/issues/BLD-3654))
 - **Inline Plate Calculator** — A plate calculator is now accessible directly from the active set row while logging. Tap the weight hint to open a bottom-sheet calculator without leaving the workout. ([BLD-3820](/BLD/issues/BLD-3820))
 
 ## v0.26.84 — 2026-07-25
