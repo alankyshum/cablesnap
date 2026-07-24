@@ -167,4 +167,28 @@ describe("WorkoutSegment — gym filter pill 390px width-chain regression (BLD-1
     // At least the 4 gym filter buttons (+ toggle button = 5 total)
     expect(buttons.length).toBeGreaterThanOrEqual(4);
   });
+
+  it("toggleRow horizontal and vertical padding matches design alignment constraints (BLD-3648)", async () => {
+    const { getByTestId } = render(<WorkoutSegment />);
+
+    await waitFor(() => {
+      const row = getByTestId("workout-toggle-row");
+      const rawStyle = row.props.style;
+      const flattened = Array.isArray(rawStyle)
+        ? Object.assign({}, ...rawStyle.filter(Boolean))
+        : (rawStyle ?? {});
+      expect(flattened.paddingHorizontal).toBe(0);
+    });
+
+    const toggleRow = getByTestId("workout-toggle-row");
+    const rawStyle = toggleRow.props.style;
+    const flattened = Array.isArray(rawStyle)
+      ? Object.assign({}, ...rawStyle.filter(Boolean))
+      : (rawStyle ?? {});
+
+    // In list view, paddingHorizontal should resolve to 0 so the parent FlatList's 16px padding is used.
+    expect(flattened.paddingHorizontal).toBe(0);
+    // paddingTop should be 0 because vertical gap is defined by tabsContainer's paddingBottom in progress.tsx
+    expect(flattened.paddingTop).toBe(0);
+  });
 });

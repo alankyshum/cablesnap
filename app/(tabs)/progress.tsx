@@ -9,6 +9,7 @@ import NutritionSegment from "@/components/progress/NutritionSegment";
 import MonthlyReportSegment from "@/components/progress/MonthlyReportSegment";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { MuscleGroup } from "../../lib/types";
+import { PROGRESS_TAB_SPACING } from "@/constants/design-tokens";
 
 export default function Progress() {
   const colors = useThemeColors();
@@ -56,7 +57,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   tabsContainer: {
-    paddingTop: 16,
-    paddingBottom: 0,
+    paddingTop: PROGRESS_TAB_SPACING,
+    paddingBottom: PROGRESS_TAB_SPACING,
   },
 });
