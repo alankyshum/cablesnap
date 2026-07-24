@@ -67,10 +67,10 @@ export default defineConfig({
     // config sets COOP/COEP/CORP headers; the absolute path is required
     // because `serve --config` resolves relative to the served folder.
     command: process.env.E2E_USE_STATIC
-      ? `npx --yes serve -s dist -l 8081 -c '${path.resolve(__dirname, "e2e/serve-coop-coep.json")}'`
+      ? `npx serve -s dist -l 8081 -c '${path.resolve(__dirname, "e2e/serve-coop-coep.json")}'`
       : "npx expo start --web --port 8081",
     url: "http://localhost:8081",
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 180_000,
   },
 });
