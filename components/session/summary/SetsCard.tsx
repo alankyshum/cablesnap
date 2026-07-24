@@ -32,40 +32,40 @@ export default function SetsCard({ grouped, colors }: Props) {
             Sets
           </Text>
         </View>
-        <View style={styles.exerciseGroups}>
-        {grouped.map((group) => (
-          <View key={group.name}>
-            <Text
-              variant="body"
-              style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
-            >
-              {group.name}
-            </Text>
-            {group.sets.map((set) => (
-              <View key={set.id} style={styles.setRow}>
-                <Text variant="body" style={{ color: colors.onSurface }}>
-                  {set.weight ?? 0} × {set.reps ?? 0}
-                </Text>
-                {set.tempo && (
-                  <Text
-                    variant="caption"
-                    style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
-                  >
-                    ♩ {set.tempo}
+        <View style={styles.exerciseGroupsContainer}>
+          {grouped.map((group) => (
+            <View key={group.name}>
+              <Text
+                variant="body"
+                style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
+              >
+                {group.name}
+              </Text>
+              {group.sets.map((set) => (
+                <View key={set.id} style={styles.setRow}>
+                  <Text variant="body" style={{ color: colors.onSurface }}>
+                    {set.weight ?? 0} × {set.reps ?? 0}
                   </Text>
-                )}
-                {set.rpe != null && (
-                  <Text
-                    variant="caption"
-                    style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
-                  >
-                    {formatIntensity(set.rpe, intensityMode)}
-                  </Text>
-                )}
-              </View>
-            ))}
-          </View>
-        ))}
+                  {set.tempo && (
+                    <Text
+                      variant="caption"
+                      style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
+                    >
+                      ♩ {set.tempo}
+                    </Text>
+                  )}
+                  {set.rpe != null && (
+                    <Text
+                      variant="caption"
+                      style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
+                    >
+                      {formatIntensity(set.rpe, intensityMode)}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          ))}
         </View>
       </CardContent>
     </Card>
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   // BLD-3660: Use `gap` on the wrapping container so spacing between exercise groups
   // is consistent and no trailing margin leaks past the last group.
-  exerciseGroups: { gap: 8 },
+  exerciseGroupsContainer: { gap: 8 },
   setRow: {
     flexDirection: "row",
     alignItems: "center",

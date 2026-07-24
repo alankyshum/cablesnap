@@ -130,6 +130,7 @@ export default function WorkoutSegment() {
     : screenWidth - 48;
 
   const empty = sessions.length === 0 && freq.length === 0;
+  const isListView = viewMode === "list" && !empty;
   const showGymUI = activeGymCount >= 2;
 
   const toggleButton = (

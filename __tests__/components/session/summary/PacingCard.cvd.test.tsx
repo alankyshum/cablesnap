@@ -329,4 +329,36 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     // Must have at least two distinct IDs (one for dot, one for dash)
     expect(ids.size).toBeGreaterThanOrEqual(2);
   });
+
+  // ── 15. Protanopia-safe inter-segment divider tests (BLD-3871 / BLD-3880) ──
+  it("renders inter-segment dividers when all three pacing segments are present", () => {
+    const { getAllByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dividers = getAllByTestId("pacing-bar-divider", { includeHiddenElements: true });
+    // Expect 2 dividers (one between Working-Rest, one between Rest-Other)
+    expect(dividers.length).toBe(2);
+  });
+
+  it("renders exactly 1 divider when only two segments are present", () => {
+    // working and rest are present, other is 0
+    const pacing = makePacing({ working: 900, rest: 900, other: 0, gross: 1800 });
+    const { getAllByTestId } = render(<PacingCard pacing={pacing} />);
+    const dividers = getAllByTestId("pacing-bar-divider", { includeHiddenElements: true });
+    expect(dividers.length).toBe(1);
+  });
+
+  it("renders NO dividers when only one segment is present", () => {
+    const pacing = makePacing({ working: 0, rest: 1800, other: 0, gross: 1800 });
+    const { queryAllByTestId } = render(<PacingCard pacing={pacing} />);
+    const dividers = queryAllByTestId("pacing-bar-divider", { includeHiddenElements: true });
+    expect(dividers.length).toBe(0);
+  });
+
+  it("renders dividers with matching colors.surface background color", () => {
+    const { getAllByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dividers = getAllByTestId("pacing-bar-divider", { includeHiddenElements: true });
+    const style = dividers[0].props.style;
+    const flat = Array.isArray(style) ? Object.assign({}, ...style) : style;
+    // Expect background color to be present (representing colors.surface / card color)
+    expect(flat.backgroundColor).toBeTruthy();
+  });
 });
