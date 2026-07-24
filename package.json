@@ -123,6 +123,7 @@
     "jest-expo": "~55.0.16",
     "lint-staged": "^16.4.0",
     "react-test-renderer": "19.2.0",
+    "serve": "14.2.6",
     "sharp": "^0.34.5",
     "ts-jest": "^29.4.9",
     "tsx": "^4.21.0",
