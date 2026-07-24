@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { fireEvent } from '@testing-library/react-native';
 import { renderScreen } from '../helpers/render';
 import { WaterSection } from '../../components/nutrition/WaterSection';
@@ -81,5 +82,24 @@ describe('WaterSection', () => {
     const { getByLabelText, onCustomPress } = setup();
     fireEvent.press(getByLabelText('Log custom amount of water'));
     expect(onCustomPress).toHaveBeenCalled();
+  });
+
+  it('asserts that each water chip Pressable has minHeight and minWidth >= 44 to satisfy touch-target requirements', () => {
+    const { getByLabelText } = setup();
+    const chips = [
+      getByLabelText('Log 250 ml of water'),
+      getByLabelText('Log 500 ml of water'),
+      getByLabelText('Log 750 ml of water'),
+      getByLabelText('Log custom amount of water'),
+    ];
+
+    chips.forEach(chip => {
+      const styleProp = chip.props.style;
+      const evaluatedStyle = typeof styleProp === 'function' ? styleProp({ pressed: false }) : styleProp;
+      const flattenedStyle = StyleSheet.flatten(evaluatedStyle);
+
+      expect(flattenedStyle.minHeight).toBeGreaterThanOrEqual(44);
+      expect(flattenedStyle.minWidth).toBeGreaterThanOrEqual(44);
+    });
   });
 });
