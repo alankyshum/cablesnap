@@ -21,6 +21,7 @@ type Props = {
 export function InlinePlateSheet({
   sheetRef,
   initialWeight,
+  unit,
   onBarChanged,
   onDismiss,
 }: Props) {
@@ -65,6 +66,7 @@ export function InlinePlateSheet({
       >
         <PlateCalculatorContent
           initialWeight={initialWeight ?? undefined}
+          unit={unit}
           onBarChanged={handleBarChanged}
         />
       </BottomSheetScrollView>

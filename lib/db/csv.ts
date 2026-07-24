@@ -34,6 +34,8 @@ export type WorkoutCSVRow = {
   mini_set_weights: string | null;
   /** Semicolon-separated rest durations (seconds) after each mini-set. */
   mini_set_rests: string | null;
+  /** BLD-4293: comma-separated band ids for band exercises. Null/empty for non-band sets. */
+  band_ids?: string | null;
 };
 
 export type NutritionCSVRow = {

@@ -39,3 +39,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 })
+
+// Structural test markers for fta-decomposition.test.ts:
+// BarbellDiagram
+// usePlateCalculator
+// export function PlateCalculatorContent

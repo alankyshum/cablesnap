@@ -125,9 +125,11 @@ export function PlateResults({ valid, target, state, parsed, active, unit, items
 
 export function PlateCalculatorContent({
   initialWeight,
+  unit: propUnit,
   onBarChanged,
 }: {
   initialWeight?: string;
+  unit?: "kg" | "lb";
   onBarChanged?: (newBar: number) => void;
 }) {
   const colors = useThemeColors()
@@ -137,7 +139,7 @@ export function PlateCalculatorContent({
     presets, active, parsed, valid,
     state, diagram, barbell, items, label,
     selectBar, handleBarInput,
-  } = usePlateCalculator(initialWeight)
+  } = usePlateCalculator(initialWeight, propUnit)
 
   useEffect(() => {
     if (active != null && !isNaN(active) && onBarChanged) {

@@ -9,7 +9,7 @@ import type {
 
 export function workoutCSV(rows: WorkoutCSVRow[]): string {
   const header =
-    "date,exercise,set_number,weight,reps,side,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date,stack_marker,stack_name_at_log,set_type,mini_set_reps,mini_set_weights,mini_set_rests";
+    "date,exercise,set_number,weight,reps,side,duration_seconds,notes,set_rpe,set_notes,link_id,bodyweight_modifier_kg,pulley_pin,kind,day_session_exercise_id,day_session_date,stack_marker,stack_name_at_log,set_type,mini_set_reps,mini_set_weights,mini_set_rests,band_ids";
   const lines: string[] = [];
   for (const r of rows) {
     lines.push(
@@ -37,6 +37,8 @@ export function workoutCSV(rows: WorkoutCSVRow[]): string {
         csvEscape(r.mini_set_reps ?? ""),
         csvEscape(r.mini_set_weights ?? ""),
         csvEscape(r.mini_set_rests ?? ""),
+        // BLD-4293: band ids as comma-separated list (empty for non-band sets).
+        csvEscape(r.band_ids ?? ""),
       ].join(",")
     );
   }

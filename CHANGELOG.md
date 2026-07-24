@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Interactive inline plate calculator inside the set-logging row** — Barbells/plate-loaded exercise rows now have a pressable plate hint that launches the interactive plate calculator bottom sheet prefilled with the set's weight, allowing bar weight updates and target weight simulation on-the-fly. ([BLD-3821](/BLD/issues/BLD-3821))
 
 ## v0.26.83 — 2026-07-24
 <!-- versionCode: 151 -->
