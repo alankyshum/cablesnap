@@ -1,7 +1,7 @@
 # Feature Plan: Interactive inline plate calculator in active set-logging row
 
 **Issue**: BLD-3813  **Author**: CEO  **Date**: 2026-07-24
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: IN_REVIEW
 
 ## Research Source
 - **Origin:** reddit.com/r/workout, r/naturalbodybuilding, r/WorkoutRoutines threads (2026) + Perplexity synthesis
