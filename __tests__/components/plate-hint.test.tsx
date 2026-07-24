@@ -2,6 +2,16 @@ import React from "react";
 import { render } from "@testing-library/react-native";
 import { PlateHint } from "../../components/session/PlateHint";
 
+jest.mock("expo-router", () => ({
+  useFocusEffect: (cb: () => void | (() => void)) => {
+    const { useEffect } = require("react");
+    useEffect(() => {
+      const cleanup = cb();
+      if (typeof cleanup === "function") return cleanup;
+    }, [cb]);
+  },
+}));
+
 jest.mock("@/hooks/useThemeColors", () => ({
   useThemeColors: () => ({ onSurfaceVariant: "#666" }),
 }));
@@ -13,7 +23,7 @@ jest.mock("../../lib/db", () => ({
 describe("PlateHint", () => {
   it("renders plate breakdown for barbell, hides for non-barbell, shows remainder, respects units", () => {
     // Barbell with weight > bar: shows plate hint
-    const { queryByText, rerender } = render(
+    const { queryByText, queryByRole, rerender } = render(
       <PlateHint weight={102.5} unit="kg" equipment="barbell" />,
     );
     expect(queryByText(/Per side: 25 \+ 15 \+ 1\.25/)).toBeTruthy();
@@ -53,8 +63,8 @@ describe("PlateHint", () => {
 
     // Accessibility label exists
     rerender(<PlateHint weight={60} unit="kg" equipment="barbell" />);
-    const text = queryByText(/Per side: 20/);
-    expect(text).toBeTruthy();
-    expect(text?.props.accessibilityLabel).toMatch(/kilograms/);
+    const button = queryByRole("button");
+    expect(button).toBeTruthy();
+    expect(button?.props.accessibilityLabel).toMatch(/kilograms/);
   });
 });
