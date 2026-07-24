@@ -450,7 +450,14 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
                   testID="pacing-seg-working"
                   style={[
                     styles.barSegment,
-                    { flex: workingFrac, backgroundColor: segColors.working, borderTopLeftRadius: 4, borderBottomLeftRadius: 4 },
+                    {
+                      flex: workingFrac,
+                      backgroundColor: segColors.working,
+                      borderTopLeftRadius: workingFrac > 0 ? 4 : 0,
+                      borderBottomLeftRadius: workingFrac > 0 ? 4 : 0,
+                      borderTopRightRadius: workingFrac > 0 && restFrac === 0 && otherFrac === 0 ? 4 : 0,
+                      borderBottomRightRadius: workingFrac > 0 && restFrac === 0 && otherFrac === 0 ? 4 : 0,
+                    },
                   ]}
                 >
                   {workingFrac > 0 && (
@@ -460,19 +467,69 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
                     />
                   )}
                 </View>
+
+                {/* Divider between Working and Rest */}
+                {workingFrac > 0 && restFrac > 0 && (
+                  <View
+                    testID="pacing-bar-divider"
+                    style={[styles.divider, { backgroundColor: colors.surface }]}
+                    {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
+                    {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
+                    aria-hidden
+                  />
+                )}
+
+                {/* Rest segment */}
                 <View
                   testID="pacing-seg-rest"
                   style={[
                     styles.barSegment,
-                    { flex: restFrac, backgroundColor: segColors.rest },
+                    {
+                      flex: restFrac,
+                      backgroundColor: segColors.rest,
+                      borderTopLeftRadius: restFrac > 0 && workingFrac === 0 ? 4 : 0,
+                      borderBottomLeftRadius: restFrac > 0 && workingFrac === 0 ? 4 : 0,
+                      borderTopRightRadius: restFrac > 0 && otherFrac === 0 ? 4 : 0,
+                      borderBottomRightRadius: restFrac > 0 && otherFrac === 0 ? 4 : 0,
+                    },
                   ]}
                 />
+
+                {/* Divider between Rest and Other */}
+                {restFrac > 0 && otherFrac > 0 && (
+                  <View
+                    testID="pacing-bar-divider"
+                    style={[styles.divider, { backgroundColor: colors.surface }]}
+                    {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
+                    {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
+                    aria-hidden
+                  />
+                )}
+
+                {/* Divider between Working and Other if Rest is 0 */}
+                {workingFrac > 0 && otherFrac > 0 && restFrac === 0 && (
+                  <View
+                    testID="pacing-bar-divider"
+                    style={[styles.divider, { backgroundColor: colors.surface }]}
+                    {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
+                    {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
+                    aria-hidden
+                  />
+                )}
+
                 {/* Other segment: dot/stipple overlay for CVD (BLD-1939, BLD-2725) */}
                 <View
                   testID="pacing-seg-other"
                   style={[
                     styles.barSegment,
-                    { flex: otherFrac, backgroundColor: segColors.other, borderTopRightRadius: 4, borderBottomRightRadius: 4 },
+                    {
+                      flex: otherFrac,
+                      backgroundColor: segColors.other,
+                      borderTopLeftRadius: otherFrac > 0 && workingFrac === 0 && restFrac === 0 ? 4 : 0,
+                      borderBottomLeftRadius: otherFrac > 0 && workingFrac === 0 && restFrac === 0 ? 4 : 0,
+                      borderTopRightRadius: otherFrac > 0 ? 4 : 0,
+                      borderBottomRightRadius: otherFrac > 0 ? 4 : 0,
+                    },
                   ]}
                 >
                   {otherFrac > 0 && (
@@ -570,11 +627,12 @@ const BAR_HEIGHT = 18;
 
 const styles = StyleSheet.create({
   card: { marginBottom: 16 },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   infoButton: { padding: 4 },
   disclosure: { marginBottom: 8, lineHeight: 18 },
   barContainer: { height: BAR_HEIGHT, flexDirection: "row", borderRadius: 4, overflow: "hidden", marginBottom: spacing.md },
   barSegment: { height: "100%" },
+  divider: { width: 2, height: "100%" },
   labelsRow: { flexDirection: "row", justifyContent: "space-around", flexWrap: "wrap", gap: spacing.sm },
   labelChip: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   legendDot: { width: LEGEND_DOT_SIZE, height: LEGEND_DOT_SIZE, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(0,0,0,0.18)", overflow: "hidden" },
