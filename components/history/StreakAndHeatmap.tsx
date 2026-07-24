@@ -70,8 +70,8 @@ export default function StreakAndHeatmap({
 
 const styles = StyleSheet.create({
   streakCard: { marginBottom: 12 },
-  streakRow: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingVertical: 4 },
-  streakItem: { alignItems: "center", gap: 2 },
+  streakRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 4 },
+  streakItem: { flex: 1, alignItems: "center", gap: 2 },
   heatmapSection: { marginBottom: 12 },
   heatmapHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, paddingHorizontal: 4 },
   heatmapLoading: { height: 120, alignItems: "center", justifyContent: "center" },
