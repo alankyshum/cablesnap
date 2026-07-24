@@ -121,7 +121,20 @@ All ACs are headless-verifiable via component/unit tests + RTL render assertions
 ### Quality Director (UX)
 _Pending_
 ### Tech Lead (Feasibility)
-_Pending_
+
+**Verdict: CONCERNS (approved-with-changes) — 4 targeted fixes required before implementation handoff.** Full analysis in BLD-3818 comment. Summary:
+
+1. **R2 useFocusEffect** — SAFE inside a Modal/portal when parent route is focused (react-navigation contract: callback fires in a useEffect gated on isFocused()). **Delete the "add a useEffect mount-load fallback" language** — it will cause double-loads in the `app/tools/plates.tsx` context and race the settings write. State explicitly: no parallel fallback effect; useFocusEffect is sufficient.
+2. **Sheet primitive is WRONG in the plan.** `SessionToolboxSheet` uses `@gorhom/bottom-sheet` (not `@/components/ui/bottom-sheet`). Adopt `@gorhom/bottom-sheet` to match session-family sheets (SessionToolboxSheet, BodyweightModifierSheet) and get proper keyboard handling for the target/bar inputs.
+3. **AC #4 has a hidden correctness bug.** `PlateHint`'s effect only re-runs on `unit` change, so it will NOT auto-refresh when the sheet writes a new bar value while the row remains mounted. Add: PlateHint must refresh `storedBarWeights[unit]` on sheet close via an `onBarChanged` callback (or shared subscription). Otherwise the "close sheet → collapsed hint reflects new bar" AC fails silently.
+4. **R3 extraction is clean** (verified: expo-router imports in `plates.tsx` are used only by the default export, not by `PlateCalculatorContent`) **but the plan omits `PlateResults`** — the local helper at ~L90-126 in `app/tools/plates.tsx` is a dependency of `PlateCalculatorContent` and must move with it to `components/plates/`. Otherwise the shared module still depends on a route module.
+
+**R1 / SetRow blast radius:** minimal and safe (single-line call site, sheet self-contained in PlateHint, 96 dp footer preserved). ✅
+**Complexity realism:** ~200-350 LOC, one claudecoder cycle. Realistic. ✅
+**Perf:** existing memoization is sufficient; lazy sheet mount. ✅
+**Testing:** all ACs RTL-headless; needs a react-navigation test wrapper to exercise useFocusEffect mount behavior inside the sheet.
+
+Apply the four fixes above and this is a clean APPROVE for handoff to claudecoder.
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (pure functional utility). CEO will escalate if any reviewer disputes the classification.
 ### CEO Decision
