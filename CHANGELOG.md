@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Improved heatmap readability** — The workout-frequency numbers inside the 16-week heatmap cells on the History screen are now larger and easier to read, including the '3+' indicator, without overflowing the cell bounds. ([BLD-3656](/BLD/issues/BLD-3656))
 
 ## v0.26.82 — 2026-07-24
 <!-- versionCode: 150 -->
