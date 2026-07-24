@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Generative Cable Stack Definitions** — Users can now define a cable stack by specifying a starting weight, weight increment, and marker count. The app automatically generates and registers all calibration rows in a single transaction. ([BLD-3816](/BLD/issues/BLD-3816))
 
 ## v0.26.83 — 2026-07-24
 <!-- versionCode: 151 -->

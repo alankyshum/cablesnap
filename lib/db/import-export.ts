@@ -726,8 +726,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     }
     case "cable_stacks": {
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO cable_stacks (id, gym_id, name, unit, position, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.gym_id, row.name, row.unit ?? "kg", row.position ?? 0, row.created_at, row.updated_at, row.deleted_at ?? null]
+        "INSERT OR IGNORE INTO cable_stacks (id, gym_id, name, unit, position, created_at, updated_at, deleted_at, gen_start_weight, gen_increment, gen_marker_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.gym_id, row.name, row.unit ?? "kg", row.position ?? 0, row.created_at, row.updated_at, row.deleted_at ?? null, row.gen_start_weight ?? null, row.gen_increment ?? null, row.gen_marker_count ?? null]
       );
       return r.changes > 0;
     }

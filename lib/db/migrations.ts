@@ -201,6 +201,12 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
 
   // body_settings table
   await addColumnIfMissing(database, "body_settings", "sex", "TEXT NOT NULL DEFAULT 'male'");
+
+  // BLD-3816: generative cable stack definition metadata.
+  // advisory only — resolution path never reads gen_* columns.
+  await addColumnIfMissing(database, "cable_stacks", "gen_start_weight", "REAL NULL");
+  await addColumnIfMissing(database, "cable_stacks", "gen_increment", "REAL NULL");
+  await addColumnIfMissing(database, "cable_stacks", "gen_marker_count", "INTEGER NULL");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Migration phase 2 failed: ${msg}`, { cause: err });
