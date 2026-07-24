@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.83",
+    "date": "2026-07-24",
+    "versionCode": 151,
+    "body": "- **Aligned the 'Summary' header** on the session summary screen so the title lines up with the content below. ([BLD-3639](/BLD/issues/BLD-3639))\n- **Consistent exercise spacing in workout summary Sets card** — The vertical gap between exercises listed under 'Sets' on the completed-workout summary is now uniform, with no extra trailing space after the last exercise. ([BLD-3660](/BLD/issues/BLD-3660))\n- **Improved heatmap readability** — The workout-frequency numbers inside the 16-week heatmap cells on the History screen are now larger and easier to read, including the '3+' indicator, without overflowing the cell bounds. ([BLD-3656](/BLD/issues/BLD-3656))"
+  },
+  {
     "version": "0.26.82",
     "date": "2026-07-24",
     "versionCode": 150,

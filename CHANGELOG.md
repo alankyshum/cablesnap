@@ -23,6 +23,11 @@ marker) at release time.
 ## Unreleased
 
 - **Harden visual UX audit web server against connection timeouts** — Pins the local \`serve\` dependency to \`14.2.6\` in package.json and updates playwright.config.ts to launch the local package via \`npx serve\` and bumps the startup timeout limit to 180 seconds, mitigating connection and cold-start failures on CI runners. ([BLD-3801](/BLD/issues/BLD-3801))
+
+## v0.26.83 — 2026-07-24
+<!-- versionCode: 151 -->
+
+- **Aligned the 'Summary' header** on the session summary screen so the title lines up with the content below. ([BLD-3639](/BLD/issues/BLD-3639))
 - **Consistent exercise spacing in workout summary Sets card** — The vertical gap between exercises listed under 'Sets' on the completed-workout summary is now uniform, with no extra trailing space after the last exercise. ([BLD-3660](/BLD/issues/BLD-3660))
 - **Improved heatmap readability** — The workout-frequency numbers inside the 16-week heatmap cells on the History screen are now larger and easier to read, including the '3+' indicator, without overflowing the cell bounds. ([BLD-3656](/BLD/issues/BLD-3656))
 
