@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.82 — 2026-07-24
+<!-- versionCode: 150 -->
+
 - **Muscle-Group Volume Balance insight** — The home screen now shows a proactive notification when any tracked muscle group is below this week's target (below MEV) or above this week's cap (above MRV) for the current week, with a tap that opens the Muscle Volume analysis tab pre-filtered to the flagged muscle. ([BLD-3619](/BLD/issues/BLD-3619))
 
 ## v0.26.81 — 2026-07-23
