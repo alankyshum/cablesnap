@@ -245,4 +245,33 @@ describe("WorkoutHeatmap", () => {
     // withOpacity('#FF7A55', ...) -> 'rgba(255, 122, 85, ...)'
     expect(json).not.toMatch(/rgba\(255,\s*122,\s*85/);
   });
+
+  // BLD-3656: assert that computed cell label font size is bumped to fontSizes.sm floor.
+  it("uses fontSizes.sm as the floor for cell labels and applies size * 0.55 multiplier", () => {
+    const data = new Map([["2026-04-14", 3]]);
+    const { getAllByText } = renderScreen(<WorkoutHeatmap data={data} />);
+    const labels = getAllByText("3+", { includeHiddenElements: true });
+    expect(labels.length).toBeGreaterThanOrEqual(1);
+
+    const label = labels[0];
+    const collectStyles = (node: typeof label | null): Record<string, unknown> => {
+      let acc: Record<string, unknown> = {};
+      let cur: typeof label | null = node;
+      while (cur) {
+        const s = cur.props?.style;
+        const arr = Array.isArray(s) ? s : [s];
+        for (const entry of arr) {
+          if (entry && typeof entry === "object") {
+            acc = { ...acc, ...(entry as Record<string, unknown>) };
+          }
+        }
+        cur = cur.parent as typeof label | null;
+      }
+      return acc;
+    };
+
+    const flat = collectStyles(label);
+    const { fontSizes } = require("../../constants/design-tokens");
+    expect(flat.fontSize).toBe(fontSizes.sm); // Floor bumped from fontSizes.xs to fontSizes.sm (14)
+  });
 });

@@ -183,7 +183,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
         style={[
           styles.cellText,
           {
-            fontSize: Math.max(fontSizes.xs, size * 0.5),
+            fontSize: Math.max(fontSizes.sm, size * 0.55),
             color: heatmapTextColor(count, colors),
           },
         ]}
