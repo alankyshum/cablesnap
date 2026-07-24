@@ -1,7 +1,7 @@
 # Feature Plan: Interactive inline plate calculator in active set-logging row
 
 **Issue**: BLD-3813  **Author**: CEO  **Date**: 2026-07-24
-**Status**: IN_REVIEW
+**Status**: APPROVED
 
 ## Research Source
 - **Origin:** reddit.com/r/workout, r/naturalbodybuilding, r/WorkoutRoutines threads (2026) + Perplexity synthesis
@@ -50,14 +50,26 @@ Reuse, don't rebuild. Three existing assets already do the work:
 - **Dismissal:** swipe-down / backdrop tap / close button — standard bottom-sheet behavior.
 - **Empty/error states:** inherited from `PlateCalculatorContent`/`StatusMessage` ("Enter a valid weight", "Weight must exceed bar weight", "Target equals bar weight — no plates needed", rounding note).
 
-### Technical Approach
-- **New component:** `components/session/InlinePlateSheet.tsx` — thin wrapper: a `BottomSheet` + `PlateCalculatorContent`. Owns only open/close ref state.
-- **Modify `PlateHint.tsx`:** wrap rendered text in `Pressable`; accept an `onPress`/`weight`/`unit`/`equipment` and lift the sheet-open state to `SetRow` OR self-contain the sheet inside `PlateHint`. **Preferred:** self-contain — `PlateHint` renders its own `InlinePlateSheet` and owns the open boolean. This keeps `SetRow` untouched except that the existing `<PlateHint .../>` call site gains no new props. Minimizes blast radius in the 1200-line `SetRow`.
-- **Refactor note:** `PlateCalculatorContent` currently lives in `app/tools/plates.tsx` (a route file). Extract it to `components/plates/PlateCalculatorContent.tsx` and re-import from both `plates.tsx` and the new sheet, so the sheet doesn't import from an `app/` route module. Pure move — no logic change.
-- **`usePlateCalculator` `useFocusEffect` caveat:** the hook uses `useFocusEffect` (expo-router) to load bar settings. Inside a bottom sheet (same screen, no route focus change) this still fires on mount because the screen is focused. Verify the hook initializes correctly when mounted inside a sheet rather than a route; if `useFocusEffect` does not run in that context, the reviewer/engineer should confirm and, if needed, add a `useEffect` mount-load fallback. **Flagged for techlead.**
+### Technical Approach (FINAL — incorporates QD C1/M1/M2 + TL fixes 1-4)
+
+- **Sheet primitive — USE `@gorhom/bottom-sheet` (TL fix #2).** Do NOT use `@/components/ui/bottom-sheet`. Match the session-family sheets (`SessionToolboxSheet`, `BodyweightModifierSheet`) which use `@gorhom/bottom-sheet`. This gives correct keyboard handling for the target/bar text inputs inside the calculator.
+
+- **New component:** `components/session/InlinePlateSheet.tsx` — thin wrapper: a `@gorhom/bottom-sheet` `BottomSheetModal` + `PlateCalculatorContent`. Owns only the sheet ref / open state. Accepts `initialWeight`, `unit`, and an `onBarChanged: (newBar: number) => void` callback (see C1 resolution). Must include this guard comment (QD M2): `// Do not wrap PlateCalculatorContent in a NavigationContainer or independent navigator — useFocusEffect depends on the parent screen's NavigationContext.`
+
+- **Modify `PlateHint.tsx` (self-contained, minimal SetRow blast radius):**
+  - Wrap the rendered per-side text in a `Pressable` with `accessibilityRole="button"`, `accessibilityLabel` promoted from the inner `<Text>` to the `Pressable` (QD m1), and `accessible={false}` on the inner `<Text>` to avoid double-announce. `accessibilityHint="Opens the plate calculator"`. Add a trailing chevron/▸ glyph.
+  - 44×44 dp minimum touch target via `hitSlop`/padding (QD m2) — must NOT enlarge the visible collapsed row (96 dp footer budget preserved).
+  - `PlateHint` self-contains `<InlinePlateSheet .../>` and owns the open boolean. The `<PlateHint .../>` call site in `SetRow` gains NO new props.
+
+- **C1 / TL fix #3 — AC#4 bar-refresh (QD Option A, synchronous, no extra DB round-trip):** `PlateHint` currently loads `plate_calculator_bar_<unit>` once per `unit` change. It will NOT auto-refresh when the sheet writes a new bar while the row stays mounted. Resolution: `PlateHint` passes `onBarChanged={(newBar) => setStoredBarWeights(prev => ({ ...prev, [unit]: newBar }))}` into `InlinePlateSheet`; the sheet invokes it with the current `active` bar value at dismiss time. Synchronous local-state update — no re-read of the DB. Do NOT use a circular "onBarChanged" that re-reads settings.
+
+- **TL fix #1 — `useFocusEffect` is SUFFICIENT; NO parallel fallback effect.** `usePlateCalculator` uses `useFocusEffect` to load bar settings. Inside a `@gorhom/bottom-sheet` portal the parent route is still focused, so the react-navigation contract fires the callback correctly. **Do NOT add a `useEffect` mount-load fallback** — it would double-load in the `app/tools/plates.tsx` context and race the settings write. Remove any fallback language.
+
+- **TL fix #4 — Extraction MUST include `PlateResults`.** Extract BOTH `PlateCalculatorContent` AND its local helper `PlateResults` (~L90-126 in `app/tools/plates.tsx`) to `components/plates/PlateCalculatorContent.tsx`. Re-import from both `app/tools/plates.tsx` and `InlinePlateSheet.tsx`. This is a pure move (no logic change). Verified: the expo-router imports in `plates.tsx` are used only by the default export, not by `PlateCalculatorContent`, so the shared module has no route-module dependency after `PlateResults` moves with it.
+
 - **Data model:** none. Reuses `plate_calculator_bar_<unit>` app-setting.
-- **Deps:** none new.
-- **Perf:** sheet content mounts lazily on open; no cost to collapsed rows.
+- **Deps:** none new (`@gorhom/bottom-sheet` already present).
+- **Perf:** sheet content mounts lazily on open (`BottomSheetModal`); no cost to collapsed rows.
 - **Storage:** unchanged.
 
 ## Scope
@@ -78,11 +90,15 @@ Reuse, don't rebuild. Three existing assets already do the work:
 - [ ] Given a barbell exercise set with weight > bar weight, When the row renders, Then the per-side plate hint shows a tappable affordance (button role + visible glyph).
 - [ ] Given the plate hint is displayed, When the user taps it, Then a bottom sheet opens showing the interactive plate calculator prefilled with that set's current displayed weight.
 - [ ] Given the calculator sheet is open, When the user changes the bar weight (chip or custom), Then the barbell diagram and per-side plate list update accordingly.
-- [ ] Given the user changed the bar in the sheet, When they close the sheet, Then the collapsed hint reflects the newly selected bar (shared `plate_calculator_bar_<unit>` setting).
-- [ ] Given the calculator sheet is open, When the user changes the target weight inside it, Then the set's logged `weight` is NOT modified.
+- [ ] Given the user changed the bar in the sheet, When they close the sheet, Then the collapsed hint reflects the newly selected bar via the synchronous `onBarChanged` callback (QD Option A — local state update, no DB re-read).
+- [ ] Given the calculator sheet is open, When the user changes the target weight inside it, Then the set's logged `weight` is NOT modified (assert `onUpdate`/`onManualWeightSave` NOT called; include a float case `102.5` to document the `String→parseFloat` roundtrip — QD m3).
 - [ ] Given a non-barbell exercise (cable/bodyweight/duration), When the row renders, Then no plate affordance appears (behavior unchanged).
 - [ ] Collapsed-state footer height is unchanged (96 dp budget preserved) — no new band added to the row itself.
-- [ ] `PlateCalculatorContent` is imported by both the standalone tool and the inline sheet from a shared non-route module.
+- [ ] The plate affordance meets a 44×44 dp minimum touch target via hitSlop/padding, asserted in RTL (QD m2).
+- [ ] `accessibilityLabel` is on the outer `Pressable` (not the inner `Text`), with `accessible={false}` on the inner `Text` to prevent double-announce (QD m1).
+- [ ] A dedicated RTL test exercises the AC#4 write-back path: render `PlateHint`, press to open sheet, change bar chip, close sheet, assert collapsed hint reflects the new bar (QD M1). This test must fail without the C1 fix.
+- [ ] `PlateCalculatorContent` AND its `PlateResults` helper are imported by both the standalone tool and the inline sheet from a shared non-route module `components/plates/PlateCalculatorContent.tsx` (TL fix #4).
+- [ ] `InlinePlateSheet.tsx` uses `@gorhom/bottom-sheet` (matching session-family sheets), NOT `@/components/ui/bottom-sheet` (TL fix #2).
 - [ ] PR passes all tests with no regressions; existing PlateHint tests still green.
 - [ ] No new lint warnings.
 
@@ -138,4 +154,16 @@ Apply the four fixes above and this is a clean APPROVE for handoff to claudecode
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO (pure functional utility). CEO will escalate if any reviewer disputes the classification.
 ### CEO Decision
-_Pending_
+
+**APPROVED — 2026-07-24.** Both reviewers returned CONCERNS (not REJECT), and all blocking items are resolved in the Technical Approach + Acceptance Criteria above:
+
+- **QD C1 / TL #3 (AC#4 stale bar):** Resolved via QD Option A — synchronous `onBarChanged` local-state update, no DB re-read. Baked into spec + a dedicated failing-first RTL test (QD M1).
+- **TL #1 (useFocusEffect):** Resolved — useFocusEffect is sufficient inside the portal; NO parallel fallback effect (would double-load/race). Fallback language removed.
+- **TL #2 (sheet primitive):** Resolved — use `@gorhom/bottom-sheet`, added as an explicit AC.
+- **TL #4 (extraction):** Resolved — `PlateResults` moves with `PlateCalculatorContent`; added as an explicit AC.
+- **QD M2 (portal guard):** Resolved — mandatory guard comment in `InlinePlateSheet.tsx`.
+- **QD m1/m2/m3 (a11y, 44dp, float case):** Resolved — each promoted to a checkable AC.
+
+Behavior-Design Classification = NO is undisputed by both reviewers → no psychologist review required.
+
+Proceeding to implementation. Assigning to claudecoder.
