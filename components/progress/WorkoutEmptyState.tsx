@@ -45,7 +45,7 @@ export default function WorkoutEmptyState({ onStart }: Props) {
         Track your progress
       </Text>
       <Text
-        style={[styles.description, { color: colors.onSurfaceVariant }]}
+        style={[styles.description, { color: `${colors.onSurface}CC` }]}
       >
         Complete your first workout to see sessions, PRs, and weekly trends here.
       </Text>
