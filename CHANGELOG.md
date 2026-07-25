@@ -24,6 +24,8 @@ marker) at release time.
 
 - **Estimated pacing bar boundaries now visible under protanopia** — the Working and Rest segments in the post-workout Estimated pacing bar are now separated by a crisp 2 px divider and a strengthened dash texture on the Working segment, making the boundary clearly visible under red-green colour vision deficiency (protanopia) as well as in grayscale. The fix is purely structural — segment colours and labels are unchanged. ([BLD-3880](/BLD/issues/BLD-3880))
 - **Heatmap legend accessibility under deuteranopia** — Adjusts the workout-frequency heatmap legend colors to ensure steps are distinct and distinguishable under deuteranopia. ([BLD-3874](/BLD/issues/BLD-3874))
+- **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
+- **What's New now supports inline code and tappable web or email links** in release notes.
 
 ## v0.26.85 — 2026-07-25
 <!-- versionCode: 153 -->
@@ -66,6 +68,10 @@ marker) at release time.
 - **Consistent spacing for Workout History Import button** — Aligns the vertical spacing and gaps around the "Choose CSV File..." button inside the settings card to match standard design patterns and other buttons. (BLD-3499)
 - **Added customizable weight-step increments (micro-loading)** — you can now configure the weight step (0.5 kg, 1.25 kg, 2.5 kg, 5 kg or 1 lb, 2.5 lb, 5 lb, 10 lb) in Units settings, which applies across all steppers in your workout sessions and quick-adds. ([BLD-3517](/BLD/issues/BLD-3517))
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
+=======
+- **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
+- **What's New now supports inline code and tappable web or email links** in release notes.
+>>>>>>> 4c987e2d (feat(release-notes): strip internal refs and support code/link markdown)
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->
