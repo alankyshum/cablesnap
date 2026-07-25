@@ -236,7 +236,7 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     
     // Find the ancestor View that represents the header row
     let headerRow = title.parent;
-    while (headerRow && headerRow.type !== "View") {
+    while (headerRow && (headerRow.type as unknown) !== "View") {
       headerRow = headerRow.parent;
     }
     expect(headerRow).toBeTruthy();

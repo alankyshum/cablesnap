@@ -355,6 +355,144 @@ export function applyMinSegmentFraction(raw: SegmentFractions): SegmentFractions
   return floored;
 }
 
+// ─── Segment style helpers for PacingStackedBar (BLD-4214) ────────────────────
+
+export function getWorkingSegmentStyle(
+  workingFrac: number,
+  restFrac: number,
+  otherFrac: number,
+  workingColor: string
+) {
+  const isWorking = workingFrac > 0;
+  const isAllWorking = isWorking && restFrac === 0 && otherFrac === 0;
+  return {
+    flex: workingFrac,
+    backgroundColor: workingColor,
+    borderTopLeftRadius: isWorking ? 4 : 0,
+    borderBottomLeftRadius: isWorking ? 4 : 0,
+    borderTopRightRadius: isAllWorking ? 4 : 0,
+    borderBottomRightRadius: isAllWorking ? 4 : 0,
+  };
+}
+
+export function getRestSegmentStyle(
+  workingFrac: number,
+  restFrac: number,
+  otherFrac: number,
+  restColor: string
+) {
+  const isRest = restFrac > 0;
+  const isLeftRounded = isRest && workingFrac === 0;
+  const isRightRounded = isRest && otherFrac === 0;
+  return {
+    flex: restFrac,
+    backgroundColor: restColor,
+    borderTopLeftRadius: isLeftRounded ? 4 : 0,
+    borderBottomLeftRadius: isLeftRounded ? 4 : 0,
+    borderTopRightRadius: isRightRounded ? 4 : 0,
+    borderBottomRightRadius: isRightRounded ? 4 : 0,
+  };
+}
+
+export function getOtherSegmentStyle(
+  workingFrac: number,
+  restFrac: number,
+  otherFrac: number,
+  otherColor: string
+) {
+  const isOther = otherFrac > 0;
+  const isOnlyOther = isOther && workingFrac === 0 && restFrac === 0;
+  return {
+    flex: otherFrac,
+    backgroundColor: otherColor,
+    borderTopLeftRadius: isOnlyOther ? 4 : 0,
+    borderBottomLeftRadius: isOnlyOther ? 4 : 0,
+    borderTopRightRadius: isOther ? 4 : 0,
+    borderBottomRightRadius: isOther ? 4 : 0,
+  };
+}
+
+// ─── BarDivider (BLD-4214) ────────────────────────────────────────────────────
+
+function BarDivider({ surfaceColor }: { surfaceColor: string }) {
+  return (
+    <View
+      testID="pacing-bar-divider"
+      style={[styles.divider, { backgroundColor: surfaceColor }]}
+      {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
+      {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
+      aria-hidden
+    />
+  );
+}
+
+// ─── PacingStackedBar (BLD-4214) ──────────────────────────────────────────────
+
+interface PacingStackedBarProps {
+  workingFrac: number;
+  restFrac: number;
+  otherFrac: number;
+  surfaceColor: string;
+  segColors: {
+    working: string;
+    rest: string;
+    other: string;
+  };
+}
+
+export function PacingStackedBar({
+  workingFrac,
+  restFrac,
+  otherFrac,
+  surfaceColor,
+  segColors,
+}: PacingStackedBarProps) {
+  const workingStyle = getWorkingSegmentStyle(workingFrac, restFrac, otherFrac, segColors.working);
+  const restStyle = getRestSegmentStyle(workingFrac, restFrac, otherFrac, segColors.rest);
+  const otherStyle = getOtherSegmentStyle(workingFrac, restFrac, otherFrac, segColors.other);
+
+  const hasWorking = workingFrac > 0;
+  const hasRest = restFrac > 0;
+  const hasOther = otherFrac > 0;
+
+  const showWorkingRestDivider = hasWorking && hasRest;
+  const showRestOtherDivider = hasRest && hasOther;
+  const showWorkingOtherDivider = hasWorking && hasOther && !hasRest;
+
+  return (
+    <View
+      style={styles.barContainer}
+      {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
+    >
+      {/* Working segment: horizontal-dash overlay for CVD */}
+      <View testID="pacing-seg-working" style={[styles.barSegment, workingStyle]}>
+        {hasWorking && (
+          <WorkingDashOverlay fill testID="pacing-seg-working-pattern" />
+        )}
+      </View>
+
+      {/* Divider between Working and Rest */}
+      {showWorkingRestDivider && <BarDivider surfaceColor={surfaceColor} />}
+
+      {/* Rest segment */}
+      <View testID="pacing-seg-rest" style={[styles.barSegment, restStyle]} />
+
+      {/* Divider between Rest and Other */}
+      {showRestOtherDivider && <BarDivider surfaceColor={surfaceColor} />}
+
+      {/* Divider between Working and Other if Rest is 0 */}
+      {showWorkingOtherDivider && <BarDivider surfaceColor={surfaceColor} />}
+
+      {/* Other segment: dot/stipple overlay for CVD */}
+      <View testID="pacing-seg-other" style={[styles.barSegment, otherStyle]}>
+        {hasOther && (
+          <HatchOverlay fill testID="pacing-seg-other-pattern" />
+        )}
+      </View>
+    </View>
+  );
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 type Props = {
@@ -441,105 +579,13 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
               accessibilityHint="Double tap to open per-exercise breakdown"
             >
               {/* Stacked bar */}
-              <View
-                style={styles.barContainer}
-                {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
-              >
-                {/* Working segment: horizontal-dash overlay for CVD (BLD-2713/BLD-2714) */}
-                <View
-                  testID="pacing-seg-working"
-                  style={[
-                    styles.barSegment,
-                    {
-                      flex: workingFrac,
-                      backgroundColor: segColors.working,
-                      borderTopLeftRadius: workingFrac > 0 ? 4 : 0,
-                      borderBottomLeftRadius: workingFrac > 0 ? 4 : 0,
-                      borderTopRightRadius: workingFrac > 0 && restFrac === 0 && otherFrac === 0 ? 4 : 0,
-                      borderBottomRightRadius: workingFrac > 0 && restFrac === 0 && otherFrac === 0 ? 4 : 0,
-                    },
-                  ]}
-                >
-                  {workingFrac > 0 && (
-                    <WorkingDashOverlay
-                      fill
-                      testID="pacing-seg-working-pattern"
-                    />
-                  )}
-                </View>
-
-                {/* Divider between Working and Rest */}
-                {workingFrac > 0 && restFrac > 0 && (
-                  <View
-                    testID="pacing-bar-divider"
-                    style={[styles.divider, { backgroundColor: colors.surface }]}
-                    {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
-                    {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
-                    aria-hidden
-                  />
-                )}
-
-                {/* Rest segment */}
-                <View
-                  testID="pacing-seg-rest"
-                  style={[
-                    styles.barSegment,
-                    {
-                      flex: restFrac,
-                      backgroundColor: segColors.rest,
-                      borderTopLeftRadius: restFrac > 0 && workingFrac === 0 ? 4 : 0,
-                      borderBottomLeftRadius: restFrac > 0 && workingFrac === 0 ? 4 : 0,
-                      borderTopRightRadius: restFrac > 0 && otherFrac === 0 ? 4 : 0,
-                      borderBottomRightRadius: restFrac > 0 && otherFrac === 0 ? 4 : 0,
-                    },
-                  ]}
-                />
-
-                {/* Divider between Rest and Other */}
-                {restFrac > 0 && otherFrac > 0 && (
-                  <View
-                    testID="pacing-bar-divider"
-                    style={[styles.divider, { backgroundColor: colors.surface }]}
-                    {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
-                    {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
-                    aria-hidden
-                  />
-                )}
-
-                {/* Divider between Working and Other if Rest is 0 */}
-                {workingFrac > 0 && otherFrac > 0 && restFrac === 0 && (
-                  <View
-                    testID="pacing-bar-divider"
-                    style={[styles.divider, { backgroundColor: colors.surface }]}
-                    {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
-                    {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
-                    aria-hidden
-                  />
-                )}
-
-                {/* Other segment: dot/stipple overlay for CVD (BLD-1939, BLD-2725) */}
-                <View
-                  testID="pacing-seg-other"
-                  style={[
-                    styles.barSegment,
-                    {
-                      flex: otherFrac,
-                      backgroundColor: segColors.other,
-                      borderTopLeftRadius: otherFrac > 0 && workingFrac === 0 && restFrac === 0 ? 4 : 0,
-                      borderBottomLeftRadius: otherFrac > 0 && workingFrac === 0 && restFrac === 0 ? 4 : 0,
-                      borderTopRightRadius: otherFrac > 0 ? 4 : 0,
-                      borderBottomRightRadius: otherFrac > 0 ? 4 : 0,
-                    },
-                  ]}
-                >
-                  {otherFrac > 0 && (
-                    <HatchOverlay
-                      fill
-                      testID="pacing-seg-other-pattern"
-                    />
-                  )}
-                </View>
-              </View>
+              <PacingStackedBar
+                workingFrac={workingFrac}
+                restFrac={restFrac}
+                otherFrac={otherFrac}
+                surfaceColor={colors.surface}
+                segColors={segColors}
+              />
 
               {/* Labels */}
               <View style={styles.labelsRow}>
