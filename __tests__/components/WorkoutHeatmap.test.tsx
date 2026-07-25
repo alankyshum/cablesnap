@@ -297,6 +297,7 @@ describe("WorkoutHeatmap", () => {
     const cell2 = getByLabelText(new RegExp(`${d2.toLocaleDateString(undefined, { month: "long" })}.*2 workouts`));
     const cell3 = getByLabelText(new RegExp(`${d3.toLocaleDateString(undefined, { month: "long" })}.*3 workouts`));
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const getBgColor = (node: any) => {
       const s = node.props?.style;
       const arr = Array.isArray(s) ? s : [s];
