@@ -264,6 +264,24 @@ function PacingBar({ workingFrac, restFrac, otherFrac, segColors, dividerColor }
   );
 }
 
+// ─── Vertical-dash overlay — "Rest" segment (BLD-3902 CVD fix) ────────────────
+//
+// Renders short vertical rectangle dashes in a repeating tile pattern as an
+// absolute-fill overlay on the Rest bar segment and legend dot.
+//
+// Chosen as the Rest cue because it is structurally distinct from Working's
+// horizontal dashes (shape: vertical dash ≠ horizontal dash) and Other's
+// circular dots (shape: dash ≠ dot).
+//
+// Uses a unique PATTERN_ID so it coexists cleanly with other SVG patterns.
+
+const REST_DASH_PATTERN_ID = "pacing-rest-dash";
+const REST_DASH_TILE_W = 6;    // tile width
+const REST_DASH_TILE_H = 8;    // tile height — taller than width for distinct vertical rhythm
+const REST_DASH_W = 1.5;       // dash width: thin vertical bar
+const REST_DASH_H = 4;         // dash height: noticeably taller than width
+const REST_DASH_COLOR = OVERLAY_COLOR;
+
 type HatchOverlayProps =
   | {
       /** Fill mode: SVG and Rect use "100%" to cover the full flex-sized parent.
@@ -439,7 +457,11 @@ type RestDashOverlayProps =
 
 /**
  * RestDashOverlay — decorative vertical-dash fill for the "Rest" segment.
- * Resolves BLD-3879 (deuteranopia audit).
+ * Resolves BLD-3902 (deuteranopia).
+ *
+ * Short vertical rectangles spaced at regular intervals provide a distinct
+ * texture from Working's horizontal dashes and Other's circular dots.
+ * The cue is hue-independent: works in pure grayscale and under any CVD type.
  */
 export function RestDashOverlay({ fill, width, height, testID }: RestDashOverlayProps) {
   // In explicit-size mode, guard against non-positive dimensions.
@@ -488,7 +510,6 @@ export function RestDashOverlay({ fill, width, height, testID }: RestDashOverlay
     </Svg>
   );
 }
-
 // ─── Min-segment fraction helper (BLD-2712) ──────────────────────────────────
 //
 // Ensures every non-zero segment is wide enough to be perceptible at mobile
@@ -677,9 +698,9 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
 
               {/* Labels */}
               <View style={styles.labelsRow}>
-                <LabelChip label="Working" value={workingLabel} color={segColors.working} textColor={colors.onSurface} showHatch={false} showDash />
-                <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} showDash={false} showVerticalDash />
-                <LabelChip label="Other" value={otherLabel} color={segColors.other} textColor={colors.onSurface} showHatch showDash={false} />
+                 <LabelChip label="Working" value={workingLabel} color={segColors.working} textColor={colors.onSurface} showHatch={false} showDash />
+                 <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} showDash={false} showVerticalDash />
+                 <LabelChip label="Other" value={otherLabel} color={segColors.other} textColor={colors.onSurface} showHatch showDash={false} />
               </View>
 
               <Text

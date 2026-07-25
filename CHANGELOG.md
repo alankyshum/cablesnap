@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **F-Droid builds no longer embed the Sentry DSN**, allowing the Tracking AntiFeature to be removed from the official listing.
+- **Estimated pacing bar distinguishable under deuteranopia** — Adds a distinct vertical-dash pattern overlay to the 'Rest' segment on the post-session Estimated pacing horizontal bar and matching legend dot, resolving color-only differentiation for users with red-green color vision deficiency (deuteranopia/protanopia) and pure grayscale. ([BLD-3902](/BLD/issues/BLD-3902))
 
 ## v0.26.87 — 2026-07-26
 <!-- versionCode: 155 -->
@@ -38,8 +39,6 @@ marker) at release time.
 - **What's New now supports inline code and tappable web or email links** in release notes.
 
 ## v0.26.85 — 2026-07-25
-<!-- versionCode: 153 -->
-
 - **Estimated pacing bar now distinguishable under tritanopia** — the Working and Rest segments on the post-workout Estimated pacing card previously used two colours (coral and blue) that collapsed to near-identical luminance under blue-yellow colour vision deficiency, making the segments hard to tell apart. The Rest segment now uses a dedicated CVD-hardened colour (deep petrol blue in light theme, pale cyan in dark theme) that stays visually distinct from the Working coral under tritanopia while remaining distinguishable under deuteranopia, protanopia, and grayscale. Segment labels, overlays, and the RecoveryHeatmap surface are unchanged. ([BLD-3872](/BLD/issues/BLD-3872))
 - **Distinct CVD pattern for Rest pacing segment** — Adds a vertical-dash hatch pattern to the "Rest" pacing segment on the completed-workout summary pacing bar and matching legend dot, improving readability for users with color vision deficiencies. ([BLD-3879](/BLD/issues/BLD-3879))
 - **Inline Plate Calculator** — A plate calculator is now accessible directly from the active set row while logging. Tap the weight hint to open a bottom-sheet calculator without leaving the workout. ([BLD-3820](/BLD/issues/BLD-3820))

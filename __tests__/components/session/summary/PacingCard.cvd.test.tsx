@@ -192,6 +192,27 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     }
   });
 
+  // ── 8c. RestDashOverlay is a11y-hidden (BLD-3902, BLD-1994) ──
+  it("rest dash overlay accessibilityElementsHidden is Platform-gated (true on native, false on web)", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const restPattern = getByTestId("pacing-seg-rest-pattern", { includeHiddenElements: true });
+    if (Platform.OS === 'web') {
+      expect(restPattern.props.accessibilityElementsHidden).not.toBe(true);
+    } else {
+      expect(restPattern.props.accessibilityElementsHidden).toBe(true);
+    }
+  });
+
+  it("rest dash overlay importantForAccessibility is undefined on web", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const restPattern = getByTestId("pacing-seg-rest-pattern", { includeHiddenElements: true });
+    if (Platform.OS === 'web') {
+      expect(restPattern.props.importantForAccessibility).toBeUndefined();
+    } else {
+      expect(restPattern.props.importantForAccessibility).toBe('no-hide-descendants');
+    }
+  });
+
   // ── 9. Empty state — otherFrac == 0: no crash, hatch absent ───────────────
   it("does not render hatch on Other segment when other time is zero", () => {
     // working + rest == gross leaves otherFrac = 0
