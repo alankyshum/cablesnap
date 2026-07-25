@@ -114,6 +114,9 @@ export function makeMockThemeColors(scheme: ColorScheme = "light") {
     heatmapHigh: t.heatmapHigh,
     heatmapBorder: t.heatmapBorder,
 
+    // Pacing "Rest" segment — dedicated CVD-safe token (BLD-3872).
+    pacingRest: t.pacingRest,
+
     // Workout-frequency heatmap accent (BLD-2719).
     // Must be a blue/purple hue so the opacity ramp is CVD-safe.
     heatmapFrequency: t.blue,

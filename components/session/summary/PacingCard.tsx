@@ -11,10 +11,13 @@
  * in this file — enforced by source-contracts-batch.test.ts.
  * ⓘ disclosure copy is verbatim per AC§147 — locked by source-contracts.
  *
- * CVD accessibility (BLD-1939, BLD-2713, BLD-2714, BLD-2725):
+ * CVD accessibility (BLD-1939, BLD-2713, BLD-2714, BLD-2725, BLD-3872):
  * All three pacing segments carry a distinct non-color structural cue so that
  * the bar and legend are mutually distinguishable under deuteranopia, protanopia,
- * and in pure grayscale — following the dual-channel encoding pattern (BLD-65/BLD-732).
+ * tritanopia, and in pure grayscale — following the dual-channel encoding
+ * pattern (BLD-65/BLD-732). Structural cues cover deut/prot/grey; the Rest
+ * colour token (`colors.pacingRest`, BLD-3872) is separately CVD-tuned so the
+ * bar segments themselves are also luminance-distinct under tritanopia.
  *
  *   "Working"  — horizontal-dash overlay (WorkingDashOverlay): short horizontal
  *                rectangles in a repeating tile pattern. Resolves BLD-2713/BLD-2714.
@@ -22,7 +25,8 @@
  *                solid Rest (texture ≠ no texture) in any color mode.
  *   "Other"    — dot/stipple pattern overlay (HatchOverlay): repeating 6px circular dots.
  *                Replaces diagonal stripes (BLD-2725: stripes imply disabled state).
- *   "Rest"     — solid (blue; high inherent luminance contrast vs both textured segs).
+ *   "Rest"     — solid (petrol blue / pale cyan; tuned for tritanopia luminance
+ *                separation vs Working — see BLD-3872).
  *
  * Both overlays are additive: full-colour sighted appearance is unchanged.
  * Both are purely decorative: aria-hidden (web) + accessibilityElementsHidden (native).
@@ -49,12 +53,25 @@ import { spacing } from "@/constants/design-tokens";
 export const PACING_DISCLOSURE_COPY =
   "Working time is estimated as roughly 2 seconds per rep (or recorded duration for time-based sets). Rest is the remaining gap between consecutive sets.";
 
-// ─── Segment colours (CVD-safe: blue, coral, grey — distinct hue + luminance) ─
+// ─── Segment colours (CVD-safe: coral / petrol-blue / grey — distinct hue + luminance) ─
+//
+// Working / Rest / Other must be distinguishable across all four CVD modes
+// (deuteranopia, protanopia, tritanopia) AND in pure grayscale.
+//
+//   • Working = colors.primary  (Electric Coral)
+//   • Rest    = colors.pacingRest  (petrol blue / pale cyan in dark theme)
+//     — Dedicated pacing token, NOT `heatmapLow` (BLD-3872). heatmapLow's
+//       blue collapsed to near-identical luminance vs the coral under Machado
+//       tritanopia (W/R ~1.08:1). pacingRest is tuned so Machado tritan W/R
+//       is ≥ 1.5:1 in both themes while preserving CVD guarantees from
+//       BLD-1939/2713/2714/2725 (deut/prot/grey). See
+//       __tests__/theme/pacing-cvd-contrast.test.ts.
+//   • Other   = colors.onSurfaceVariant  (mid grey)
 function useSegmentColors() {
   const colors = useThemeColors();
   return {
     working: colors.primary,          // Electric Coral
-    rest: colors.heatmapLow,          // Blue (#1E88E5 / dark variant)
+    rest: colors.pacingRest,          // Petrol-blue (light) / pale cyan (dark) — CVD-safe (BLD-3872)
     other: colors.onSurfaceVariant,   // Mid grey — legible on card background
   };
 }
