@@ -72,14 +72,24 @@ function formatDateKey(date: Date): string {
  * deuteranopia emulation, making steps 1 and 2 indistinguishable from
  * empty cells. Blue is perceived by the blue (S-cone) channel which is
  * unaffected by red-green CVD, retaining distinct luminance steps.
+ *
+ * BLD-3878: Widened opacity ramp from 0.15/0.55/1.0 to 0.30/0.62/1.0 for
+ * protanopia distinctness. Under protanopia only luminance survives (hue
+ * discarded). The old 0.15-alpha step composited over the light card surface
+ * (#F3F4F6, lum≈0.90) to a relative luminance of ≈0.88 — nearly identical
+ * to (or even above) the surfaceVariant step-0 cell (lum≈0.80), making the
+ * two steps indistinguishable. The new 0.30 alpha gives lum≈0.70 for a
+ * clear ≈0.10 delta from step 0. The 0.62 alpha gives lum≈0.48 for a ≈0.22
+ * delta from step 1 (was ≈0.52 → too close). All four steps are now strictly
+ * monotonically ordered in relative luminance on both light and dark surfaces.
  */
 function heatmapColor(
   count: number,
   colors: { surfaceVariant: string; heatmapFrequency: string }
 ): string {
   if (count === 0) return colors.surfaceVariant;
-  if (count === 1) return withOpacity(colors.heatmapFrequency, 0.15);
-  if (count === 2) return withOpacity(colors.heatmapFrequency, 0.55);
+  if (count === 1) return withOpacity(colors.heatmapFrequency, 0.30);
+  if (count === 2) return withOpacity(colors.heatmapFrequency, 0.62);
   return colors.heatmapFrequency;
 }
 
@@ -93,12 +103,25 @@ function heatmapColor(
  * Step 1 uses onSurface (dark foreground) rather than onPrimaryContainer
  * because onPrimaryContainer was tuned for the coral accent palette and
  * renders a dark-brown on light mode that clashes with blue tints.
+ *
+ * BLD-3878: Updated boundary for the widened 0.30/0.62/1.0 opacity ramp.
+ * At alpha=0.62 (step 2) on the light card surface (#F3F4F6), the composited
+ * cell luminance is ≈0.48. White text (onSecondary) gives only ≈2:1 contrast
+ * there, failing WCAG AA 4.5:1. Dark text (onSurface) gives ≈8:1 ✓.
+ * The boundary moves to count >= 3 so steps 0–2 all use the dark-on-light /
+ * light-on-dark onSurface token, and only step 3+ (full-opacity blue, where
+ * neither text color perfectly meets 4.5:1) uses the lighter onSecondary.
  */
 function heatmapTextColor(
   count: number,
   colors: { onSecondary: string; onSurface: string }
 ): string {
-  return count <= 1 ? colors.onSurface : colors.onSecondary;
+  // Steps 0–2: composited cell is light enough in both themes for onSurface to
+  // clear 4.5:1 comfortably (≥7:1 on light, ≥4.7:1 on dark).
+  // Step 3+ (full-opacity heatmapFrequency #007AFF / #0A84FF): luminance sits
+  // in the 0.21–0.24 range where neither black nor white achieves 4.5:1; we
+  // use onSecondary (white, ~4:1) as the best available option.
+  return count >= 3 ? colors.onSecondary : colors.onSurface;
 }
 
 type CellData = {

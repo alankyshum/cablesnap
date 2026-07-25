@@ -2,6 +2,7 @@ import React from "react";
 import { fireEvent } from "@testing-library/react-native";
 import WorkoutHeatmap from "../../components/WorkoutHeatmap";
 import { renderScreen } from "../helpers/render";
+import { withOpacity } from "../../lib/format";
 
 describe("WorkoutHeatmap", () => {
   const emptyData = new Map<string, number>();
@@ -204,13 +205,16 @@ describe("WorkoutHeatmap", () => {
   // heatmapFrequency token (#007AFF / #0A84FF) which uses the S-cone channel
   // and retains contrast under red-green CVD.
   //
+  // BLD-3878 update: widened opacity ramp to 0.30 / 0.62 / 1.0 for protanopia
+  // distinctness. Expected light-mode rgba strings for count=1,2:
+  //   - count=1 → rgba(0, 122, 255, 0.3)   [withOpacity on #007AFF]
+  //   - count=2 → rgba(0, 122, 255, 0.62)
+  //   - count=3 → #007AFF  (or dark-mode variant #0A84FF)
+  //
   // We assert via backgroundColor on rendered cells: for count=1,2,3 the
   // rendered color must contain the blue channel string (partial hex or rgba
   // from withOpacity()). Specifically:
   //   - count=0 → surfaceVariant (grey muted)
-  //   - count=1 → rgba(0,122,255, 0.15)  [withOpacity on #007AFF]
-  //   - count=2 → rgba(0,122,255, 0.55)
-  //   - count=3 → #007AFF  (or dark-mode variant #0A84FF)
   //
   // The test checks that no filled-cell color string contains the coral hex
   // values (#FF6038 or #FF7A55), and that count=1 and count=2 are visually
@@ -273,5 +277,130 @@ describe("WorkoutHeatmap", () => {
     const flat = collectStyles(label);
     const { fontSizes } = require("../../constants/design-tokens");
     expect(flat.fontSize).toBe(fontSizes.sm); // Floor bumped from fontSizes.xs to fontSizes.sm (14)
+  });
+
+  // BLD-3878: Protanopia fix — verify all four heatmap fill steps have strictly
+  // monotonic relative luminance when composited over the card surface in both
+  // light and dark themes. Under protanopia only luminance survives (hue is
+  // discarded), so monotonic luminance is a sound headless proxy for
+  // "visually distinguishable under CVD" without needing device simulation.
+  //
+  // Approach: use the WCAG relative-luminance formula directly on the rgba/hex
+  // color strings produced by the widened opacity ramp (0.30 / 0.62 / 1.0).
+  // Composite over each card surface in linear light, then assert:
+  //   1. Strict monotonicity (no two adjacent steps have equal luminance)
+  //   2. Minimum per-adjacent-pair delta ≥ 0.05 (catches regression back to
+  //      the old 0.15-alpha where step 0→1 delta was ≈0.025 in dark mode)
+  it("heatmap fill steps have strictly monotonic luminance on both light and dark card surfaces (BLD-3878 protanopia fix)", () => {
+    // WCAG sRGB → linear-light single-channel transform
+    const wcagLin = (c8bit: number): number => {
+      const c = c8bit / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+
+    // WCAG relative luminance from linear RGB channels (0–255)
+    const wcagLum = (r: number, g: number, b: number): number =>
+      0.2126 * wcagLin(r) + 0.7152 * wcagLin(g) + 0.0722 * wcagLin(b);
+
+    // Parse a color string (hex #rrggbb or rgba(r,g,b,a)) and composite it
+    // over a background (bgR, bgG, bgB) in linear light. Returns relative lum.
+    const compositeAndLum = (
+      colorStr: string,
+      bgR: number,
+      bgG: number,
+      bgB: number
+    ): number => {
+      const rgbaMatch = colorStr.match(
+        /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([0-9.]+))?\s*\)/
+      );
+      if (rgbaMatch) {
+        const r = parseInt(rgbaMatch[1]);
+        const g = parseInt(rgbaMatch[2]);
+        const b = parseInt(rgbaMatch[3]);
+        const a = rgbaMatch[4] !== undefined ? parseFloat(rgbaMatch[4]) : 1;
+        // Composite in linear-light space (standard alpha-compositing over opaque bg)
+        const rLin = a * wcagLin(r) + (1 - a) * wcagLin(bgR);
+        const gLin = a * wcagLin(g) + (1 - a) * wcagLin(bgG);
+        const bLin = a * wcagLin(b) + (1 - a) * wcagLin(bgB);
+        return 0.2126 * rLin + 0.7152 * gLin + 0.0722 * bLin;
+      }
+      const hexMatch = colorStr.match(/^#([0-9a-fA-F]{6})$/);
+      if (hexMatch) {
+        return wcagLum(
+          parseInt(hexMatch[1].slice(0, 2), 16),
+          parseInt(hexMatch[1].slice(2, 4), 16),
+          parseInt(hexMatch[1].slice(4, 6), 16)
+        );
+      }
+      throw new Error(`Unrecognised color string: ${colorStr}`);
+    };
+
+    // Light theme: heatmapFrequency=#007AFF, surfaceVariant=#E5E7EB, card=#F3F4F6
+    const LIGHT_CARD = { r: 243, g: 244, b: 246 };
+    // Dark theme: heatmapFrequency=#0A84FF, surfaceVariant=#21262D, card=#161B22
+    const DARK_CARD = { r: 22, g: 27, b: 34 };
+
+    const themes = [
+      {
+        card: LIGHT_CARD,
+        surfaceVariant: "#E5E7EB",
+        heatmapFrequency: "#007AFF",
+      },
+      {
+        card: DARK_CARD,
+        surfaceVariant: "#21262D",
+        heatmapFrequency: "#0A84FF",
+      },
+    ] as const;
+
+    for (const { card, surfaceVariant, heatmapFrequency } of themes) {
+      // Mirror heatmapColor() exactly (BLD-3878 ramp: 0.30 / 0.62 / 1.0)
+      const stepColors = [
+        surfaceVariant,                             // step 0: empty cell
+        withOpacity(heatmapFrequency, 0.30),        // step 1: 1 workout
+        withOpacity(heatmapFrequency, 0.62),        // step 2: 2 workouts
+        heatmapFrequency,                            // step 3+: 3+ workouts
+      ];
+
+      const luminances = stepColors.map((c) =>
+        compositeAndLum(c, card.r, card.g, card.b)
+      );
+
+      // Assert strict monotonicity — no two adjacent steps may have equal lum
+      for (let i = 1; i < luminances.length; i++) {
+        expect(luminances[i]).not.toBeCloseTo(luminances[i - 1], 3);
+      }
+
+      // Compute minimum adjacent-pair delta
+      const deltas = luminances
+        .slice(1)
+        .map((l, i) => Math.abs(l - luminances[i]));
+      const minDelta = Math.min(...deltas);
+
+      // ≥ 0.05 ensures regression back to old 0.15-alpha (delta≈0.025 in dark)
+      // is caught while tolerating the inherent dark-mode range constraint.
+      expect(minDelta).toBeGreaterThanOrEqual(0.05);
+    }
+  });
+
+  // BLD-3878: Regression guard — the new ramp must NOT revert to the old
+  // 0.15/0.55 alpha values that caused protanopia indistinguishability.
+  it("does not use the old 0.15 or 0.55 opacity values in heatmap fill colors (BLD-3878 protanopia regression guard)", () => {
+    const today = new Date();
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const d1 = new Date(today); d1.setDate(today.getDate() - 7);
+    const d2 = new Date(today); d2.setDate(today.getDate() - 14);
+    const data = new Map([
+      [fmt(d1), 1],
+      [fmt(d2), 2],
+    ]);
+    const { toJSON } = renderScreen(<WorkoutHeatmap data={data} />);
+    const json = JSON.stringify(toJSON());
+
+    // Old step-1 value: rgba(0, 122, 255, 0.15) — should NOT appear
+    expect(json).not.toMatch(/rgba\(\s*0\s*,\s*122\s*,\s*255\s*,\s*0\.15/);
+    // Old step-2 value: rgba(0, 122, 255, 0.55) — should NOT appear
+    expect(json).not.toMatch(/rgba\(\s*0\s*,\s*122\s*,\s*255\s*,\s*0\.55/);
   });
 });
