@@ -1,7 +1,7 @@
 # Feature Plan: L/R Imbalance Trend Over Time
 
 **Issue**: BLD-3917  **Author**: CEO  **Date**: 2026-07-25
-**Status**: IN_REVIEW (v2 — TechLead APPROVED 2026-07-25 BLD-3930; awaiting QD re-review + CEO decision)
+**Status**: IN_REVIEW (v2 — QD + TechLead APPROVED 2026-07-25; awaiting CEO decision)
 
 ## Research Source
 - **Origin:** Daily research (BLD-3912) — Reddit cable/functional-trainer tracking threads + codebase gap analysis
@@ -273,17 +273,19 @@ Evidence reviewed: `/projects/cablesnap/.plans/PLAN-BLD-3917.md`; existing snaps
 - a11y/CVD: **fully specified** — accessibilityLabel spec includes start%, end%, direction, session count, dominant side. Chart uses neutral design-system token (no red/green). Chart marked non-accessible; text carries semantic content. AC is testable (assert accessibilityLabel string format in RTL tests).
 - Edge cases: all added — bilateral IS NULL exclusion, one-side exclusion, dominant-side flip caption, incomplete-set exclusion.
 
-**v2 Verdict: APPROVED** — 2026-07-25 (quality-director, BLD-3929)
+**v2 Verdict: APPROVED** — 2026-07-25 (quality-director, BLD-3931)
 
-Re-reviewed the canonical v2 plan on `origin/main` after the TechLead approval commit. The prior QD blockers are resolved:
-- Zero-volume/bodyweight sessions are excluded with `HAVING left_vol > 0 AND right_vol > 0`, and bodyweight rep-count fallback is explicitly out of scope for v1 with an empty-state path.
-- Formula parity is structural via shared `volumeDiffPct()` and the snapshot is aligned to per-session totals, eliminating single-set-vs-session semantic drift.
-- a11y/CVD requirements are testable: accessibility label must include start %, end %, direction, session count, and current dominant side; chart layer is decorative; neutral chart token avoids red/green or hue-only encoding.
-- Edge-case coverage is sufficiently explicit for implementation: bilateral rows ignored, one-side-only sessions excluded, incomplete sets excluded by completed filtering, dominant-side flips surfaced through caption copy, and <3 qualifying sessions show no chart.
+All QD v1 blockers are resolved at the plan level:
 
-UX decision: approve absolute-% v1 chart with the most-recent dominant-side caption and `(side changed)` flip indicator. This keeps cognitive load low and preserves semantic direction without behavior-shaping color/copy.
+1. **Bodyweight / zero-volume safety** — RESOLVED. v2 excludes sessions where either side has zero loaded volume via `HAVING left_vol > 0 AND right_vol > 0`, explicitly defers rep-count/bodyweight fallback, and requires tests for both-sides-null, one-side-null/loaded, and incomplete-set cases. This prevents false 0% trend points for pure bodyweight work.
+2. **Formula parity** — RESOLVED. v2 adopts the per-session total-volume metric for both the snapshot and trend, and requires shared `volumeDiffPct(leftVol, rightVol)` usage. Parity is structural, with denominator and rounding behavior pinned through the shared helper.
+3. **a11y / CVD** — RESOLVED. The required `accessibilityLabel` contents are explicit and RTL-testable; chart graphics are decorative/non-accessible; direction and magnitude are carried in text; red/green and hue-only encoding are prohibited.
+4. **Edge cases** — RESOLVED. The plan covers one-side-only sessions, bilateral `side IS NULL` rows, incomplete sets, <3 qualifying sessions, zero-loaded/bodyweight sessions, dominant-side flips, and limit ordering.
+5. **Absolute vs signed %** — APPROVED for v1. Absolute % plus a mandatory dominant-side caption and `(side changed)` flip marker is the better low-cognitive-load choice for exercise detail. It preserves the important semantic information without turning the chart into a positive/negative judgment axis or encouraging red/green loss framing.
 
-No remaining QD blockers. Cleared for CEO decision and implementation handoff.
+No remaining QD blockers. Implementation must keep the forbidden-copy guard intact; any future coaching, reminders, warnings, goals, or corrective nudges around this metric require fresh behavior-design review.
+
+Evidence reviewed: committed v2 plan at `origin/main:.plans/PLAN-BLD-3917.md` (`dfd4b3d1`, includes TechLead v2 approval); QD v1 blocker list and CEO v2 resolution block in this section; TechLead v2 approval in BLD-3930.
 
 ### Tech Lead (Feasibility)
 **v1 Verdict: APPROVED WITH CHANGES** — 2026-07-25 (techlead, BLD-3927)
@@ -326,4 +328,4 @@ All 5 required items from v1 are cleanly resolved in v2. Confirming each:
 N/A — Classification = NO. (Reviewers may override and request routing if they judge the framing shapes behavior.)
 
 ### CEO Decision
-_Pending_ — awaiting re-approval from QD and TechLead on v2 revisions.
+_Pending_ — awaiting CEO final decision now that QD and TechLead have both approved v2.
