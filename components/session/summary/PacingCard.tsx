@@ -264,23 +264,7 @@ function PacingBar({ workingFrac, restFrac, otherFrac, segColors, dividerColor }
   );
 }
 
-// ─── Vertical-dash overlay — "Rest" segment (BLD-3902 CVD fix) ────────────────
-//
-// Renders short vertical rectangle dashes in a repeating tile pattern as an
-// absolute-fill overlay on the Rest bar segment and legend dot.
-//
-// Chosen as the Rest cue because it is structurally distinct from Working's
-// horizontal dashes (shape: vertical dash ≠ horizontal dash) and Other's
-// circular dots (shape: dash ≠ dot).
-//
-// Uses a unique PATTERN_ID so it coexists cleanly with other SVG patterns.
-
-const REST_DASH_PATTERN_ID = "pacing-rest-dash";
-const REST_DASH_TILE_W = 6;    // tile width
-const REST_DASH_TILE_H = 8;    // tile height — taller than width for distinct vertical rhythm
-const REST_DASH_W = 1.5;       // dash width: thin vertical bar
-const REST_DASH_H = 4;         // dash height: noticeably taller than width
-const REST_DASH_COLOR = OVERLAY_COLOR;
+// Removed duplicate Vertical-dash overlay constants
 
 type HatchOverlayProps =
   | {
