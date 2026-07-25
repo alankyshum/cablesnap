@@ -106,10 +106,14 @@ export function useThemeColors() {
     // unaffected. See theme/colors.ts for CVD rationale and verified contrast.
     pacingRest: t.pacingRest,
 
-    // Workout-frequency heatmap accent (BLD-2719).
-    // Must be a blue/purple hue so the opacity ramp remains distinguishable
-    // under red-green CVD (deuteranopia / protanopia). Do NOT use the primary
-    // coral here — it collapses to grey-olive under deuteranopia simulation.
+    // Workout-frequency heatmap solid luminance ramp (BLD-3877).
+    // Replacing the single-hue opacity ramp (BLD-2719) with a 4-color luminance ramp
+    // to resolve tritanopia CVD issues (BLD-3876). Step-wise perceived lightness
+    // increases monotonically, ensuring contrast is preserved across all CVD types
+    // (normal, tritanopia, deuteranopia, protanopia) and achromatopsia.
+    heatmapFreq1: t.heatmapFreq1,
+    heatmapFreq2: t.heatmapFreq2,
+    heatmapFreq3: t.heatmapFreq3,
     heatmapFrequency: t.blue,
   };
 }

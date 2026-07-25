@@ -77,6 +77,10 @@ const lightColors = {
   // RecoveryHeatmap depends on the lighter blue for its 3-step ramp.
   pacingRest: "#08415C",
 
+  // Workout-frequency heatmap solid luminance ramp (BLD-3877, Tritanopia-safe)
+  heatmapFreq1: "#64B5F6",
+  heatmapFreq2: "#1976D2",
+  heatmapFreq3: "#0D47A1",
   // Shadows & overlays
   shadow: "#000000",
   onToast: "#FFFFFF",
@@ -161,6 +165,10 @@ const darkColors = {
   // `heatmapLow` (#42A5F5). Improves deut/prot/grey vs the prior value too.
   pacingRest: "#A5F3FC",
 
+  // Workout-frequency heatmap solid luminance ramp (BLD-3877, Tritanopia-safe)
+  heatmapFreq1: "#1E5A8A",
+  heatmapFreq2: "#4A9EE8",
+  heatmapFreq3: "#B3D9FF",
   // Shadows & overlays
   shadow: "#000000",
   onToast: "#FFFFFF",
