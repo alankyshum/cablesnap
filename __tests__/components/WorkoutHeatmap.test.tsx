@@ -274,4 +274,58 @@ describe("WorkoutHeatmap", () => {
     const { fontSizes } = require("../../constants/design-tokens");
     expect(flat.fontSize).toBe(fontSizes.sm); // Floor bumped from fontSizes.xs to fontSizes.sm (14)
   });
+
+  // BLD-3877: Assert that the three filled steps map to three DISTINCT color values
+  // (not opacity variants of one).
+  it("renders three filled steps with three DISTINCT solid color values from the theme (BLD-3877)", () => {
+    const today = new Date();
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const d1 = new Date(today); d1.setDate(today.getDate() - 7);
+    const d2 = new Date(today); d2.setDate(today.getDate() - 14);
+    const d3 = new Date(today); d3.setDate(today.getDate() - 21);
+    const data = new Map([
+      [fmt(d1), 1],
+      [fmt(d2), 2],
+      [fmt(d3), 3],
+    ]);
+
+    const { getByLabelText } = renderScreen(<WorkoutHeatmap data={data} />);
+
+    // Find the cell pressables
+    const cell1 = getByLabelText(new RegExp(`${d1.toLocaleDateString(undefined, { month: "long" })}.*1 workout$`));
+    const cell2 = getByLabelText(new RegExp(`${d2.toLocaleDateString(undefined, { month: "long" })}.*2 workouts`));
+    const cell3 = getByLabelText(new RegExp(`${d3.toLocaleDateString(undefined, { month: "long" })}.*3 workouts`));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getBgColor = (node: any) => {
+      const s = node.props?.style;
+      const arr = Array.isArray(s) ? s : [s];
+      let bgColor = undefined;
+      for (const entry of arr) {
+        if (entry && typeof entry === "object" && entry.backgroundColor) {
+          bgColor = entry.backgroundColor;
+        }
+      }
+      return bgColor;
+    };
+
+    const color1 = getBgColor(cell1);
+    const color2 = getBgColor(cell2);
+    const color3 = getBgColor(cell3);
+
+    // Verify all colors are distinct and not opacity variants
+    expect(color1).not.toBeUndefined();
+    expect(color2).not.toBeUndefined();
+    expect(color3).not.toBeUndefined();
+    expect(color1).not.toBe(color2);
+    expect(color2).not.toBe(color3);
+    expect(color1).not.toBe(color3);
+
+    // Assert they match the mock colors from makeMockThemeColors / Colors.light (since useColorScheme defaults to 'light')
+    // Light mock theme colors: heatmapFreq1 = '#64B5F6', heatmapFreq2 = '#1976D2', heatmapFreq3 = '#0D47A1'
+    expect(color1).toBe("#64B5F6");
+    expect(color2).toBe("#1976D2");
+    expect(color3).toBe("#0D47A1");
+  });
 });
