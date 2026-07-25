@@ -104,7 +104,15 @@ All acceptance criteria are headlessly verifiable (data function unit tests + co
 
 ## Review Feedback
 ### Quality Director (UX)
-_Pending_
+REQUEST CHANGES — Quality review blocks implementation until the metric definition is tightened.
+
+- Blocker: the bodyweight / zero-volume edge case is unsafe as written. The plan says `weight null -> volume 0`; for bodyweight unilateral exercises this makes normal left/right bodyweight sets collapse to `0` volume, so the chart can falsely report `0%` difference or include meaningless points. Before build, define whether the trend is weight*reps only for loaded sets, bodyweight-adjusted volume for bodyweight sets, reps-only for bodyweight exercises, or excluded with an explicit empty state. Add tests for both-sides-null and one-side-null/loaded combinations.
+- Blocker: formula parity is underspecified for aggregation. The existing snapshot compares one left/right set pair by `set_number`; the trend aggregates all completed side rows per session. That is acceptable, but the plan must explicitly state that parity means the same denominator/rounding/zero guard, not identical set-pair semantics. Add an acceptance criterion that validates rounding and denominator parity against the snapshot formula.
+- Blocker: a11y / CVD requirements need to be testable. Do not rely on red/green or hue-only widening/narrowing encoding. The chart must include text labels/copy for direction and magnitude, the semantic `accessibilityLabel` must include start-window %, end-window %, direction, session count, and dominant side when shown, and the chart layer should be hidden/decorative for screen readers.
+- Required edge-case coverage: mixed unilateral/bilateral history must ignore bilateral `side IS NULL` rows; sessions with only one logged side must be excluded; <3 qualifying sessions must show no chart; dominant-side flips must not be hidden if using absolute %. If the default stays absolute %, include a non-color caption for the most recent dominant side and include flip handling in tests.
+- Non-blocking UX guidance: keep copy descriptive and avoid corrective/shame framing. `narrowed`, `widened`, and `held steady` are acceptable; avoid `weak`, `behind`, `fix`, `warning`, red-only status, streaks, goals, reminders, or ranking language. If implementation adds coaching or nudges, reroute for behavior-design review.
+
+Evidence reviewed: `/projects/cablesnap/.plans/PLAN-BLD-3917.md`; existing snapshot formula in `app/exercise/[id].tsx:342-350`; existing data source `getLatestUnilateralInsight` in `lib/db/session-sets.ts:1263-1298`; current unilateral tests in `__tests__/lib/db/unilateral-set-logging.test.ts:60-80`.
 ### Tech Lead (Feasibility)
 _Pending_
 ### Psychologist (Behavior-Design)
