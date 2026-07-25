@@ -101,6 +101,11 @@ export function useThemeColors() {
     heatmapHigh: t.heatmapHigh,
     heatmapBorder: t.heatmapBorder,
 
+    // Pacing "Rest" segment — dedicated CVD-safe token (BLD-3872).
+    // Distinct from heatmapLow so the shared recovery-heatmap surface is
+    // unaffected. See theme/colors.ts for CVD rationale and verified contrast.
+    pacingRest: t.pacingRest,
+
     // Workout-frequency heatmap accent (BLD-2719).
     // Must be a blue/purple hue so the opacity ramp remains distinguishable
     // under red-green CVD (deuteranopia / protanopia). Do NOT use the primary

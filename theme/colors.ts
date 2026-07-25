@@ -61,6 +61,22 @@ const lightColors = {
   heatmapHigh: "#D32F2F",
   heatmapBorder: "#9E9E9E",
 
+  // Pacing "Rest" segment — CVD-hardened for tritanopia (BLD-3872).
+  //
+  // Previously the pacing Rest segment reused `heatmapLow` (#1E88E5 blue), which
+  // under Machado-2009 tritanopia simulation collapsed to nearly the same
+  // luminance as the Working coral (#FF6038) — W/R contrast dropped to ~1.08:1,
+  // making the two segments indistinguishable for blue-yellow CVD users.
+  //
+  // #08415C is a deep petrol blue that keeps the "Rest = blue" hue identity for
+  // full-colour sighted users while lifting Machado tritan W/R contrast to
+  // ~3.26:1, and also improves deuteranopia / protanopia / grayscale contrast
+  // vs the prior value. Verified in __tests__/theme/pacing-cvd-contrast.test.ts.
+  //
+  // Kept as a pacing-scoped token (not merged into `heatmapLow`) because
+  // RecoveryHeatmap depends on the lighter blue for its 3-step ramp.
+  pacingRest: "#08415C",
+
   // Shadows & overlays
   shadow: "#000000",
   onToast: "#FFFFFF",
@@ -136,6 +152,14 @@ const darkColors = {
   heatmapMid: "#FFC107",
   heatmapHigh: "#F44336",
   heatmapBorder: "#616161",
+
+  // Pacing "Rest" segment — CVD-hardened for tritanopia (BLD-3872).
+  // Dark-theme companion to lightColors.pacingRest. On a dark card background
+  // the Rest chip must sit at a *higher* luminance than the coral Working
+  // segment (opposite direction from the light theme). #A5F3FC (pale cyan)
+  // gives Machado tritan W/R contrast ~2.16:1, up from ~1.09:1 with the prior
+  // `heatmapLow` (#42A5F5). Improves deut/prot/grey vs the prior value too.
+  pacingRest: "#A5F3FC",
 
   // Shadows & overlays
   shadow: "#000000",
