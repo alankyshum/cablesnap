@@ -23,7 +23,7 @@
 import React from "react";
 import { Platform } from "react-native";
 import { render } from "@testing-library/react-native";
-import PacingCard, { HatchOverlay, WorkingDashOverlay } from "../../../../components/session/summary/PacingCard";
+import PacingCard, { HatchOverlay, WorkingDashOverlay, RestDashOverlay } from "../../../../components/session/summary/PacingCard";
 import type { PacingBreakdown } from "@/lib/session-pacing";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -91,10 +91,11 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     expect(dash).toBeTruthy();
   });
 
-  // ── 4. Rest segment has NO pattern overlay ────────────────────────────────
-  it("does NOT render a pattern on the Rest bar segment", () => {
-    const { queryByTestId } = render(<PacingCard pacing={makePacing()} />);
-    expect(queryByTestId("pacing-seg-rest-pattern", { includeHiddenElements: true })).toBeNull();
+  // ── 4. Rest segment carries the vertical-dash cue (BLD-3879) ───────────────
+  it("renders the vertical dash pattern overlay on the Rest bar segment", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const restPattern = getByTestId("pacing-seg-rest-pattern", { includeHiddenElements: true });
+    expect(restPattern).toBeTruthy();
   });
 
   // ── 5. Working legend dot carries the horizontal-dash cue (BLD-2713/BLD-2714)
@@ -107,10 +108,11 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     expect(dotDash).toBeTruthy();
   });
 
-  // ── 6. Rest dot has NO pattern overlay ────────────────────────────────────
-  it("does NOT render a pattern on the Rest legend dot", () => {
-    const { queryByTestId } = render(<PacingCard pacing={makePacing()} />);
-    expect(queryByTestId("pacing-dot-rest-pattern", { includeHiddenElements: true })).toBeNull();
+  // ── 6. Rest dot carries the vertical-dash cue (BLD-3879) ───────────────────
+  it("renders the vertical dash pattern overlay on the Rest legend dot", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dotRestPattern = getByTestId("pacing-dot-rest-pattern", { includeHiddenElements: true });
+    expect(dotRestPattern).toBeTruthy();
   });
 
   // ── 7. Base backgroundColor preserved on each segment ─────────────────────

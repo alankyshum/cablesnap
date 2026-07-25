@@ -117,6 +117,14 @@ const DASH_TILE_W = 8;    // tile width — wider than dot tile for distinct hor
 const DASH_TILE_H = 6;    // tile height — same as dot tile height
 const DASH_W = 4;         // dash width: noticeably longer than the 2.2px dot diameter
 const DASH_H = 1.5;       // dash height: thin horizontal bar, not a block
+
+// ─── Vertical-dash overlay — "Rest" segment (BLD-3879 CVD fix) ───────────────
+const REST_DASH_PATTERN_ID = "pacing-rest-vertical-dash";
+const REST_DASH_TILE_W = 6;
+const REST_DASH_TILE_H = 8;
+const REST_DASH_W = 1.5;
+const REST_DASH_H = 4;
+const REST_DASH_COLOR = OVERLAY_COLOR;
 const DASH_COLOR = OVERLAY_COLOR;
 
 type HatchOverlayProps =
@@ -271,6 +279,74 @@ export function WorkingDashOverlay({ fill, width, height, testID }: WorkingDashO
         width={svgWidth}
         height={svgHeight}
         fill={`url(#${DASH_PATTERN_ID})`}
+      />
+    </Svg>
+  );
+}
+
+type RestDashOverlayProps =
+  | {
+      /** Fill mode: SVG canvas is "100%×100%" to cover the flex-sized bar segment. */
+      fill: true;
+      width?: never;
+      height?: never;
+      testID?: string;
+    }
+  | {
+      /** Explicit-size mode: pass exact pixel dimensions (e.g. legend dot 8×8). */
+      fill?: false;
+      width: number;
+      height: number;
+      testID?: string;
+    };
+
+/**
+ * RestDashOverlay — decorative vertical-dash fill for the "Rest" segment.
+ * Resolves BLD-3879 (deuteranopia audit).
+ */
+export function RestDashOverlay({ fill, width, height, testID }: RestDashOverlayProps) {
+  // In explicit-size mode, guard against non-positive dimensions.
+  if (!fill && (width <= 0 || height <= 0)) return null;
+
+  const svgWidth = fill ? "100%" : width;
+  const svgHeight = fill ? "100%" : height;
+
+  return (
+    <Svg
+      width={svgWidth}
+      height={svgHeight}
+      style={StyleSheet.absoluteFillObject}
+      {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
+      {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
+      aria-hidden
+      pointerEvents="none"
+      testID={testID}
+    >
+      <Defs>
+        <Pattern
+          id={REST_DASH_PATTERN_ID}
+          x="0"
+          y="0"
+          width={REST_DASH_TILE_W}
+          height={REST_DASH_TILE_H}
+          patternUnits="userSpaceOnUse"
+        >
+          {/* Centered vertical dash within the tile */}
+          <Rect
+            x={(REST_DASH_TILE_W - REST_DASH_W) / 2}
+            y={(REST_DASH_TILE_H - REST_DASH_H) / 2}
+            width={REST_DASH_W}
+            height={REST_DASH_H}
+            fill={REST_DASH_COLOR}
+          />
+        </Pattern>
+      </Defs>
+      <Rect
+        x="0"
+        y="0"
+        width={svgWidth}
+        height={svgHeight}
+        fill={`url(#${REST_DASH_PATTERN_ID})`}
       />
     </Svg>
   );
@@ -460,13 +536,20 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
                     />
                   )}
                 </View>
-                <View
+                 <View
                   testID="pacing-seg-rest"
                   style={[
                     styles.barSegment,
                     { flex: restFrac, backgroundColor: segColors.rest },
                   ]}
-                />
+                >
+                  {restFrac > 0 && (
+                    <RestDashOverlay
+                      fill
+                      testID="pacing-seg-rest-pattern"
+                    />
+                  )}
+                </View>
                 {/* Other segment: dot/stipple overlay for CVD (BLD-1939, BLD-2725) */}
                 <View
                   testID="pacing-seg-other"
@@ -487,7 +570,7 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
               {/* Labels */}
               <View style={styles.labelsRow}>
                 <LabelChip label="Working" value={workingLabel} color={segColors.working} textColor={colors.onSurface} showHatch={false} showDash />
-                <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} showDash={false} />
+                <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} showDash={false} showVerticalDash />
                 <LabelChip label="Other" value={otherLabel} color={segColors.other} textColor={colors.onSurface} showHatch showDash={false} />
               </View>
 
@@ -524,6 +607,7 @@ function LabelChip({
   textColor,
   showHatch,
   showDash,
+  showVerticalDash,
 }: {
   label: string;
   value: string;
@@ -531,6 +615,7 @@ function LabelChip({
   textColor: string;
   showHatch: boolean;
   showDash: boolean;
+  showVerticalDash?: boolean;
 }) {
   return (
     <View style={styles.labelChip}>
@@ -548,6 +633,13 @@ function LabelChip({
         )}
         {showDash && (
           <WorkingDashOverlay
+            width={LEGEND_DOT_SIZE}
+            height={LEGEND_DOT_SIZE}
+            testID={`pacing-dot-${label.toLowerCase()}-pattern`}
+          />
+        )}
+        {showVerticalDash && (
+          <RestDashOverlay
             width={LEGEND_DOT_SIZE}
             height={LEGEND_DOT_SIZE}
             testID={`pacing-dot-${label.toLowerCase()}-pattern`}
