@@ -41,6 +41,7 @@ marker) at release time.
 - **Heatmap legend accessibility under deuteranopia** — Adjusts the workout-frequency heatmap legend colors to ensure steps are distinct and distinguishable under deuteranopia. ([BLD-3874](/BLD/issues/BLD-3874))
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
+- **Consistent spacing in Progress tab** — Aligns the Progress tab navigation and view-mode toggle spacing to resolve inconsistent vertical and horizontal gaps. ([BLD-3648](/BLD/issues/BLD-3648))
 
 ## v0.26.85 — 2026-07-25
 <!-- versionCode: 153 -->
