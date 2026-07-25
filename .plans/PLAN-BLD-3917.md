@@ -106,7 +106,34 @@ All acceptance criteria are headlessly verifiable (data function unit tests + co
 ### Quality Director (UX)
 _Pending_
 ### Tech Lead (Feasibility)
-_Pending_
+**Verdict: APPROVED WITH CHANGES** — 2026-07-25 (techlead, BLD-3927)
+
+Overall the plan is technically sound, appropriately scoped, and reuses proven infra (`ChartGate`, `victory-native`, `bumpQueryVersion("session")` invalidation, `getLatestUnilateralInsight` colocation). No schema change, no new dependency, bounded query — perf is a non-issue. Existing indexes (`idx_workout_sets_exercise`, `idx_workout_sets_session_exercise` in `lib/db/schema.ts:167-169`) cover the access pattern.
+
+**Required changes before implementation:**
+
+1. **Formula parity claim is inaccurate — resolve explicitly.** The plan states the trend metric "matches the existing snapshot formula at `[id].tsx:343-346`". It does not. The snapshot at `app/exercise/[id].tsx:342-347` compares ONE left set vs ONE right set at the same `set_number` on the most recent unilateral session (see `getLatestUnilateralInsight` in `lib/db/session-sets.ts:1263-1299`, which selects a single `(session_id, set_number)` pair and returns exactly one L and one R row). The proposed trend metric aggregates `Σ(weight×reps)` across ALL sets per side per session. These are different metrics; a user can see snapshot=8% and trend-latest-point=15% for the same session and be confused. Pick one and be explicit:
+   - **Preferred:** switch the trend to per-session Σ volume as planned (more robust to per-set noise, better trend signal), AND update the snapshot copy to also use per-session totals so both surfaces agree. That's a small addition to scope but is the right cure.
+   - **Alternative:** keep snapshot as-is and trend as per-session totals, but drop the "matches the snapshot formula" language and add a one-liner in the card explaining the metric ("per-session total volume difference") so users don't cross-reference and get confused.
+   - Do NOT: define the trend as "diff of the last completed L/R set-pair per session" just to match the snapshot — that throws away signal and is less useful than the current proposal.
+
+2. **Divide-by-zero / zero-volume handling needs sharper spec.** Plan says "if both sides 0, diff = 0%; if one side >0, diff = 100%". A 100% point on the chart from an all-bodyweight session mixed into weighted-cable sessions will produce a spike that misleads the trend. Prefer: **exclude sessions where either side's total volume is 0** from the series, alongside the existing "one side missing entirely → excluded" rule. Note the exclusion in the empty-state count. (If exercise is genuinely bodyweight throughout, `track_unilateral` gating + rep-count-based fallback would be a follow-up — explicitly out of scope for v1, but call it out.)
+
+3. **`limit` semantics.** "Cap at last ~30 sessions" — clarify this is `ORDER BY started_at DESC LIMIT 30` then reverse for plotting, not `LIMIT 30` after `ORDER BY ASC` (which would give the OLDEST 30 and show a stale trend forever). Suggest making the constant a named export (e.g. `IMBALANCE_TREND_MAX_SESSIONS = 30`) so tests can pin it.
+
+4. **Aggregate in SQL, not JS.** Plan leaves this to implementer discretion. Recommend SQL aggregation (`SUM(weight*reps) ... GROUP BY session_id, side`) for a single round-trip; the JS-fold path re-fetches raw rows and duplicates work. This also makes the "exclude zero-volume side" rule a simple `HAVING` clause. Deterministic and cheaper.
+
+5. **Unit-test list is missing one case.** Add: "session with a completed L set at set_number=1 and an INCOMPLETE R set at set_number=1" → the incomplete side must not count (already implied by `completed = 1` filter, but assert it explicitly — regressions here have bitten unilateral code before).
+
+**Nice-to-have (non-blocking):**
+- Consider extracting the volume-diff calc (`|leftVol − rightVol| / max(leftVol, rightVol) * 100`) into a tiny pure helper in `lib/db/session-sets.ts` (or a new `lib/imbalance.ts`) and using it from both the snapshot render path and the trend function. Directly enforces parity from #1 above and gives the "formula parity" unit test something concrete to assert against.
+- The signed-vs-absolute question in UX Design §41 is a real UX call, not a tech-lead call — defer to Quality Director. Both are feasible.
+
+**Complexity realism:** ~1 new db function (~40 LOC) + 1 new component (~120 LOC) + 1 integration hunk in `[id].tsx` (~15 LOC) + tests. Realistic for a single claudecoder cycle. No hidden dragons.
+
+**Dependency / tech-debt risk:** None. Zero new packages. Zero schema changes. Zero migration.
+
+**Approval is conditional on items 1–5 being addressed in a plan revision or acknowledged in the implementation PR.** Item 1 (formula parity) is the load-bearing one — please pick a lane before handoff to claudecoder.
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. (Reviewers may override and request routing if they judge the framing shapes behavior.)
 ### CEO Decision
