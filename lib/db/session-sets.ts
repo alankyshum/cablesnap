@@ -17,6 +17,8 @@ import {
 } from "./sets";
 import { cascadeDeleteClipsForSets } from "../media/form-clips";
 import { normalizeSetType } from "./sets";
+import { volumeDiffPct } from "./imbalance";
+export { volumeDiffPct };
 
 export async function getSessionSets(
   sessionId: string
@@ -1267,33 +1269,94 @@ export async function getLatestUnilateralInsight(
   right: { weight: number | null; reps: number | null } | null;
 } | null> {
   const database = await getDatabase();
-  const target = await database.getFirstAsync<{ session_id: string; set_number: number }>(
-    `SELECT ws.session_id, ws.set_number
-       FROM workout_sets ws
-       JOIN workout_sessions wss ON ws.session_id = wss.id
-      WHERE ws.exercise_id = ?
-        AND ws.completed = 1
-        AND ws.side IS NOT NULL
-        AND wss.completed_at IS NOT NULL
-      ORDER BY wss.started_at DESC, ws.set_number DESC
-      LIMIT 1`,
+  const row = await database.getFirstAsync<{
+    left_vol: number;
+    right_vol: number;
+  }>(
+    `SELECT
+       SUM(CASE WHEN ws.side = 'left'  THEN COALESCE(ws.weight, 0) * ws.reps ELSE 0 END) AS left_vol,
+       SUM(CASE WHEN ws.side = 'right' THEN COALESCE(ws.weight, 0) * ws.reps ELSE 0 END) AS right_vol
+     FROM workout_sets ws
+     JOIN workout_sessions wk ON wk.id = ws.session_id
+     WHERE ws.exercise_id = ?
+       AND ws.completed = 1
+       AND ws.side IS NOT NULL
+       AND wk.completed_at IS NOT NULL
+     GROUP BY ws.session_id, wk.started_at
+     HAVING left_vol > 0 AND right_vol > 0
+     ORDER BY wk.started_at DESC
+     LIMIT 1`,
     [exerciseId]
   );
 
-  if (!target) return null;
-
-  const rows = await database.getAllAsync<{ weight: number | null; reps: number | null; side: string | null }>(
-    `SELECT weight, reps, side
-       FROM workout_sets
-      WHERE session_id = ? AND set_number = ? AND exercise_id = ? AND completed = 1`,
-    [target.session_id, target.set_number, exerciseId]
-  );
-
-  const left = rows.find((r) => r.side === "left") ?? null;
-  const right = rows.find((r) => r.side === "right") ?? null;
+  if (!row) return null;
 
   return {
-    left: left ? { weight: left.weight, reps: left.reps } : null,
-    right: right ? { weight: right.weight, reps: right.reps } : null,
+    left: { weight: row.left_vol, reps: 1 },
+    right: { weight: row.right_vol, reps: 1 },
   };
+}
+
+export const IMBALANCE_TREND_MAX_SESSIONS = 30;
+
+export type ImbalanceTrendPoint = {
+  sessionId: string;
+  startedAt: number;
+  leftVol: number;
+  rightVol: number;
+  diffPct: number;
+  dominantSide: 'left' | 'right' | 'equal';
+};
+
+export async function getImbalanceTrend(
+  exerciseId: string,
+  options?: { limit?: number }
+): Promise<ImbalanceTrendPoint[]> {
+  const limit = options?.limit ?? IMBALANCE_TREND_MAX_SESSIONS;
+  const database = await getDatabase();
+  
+  const rows = await database.getAllAsync<{
+    session_id: string;
+    started_at: number;
+    left_vol: number;
+    right_vol: number;
+  }>(
+    `WITH side_volumes AS (
+      SELECT
+        ws.session_id,
+        wk.started_at,
+        SUM(CASE WHEN ws.side = 'left'  THEN COALESCE(ws.weight, 0) * ws.reps ELSE 0 END) AS left_vol,
+        SUM(CASE WHEN ws.side = 'right' THEN COALESCE(ws.weight, 0) * ws.reps ELSE 0 END) AS right_vol
+      FROM workout_sets ws
+      JOIN workout_sessions wk ON wk.id = ws.session_id
+      WHERE ws.exercise_id = ?
+        AND ws.completed = 1
+        AND ws.side IS NOT NULL
+        AND wk.completed_at IS NOT NULL
+      GROUP BY ws.session_id, wk.started_at
+      HAVING left_vol > 0 AND right_vol > 0
+      ORDER BY wk.started_at DESC
+      LIMIT ?
+    )
+    SELECT * FROM side_volumes ORDER BY started_at ASC`,
+    [exerciseId, limit]
+  );
+
+  return rows.map((r) => {
+    const diffPct = volumeDiffPct(r.left_vol, r.right_vol);
+    let dominantSide: 'left' | 'right' | 'equal' = 'equal';
+    if (r.left_vol > r.right_vol) {
+      dominantSide = 'left';
+    } else if (r.right_vol > r.left_vol) {
+      dominantSide = 'right';
+    }
+    return {
+      sessionId: r.session_id,
+      startedAt: r.started_at,
+      leftVol: r.left_vol,
+      rightVol: r.right_vol,
+      diffPct,
+      dominantSide,
+    };
+  });
 }

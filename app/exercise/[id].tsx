@@ -25,7 +25,7 @@ import {
   updateTrackUnilateral,
   type ExerciseSession,
 } from "../../lib/db";
-import { bumpQueryVersion } from "../../lib/query";
+import { bumpQueryVersion, getQueryVersion } from "../../lib/query";
 import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
 import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
@@ -42,7 +42,8 @@ import ExerciseVariantFilter from "@/components/exercise/ExerciseVariantFilter";
 import { PlateauStatusCard } from "@/components/exercise/PlateauStatusCard";
 import { usePlateauStatus } from "@/hooks/usePlateauStatus";
 import { FormVideoSheet } from "@/components/session/FormVideoSheet";
-import { getMostRecentCompletedSetForExercise, getLatestUnilateralInsight } from "@/lib/db/session-sets";
+import { getMostRecentCompletedSetForExercise, getLatestUnilateralInsight, getImbalanceTrend, volumeDiffPct, type ImbalanceTrendPoint } from "@/lib/db/session-sets";
+import ImbalanceTrendCard from "@/components/exercise/ImbalanceTrendCard";
 import { isCableExercise } from "@/lib/cable-variant";
 import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
 import { useStrengthLevel } from "@/hooks/useStrengthLevel";
@@ -130,6 +131,9 @@ export default function ExerciseDetail() {
     left: { weight: number | null; reps: number | null } | null;
     right: { weight: number | null; reps: number | null } | null;
   } | null>(null);
+  const [imbalanceTrend, setImbalanceTrend] = useState<ImbalanceTrendPoint[]>([]);
+  const [imbalanceTrendLoading, setImbalanceTrendLoading] = useState(false);
+  const [imbalanceTrendError, setImbalanceTrendError] = useState(false);
 
   useEffect(() => {
     if (d.exercise) {
@@ -138,14 +142,32 @@ export default function ExerciseDetail() {
     }
   }, [d.exercise]);
 
+  const sessionVer = getQueryVersion("session");
+
   useEffect(() => {
     if (id && trackUnilateral) {
       getLatestUnilateralInsight(id).then(setUnilateralInsight);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setImbalanceTrendLoading(true);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setImbalanceTrendError(false);
+      getImbalanceTrend(id)
+        .then((data) => {
+          setImbalanceTrend(data);
+          setImbalanceTrendLoading(false);
+        })
+        .catch(() => {
+          setImbalanceTrendError(true);
+          setImbalanceTrendLoading(false);
+        });
     } else {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUnilateralInsight(null);
+      setImbalanceTrend([]);
+      setImbalanceTrendLoading(false);
+      setImbalanceTrendError(false);
     }
-  }, [id, trackUnilateral]);
+  }, [id, trackUnilateral, sessionVer]);
 
   const handleTrackUnilateralChange = useCallback(async (value: boolean) => {
     if (!id) return;
@@ -342,16 +364,26 @@ export default function ExerciseDetail() {
       {unilateralInsight && unilateralInsight.left && unilateralInsight.right && (() => {
         const leftVol = (unilateralInsight.left.weight ?? 0) * (unilateralInsight.left.reps ?? 0);
         const rightVol = (unilateralInsight.right.weight ?? 0) * (unilateralInsight.right.reps ?? 0);
-        const maxVol = Math.max(leftVol, rightVol);
-        const diff = maxVol > 0 ? Math.round((Math.abs(leftVol - rightVol) / maxVol) * 100) : 0;
+        const diff = Math.round(volumeDiffPct(leftVol, rightVol));
         return (
-          <View style={styles.section} accessibilityLabel={`Left and right differ by ${diff} percent`}>
+          <View style={styles.section} accessibilityLabel={`Session imbalance: ${diff} percent`}>
             <Text variant="body" style={{ color: colors.onSurface }}>
-              {`Left ${toDisplay(unilateralInsight.left.weight ?? 0, d.unit)} ${d.unit}x${unilateralInsight.left.reps ?? 0} · Right ${toDisplay(unilateralInsight.right.weight ?? 0, d.unit)} ${d.unit}x${unilateralInsight.right.reps ?? 0} · Difference ${diff}%`}
+              {`Session imbalance: Left session total ${toDisplay(leftVol, d.unit)} ${d.unit} · Right session total ${toDisplay(rightVol, d.unit)} ${d.unit} · Difference ${diff}%`}
             </Text>
           </View>
         );
       })()}
+
+      {trackUnilateral && (
+        <View style={styles.section}>
+          <ImbalanceTrendCard
+            colors={colors}
+            trend={imbalanceTrend}
+            loading={imbalanceTrendLoading}
+            error={imbalanceTrendError}
+          />
+        </View>
+      )}
 
       {/* Goal Progress Card — above Records/Chart for discoverability */}
       <GoalSection goalState={goalState} colors={colors} bw={d.bw} unit={d.unit} onOpenSheet={goalSheet.open} />

@@ -44,8 +44,11 @@ export {
   getSourceSessionSets,
   updateExercisePositions,
   getLatestUnilateralInsight,
+  getImbalanceTrend,
+  IMBALANCE_TREND_MAX_SESSIONS,
+  volumeDiffPct,
 } from "./session-sets";
-export type { SourceSessionSet } from "./session-sets";
+export type { SourceSessionSet, ImbalanceTrendPoint } from "./session-sets";
 export type { RestContext } from "./session-sets";
 
 export {
