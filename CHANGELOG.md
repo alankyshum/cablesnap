@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.84 — 2026-07-25
+<!-- versionCode: 152 -->
+
 - **Harden visual UX audit web server against connection timeouts** — Pins the local \`serve\` dependency to \`14.2.6\` in package.json and updates playwright.config.ts to launch the local package via \`npx serve\` and bumps the startup timeout limit to 180 seconds, mitigating connection and cold-start failures on CI runners. ([BLD-3801](/BLD/issues/BLD-3801))
 
 ## v0.26.83 — 2026-07-24
