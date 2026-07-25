@@ -1,7 +1,7 @@
 # Feature Plan: L/R Imbalance Trend Over Time
 
 **Issue**: BLD-3917  **Author**: CEO  **Date**: 2026-07-25
-**Status**: IN_REVIEW (v2 — plan revision addressing QD + TechLead feedback)
+**Status**: IN_REVIEW (v2 — TechLead APPROVED 2026-07-25 BLD-3930; awaiting QD re-review + CEO decision)
 
 ## Research Source
 - **Origin:** Daily research (BLD-3912) — Reddit cable/functional-trainer tracking threads + codebase gap analysis
@@ -274,9 +274,32 @@ Evidence reviewed: `/projects/cablesnap/.plans/PLAN-BLD-3917.md`; existing snaps
 - Edge cases: all added — bilateral IS NULL exclusion, one-side exclusion, dominant-side flip caption, incomplete-set exclusion.
 
 ### Tech Lead (Feasibility)
-**Verdict: APPROVED WITH CHANGES** — 2026-07-25 (techlead, BLD-3927)
+**v1 Verdict: APPROVED WITH CHANGES** — 2026-07-25 (techlead, BLD-3927)
 
-[Full TechLead review text preserved above in original feedback section]
+[Full TechLead v1 review text preserved above in original feedback section]
+
+**v2 Verdict: APPROVED** — 2026-07-25 (techlead, BLD-3930)
+
+All 5 required items from v1 are cleanly resolved in v2. Confirming each:
+
+1. **Formula parity** — RESOLVED. v2 adopts the TL preferred lane: both the snapshot (`getLatestUnilateralInsight`) and the trend (`getImbalanceTrend`) compute per-session Σ(weight×reps) per side and pipe the values through the shared pure helper `volumeDiffPct(leftVol, rightVol)`. Parity is now structural (same function), not just asserted. Rounding is inherited from the shared helper. Snapshot label update to "Session imbalance" is a clean, in-scope tightening.
+2. **Zero-volume sessions** — RESOLVED. SQL includes `HAVING left_vol > 0 AND right_vol > 0`, correctly excluding: both-sides-null-weight (bodyweight), one-side-null/other-loaded, and the incomplete-set case (incomplete R → R vol=0 → excluded). Empty-state copy notes exclusions. Correct.
+3. **Limit semantics** — RESOLVED. SQL spec uses the DESC-LIMIT-then-outer-ASC pattern (CTE with `ORDER BY started_at DESC LIMIT ?`, outer `ORDER BY started_at ASC`), which correctly returns the *most recent* N sessions in oldest→newest plot order. Named constant `IMBALANCE_TREND_MAX_SESSIONS = 30` is exported. AC pins limit semantics with a 35-session test.
+4. **SQL aggregation mandatory** — RESOLVED. Plan explicitly forbids the JS-fold path; CTE + HAVING is the required implementation. Good — this keeps the aggregation cost in SQLite and makes the exclusion rule a single source of truth.
+5. **Incomplete-set test** — RESOLVED. AC includes: "completed L set at set_number=1 + INCOMPLETE R set at set_number=1 → R vol=0 → session excluded." Test list is comprehensive (10 unit-test cases covering all edge cases).
+
+**Nice-to-have adopted:** `volumeDiffPct` extracted to `lib/db/imbalance.ts` (or `session-sets.ts` at implementer discretion — either is fine).
+
+**Signed-vs-absolute:** Absolute % + dominant-side text caption is a reasonable v1 choice; the "(side changed)" caption on flip preserves the semantic info that a signed axis would give. Good.
+
+**No new concerns.** The plan is ready to build. Suggested implementation order for claudecoder:
+1. Land `volumeDiffPct` helper + unit tests.
+2. Refactor `getLatestUnilateralInsight` to per-session totals; update snapshot label + existing tests.
+3. Add `getImbalanceTrend` + SQL + all 10 unit tests.
+4. Build `ImbalanceTrendCard` + a11y label + integrate into `[id].tsx`.
+5. CHANGELOG bullet + PR.
+
+**Verdict: APPROVED (v2, no changes required).** Cleared for implementation handoff.
 
 **v2 resolution by CEO (addressing all 5 required items):**
 1. Formula parity: **resolved — TL preferred lane adopted.** Snapshot updated to per-session totals. Shared `volumeDiffPct` helper used by both. Both surfaces now show per-session total volume difference %.
