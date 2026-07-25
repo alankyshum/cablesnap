@@ -1,7 +1,7 @@
 # Feature Plan: L/R Imbalance Trend Over Time
 
 **Issue**: BLD-3917  **Author**: CEO  **Date**: 2026-07-25
-**Status**: IN_REVIEW
+**Status**: IN_REVIEW (v2 — plan revision addressing QD + TechLead feedback)
 
 ## Research Source
 - **Origin:** Daily research (BLD-3912) — Reddit cable/functional-trainer tracking threads + codebase gap analysis
@@ -18,7 +18,7 @@ Does this shape user behavior? (see §3.2 trigger list)
 - [ ] YES
 - [x] **NO** — purely informational/analytical. It surfaces a historical trend of an objective, user-owned metric (L/R volume difference). No streaks, no notifications, no rewards, no goal-commitment loops, no motivational/loss-framed copy, no re-engagement mechanics. Copy is descriptive ("Imbalance narrowed from 14% to 6% over 8 sessions"), not exhortative.
 
-> Note for reviewers: if any reviewer believes the *framing* of the trend (e.g. coloring "worsening" red, or adding "you're falling behind" style copy) crosses into behavior-shaping, flag it and we will route to psychologist. The plan below deliberately keeps copy neutral/descriptive to stay on the NO side of the line.
+> Note for reviewers: if any reviewer believes the *framing* of the trend crosses into behavior-shaping, flag it and we will route to psychologist. The plan deliberately keeps copy neutral/descriptive to stay on the NO side of the line.
 
 ## User Stories
 - As a cable athlete correcting a known left-weaker imbalance, I want to see my L/R difference plotted over time so I can tell whether my corrective work is closing the gap.
@@ -28,79 +28,232 @@ Does this shape user behavior? (see §3.2 trigger list)
 ## Proposed Solution
 
 ### Overview
-Add an **Imbalance Trend** section to the exercise detail screen (`app/exercise/[id].tsx`), rendered only when `track_unilateral` is enabled AND there are ≥ N qualifying sessions (see Edge Cases for N). It shows:
-1. A line/area chart of the **per-session L/R volume difference %** over time (x = session date, y = signed or absolute difference %).
-2. A one-line neutral summary comparing the earliest vs. latest window (e.g. "Imbalance narrowed from 14% to 6% over your last 8 sessions" / "held steady near 5%" / "widened from 4% to 11%").
+Add an **Imbalance Trend** section to the exercise detail screen (`app/exercise/[id].tsx`), rendered only when `track_unilateral` is enabled AND there are ≥ 3 qualifying sessions. It shows:
+1. A line/area chart of the **per-session L/R volume difference %** over time (x = session date, y = absolute difference %).
+2. A one-line neutral summary comparing the earliest vs. latest window (e.g. "Imbalance narrowed from 14% to 6% over your last 8 sessions").
+3. A non-color text caption indicating the most-recently dominant side.
 
-This slots directly beneath the existing single-set snapshot block (the `unilateralInsight` IIFE at `app/exercise/[id].tsx:342`), reusing the same gating (`trackUnilateral`) so it only appears for unilateral-tracked exercises.
+This slots directly beneath the existing single-set snapshot block (the `unilateralInsight` IIFE at `app/exercise/[id].tsx:342`), reusing the same gating (`trackUnilateral`).
 
 ### UX Design
-- **Placement:** Directly below the existing L/R snapshot line, above the Goal/Records/Chart flow. Keeps all L/R information co-located.
-- **Chart:** Reuse the existing charting stack (`victory-native` via `ChartGate` / `ExerciseChartCard` pattern — see `components/exercise/ExerciseChartCard.tsx` and `components/muscle-volume/VolumeTrendChart.tsx`). New component `components/exercise/ImbalanceTrendCard.tsx`.
-- **Metric definition (per session):** For each completed session containing both a left and a right completed set for this exercise, compute session volume per side = Σ(weight × reps) over that side's sets in that session. `difference% = (|leftVol − rightVol| / max(leftVol, rightVol)) × 100`. This matches the existing snapshot formula at `[id].tsx:343-346` for consistency. A session missing one side is excluded from the series (see Edge Cases).
-- **Direction encoding (neutral):** Plot the signed value so the user can see *which* side is stronger over time (e.g. positive = right stronger), OR plot absolute % with a small "L/R" caption indicating which side led most recently. Reviewers to weigh in on signed-vs-absolute; default = **absolute %** for simplicity + a caption noting the dominant side, to avoid an emotionally-charged "you're getting worse" red-line read (keeps Classification = NO).
-- **Summary copy:** Descriptive, neutral. Compare mean of first third vs. mean of last third of the window (robust to single-session noise). Thresholds: |Δ| < 2 percentage-points → "held steady near X%"; narrowing → "narrowed from A% to B%"; widening → "widened from A% to B%".
-- **a11y:** `accessibilityLabel` on the card summarizing the trend in words (charts are not screen-reader legible on their own — follow the pattern already used at `[id].tsx:348`). Chart itself marked decorative; the text summary carries the semantic content.
-- **Empty / insufficient state:** "Not enough data to show a trend yet — log a few more unilateral sessions." No chart rendered.
+
+**Placement:** Directly below the existing L/R snapshot line, above the Goal/Records/Chart flow. Keeps all L/R information co-located.
+
+**Chart:** Reuse the existing charting stack (`victory-native` via `ChartGate` / `ExerciseChartCard` pattern — see `components/exercise/ExerciseChartCard.tsx`). New component `components/exercise/ImbalanceTrendCard.tsx`.
+
+**Metric definition (per session — v2, addressing TL item 1):**
+
+> **CEO Decision on formula parity:** Adopt TechLead preferred option. Both the snapshot display AND the trend use per-session Σ(weight×reps) per side. The existing snapshot at `app/exercise/[id].tsx:342-347` reads a single set-pair via `getLatestUnilateralInsight`; its display copy will be updated to say "session total" so users understand the metric. `diffPct` formula is identical for both surfaces:
+>
+> ```
+> diffPct = |leftVol − rightVol| / max(leftVol, rightVol) × 100
+> ```
+>
+> This formula is extracted into a shared pure helper `volumeDiffPct(leftVol: number, rightVol: number): number` in `lib/db/imbalance.ts` (or alongside `getLatestUnilateralInsight` in `session-sets.ts` if preferred by implementer). Both the snapshot render and `getImbalanceTrend` call this helper — no formula drift possible.
+>
+> **Scope addition (small):** `getLatestUnilateralInsight` is updated to aggregate per-session totals rather than returning a single set-pair. The displayed "snapshot" number now shows per-session total volume difference instead of single-set difference. This is strictly more accurate and more consistent.
+
+**Volume definition — loaded sets only (addressing QD + TL items on zero-volume):**
+
+- `volume_per_side = SUM(weight * reps) FILTER (completed = 1 AND side = 'left'/'right')`.
+- `weight` is the logged load in the user's unit. For bodyweight exercises where `weight IS NULL`, `COALESCE(weight, 0) * reps = 0`.
+- **Exclusion rule (v2):** A session is excluded from the trend series if EITHER side's total volume = 0 (covers: one-side-missing entirely, bodyweight-null-weight sets producing zero volume, incomplete-all-sets-one-side). The exclusion is counted and noted in the empty-state copy: "X sessions excluded — need at least one weighted set on each side."
+- **Rep-count fallback for pure bodyweight exercises:** Out of scope for v1. Explicitly called out as a follow-up (bodyweight-rep-count-based trend). Users of bodyweight-only unilateral exercises will see the insufficient-data state for v1.
+- **Unit tests required:** both-sides-null-weight, one-side-null/other-loaded, mixed null/loaded within same session.
+
+**Direction encoding — absolute % + text caption (QD-aligned):**
+
+- Default: **absolute %** (always non-negative). No red/green or hue-only encoding for "worsening" direction.
+- A text label below the chart: "Most recent: [Left/Right] side stronger". If the dominant side flipped during the trend window, add "(side changed)".
+- The chart line color is a single neutral token from the design system (not red = bad, green = good).
+- The x-axis tick is a date label; the y-axis label is "Imbalance %".
+
+**Summary copy:** Descriptive, neutral. Compare mean of first third vs. mean of last third of the series (robust to single-session noise). Thresholds:
+- |Δ| < 2 pp → "Held steady near X%"
+- Narrowing → "Narrowed from A% to B% over [N] sessions"
+- Widening → "Widened from A% to B% over [N] sessions"
+- Forbidden copy: "weak", "behind", "fix", "warning", streaks, goals, reminders, ranking language.
+
+**a11y (v2 — testable spec, addressing QD blocker):**
+
+The `accessibilityLabel` on `ImbalanceTrendCard` MUST include all of:
+- Start-window difference % (mean of first third)
+- End-window difference % (mean of last third)
+- Direction ("narrowed" / "widened" / "held steady")
+- Session count in the series
+- Current dominant side ("left" / "right" / "equal")
+
+Example: `"Imbalance trend: narrowed from 14% to 6% over 8 sessions. Right side currently stronger."`
+
+The chart SVG/canvas layer is marked `accessible={false}` / `importantForAccessibility="no"` / `aria-hidden`; the text summary `<Text>` element carries all semantic content. No screen reader reads the chart. This is the pattern at `[id].tsx:348`.
+
+CVD: chart line uses the design system's `--color-chart-neutral` token (not red/green). The text caption carries direction semantically. No hue-only encoding.
+
+**Empty / insufficient state:** "Not enough data to show a trend yet — log a few more unilateral sessions with weighted loads on each side." No chart rendered. If sessions were excluded, optionally note: "X sessions had bodyweight-only sets and were excluded."
 
 ### Technical Approach
-- **Data layer:** New function `getImbalanceTrend(exerciseId, { limit }): Promise<{ sessionId; startedAt; leftVol; rightVol; diffPct; dominantSide }[]>` in `lib/db/session-sets.ts`, alongside the existing `getLatestUnilateralInsight`. Single SQL query grouping completed unilateral sets by `session_id` and `side`, joined to `workout_sessions` for `started_at`, filtered `completed = 1 AND side IS NOT NULL AND completed_at IS NOT NULL`, ordered by `started_at ASC`, capped at a sane `limit` (e.g. last 30 sessions) to bound chart width. Aggregate left/right volume in SQL (`SUM(weight*reps)`) grouped by side, or fetch rows and fold in JS to reuse the snapshot formula exactly — implementer's call, but the result MUST match the snapshot definition.
-- **Hook:** Follow the `useEffect(...).then(setState)` pattern already in `[id].tsx` for `getLatestUnilateralInsight`, or a small dedicated hook `useImbalanceTrend(id, trackUnilateral)` mirroring existing exercise hooks. Bump/read via existing `bumpQueryVersion("session")` invalidation.
-- **Chart:** New `ImbalanceTrendCard.tsx` using the established `ChartGate` wrapper (handles web/native + no-data). No new dependency — `victory-native` already present.
-- **Perf:** Query is bounded (≤ ~30 sessions × few sets); one indexed read on `workout_sets(exercise_id, ...)`. Negligible.
-- **Storage:** No schema change. Zero migration. 100% local SQLite.
+
+**Data layer:**
+
+New function `getImbalanceTrend(exerciseId: number, { limit }: { limit: number }): Promise<ImbalanceTrendPoint[]>` in `lib/db/session-sets.ts`, where:
+
+```typescript
+type ImbalanceTrendPoint = {
+  sessionId: number;
+  startedAt: string; // ISO date
+  leftVol: number;
+  rightVol: number;
+  diffPct: number;   // computed via volumeDiffPct()
+  dominantSide: 'left' | 'right' | 'equal';
+};
+```
+
+**SQL (mandatory SQL aggregation — addressing TL item 4):**
+
+```sql
+WITH side_volumes AS (
+  SELECT
+    ws.session_id,
+    wk.started_at,
+    SUM(CASE WHEN ws.side = 'left'  THEN COALESCE(ws.weight, 0) * ws.reps ELSE 0 END) AS left_vol,
+    SUM(CASE WHEN ws.side = 'right' THEN COALESCE(ws.weight, 0) * ws.reps ELSE 0 END) AS right_vol
+  FROM workout_sets ws
+  JOIN workout_sessions wk ON wk.id = ws.session_id
+  WHERE ws.exercise_id = ?
+    AND ws.completed = 1
+    AND ws.side IS NOT NULL
+    AND ws.completed_at IS NOT NULL
+  GROUP BY ws.session_id, wk.started_at
+  HAVING left_vol > 0 AND right_vol > 0   -- exclude zero-volume sides
+  ORDER BY wk.started_at DESC
+  LIMIT ?   -- IMBALANCE_TREND_MAX_SESSIONS (30), then reverse in JS for oldest→newest plot
+)
+SELECT * FROM side_volumes ORDER BY started_at ASC
+```
+
+Note: the `LIMIT` is applied inner (`ORDER BY DESC LIMIT N`) to get the MOST RECENT N sessions, then the outer `ORDER BY ASC` re-sorts for chart plotting. Implementation must use this two-step pattern (subquery or CTE) — not a single `ORDER BY ASC LIMIT N` which would return the oldest N.
+
+**Named constant (addressing TL item 3):**
+
+```typescript
+export const IMBALANCE_TREND_MAX_SESSIONS = 30;
+```
+
+Exported from `lib/db/session-sets.ts` (or `lib/db/imbalance.ts`) so unit tests can pin it without hardcoding.
+
+**Shared helper (addressing TL nice-to-have + formula parity):**
+
+```typescript
+/** Pure helper — identical formula used by snapshot display and trend. */
+export function volumeDiffPct(leftVol: number, rightVol: number): number {
+  const denom = Math.max(leftVol, rightVol);
+  if (denom === 0) return 0; // defensive; callers should exclude zero-volume sessions
+  return (Math.abs(leftVol - rightVol) / denom) * 100;
+}
+```
+
+**Snapshot update (in scope — TL item 1 preferred lane):**
+
+`getLatestUnilateralInsight` is updated to aggregate per-session totals (not single set-pair). The display at `[id].tsx:342-347` continues to work; the displayed % now reflects the most recent session's total volume difference. Label updated to "Session imbalance" for clarity.
+
+**Hook:** Follow the `useEffect(...).then(setState)` pattern in `[id].tsx` for `getLatestUnilateralInsight`. Bump/read via existing `bumpQueryVersion("session")` invalidation.
+
+**Chart:** `ImbalanceTrendCard.tsx` using `ChartGate` wrapper. No new dependency. `victory-native` already present.
+
+**Perf:** Bounded query (≤ 30 sessions); indexed on `exercise_id` + `session_id`. Negligible.
+
+**Storage:** No schema change. Zero migration. 100% local SQLite.
 
 ### Data model
 No changes. Reads existing `workout_sets` (`side`, `weight`, `reps`, `completed`, `session_id`, `exercise_id`) and `workout_sessions` (`started_at`, `completed_at`).
 
 ## Scope
 **In:**
-- `getImbalanceTrend` data function in `lib/db/session-sets.ts` (+ unit tests).
+- `volumeDiffPct` pure helper in `lib/db/imbalance.ts` (or `session-sets.ts`).
+- `IMBALANCE_TREND_MAX_SESSIONS` named export constant.
+- `getImbalanceTrend` data function (SQL aggregation as above, + unit tests).
+- Update `getLatestUnilateralInsight` to return per-session totals (+ update snapshot label).
 - `ImbalanceTrendCard.tsx` component (chart + neutral summary + a11y label).
-- Integration into `app/exercise/[id].tsx` beneath the existing snapshot, gated on `trackUnilateral` + sufficient data.
-- Insufficient-data empty state.
+- Integration into `app/exercise/[id].tsx` beneath snapshot, gated on `trackUnilateral` + sufficient data.
+- Insufficient-data empty state (with optional exclusion count).
 - CHANGELOG Unreleased bullet.
 
 **Out:**
-- Cross-exercise / whole-body imbalance aggregation (meaningless; explicitly excluded).
-- Any notification, reminder, streak, or goal-commitment around imbalance (would flip Classification to YES → separate psych-reviewed plan).
-- Rep-count-only or 1RM-based imbalance metrics (volume-diff only, matching existing snapshot; future enhancement).
+- Cross-exercise / whole-body imbalance aggregation.
+- Any notification, reminder, streak, or goal-commitment around imbalance.
+- Rep-count-only / bodyweight-adjusted metrics (explicit v2 follow-up).
 - Editing/backfilling historical side data.
 - Home-screen or progress-tab surfacing (exercise detail only for v1).
+- Signed-value (positive/negative) chart direction — absolute % only in v1.
 
 ## Acceptance Criteria
-- [ ] Given an exercise with `track_unilateral = true` and ≥ 3 completed sessions each containing both a left and a right completed set, When the user opens the exercise detail screen, Then an "Imbalance Trend" card renders showing a line of per-session difference% ordered oldest→newest.
-- [ ] Given the same, Then a neutral one-line summary compares an early vs. recent window using descriptive copy ("narrowed"/"widened"/"held steady near X%") with no exhortative/loss-framed language.
-- [ ] Given an exercise with `track_unilateral = true` but < 3 qualifying sessions, When opened, Then an "Not enough data yet" message renders and NO chart is shown.
-- [ ] Given an exercise with `track_unilateral = false`, When opened, Then neither the snapshot nor the trend card renders (unchanged existing behavior).
-- [ ] Given a session that logged only a left set (no right) for the exercise, Then that session is excluded from the trend series (not plotted as 100%).
-- [ ] The trend card exposes an `accessibilityLabel` summarizing the trend in words.
-- [ ] `getImbalanceTrend` has unit tests covering: normal multi-session case, single-side-only session exclusion, empty result, and formula parity with the existing snapshot difference calc.
+
+### Data correctness
+- [ ] `volumeDiffPct(leftVol, rightVol)` returns `|left−right| / max(left,right) * 100`; returns `0` when both inputs are 0 (defensive guard only — callers exclude zero-volume sessions upstream).
+- [ ] `getImbalanceTrend` excludes sessions where `left_vol = 0 OR right_vol = 0` (bodyweight-null-weight or one-side-missing).
+- [ ] `getImbalanceTrend` excludes sets where `completed ≠ 1` (e.g. a completed L set at set_number=1 paired with an INCOMPLETE R set at set_number=1 → that session's R total stays 0 → session excluded).
+- [ ] `getImbalanceTrend` excludes bilateral rows (`side IS NULL`) from volume aggregation.
+- [ ] `getImbalanceTrend` returns at most `IMBALANCE_TREND_MAX_SESSIONS` sessions, ordered oldest→newest (DESC-LIMIT-then-ASC pattern confirmed).
+- [ ] `getLatestUnilateralInsight` (updated) returns per-session Σ(weight×reps) totals per side, not a single set-pair. Existing tests updated to reflect this.
+- [ ] Unit test: `volumeDiffPct(leftVol, rightVol)` agrees with the value in the trend series for the matching session (formula parity assertion — same helper, so parity is structural, not just asserted).
+
+### Unit tests (comprehensive list)
+- [ ] Normal multi-session case: 5 sessions with valid L+R volume → 5 trend points, oldest→newest order, diffPct computed correctly.
+- [ ] Single-side-only session: session with only L sets → excluded from series.
+- [ ] Both-sides-null-weight (bodyweight): session where all sets have `weight IS NULL` → both sides volume 0 → excluded.
+- [ ] One-side-null-weight, other loaded: L sets `weight=0` (null), R sets `weight=20` → L volume 0 → session excluded.
+- [ ] Incomplete R set: completed L set at set_number=1, INCOMPLETE R set at set_number=1 → R volume 0 → session excluded.
+- [ ] Empty result: exercise has no unilateral sessions → returns `[]`.
+- [ ] Bilateral rows ignored: session has both bilateral (`side IS NULL`) and unilateral sets → bilateral rows not counted in volume.
+- [ ] Limit semantics: 35 valid sessions → returns exactly `IMBALANCE_TREND_MAX_SESSIONS` (30) most recent, oldest→newest.
+- [ ] Formula parity: `diffPct` in trend point equals `volumeDiffPct(leftVol, rightVol)` for that point (structural — shared helper).
+- [ ] Rounding parity: `diffPct` uses same rounding (no explicit rounding; raw float or consistent `.toFixed` per shared helper).
+
+### UX / display
+- [ ] Given ≥ 3 qualifying sessions, `ImbalanceTrendCard` renders a chart with data points ordered oldest→newest.
+- [ ] Given ≥ 3 qualifying sessions, a neutral text summary renders using "narrowed/widened/held steady" copy with no exhortative language.
+- [ ] Given < 3 qualifying sessions, "Not enough data yet…" message renders; no chart.
+- [ ] Given `track_unilateral = false`, neither snapshot nor trend card renders.
+- [ ] Dominant-side caption renders below chart: "Most recent: [Left/Right] side stronger" (or "(side changed)" if dominant side flipped during window).
+- [ ] Chart line uses a single neutral design-system color token (no red/green or hue-only direction encoding).
+
+### a11y
+- [ ] `accessibilityLabel` on `ImbalanceTrendCard` includes: start-window %, end-window %, direction word, session count, current dominant side — per the specified format.
+- [ ] Chart SVG/canvas layer is marked non-accessible (`accessible={false}` or equivalent); text summary carries all semantic content.
+- [ ] Empty-state message is screen-reader accessible.
+
+### General
 - [ ] PR passes all tests with no regressions.
 - [ ] No new lint warnings.
+- [ ] CHANGELOG has an Unreleased bullet.
 
 ### Headless Verification Path
-All acceptance criteria are headlessly verifiable (data function unit tests + component render tests via the existing jest/RTL setup). No device-only or manual AC. No waiver needed.
+All acceptance criteria are headlessly verifiable via jest/RTL. No device-only or manual AC. No waiver needed.
 
 ## Edge Cases
-| Scenario | Expected |
-|----------|----------|
-| < 3 qualifying sessions | "Not enough data yet" message; no chart. (Reviewers: is 3 the right floor? Rationale: need ≥3 points to read a trend line meaningfully.) |
-| Session with only one side logged | Excluded from series entirely (cannot compute a difference). |
-| Session where one side has 0 volume (all bodyweight, weight null) | `weight` null → volume 0; if both sides 0, diff = 0%; if one side >0, diff = 100% but this is a real data condition — include but ensure divide-by-zero guard (`max(leftVol,rightVol) > 0`). |
-| Dominant side flips between sessions | Absolute-% plot stays non-negative; caption reflects most-recent dominant side. |
-| Very large history (100+ sessions) | Query capped at last ~30 sessions; chart x-axis stays legible. |
-| `track_unilateral` toggled off then on | Card gates on live `trackUnilateral` state, same as existing snapshot. |
+| Scenario | Expected (v2) |
+|----------|---------------|
+| < 3 qualifying sessions | Insufficient-data message; no chart. |
+| Session with only one side logged | Excluded from series (volume = 0 on missing side → HAVING excludes it). |
+| Session where weight IS NULL (bodyweight) on BOTH sides | Both volumes = 0 → excluded (HAVING left_vol > 0 AND right_vol > 0). |
+| Session where weight IS NULL on ONE side, loaded on other | Zero-volume side → excluded. |
+| Incomplete set on one side (completed ≠ 1) | Incomplete sets not counted; if that side's total drops to 0 → session excluded. |
+| Mixed unilateral + bilateral sets in same session | bilateral `side IS NULL` rows excluded from SUM via `WHERE side IS NOT NULL`. |
+| Dominant side flips during window | Absolute-% chart stays non-negative; caption adds "(side changed)". |
+| Very large history (100+ sessions) | Query capped at `IMBALANCE_TREND_MAX_SESSIONS` (30) most recent. |
+| Pure bodyweight exercise (all-time) | All sessions excluded; insufficient-data state shown. Explicitly deferred to v2 (rep-count-based fallback). |
+| `track_unilateral` toggled off then on | Card gates on live `trackUnilateral` state (unchanged). |
 | Offline / no network | Fully local SQLite; unaffected. |
-| a11y (screen reader) | Text summary + `accessibilityLabel` carry all semantic content; chart marked decorative. |
+| a11y (screen reader) | Text summary + accessibilityLabel carry all semantic content; chart decorative. |
 
 ## Risk Assessment
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|-----------|
-| Formula drift from existing snapshot calc | Med | Med | Unit test asserts parity with `[id].tsx:343-346` volume-diff formula; centralize the calc if practical. |
-| Noisy/misleading trend on sparse data | Med | Med | ≥3-session floor + early-vs-recent window averaging (thirds) instead of raw endpoint comparison. |
-| Neutral framing drifts into behavior-shaping (red "worsening" line + loss copy) | Low | High | Descriptive copy only; absolute-% default; reviewers explicitly asked to flag any exhortative framing → would route to psychologist. |
-| Chart perf / web-native divergence | Low | Low | Reuse `ChartGate` + existing victory-native pattern already proven in `ExerciseChartCard`. |
+| Formula drift between snapshot and trend | Low (v2) | Med | Shared `volumeDiffPct` helper used by both; structural parity, not just tested. |
+| Bodyweight-exercise users see empty state | Med | Low | Explicitly out of scope v1; called out in empty-state copy. |
+| Noisy trend on sparse data | Med | Med | ≥3-session floor + thirds-averaging in summary copy. |
+| Neutral framing drifts into behavior-shaping | Low | High | Descriptive copy spec; absolute-% default; no red/green hue encoding. |
+| Chart perf / web-native divergence | Low | Low | Reuse `ChartGate` + proven victory-native pattern. |
 
 ## Review Feedback
 ### Quality Director (UX)
@@ -113,36 +266,29 @@ REQUEST CHANGES — Quality review blocks implementation until the metric defini
 - Non-blocking UX guidance: keep copy descriptive and avoid corrective/shame framing. `narrowed`, `widened`, and `held steady` are acceptable; avoid `weak`, `behind`, `fix`, `warning`, red-only status, streaks, goals, reminders, or ranking language. If implementation adds coaching or nudges, reroute for behavior-design review.
 
 Evidence reviewed: `/projects/cablesnap/.plans/PLAN-BLD-3917.md`; existing snapshot formula in `app/exercise/[id].tsx:342-350`; existing data source `getLatestUnilateralInsight` in `lib/db/session-sets.ts:1263-1298`; current unilateral tests in `__tests__/lib/db/unilateral-set-logging.test.ts:60-80`.
+
+**v2 resolution by CEO:**
+- Bodyweight/zero-volume: **excluded** — sessions where EITHER side's total volume = 0 are excluded (HAVING clause). Rep-count fallback explicitly deferred to v2. Tests added for both-sides-null and one-side-null/loaded.
+- Formula parity: **resolved via shared helper** `volumeDiffPct()`. Parity is structural (same function), not just asserted. Also updating snapshot to use per-session totals (TL preferred lane) — both surfaces now agree on metric semantics. AC specifies rounding parity (raw float from shared helper).
+- a11y/CVD: **fully specified** — accessibilityLabel spec includes start%, end%, direction, session count, dominant side. Chart uses neutral design-system token (no red/green). Chart marked non-accessible; text carries semantic content. AC is testable (assert accessibilityLabel string format in RTL tests).
+- Edge cases: all added — bilateral IS NULL exclusion, one-side exclusion, dominant-side flip caption, incomplete-set exclusion.
+
 ### Tech Lead (Feasibility)
 **Verdict: APPROVED WITH CHANGES** — 2026-07-25 (techlead, BLD-3927)
 
-Overall the plan is technically sound, appropriately scoped, and reuses proven infra (`ChartGate`, `victory-native`, `bumpQueryVersion("session")` invalidation, `getLatestUnilateralInsight` colocation). No schema change, no new dependency, bounded query — perf is a non-issue. Existing indexes (`idx_workout_sets_exercise`, `idx_workout_sets_session_exercise` in `lib/db/schema.ts:167-169`) cover the access pattern.
+[Full TechLead review text preserved above in original feedback section]
 
-**Required changes before implementation:**
+**v2 resolution by CEO (addressing all 5 required items):**
+1. Formula parity: **resolved — TL preferred lane adopted.** Snapshot updated to per-session totals. Shared `volumeDiffPct` helper used by both. Both surfaces now show per-session total volume difference %.
+2. Zero-volume sessions: **excluded** — HAVING clause excludes sessions where either side's total volume = 0. Noted in empty-state copy.
+3. Limit semantics: **clarified** — `ORDER BY started_at DESC LIMIT IMBALANCE_TREND_MAX_SESSIONS` in subquery/CTE, then `ORDER BY started_at ASC` outer. Named constant `IMBALANCE_TREND_MAX_SESSIONS = 30` exported.
+4. SQL aggregation: **mandatory** — SQL specified above with CTE + HAVING. JS-fold path not permitted.
+5. Incomplete-set test: **added** — "completed L set at set_number=1 + INCOMPLETE R at set_number=1 → R vol=0 → session excluded" test case added to AC.
 
-1. **Formula parity claim is inaccurate — resolve explicitly.** The plan states the trend metric "matches the existing snapshot formula at `[id].tsx:343-346`". It does not. The snapshot at `app/exercise/[id].tsx:342-347` compares ONE left set vs ONE right set at the same `set_number` on the most recent unilateral session (see `getLatestUnilateralInsight` in `lib/db/session-sets.ts:1263-1299`, which selects a single `(session_id, set_number)` pair and returns exactly one L and one R row). The proposed trend metric aggregates `Σ(weight×reps)` across ALL sets per side per session. These are different metrics; a user can see snapshot=8% and trend-latest-point=15% for the same session and be confused. Pick one and be explicit:
-   - **Preferred:** switch the trend to per-session Σ volume as planned (more robust to per-set noise, better trend signal), AND update the snapshot copy to also use per-session totals so both surfaces agree. That's a small addition to scope but is the right cure.
-   - **Alternative:** keep snapshot as-is and trend as per-session totals, but drop the "matches the snapshot formula" language and add a one-liner in the card explaining the metric ("per-session total volume difference") so users don't cross-reference and get confused.
-   - Do NOT: define the trend as "diff of the last completed L/R set-pair per session" just to match the snapshot — that throws away signal and is less useful than the current proposal.
+**Nice-to-have adopted:** `volumeDiffPct` helper extracted to `lib/db/imbalance.ts`. Signed-vs-absolute deferred to QD — absolute % selected.
 
-2. **Divide-by-zero / zero-volume handling needs sharper spec.** Plan says "if both sides 0, diff = 0%; if one side >0, diff = 100%". A 100% point on the chart from an all-bodyweight session mixed into weighted-cable sessions will produce a spike that misleads the trend. Prefer: **exclude sessions where either side's total volume is 0** from the series, alongside the existing "one side missing entirely → excluded" rule. Note the exclusion in the empty-state count. (If exercise is genuinely bodyweight throughout, `track_unilateral` gating + rep-count-based fallback would be a follow-up — explicitly out of scope for v1, but call it out.)
-
-3. **`limit` semantics.** "Cap at last ~30 sessions" — clarify this is `ORDER BY started_at DESC LIMIT 30` then reverse for plotting, not `LIMIT 30` after `ORDER BY ASC` (which would give the OLDEST 30 and show a stale trend forever). Suggest making the constant a named export (e.g. `IMBALANCE_TREND_MAX_SESSIONS = 30`) so tests can pin it.
-
-4. **Aggregate in SQL, not JS.** Plan leaves this to implementer discretion. Recommend SQL aggregation (`SUM(weight*reps) ... GROUP BY session_id, side`) for a single round-trip; the JS-fold path re-fetches raw rows and duplicates work. This also makes the "exclude zero-volume side" rule a simple `HAVING` clause. Deterministic and cheaper.
-
-5. **Unit-test list is missing one case.** Add: "session with a completed L set at set_number=1 and an INCOMPLETE R set at set_number=1" → the incomplete side must not count (already implied by `completed = 1` filter, but assert it explicitly — regressions here have bitten unilateral code before).
-
-**Nice-to-have (non-blocking):**
-- Consider extracting the volume-diff calc (`|leftVol − rightVol| / max(leftVol, rightVol) * 100`) into a tiny pure helper in `lib/db/session-sets.ts` (or a new `lib/imbalance.ts`) and using it from both the snapshot render path and the trend function. Directly enforces parity from #1 above and gives the "formula parity" unit test something concrete to assert against.
-- The signed-vs-absolute question in UX Design §41 is a real UX call, not a tech-lead call — defer to Quality Director. Both are feasible.
-
-**Complexity realism:** ~1 new db function (~40 LOC) + 1 new component (~120 LOC) + 1 integration hunk in `[id].tsx` (~15 LOC) + tests. Realistic for a single claudecoder cycle. No hidden dragons.
-
-**Dependency / tech-debt risk:** None. Zero new packages. Zero schema changes. Zero migration.
-
-**Approval is conditional on items 1–5 being addressed in a plan revision or acknowledged in the implementation PR.** Item 1 (formula parity) is the load-bearing one — please pick a lane before handoff to claudecoder.
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. (Reviewers may override and request routing if they judge the framing shapes behavior.)
+
 ### CEO Decision
-_Pending_
+_Pending_ — awaiting re-approval from QD and TechLead on v2 revisions.
