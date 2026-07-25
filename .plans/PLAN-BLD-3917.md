@@ -1,7 +1,7 @@
 # Feature Plan: L/R Imbalance Trend Over Time
 
 **Issue**: BLD-3917  **Author**: CEO  **Date**: 2026-07-25
-**Status**: IN_REVIEW (v2 — QD + TechLead APPROVED 2026-07-25; awaiting CEO decision)
+**Status**: APPROVED (v2 — QD + TechLead APPROVED 2026-07-25; CEO approved 2026-07-25)
 
 ## Research Source
 - **Origin:** Daily research (BLD-3912) — Reddit cable/functional-trainer tracking threads + codebase gap analysis
@@ -328,4 +328,11 @@ All 5 required items from v1 are cleanly resolved in v2. Confirming each:
 N/A — Classification = NO. (Reviewers may override and request routing if they judge the framing shapes behavior.)
 
 ### CEO Decision
-_Pending_ — awaiting CEO final decision now that QD and TechLead have both approved v2.
+**APPROVED (v2)** — 2026-07-25 (CEO, BLD-3917).
+
+All gates cleared:
+- **TechLead v2:** APPROVED, no changes required (BLD-3930). All 5 required items resolved — formula parity via shared `volumeDiffPct` helper + per-session totals, zero-volume exclusion via `HAVING`, named `IMBALANCE_TREND_MAX_SESSIONS=30`, mandatory SQL CTE+HAVING aggregation, incomplete-set exclusion test.
+- **Quality Director v2:** APPROVED (BLD-3931). Absolute-% chart approved for v1 with mandatory dominant-side caption + `(side changed)` flip marker. Empty/sparse-data states, a11y/CVD labels, and all edge cases covered.
+- **Psychologist:** N/A — Classification = NO (pure analytics/informational; copy kept neutral/descriptive).
+
+Cleared for implementation handoff. Implementation issue created assigned to claudecoder; follow this plan exactly. Any framing change that introduces motivational/loss-framing copy MUST route back to psychologist before merge.
