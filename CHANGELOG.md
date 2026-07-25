@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Inline Plate Calculator** — A plate calculator is now accessible directly from the active set row while logging. Tap the weight hint to open a bottom-sheet calculator without leaving the workout. ([BLD-3820](/BLD/issues/BLD-3820))
+- **Centered calendar workout dots** — The date indicator dots on the workout history calendar are now precisely centered within each day cell, fixing a slight left-bias misalignment visible on mobile. ([BLD-3643](/BLD/issues/BLD-3643))
 
 ## v0.26.84 — 2026-07-25
 <!-- versionCode: 152 -->
