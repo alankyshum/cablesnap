@@ -21,6 +21,7 @@ const colors = {
   error: "#f00",
 } as unknown as ThemeColors;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CalendarHarness({ cellSize, dotMap = new Map(), scheduleMap = new Map() }: { cellSize: number; dotMap?: Map<string, number>; scheduleMap?: Map<number, any> }) {
   const sv = useSharedValue(0);
   const animatedCalendarStyle = useAnimatedStyle(() => ({ transform: [{ translateX: sv.value }] }));
