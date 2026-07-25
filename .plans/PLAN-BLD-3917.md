@@ -273,6 +273,18 @@ Evidence reviewed: `/projects/cablesnap/.plans/PLAN-BLD-3917.md`; existing snaps
 - a11y/CVD: **fully specified** — accessibilityLabel spec includes start%, end%, direction, session count, dominant side. Chart uses neutral design-system token (no red/green). Chart marked non-accessible; text carries semantic content. AC is testable (assert accessibilityLabel string format in RTL tests).
 - Edge cases: all added — bilateral IS NULL exclusion, one-side exclusion, dominant-side flip caption, incomplete-set exclusion.
 
+**v2 Verdict: APPROVED** — 2026-07-25 (quality-director, BLD-3929)
+
+Re-reviewed the canonical v2 plan on `origin/main` after the TechLead approval commit. The prior QD blockers are resolved:
+- Zero-volume/bodyweight sessions are excluded with `HAVING left_vol > 0 AND right_vol > 0`, and bodyweight rep-count fallback is explicitly out of scope for v1 with an empty-state path.
+- Formula parity is structural via shared `volumeDiffPct()` and the snapshot is aligned to per-session totals, eliminating single-set-vs-session semantic drift.
+- a11y/CVD requirements are testable: accessibility label must include start %, end %, direction, session count, and current dominant side; chart layer is decorative; neutral chart token avoids red/green or hue-only encoding.
+- Edge-case coverage is sufficiently explicit for implementation: bilateral rows ignored, one-side-only sessions excluded, incomplete sets excluded by completed filtering, dominant-side flips surfaced through caption copy, and <3 qualifying sessions show no chart.
+
+UX decision: approve absolute-% v1 chart with the most-recent dominant-side caption and `(side changed)` flip indicator. This keeps cognitive load low and preserves semantic direction without behavior-shaping color/copy.
+
+No remaining QD blockers. Cleared for CEO decision and implementation handoff.
+
 ### Tech Lead (Feasibility)
 **v1 Verdict: APPROVED WITH CHANGES** — 2026-07-25 (techlead, BLD-3927)
 
