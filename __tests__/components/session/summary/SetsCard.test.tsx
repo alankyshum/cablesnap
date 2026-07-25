@@ -35,12 +35,14 @@ describe("SetsCard spacing and rendering (BLD-3660)", () => {
       sets: [
         { id: "set-1", weight: 100, reps: 5, tempo: "3010", rpe: 8 },
         { id: "set-2", weight: 80, reps: 4, tempo: null, rpe: 8.5 },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ] as any[],
     },
     {
       name: "Bench Press",
       sets: [
         { id: "set-3", weight: 60, reps: 8, tempo: null, rpe: 9 },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       ] as any[],
     },
   ];
