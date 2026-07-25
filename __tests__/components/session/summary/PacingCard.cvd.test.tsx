@@ -23,7 +23,7 @@
 import React from "react";
 import { Platform } from "react-native";
 import { render } from "@testing-library/react-native";
-import PacingCard, { HatchOverlay, WorkingDashOverlay } from "../../../../components/session/summary/PacingCard";
+import PacingCard, { HatchOverlay, WorkingDashOverlay, RestDashOverlay } from "../../../../components/session/summary/PacingCard";
 import type { PacingBreakdown } from "@/lib/session-pacing";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -91,10 +91,11 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     expect(dash).toBeTruthy();
   });
 
-  // ── 4. Rest segment has NO pattern overlay ────────────────────────────────
-  it("does NOT render a pattern on the Rest bar segment", () => {
-    const { queryByTestId } = render(<PacingCard pacing={makePacing()} />);
-    expect(queryByTestId("pacing-seg-rest-pattern", { includeHiddenElements: true })).toBeNull();
+  // ── 4. Rest segment carries the vertical-dash cue (BLD-3879) ───────────────
+  it("renders the vertical dash pattern overlay on the Rest bar segment", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const restPattern = getByTestId("pacing-seg-rest-pattern", { includeHiddenElements: true });
+    expect(restPattern).toBeTruthy();
   });
 
   // ── 5. Working legend dot carries the horizontal-dash cue (BLD-2713/BLD-2714)
@@ -107,10 +108,11 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     expect(dotDash).toBeTruthy();
   });
 
-  // ── 6. Rest dot has NO pattern overlay ────────────────────────────────────
-  it("does NOT render a pattern on the Rest legend dot", () => {
-    const { queryByTestId } = render(<PacingCard pacing={makePacing()} />);
-    expect(queryByTestId("pacing-dot-rest-pattern", { includeHiddenElements: true })).toBeNull();
+  // ── 6. Rest dot carries the vertical-dash cue (BLD-3879) ───────────────────
+  it("renders the vertical dash pattern overlay on the Rest legend dot", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dotRestPattern = getByTestId("pacing-dot-rest-pattern", { includeHiddenElements: true });
+    expect(dotRestPattern).toBeTruthy();
   });
 
   // ── 7. Base backgroundColor preserved on each segment ─────────────────────
@@ -206,6 +208,14 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     expect(queryByTestId("pacing-seg-working-pattern", { includeHiddenElements: true })).toBeNull();
   });
 
+  // ── 9c. restFrac == 0: no crash, rest pattern absent ──────────────────────
+  it("does not render rest pattern on Rest segment when rest time is zero", () => {
+    // working + other == gross leaves restFrac = 0
+    const pacing = makePacing({ working: 900, rest: 0, other: 900, gross: 1800 });
+    const { queryByTestId } = render(<PacingCard pacing={pacing} />);
+    expect(queryByTestId("pacing-seg-rest-pattern", { includeHiddenElements: true })).toBeNull();
+  });
+
   // ── 10. isEmpty path renders without crash ────────────────────────────────
   it("renders empty state without crashing (no bar rendered)", () => {
     const pacing = makePacing({ isEmpty: true, working: 0, rest: 0, other: 0, gross: 0 });
@@ -248,6 +258,17 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
 
   it("WorkingDashOverlay returns null when height is 0", () => {
     const { toJSON } = render(<WorkingDashOverlay width={18} height={0} />);
+    expect(toJSON()).toBeNull();
+  });
+
+  // ── 12c. RestDashOverlay unit: returns null for zero/negative dims ─────
+  it("RestDashOverlay returns null when width is 0", () => {
+    const { toJSON } = render(<RestDashOverlay width={0} height={18} />);
+    expect(toJSON()).toBeNull();
+  });
+
+  it("RestDashOverlay returns null when height is 0", () => {
+    const { toJSON } = render(<RestDashOverlay width={18} height={0} />);
     expect(toJSON()).toBeNull();
   });
 
@@ -312,21 +333,36 @@ describe("PacingCard — CVD hatch fix (BLD-1939)", () => {
     expect(dotDash.props.height).toBe(8);
   });
 
-  // ── 14. Working dash and Other dot use distinct SVG pattern IDs ───────────
+  // ── 13c. Rest dash bar must be full-fill (BLD-3902) ──────────────────────
+  it("bar Rest dash SVG canvas is full-fill (width/height = '100%')", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const restDash = getByTestId("pacing-seg-rest-pattern", { includeHiddenElements: true });
+    expect(restDash.props.width).toBe("100%");
+    expect(restDash.props.height).toBe("100%");
+  });
+
+  it("legend dot rest dash SVG canvas keeps explicit 8×8 dimensions (not full-fill)", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const dotRestDash = getByTestId("pacing-dot-rest-pattern", { includeHiddenElements: true });
+    expect(dotRestDash.props.width).toBe(8);
+    expect(dotRestDash.props.height).toBe(8);
+  });
+
+  // ── 14. Working dash, Rest dash, and Other dot use distinct SVG pattern IDs 
   //
-  // The two overlays must use DIFFERENT SVG Pattern IDs so they render distinct
-  // shapes. If both had the same ID, the second Defs block would shadow the first
+  // The three overlays must use DIFFERENT SVG Pattern IDs so they render distinct
+  // shapes. If two had the same ID, the second Defs block would shadow the first
   // and both segments would look identical — defeating the CVD fix.
   //
-  // Both use url(#...) pattern fills; we distinguish by finding both Defs
+  // They use url(#...) pattern fills; we distinguish by finding both Defs
   // patterns and asserting that the Pattern elements have different IDs.
-  it("Other dot and Working dash patterns have distinct SVG Pattern IDs", () => {
+  it("Other dot, Working dash, and Rest dash patterns have distinct SVG Pattern IDs", () => {
     const { UNSAFE_getAllByType } = render(<PacingCard pacing={makePacing()} />);
     const { Pattern } = require("react-native-svg");
     const patterns = UNSAFE_getAllByType(Pattern);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = new Set(patterns.map((p: any) => p.props.id as string | undefined));
-    // Must have at least two distinct IDs (one for dot, one for dash)
-    expect(ids.size).toBeGreaterThanOrEqual(2);
+    // Must have at least three distinct IDs (one for dot, one for working dash, one for rest vertical dash)
+    expect(ids.size).toBeGreaterThanOrEqual(3);
   });
 });
