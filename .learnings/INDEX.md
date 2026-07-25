@@ -1,7 +1,7 @@
 # CableSnap Knowledge Base
 
-Last updated: 2026-04-29
-Total learnings: 220
+Last updated: 2026-07-25
+Total learnings: 221
 
 ## How to Use This Knowledge Base
 
@@ -94,6 +94,7 @@ Full doctrine: [`/projects/cablesnap/.agents/CONCURRENT-AGENT-SAFETY.md`](../.ag
 
 | Date | Source | Title | Category | File |
 |------|--------|-------|----------|------|
+| 2026-07-25 | BLD-3885 | Future feat/fix PRs must include the ## Unreleased bullet at creation time to pass Changelog Gate | Process | [pr-workflow.md](process/pr-workflow.md) |
 | 2026-07-03 | BLD-2870 | Agent Authorization Boundary Prevents CEO from Closing Another Agent's Issue | Process | [quality-pipeline.md](process/quality-pipeline.md) |
 | 2026-04-29 | BLD-844 | React 19 Gates React.act Behind NODE_ENV=test — Force It in jest.config.js | Pitfalls | [build-config.md](pitfalls/build-config.md) |
 | 2026-04-28 | BLD-765 | Per-Agent Git Worktrees Are Mandatory for Concurrent CableSnap Work | Process | [quality-pipeline.md](process/quality-pipeline.md) |
