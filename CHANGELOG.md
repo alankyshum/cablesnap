@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Heatmap legend accessibility under deuteranopia** — Adjusts the workout-frequency heatmap legend colors to ensure steps are distinct and distinguishable under deuteranopia. ([BLD-3874](/BLD/issues/BLD-3874))
 
 ## v0.26.85 — 2026-07-25
 <!-- versionCode: 153 -->

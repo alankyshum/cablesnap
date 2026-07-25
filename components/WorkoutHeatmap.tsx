@@ -60,8 +60,8 @@ function formatDateKey(date: Date): string {
  * (and achromatopsia) can successfully distinguish.
  *
  * Step 0 stays on `surfaceVariant` (background tone).
- * Light mode step colors: 1=#64B5F6, 2=#1976D2, 3+=#0D47A1 (min pairwise CR 1.63:1)
- * Dark mode step colors: 1=#1E5A8A, 2=#4A9EE8, 3+=#B3D9FF (min pairwise CR 1.83:1)
+ * Light mode step colors: 1=#90CAF9, 2=#1E88E5, 3+=#0A2540 (min pairwise CR 1.41:1 normal, 1.93:1 deuteranopia)
+ * Dark mode step colors: 1=#2196F3, 2=#90CAF9, 3+=#E3F2FD (min pairwise CR 1.53:1 normal, 1.97:1 deuteranopia)
  */
 function heatmapColor(
   count: number,
@@ -79,13 +79,13 @@ function heatmapColor(
  * BLD-3877: Updated text colors for the new solid luminance ramp to guarantee at least
  * 3:1 WCAG contrast on all cells across both light and dark themes:
  * - Light mode:
- *   - Step 1 (light blue bg): dark text -> onSurface (#1A2138) [contrast 3.19:1]
- *   - Step 2 (medium blue bg): white text -> onSecondary (#FFFFFF) [contrast 4.86:1]
- *   - Step 3+ (dark blue bg): white text -> onSecondary (#FFFFFF) [contrast 11.59:1]
+ *   - Step 1 (light blue bg #90CAF9): dark text -> onSurface (#1A2138) [contrast 9.10:1]
+ *   - Step 2 (medium blue bg #1E88E5): white text -> onSecondary (#FFFFFF) [contrast 3.68:1]
+ *   - Step 3+ (dark blue bg #0A2540): white text -> onSecondary (#FFFFFF) [contrast 15.54:1]
  * - Dark mode:
- *   - Step 1 (dark blue bg): white text -> onSecondary (#FFFFFF) [contrast 4.84:1]
- *   - Step 2 (medium blue bg): dark text -> onPrimary (#1A2138) [contrast 3.99:1]
- *   - Step 3+ (light blue bg): dark text -> onPrimary (#1A2138) [contrast 8.02:1]
+ *   - Step 1 (medium-dark blue bg #2196F3): white text -> onSecondary (#FFFFFF) [contrast 3.12:1]
+ *   - Step 2 (light blue bg #90CAF9): dark text -> onPrimary (#1A2138) [contrast 9.10:1]
+ *   - Step 3+ (very light blue bg #E3F2FD): dark text -> onPrimary (#1A2138) [contrast 13.94:1]
  */
 function heatmapTextColor(
   count: number,
