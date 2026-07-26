@@ -179,13 +179,13 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             exclude module: "expo-wearos-bridge"
         }
     }
-    allprojects { project ->
+    subprojects { project ->
         project.plugins.withId("com.android.library") {
+            project.afterEvaluate {
             def compileOnly = project.configurations.maybeCreate("compileOnly")
             ["implementation", "api"].each { configurationName ->
                 project.configurations.named(configurationName) {
-                    withDependencies { dependencies ->
-                        def proprietary = dependencies.findAll { dependency ->
+                    def proprietary = dependencies.findAll { dependency ->
                             dependency.group in [
                                 "com.google.android.gms",
                                 "com.google.firebase",
@@ -196,12 +196,12 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
                                 "expo-wearos-bridge",
                             ]
                         }
-                        dependencies.removeAll(proprietary)
-                        proprietary.each { dependency ->
-                            compileOnly.dependencies.add(dependency)
-                        }
+                    dependencies.removeAll(proprietary)
+                    proprietary.each { dependency ->
+                        compileOnly.dependencies.add(dependency)
                     }
                 }
+            }
             }
         }
     }
