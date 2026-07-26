@@ -81,6 +81,13 @@ jobs:
 
       - name: Generate native project
         env:
+          # CABLESNAP_FDROID=1 activates the fdroid-specific prebuild patches
+          # in plugins/with-wearos-module.js — including the FDROID_EXCLUDES
+          # gradle block that strips com.google.android.gms (the source of
+          # 446 GMS Wearable classes previously leaking into the F-Droid APK
+          # per AC10b). Must match the flag set on the assembleReleaseFdroid
+          # step below and mirrors scheduled-release.yml:313.
+          CABLESNAP_FDROID: "1"
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -142,6 +149,14 @@ jobs:
         # map upload. Escape hatch documented at
         # node_modules/@sentry/react-native/sentry.gradle:11.
         env:
+          # CABLESNAP_FDROID=1 activates the fdroid exclude block in
+          # plugins/with-wearos-module.js (FDROID_EXCLUDES_BLOCK, gated on
+          # System.getenv("CABLESNAP_FDROID") == "1") which excludes
+          # com.google.android.gms — the source of the 446 GMS Wearable
+          # classes previously landing in app-releaseFdroid.apk (AC10b
+          # regression, Actions run #30216904911). Mirrors
+          # scheduled-release.yml:366.
+          CABLESNAP_FDROID: "1"
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           set -euo pipefail
