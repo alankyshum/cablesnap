@@ -312,9 +312,11 @@ describe("patchProjectBuildGradle", () => {
     }
     expect(out).toContain('exclude module: "camera-mlkit-vision"');
     expect(out).toContain('exclude module: "expo-wearos-bridge"');
-    expect(out).toMatch(
-      /subprojects\s*\{ project ->[\s\S]*plugins\.withId\("com\.android\.library"\)[\s\S]*project\.afterEvaluate[\s\S]*dependencies\.removeAll\(proprietary\)[\s\S]*compileOnly\.dependencies\.add\(dependency\)/,
-    );
+    expect(out).toContain("gradle.beforeProject { project ->");
+    expect(out).toContain("project.buildFile.exists()");
+    expect(out).toContain("implementation");
+    expect(out).toContain("com\\.google");
+    expect(out).toContain("compileOnly");
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
     else process.env.CABLESNAP_FDROID = previous;
   });

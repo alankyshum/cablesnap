@@ -179,31 +179,16 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             exclude module: "expo-wearos-bridge"
         }
     }
-    subprojects { project ->
-        project.plugins.withId("com.android.library") {
-            project.afterEvaluate {
-            def compileOnly = project.configurations.maybeCreate("compileOnly")
-            ["implementation", "api"].each { configurationName ->
-                project.configurations.named(configurationName) {
-                    def proprietary = dependencies.findAll { dependency ->
-                            dependency.group in [
-                                "com.google.android.gms",
-                                "com.google.firebase",
-                                "com.google.mlkit",
-                                "com.android.installreferrer",
-                            ] || dependency.name in [
-                                "camera-mlkit-vision",
-                                "expo-wearos-bridge",
-                            ]
-                        }
-                    dependencies.removeAll(proprietary)
-                    proprietary.each { dependency ->
-                        compileOnly.dependencies.add(dependency)
-                    }
-                }
-            }
-            }
+    gradle.beforeProject { project ->
+        if (project == rootProject || !project.buildFile.exists()) return
+        def buildFile = project.buildFile
+        def original = buildFile.getText("UTF-8")
+        def patched = original.replaceAll(
+            /(?m)^(\\s*)implementation(\\s+['"](?:com\\.google\\.(?:android\\.gms|firebase|mlkit)|com\\.android\\.installreferrer|androidx\\.camera:camera-mlkit-vision):[^'"\\n]+['"]\\s*)$/
+        ) { _, indent, notation ->
+            "\${indent}compileOnly\${notation}"
         }
+        if (patched != original) buildFile.setText(patched, "UTF-8")
     }
 }
 `;
