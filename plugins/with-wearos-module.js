@@ -178,9 +178,15 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             exclude module: "camera-mlkit-vision"
             exclude module: "expo-wearos-bridge"
         }
+    }
+    subprojects {
         afterEvaluate {
-            configurations.matching { it.name.endsWith("RuntimeClasspath") }.all {
-                dependencies.removeAll { dependency ->
+            def compileOnly = configurations.findByName("compileOnly")
+            if (compileOnly == null) return
+            ["implementation", "api"].each { configurationName ->
+                def configuration = configurations.findByName(configurationName)
+                if (configuration == null) return
+                def proprietary = configuration.dependencies.findAll { dependency ->
                     dependency.group in [
                         "com.google.android.gms",
                         "com.google.firebase",
@@ -190,6 +196,10 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
                         "camera-mlkit-vision",
                         "expo-wearos-bridge",
                     ]
+                }
+                proprietary.each { dependency ->
+                    configuration.dependencies.remove(dependency)
+                    compileOnly.dependencies.add(dependency)
                 }
             }
         }
