@@ -12,7 +12,7 @@ export function MacroRow({ label: name, value, target, unit, colors }: {
     <View style={styles.macro}>
       <View style={styles.macroHeader}>
         <Text variant="caption" style={{ color: colors.onSurface }}>{name}</Text>
-        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{Math.round(value)}{u} / {Math.round(target)}{u}</Text>
+        <Text variant="caption" style={{ color: colors.onSurface }}>{Math.round(value)}{u} / {Math.round(target)}{u}</Text>
       </View>
       <Progress value={target > 0 ? Math.min(value / target, 1) * 100 : 0} style={styles.bar} />
     </View>

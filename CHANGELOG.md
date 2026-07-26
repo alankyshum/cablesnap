@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Improved nutrition text contrast** — Fixes low-contrast calorie/macro value text in the Nutrition tab for better readability under color vision deficiencies. ([BLD-4041](/BLD/issues/BLD-4041))
 - **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
 
 ## v0.26.88 — 2026-07-26
