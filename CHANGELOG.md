@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **'Record a clip' empty-state button is now visible to users with protanopia and other color vision deficiencies** — a luminance-defined border and adjusted text color ensure the button shape and label remain clearly distinguishable even when the coral brand color desaturates under CVD simulation.
 - **F-Droid builds now exclude Firebase, ML Kit, Google Play Services, and Install Referrer dependencies**, keeping proprietary classes out of the APK.
 - **F-Droid runtime resolution now removes direct proprietary Expo dependencies**, preventing those classes from entering the APK.
 - **F-Droid builds keep proprietary Expo dependencies compile-only**, preserving native compilation while excluding their classes from runtime packaging.
