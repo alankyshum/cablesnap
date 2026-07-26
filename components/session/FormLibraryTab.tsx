@@ -394,7 +394,7 @@ function RecordCTAButton({ isResolved, isEnabled, reason, onRecord }: RecordCTAB
     : reason === "all_have_clips"
     ? "Replace or delete an existing clip below to record a new one."
     : undefined;
-  const iconColor = isEnabled ? colors.onPrimary : colors.onSurfaceVariant;
+  const iconColor = isEnabled ? colors.recordCTAPrimaryForeground : colors.onSurfaceVariant;
   return (
     <Pressable
       onPress={isEnabled ? onRecord : undefined}
@@ -405,7 +405,7 @@ function RecordCTAButton({ isResolved, isEnabled, reason, onRecord }: RecordCTAB
       hitSlop={8}
       style={[
         styles.recordCTA,
-        { backgroundColor: colors.primary },
+        { backgroundColor: colors.recordCTAPrimary },
         !isEnabled && [styles.recordCTADisabled, { borderColor: colors.outline }],
       ]}
       disabled={!isEnabled}
@@ -744,8 +744,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     flexDirection: "row",
     justifyContent: "space-between",
   },

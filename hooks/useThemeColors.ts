@@ -115,6 +115,13 @@ export function useThemeColors() {
     heatmapFreq2: t.heatmapFreq2,
     heatmapFreq3: t.heatmapFreq3,
     heatmapFrequency: t.blue,
+
+    // RecordCTA button — CVD-hardened token pair (BLD-4036).
+    // Use these instead of primary/onPrimary for the Record action button so that
+    // contrast ≥ 4.5:1 is preserved under all CVD simulations (protanopia, deut,
+    // tritan). See theme/colors.ts for verified contrast ratios.
+    recordCTAPrimary: t.recordCTAPrimary,
+    recordCTAPrimaryForeground: t.recordCTAPrimaryForeground,
   };
 }
 

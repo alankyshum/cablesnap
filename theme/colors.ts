@@ -81,6 +81,26 @@ const lightColors = {
   heatmapFreq1: "#90CAF9",
   heatmapFreq2: "#1E88E5",
   heatmapFreq3: "#0A2540",
+  // RecordCTA button — CVD-hardened primary for the "Record" action button
+  // (BLD-4036, protanopia audit 2026-07-26).
+  //
+  // The standard `primary` token (#FF6038) uses navy (#1A2138) as foreground.
+  // Under protanopia simulation, the coral shifts to ~#80803b (olive) and the
+  // navy shifts to ~#202038, reducing text-on-button contrast from 5.30:1 to
+  // 3.83:1 — failing WCAG AA.
+  //
+  // Fix: use a deeper coral (#C03010) with white (#FFFFFF) foreground.
+  // Verified contrast ratios (all ≥ 4.5:1):
+  //   Normal:      white on #C03010 = 5.72:1  ✅
+  //   Protanopia:  white on sim     = 8.03:1  ✅
+  //   Deuteranopia:white on sim     = 4.95:1  ✅
+  //   Tritanopia:  white on sim     = 5.70:1  ✅
+  //
+  // Do NOT change these values without re-running the CVD contrast verification
+  // in __tests__/theme/record-cta-cvd-contrast.test.ts.
+  recordCTAPrimary: "#C03010",
+  recordCTAPrimaryForeground: "#FFFFFF",
+
   // Shadows & overlays
   shadow: "#000000",
   onToast: "#FFFFFF",
@@ -169,6 +189,19 @@ const darkColors = {
   heatmapFreq1: "#2196F3",
   heatmapFreq2: "#90CAF9",
   heatmapFreq3: "#E3F2FD",
+  // RecordCTA button — CVD-hardened primary for dark mode (BLD-4036).
+  //
+  // Dark-mode companion to lightColors.recordCTAPrimary.
+  // #C02A10 with white (#FFFFFF) foreground passes WCAG AA in all CVD modes:
+  //   Normal:      5.87:1  ✅
+  //   Protanopia:  8.40:1  ✅
+  //   Deuteranopia:5.02:1  ✅
+  //   Tritanopia:  5.89:1  ✅
+  //
+  // Do NOT change without re-running __tests__/theme/record-cta-cvd-contrast.test.ts.
+  recordCTAPrimary: "#C02A10",
+  recordCTAPrimaryForeground: "#FFFFFF",
+
   // Shadows & overlays
   shadow: "#000000",
   onToast: "#FFFFFF",
