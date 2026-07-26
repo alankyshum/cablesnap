@@ -656,7 +656,7 @@ const styles = StyleSheet.create({
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  headerTitle: { fontSize: fontSizes.base, fontWeight: "600" },
+  headerTitle: { fontSize: fontSizes.base, fontWeight: "600", lineHeight: fontSizes.base * 1.25, includeFontPadding: false, textAlignVertical: "center" },
   countBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
   countBadgeText: { fontSize: fontSizes.xs, fontWeight: "700" },
   selectTogglePressable: {
@@ -691,7 +691,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 16,
     alignItems: "center",
   },
   cta: {
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     marginTop: 4,
   },
-  grid: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 32 },
+  grid: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 32 },
   // BLD-2741: Use space-between + fixed 48% width instead of gap+flex:1.
   // Under react-native-web@0.21, gap+flex:1 in a FlatList columnWrapperStyle
   // over-allocates the right cell past the container's right padding, leaving
