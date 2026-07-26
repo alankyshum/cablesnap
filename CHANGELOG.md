@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 _No user-facing changes yet._
+- **F-Droid builds now use R8 dead-code elimination to strip proprietary classes shaded inside Expo AARs**, closing the AC10b gate that coordinate-based Gradle exclusions could not reach (Firebase, ML Kit, GMS tasks, Install Referrer). Play builds are unaffected. ([BLD-4124](/BLD/issues/BLD-4124))
 - **F-Droid store metadata is now maintained in this repository**, including the app description, screenshots, icon, and release notes.
 - **Progress calendar toggle is easier to tap**, increasing the list/calendar switch touch target to meet the 44dp accessibility minimum. ([BLD-4077](/BLD/issues/BLD-4077))
 - **F-Droid builds now exclude Firebase, ML Kit, Google Play Services, and Install Referrer dependencies**, keeping proprietary classes out of the APK.

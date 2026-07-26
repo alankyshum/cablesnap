@@ -9,8 +9,10 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidProguardRules,
   patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
+  FDROID_PROGUARD_RULES,
 } = require("../../plugins/with-wearos-module");
 
 // Minimal but realistic fixtures matching the shape Expo's Android template
@@ -152,6 +154,45 @@ describe("patchAppBuildGradle", () => {
     expect(out).toMatch(/releaseFdroid\s*\{[\s\S]*?matchingFallbacks\s*=\s*\["release"\]/);
     // Sentinel marker for idempotency.
     expect(out).toContain("// cablesnap:wearos:build-types");
+  });
+
+  it("references proguard-fdroid-strip.pro from the releaseFdroid build type (BLD-4124)", () => {
+    // Coordinate-based `configurations.all { exclude group: ... }` cannot
+    // strip classes that `expo-camera` / `expo-notifications` shade into
+    // their own AARs. R8's dead-code elimination CAN — but only if we point
+    // the releaseFdroid build type at a rules file containing the
+    // `-assumenosideeffects` / `-dontwarn` directives for the proprietary
+    // packages. This assertion locks that wiring in place.
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?proguardFiles[\s\S]*?getDefaultProguardFile\('proguard-android-optimize\.txt'\)[\s\S]*?'proguard-rules\.pro'[\s\S]*?'proguard-fdroid-strip\.pro'/,
+    );
+    // The Play `release` build type MUST NOT reference the F-Droid strip
+    // rules file — its presence in `release` would apply Firebase / MLKit
+    // stripping to the Play APK and break barcode scanning + FCM.
+    const releaseBlockMatch = out.match(
+      /(?<!Fdroid)\brelease\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/,
+    );
+    expect(releaseBlockMatch).not.toBeNull();
+    expect(releaseBlockMatch[0]).not.toContain("proguard-fdroid-strip.pro");
+  });
+
+  it("forces minifyEnabled true on releaseFdroid so R8 actually strips (BLD-4124)", () => {
+    // Expo/RN's stock template gates `release`'s minifyEnabled on the
+    // `enableProguardInReleaseBuilds` gradle property (default `false`),
+    // and `initWith release` inherits that value. Without `minifyEnabled
+    // true` on `releaseFdroid`, R8 does not run and every rule in
+    // `proguard-fdroid-strip.pro` is a no-op — AC10b would still fail.
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(/releaseFdroid\s*\{[\s\S]*?minifyEnabled\s+true/);
+    // Play `release` must remain unminified (unchanged from the fixture) —
+    // enabling R8 there without Firebase/MLKit keep rules would break the
+    // Play APK's barcode scanning and FCM.
+    const releaseBlockMatch = out.match(
+      /(?<!Fdroid)\brelease\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/,
+    );
+    expect(releaseBlockMatch).not.toBeNull();
+    expect(releaseBlockMatch[0]).not.toMatch(/minifyEnabled\s+true/);
   });
 
   it("uses debug signing for releaseFdroid without making it debuggable", () => {
@@ -622,6 +663,139 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
       expect(
         fs.existsSync(path.join(tmp, "app", "src", "releaseFdroid")),
       ).toBe(true);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+});
+
+// ----------------------------------------------------------------------------
+// writeFdroidProguardRules + FDROID_PROGUARD_RULES  (BLD-4124)
+// ----------------------------------------------------------------------------
+//
+// Coordinate-based `configurations.all { exclude group: ... }` cannot strip
+// classes that `expo-camera` / `expo-notifications` shade into their own
+// AARs. R8's whole-program dead-code elimination CAN — but only if the
+// releaseFdroid build type is pointed at a rules file with
+// `-assumenosideeffects` / `-dontwarn` directives for the proprietary
+// packages. These tests lock in both the content of that rules file and
+// the write behaviour that produces it.
+describe("writeFdroidProguardRules + FDROID_PROGUARD_RULES (BLD-4124)", () => {
+  const ORIGINAL_FDROID_ENV = process.env.CABLESNAP_FDROID;
+  afterEach(() => {
+    if (ORIGINAL_FDROID_ENV === undefined) {
+      delete process.env.CABLESNAP_FDROID;
+    } else {
+      process.env.CABLESNAP_FDROID = ORIGINAL_FDROID_ENV;
+    }
+  });
+
+  it("declares -assumenosideeffects for firebase, mlkit, gms tasks, and install-referrer", () => {
+    // These are the exact four proprietary package roots the CEO named on
+    // BLD-4124. Any of them missing means R8 will keep live references and
+    // the F-Droid `strings classes*.dex | grep …` acceptance check fails.
+    expect(FDROID_PROGUARD_RULES).toMatch(
+      /-assumenosideeffects class com\.google\.firebase\.\*\* \{ \*; \}/,
+    );
+    expect(FDROID_PROGUARD_RULES).toMatch(
+      /-assumenosideeffects class com\.google\.mlkit\.\*\* \{ \*; \}/,
+    );
+    expect(FDROID_PROGUARD_RULES).toMatch(
+      /-assumenosideeffects class com\.google\.android\.gms\.tasks\.\*\* \{ \*; \}/,
+    );
+    expect(FDROID_PROGUARD_RULES).toMatch(
+      /-assumenosideeffects class com\.android\.installreferrer\.\*\* \{ \*; \}/,
+    );
+  });
+
+  it("declares -dontwarn for the same four package roots", () => {
+    // Without -dontwarn, R8 aborts on the first "referenced class not
+    // found" it hits — before dead-code elimination has a chance to prune
+    // the reference. Every -assumenosideeffects package needs a matching
+    // -dontwarn.
+    expect(FDROID_PROGUARD_RULES).toMatch(/-dontwarn com\.google\.firebase\.\*\*/);
+    expect(FDROID_PROGUARD_RULES).toMatch(/-dontwarn com\.google\.mlkit\.\*\*/);
+    expect(FDROID_PROGUARD_RULES).toMatch(
+      /-dontwarn com\.google\.android\.gms\.tasks\.\*\*/,
+    );
+    expect(FDROID_PROGUARD_RULES).toMatch(
+      /-dontwarn com\.android\.installreferrer\.\*\*/,
+    );
+  });
+
+  it("writes android/app/proguard-fdroid-strip.pro when CABLESNAP_FDROID=1", () => {
+    process.env.CABLESNAP_FDROID = "1";
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      const p = path.join(tmp, "app", "proguard-fdroid-strip.pro");
+      expect(fs.existsSync(p)).toBe(true);
+      expect(fs.readFileSync(p, "utf8")).toBe(FDROID_PROGUARD_RULES);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("does NOT write the rules file when CABLESNAP_FDROID is unset (Play safety)", () => {
+    // This is the primary Play-variant safety guarantee. If the file ever
+    // gets written for a Play build, its mere existence next to
+    // `proguard-rules.pro` in `android/app/` is harmless — the `release`
+    // build type does not list it — but we still enforce absence so that
+    // an accidental future edit to `release`'s `proguardFiles` cannot
+    // silently pick it up.
+    delete process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      expect(
+        fs.existsSync(path.join(tmp, "app", "proguard-fdroid-strip.pro")),
+      ).toBe(false);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("does NOT write the rules file when CABLESNAP_FDROID is set to something other than '1'", () => {
+    // Match the string-exact "1" guard used by every other FDROID toggle in
+    // this plugin — `"true"`, `"yes"`, `"0"`, etc. must all be no-ops so
+    // that CI stays fail-closed on typos.
+    process.env.CABLESNAP_FDROID = "true";
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      expect(
+        fs.existsSync(path.join(tmp, "app", "proguard-fdroid-strip.pro")),
+      ).toBe(false);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("creates the app/ directory if missing (fresh `expo prebuild --clean`)", () => {
+    process.env.CABLESNAP_FDROID = "1";
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      expect(fs.existsSync(path.join(tmp, "app"))).toBe(true);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("is idempotent — overwrites any stale prior contents", () => {
+    process.env.CABLESNAP_FDROID = "1";
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      const dir = path.join(tmp, "app");
+      fs.mkdirSync(dir, { recursive: true });
+      const p = path.join(dir, "proguard-fdroid-strip.pro");
+      fs.writeFileSync(p, "# stale contents from a previous prebuild", "utf8");
+
+      writeFdroidProguardRules(tmp);
+
+      const written = fs.readFileSync(p, "utf8");
+      expect(written).toBe(FDROID_PROGUARD_RULES);
+      expect(written).not.toContain("stale");
     } finally {
       rmDirRecursive(tmp);
     }
