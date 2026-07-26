@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
+- **Consistent section spacing on History** — Standardises the vertical gap between section headers and their content across the workout-history screen for a more even visual rhythm. ([BLD-4051](/BLD/issues/BLD-4051))
 
 ## v0.26.88 — 2026-07-26
 <!-- versionCode: 156 -->

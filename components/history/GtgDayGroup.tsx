@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { Pressable, View, StyleSheet } from "react-native";
 import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { spacing } from "@/constants/design-tokens";
 import type { DaySessionEntry } from "@/lib/db/day-session";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 
@@ -73,14 +74,14 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 8,
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     overflow: "hidden",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     paddingVertical: 10,
     minHeight: 44,
   },
@@ -90,12 +91,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   entriesList: {
-    paddingBottom: 4,
+    paddingBottom: spacing.xs,
   },
   entryRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
     minHeight: 44,
