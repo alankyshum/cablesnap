@@ -8,6 +8,7 @@ import { ExpoConfig, ConfigContext } from "expo/config";
 // app, which is what Maestro flows expect. Local dev builds (CI unset) keep
 // the dev client for the normal Expo Go / dev-client workflow.
 const isCI = process.env.CI === "true";
+const isFdroidBuild = process.env.CABLESNAP_FDROID === "1";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -100,6 +101,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   owner: "alankyshum",
   extra: {
+    fdroidBuild: isFdroidBuild,
     eas: {
       projectId: "24dc5f10-9a21-4336-bac0-6334a5f6b82b",
     },

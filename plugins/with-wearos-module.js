@@ -134,6 +134,10 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // Inherit signing/minify/shrinker/proguard from the canonical
             // \`release\` build type so Play <-> F-Droid drift is impossible.
             initWith release
+            // F-Droid buildservers have no production keystore. Keep this
+            // variant non-debuggable while allowing fdroidserver to replace
+            // the debug signature with its own signing key.
+            signingConfig signingConfigs.debug
             // matchingFallbacks lets dependency variant resolution fall back
             // to \`release\` when an upstream library only ships a release
             // variant (the common case). Without this, Gradle errors with

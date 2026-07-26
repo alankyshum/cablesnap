@@ -127,6 +127,14 @@ describe("patchAppBuildGradle", () => {
     expect(out).toContain("// cablesnap:wearos:build-types");
   });
 
+  it("uses debug signing for releaseFdroid without making it debuggable", () => {
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?initWith release[\s\S]*?signingConfig signingConfigs\.debug/,
+    );
+    expect(out).not.toMatch(/releaseFdroid\s*\{[\s\S]*?debuggable\s+true/);
+  });
+
   it("does NOT emit productFlavors or flavorDimensions", () => {
     // Regression guard: the autolinker conflict that drove the pivot must
     // never silently come back. If a future refactor reaches for flavors,

@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Redirect, Stack, usePathname } from "expo-router";
+import Constants from "expo-constants";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import * as SplashScreen from "expo-splash-screen";
@@ -39,9 +40,18 @@ import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
 import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
 import { filterLocalhostEvents } from '@/lib/sentry-localhost-filter';
+import { isSentryEnabled } from '@/lib/sentry-enabled';
+
+const sentryEnabled = isSentryEnabled(Constants.expoConfig?.extra);
+const SENTRY_DSN = 'https://c61278ad2a774c2e586454f017d4b86f@o4511267124215808.ingest.us.sentry.io/4511267125133312';
 
 Sentry.init({
-  dsn: 'https://c61278ad2a774c2e586454f017d4b86f@o4511267124215808.ingest.us.sentry.io/4511267125133312',
+  enabled: sentryEnabled,
+  ...(sentryEnabled ? { dsn: SENTRY_DSN } : {}),
+  enableNative: sentryEnabled,
+  autoInitializeNativeSdk: sentryEnabled,
+  enableNativeCrashHandling: sentryEnabled,
+  enableAutoSessionTracking: sentryEnabled,
   sendDefaultPii: true,
   enableLogs: true,
   // BLD-2446: Drop CI/dev events (localhost/127.0.0.1/0.0.0.0). Fail-open on missing/unparseable url tag.
