@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.89",
+    "date": "2026-07-26",
+    "versionCode": 157,
+    "body": "- **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))"
+  },
+  {
     "version": "0.26.88",
     "date": "2026-07-26",
     "versionCode": 156,
