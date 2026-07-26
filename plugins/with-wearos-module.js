@@ -104,11 +104,10 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
         }
         def buildFile = project.buildFile
         def original = buildFile.getText("UTF-8")
-        def patched = original
-            .replace("implementation 'com.google.firebase:", "compileOnly 'com.google.firebase:")
-            .replace("implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:")
-            .replace('implementation "com.google.firebase:', 'compileOnly "com.google.firebase:')
-            .replace('implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:')
+        def patched = original.replaceAll(
+            /(?m)^(\\s*)implementation(\\s+['"](?:com\\.google\\.(?:android\\.gms|firebase|mlkit)|com\\.android\\.installreferrer):[^'"\\n]+['"]\\s*)$/,
+            '$1compileOnly$2',
+        )
             .replace('add(barcodeDependencyConfiguration, "com.google.android.gms:', 'add("compileOnly", "com.google.android.gms:')
             .replace('add(barcodeDependencyConfiguration, "com.google.mlkit:', 'add("compileOnly", "com.google.mlkit:')
             .replace('add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:', 'add("compileOnly", "androidx.camera:camera-mlkit-vision:')

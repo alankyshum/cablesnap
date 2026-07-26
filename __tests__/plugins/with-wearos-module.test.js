@@ -90,16 +90,61 @@ describe("patchSettingsGradle", () => {
     expect(out).toContain("// cablesnap:wearos:settings-include");
   });
 
-  it("emits an env-gated early dependency rewrite in settings.gradle", () => {
+  it("emits an env-gated early dependency rewrite in settings.gradle and rewrites all target namespaces (gms, firebase, mlkit, installreferrer) under both quote styles", () => {
     const previous = process.env.CABLESNAP_FDROID;
     process.env.CABLESNAP_FDROID = "1";
     const out = patchSettingsGradle(SETTINGS_FIXTURE);
     expect(out).toContain('if (System.getenv("CABLESNAP_FDROID") == "1")');
     expect(out).toContain("gradle.beforeProject { project ->");
     expect(out).toContain("project.ext.barcodeScannerEnabled = false");
-    expect(out).toContain("compileOnly 'com.google.firebase:");
-    expect(out).toContain("compileOnly 'com.android.installreferrer:");
     expect(out).toContain('add("compileOnly", "com.google.mlkit:');
+
+    // Extract regex pattern
+    const match = out.match(/replaceAll\(\s*\/([\s\S]+?)\/,\s*['"]([\s\S]+?)['"]/);
+    expect(match).not.toBeNull();
+    
+    let patternStr = match[1];
+    const replacementStr = match[2];
+
+    let flags = "g";
+    if (patternStr.startsWith("(?m)")) {
+      patternStr = patternStr.substring(4);
+      flags += "m";
+    }
+
+    const regex = new RegExp(patternStr, flags);
+    const rewrite = (input) => input.replace(regex, replacementStr);
+
+    // Verify com.google.android.gms (single + double quotes)
+    expect(rewrite("    implementation 'com.google.android.gms:play-services-wearable:18.0.0'"))
+      .toBe("    compileOnly 'com.google.android.gms:play-services-wearable:18.0.0'");
+    expect(rewrite('    implementation "com.google.android.gms:play-services-wearable:18.0.0"'))
+      .toBe('    compileOnly "com.google.android.gms:play-services-wearable:18.0.0"');
+
+    // Verify com.google.mlkit (single + double quotes)
+    expect(rewrite("    implementation 'com.google.mlkit:barcode-scanning:17.0.0'"))
+      .toBe("    compileOnly 'com.google.mlkit:barcode-scanning:17.0.0'");
+    expect(rewrite('    implementation "com.google.mlkit:barcode-scanning:17.0.0"'))
+      .toBe('    compileOnly "com.google.mlkit:barcode-scanning:17.0.0"');
+
+    // Verify com.google.firebase (single + double quotes)
+    expect(rewrite("    implementation 'com.google.firebase:firebase-messaging:23.0.0'"))
+      .toBe("    compileOnly 'com.google.firebase:firebase-messaging:23.0.0'");
+    expect(rewrite('    implementation "com.google.firebase:firebase-messaging:23.0.0"'))
+      .toBe('    compileOnly "com.google.firebase:firebase-messaging:23.0.0"');
+
+    // Verify com.android.installreferrer (single + double quotes)
+    expect(rewrite("    implementation 'com.android.installreferrer:installreferrer:2.2'"))
+      .toBe("    compileOnly 'com.android.installreferrer:installreferrer:2.2'");
+    expect(rewrite('    implementation "com.android.installreferrer:installreferrer:2.2"'))
+      .toBe('    compileOnly "com.android.installreferrer:installreferrer:2.2"');
+
+    // Verify negative test cases (must NOT rewrite)
+    expect(rewrite("    implementation 'com.facebook.react:react-android'"))
+      .toBe("    implementation 'com.facebook.react:react-android'");
+    expect(rewrite('    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"'))
+      .toBe('    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"');
+
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
     else process.env.CABLESNAP_FDROID = previous;
   });
