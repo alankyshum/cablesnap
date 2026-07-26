@@ -310,6 +310,7 @@ jobs:
       - name: Generate native project
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
+          CABLESNAP_FDROID: "1"
           # Sentry Expo config plugin reads these at prebuild time to generate
           # android/sentry.properties. Missing values are handled gracefully
           # (the plugin emits warning comments and falls back to env at build
@@ -362,6 +363,7 @@ jobs:
       - name: Build APK
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
+          CABLESNAP_FDROID: "1"
           # Sentry Android Gradle plugin reads these to upload debug symbols +
           # source maps during assembleRelease. Missing SENTRY_AUTH_TOKEN is
           # tolerated: the plugin logs a warning and ships an APK without

@@ -102,6 +102,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   owner: "alankyshum",
   extra: {
     fdroidBuild: isFdroidBuild,
+    ...(isFdroidBuild
+      ? {}
+      : {
+          sentryDsn:
+            process.env.SENTRY_DSN ??
+            "https://c61278ad2a774c2e586454f017d4b86f@o4511267124215808.ingest.us.sentry.io/4511267125133312",
+        }),
     eas: {
       projectId: "24dc5f10-9a21-4336-bac0-6334a5f6b82b",
     },

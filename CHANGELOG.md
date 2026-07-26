@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **F-Droid builds no longer embed the Sentry DSN**, allowing the Tracking AntiFeature to be removed from the official listing.
 
 ## v0.26.87 — 2026-07-26
 <!-- versionCode: 155 -->

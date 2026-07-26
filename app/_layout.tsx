@@ -40,14 +40,14 @@ import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
 import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
 import { filterLocalhostEvents } from '@/lib/sentry-localhost-filter';
-import { isSentryEnabled } from '@/lib/sentry-enabled';
+import { isSentryEnabled, resolveSentryDsn } from '@/lib/sentry-enabled';
 
 const sentryEnabled = isSentryEnabled(Constants.expoConfig?.extra);
-const SENTRY_DSN = 'https://c61278ad2a774c2e586454f017d4b86f@o4511267124215808.ingest.us.sentry.io/4511267125133312';
+const sentryDsn = resolveSentryDsn(Constants.expoConfig?.extra);
 
 Sentry.init({
   enabled: sentryEnabled,
-  ...(sentryEnabled ? { dsn: SENTRY_DSN } : {}),
+  ...(sentryEnabled && sentryDsn ? { dsn: sentryDsn } : {}),
   enableNative: sentryEnabled,
   autoInitializeNativeSdk: sentryEnabled,
   enableNativeCrashHandling: sentryEnabled,
