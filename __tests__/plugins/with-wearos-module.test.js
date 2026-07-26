@@ -9,6 +9,7 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
@@ -458,6 +459,33 @@ describe("copyDirRecursive + rmDirRecursive", () => {
     expect(() => copyDirRecursive(missing, dst)).toThrow(
       /with-wearos-module.*wear-template/,
     );
+  });
+});
+
+describe("patchFdroidExpoDependencies", () => {
+  it("rewrites the three direct Expo dependency sources only for F-Droid", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-deps-"));
+    try {
+      for (const [pkg, contents] of [
+        ["expo-notifications", "implementation 'com.google.firebase:firebase-messaging:25.0.1'"],
+        ["expo-application", "implementation 'com.android.installreferrer:installreferrer:2.2'"],
+        ["expo-camera", 'def barcodeDependencyConfiguration = isBarcodeScannerEnabled ? "implementation" : "compileOnly"'],
+      ]) {
+        const dir = path.join(tmp, "node_modules", pkg, "android");
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "build.gradle"), contents, "utf8");
+      }
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidExpoDependencies(tmp);
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-notifications", "android", "build.gradle"), "utf8")).toContain("compileOnly 'com.google.firebase:");
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-application", "android", "build.gradle"), "utf8")).toContain("compileOnly 'com.android.installreferrer:");
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-camera", "android", "build.gradle"), "utf8")).toContain('def barcodeDependencyConfiguration = "compileOnly"');
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
   });
 });
 

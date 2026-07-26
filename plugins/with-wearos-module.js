@@ -419,6 +419,36 @@ function writeFdroidManifest(platformRoot) {
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
 }
 
+function patchFdroidExpoDependencies(projectRoot) {
+  if (process.env.CABLESNAP_FDROID !== "1") return;
+  const replacements = [
+    [
+      path.join(projectRoot, "node_modules", "expo-notifications", "android", "build.gradle"),
+      [
+        ["implementation 'com.google.firebase:", "compileOnly 'com.google.firebase:"],
+        ['implementation "com.google.firebase:', 'compileOnly "com.google.firebase:'],
+      ],
+    ],
+    [
+      path.join(projectRoot, "node_modules", "expo-application", "android", "build.gradle"),
+      [
+        ["implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:"],
+        ['implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:'],
+      ],
+    ],
+    [
+      path.join(projectRoot, "node_modules", "expo-camera", "android", "build.gradle"),
+      [["def barcodeDependencyConfiguration = isBarcodeScannerEnabled ? \"implementation\" : \"compileOnly\"", "def barcodeDependencyConfiguration = \"compileOnly\""]],
+    ],
+  ];
+  for (const [file, fileReplacements] of replacements) {
+    if (!fs.existsSync(file)) continue;
+    let contents = fs.readFileSync(file, "utf8");
+    for (const [from, to] of fileReplacements) contents = contents.replaceAll(from, to);
+    fs.writeFileSync(file, contents, "utf8");
+  }
+}
+
 function copyDirRecursive(srcDir, dstDir) {
   if (!fs.existsSync(srcDir)) {
     throw new Error(
@@ -486,6 +516,7 @@ const withWearOsModule = (config) => {
     async (cfg) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const platformRoot = cfg.modRequest.platformProjectRoot;
+      patchFdroidExpoDependencies(projectRoot);
       const srcDir = path.join(projectRoot, WEAR_TEMPLATE_RELATIVE);
       const dstDir = path.join(platformRoot, "wear");
       // Wipe stale outputs so a renamed/deleted file in the template does
@@ -511,6 +542,7 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;
