@@ -112,6 +112,9 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             .replace('add(barcodeDependencyConfiguration, "com.google.android.gms:', 'add("compileOnly", "com.google.android.gms:')
             .replace('add(barcodeDependencyConfiguration, "com.google.mlkit:', 'add("compileOnly", "com.google.mlkit:')
             .replace('add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:', 'add("compileOnly", "androidx.camera:camera-mlkit-vision:')
+            .replace('add(barcodeDependencyConfiguration, "com.google.android.gms:', 'add("compileOnly", "com.google.android.gms:')
+            .replace('add(barcodeDependencyConfiguration, "com.google.mlkit:', 'add("compileOnly", "com.google.mlkit:')
+            .replace('add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:', 'add("compileOnly", "androidx.camera:camera-mlkit-vision:')
         if (patched != original) buildFile.setText(patched, "UTF-8")
     }
 }

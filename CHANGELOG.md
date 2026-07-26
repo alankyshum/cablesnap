@@ -37,6 +37,7 @@ _No user-facing changes yet._
 - **F-Droid dependency filtering now runs from Gradle settings before project evaluation**, so Expo subproject declarations cannot reintroduce proprietary runtime artifacts.
 - **F-Droid Expo Camera barcode artifacts are compile-only**, removing direct Play Services, ML Kit, and Camera ML Kit runtime dependencies.
 - **F-Droid prebuild patches Expo dependency declarations at source**, ensuring direct proprietary artifacts cannot re-enter the generated Android graph.
+- **F-Droid settings filtering also rewrites Expo Camera’s barcode declarations**, covering direct Play Services, ML Kit, and Camera ML Kit dependencies before subproject evaluation.
 
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->

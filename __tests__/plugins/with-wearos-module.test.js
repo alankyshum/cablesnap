@@ -100,6 +100,8 @@ describe("patchSettingsGradle", () => {
     expect(out).toContain("compileOnly 'com.google.firebase:");
     expect(out).toContain("compileOnly 'com.android.installreferrer:");
     expect(out).toContain('add("compileOnly", "com.google.mlkit:');
+    expect(out).toContain('add("compileOnly", "com.google.android.gms:');
+    expect(out).toContain('add("compileOnly", "androidx.camera:camera-mlkit-vision:');
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
     else process.env.CABLESNAP_FDROID = previous;
   });
