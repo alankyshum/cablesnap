@@ -178,75 +178,10 @@ describe("patchAppBuildGradle", () => {
     expect(releaseFdroidIdx).toBeGreaterThan(releaseInnerIdx);
   });
 
-  it("emits releaseFdroid excludes for com.google.android.gms and the bridge module", () => {
-    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    expect(out).toContain("// cablesnap:wearos:fdroid-excludes");
-    // Each of the three configurations names must carry both excludes —
-    // this is the core AC10b safeguard. Belt-and-suspenders across
-    // Implementation + RuntimeClasspath + CompileClasspath.
-    for (const cfg of [
-      "releaseFdroidImplementation",
-      "releaseFdroidRuntimeClasspath",
-      "releaseFdroidCompileClasspath",
-    ]) {
-      const blockRegex = new RegExp(
-        `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.android\\.gms"[\\s\\S]*?exclude module: "expo-wearos-bridge"[\\s\\S]*?\\}`,
-      );
-      expect(out).toMatch(blockRegex);
-    }
-  });
-
-  it("emits releaseFdroid excludes for com.google.firebase across all three configurations", () => {
-    // Firebase exclusion was added 2026-05-01 after run 25243409233 surfaced
-    // a NoClassDefFoundError on F-Droid launch: expo-notifications transitively
-    // pulls com.google.firebase:firebase-messaging, whose firebase-common AAR
-    // auto-registers `<provider FirebaseInitProvider>` that calls into
-    // com.google.android.gms.common.internal.Preconditions — already excluded
-    // above. Without this Firebase exclusion the F-Droid APK ships with
-    // Firebase classes referencing missing GMS classes → crash before
-    // MainActivity. CableSnap only uses local notifications (lib/notifications.ts)
-    // so dropping FCM has no functional impact in the F-Droid build.
-    // See plugin's FDROID_EXCLUDES_BLOCK comment for full root-cause writeup.
-    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    for (const cfg of [
-      "releaseFdroidImplementation",
-      "releaseFdroidRuntimeClasspath",
-      "releaseFdroidCompileClasspath",
-    ]) {
-      const blockRegex = new RegExp(
-        `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.firebase"[\\s\\S]*?\\}`,
-      );
-      expect(out).toMatch(blockRegex);
-    }
-  });
-
-  it("emits releaseFdroid excludes for com.google.mlkit + camera-mlkit-vision across all three configurations", () => {
-    // MLKit exclusion was added 2026-05-02 after run 25244727127 surfaced a
-    // SECOND NoClassDefFoundError on F-Droid launch (after the Firebase fix
-    // landed and was confirmed working): expo-camera unconditionally pulls
-    // `com.google.mlkit:barcode-scanning` for its built-in barcode scanner,
-    // which drags `com.google.mlkit:common` whose <provider MlKitInitProvider>
-    // exhibits the same auto-init-then-call-GMS-Preconditions crash pattern
-    // as FirebaseInitProvider. Functional impact: barcode scanning in food
-    // search (components/BarcodeScanner.tsx) is non-functional in F-Droid;
-    // manual entry remains. The companion `androidx.camera:camera-mlkit-vision`
-    // wrapper is also excluded as a `module` (NOT the whole `androidx.camera`
-    // group, which provides the core camera APIs we still need).
-    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    for (const cfg of [
-      "releaseFdroidImplementation",
-      "releaseFdroidRuntimeClasspath",
-      "releaseFdroidCompileClasspath",
-    ]) {
-      const mlkitRegex = new RegExp(
-        `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.mlkit"[\\s\\S]*?\\}`,
-      );
-      const cameraMlkitRegex = new RegExp(
-        `${cfg}\\s*\\{[\\s\\S]*?exclude module: "camera-mlkit-vision"[\\s\\S]*?\\}`,
-      );
-      expect(out).toMatch(mlkitRegex);
-      expect(out).toMatch(cameraMlkitRegex);
-    }
+  it("leaves dependency exclusions to the project-level patch", () => {
+    expect(patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE)).not.toContain(
+      "cablesnap:wearos:fdroid-excludes",
+    );
   });
 
   it("does NOT exclude the entire androidx.camera group (regression guard)", () => {
@@ -257,17 +192,6 @@ describe("patchAppBuildGradle", () => {
     // Only the specific `camera-mlkit-vision` module is safe to exclude.
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).not.toMatch(/exclude group:\s*"androidx\.camera"/);
-  });
-
-  it("places the configurations excludes block at top level, before dependencies", () => {
-    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    const excludesIdx = out.indexOf("// cablesnap:wearos:fdroid-excludes");
-    const depsIdx = out.indexOf("\ndependencies {");
-    expect(excludesIdx).toBeGreaterThan(-1);
-    expect(depsIdx).toBeGreaterThan(excludesIdx);
-    // It must NOT be nested inside the android { ... } block.
-    const androidClose = out.indexOf("\n}\n", out.indexOf("android {"));
-    expect(excludesIdx).toBeGreaterThan(androidClose);
   });
 
   it("is idempotent across multiple prebuilds", () => {
@@ -281,24 +205,6 @@ describe("patchAppBuildGradle", () => {
   it("throws a clear error when the buildTypes/release anchor is missing", () => {
     expect(() => patchAppBuildGradle("// empty gradle\n")).toThrow(
       /with-wearos-module.*buildTypes.*release/,
-    );
-  });
-
-  it("throws a clear error when the dependencies anchor is missing", () => {
-    // Fixture has buildTypes/release but no top-level `dependencies {`.
-    const noDeps = `apply plugin: "com.android.application"
-android {
-    buildTypes {
-        debug { signingConfig signingConfigs.debug }
-        release {
-            signingConfig signingConfigs.debug
-            minifyEnabled true
-        }
-    }
-}
-`;
-    expect(() => patchAppBuildGradle(noDeps)).toThrow(
-      /with-wearos-module.*dependencies/,
     );
   });
 
@@ -387,6 +293,51 @@ describe("patchProjectBuildGradle", () => {
     expect(out).toMatch(
       /subprojects\s*\{[\s\S]*subproject\.plugins\.withId\("com\.android\.library"\)/,
     );
+  });
+
+  it("emits gated all-project F-Droid exclusions for every SUSS group", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    process.env.CABLESNAP_FDROID = "1";
+    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /if \(System\.getenv\("CABLESNAP_FDROID"\) == "1"\)\s*\{[\s\S]*allprojects\s*\{[\s\S]*configurations\.all\s*\{/,
+    );
+    for (const group of [
+      "com.google.android.gms",
+      "com.google.firebase",
+      "com.google.mlkit",
+      "com.android.installreferrer",
+    ]) {
+      expect(out).toContain(`exclude group: "${group}"`);
+    }
+    expect(out).toContain('exclude module: "camera-mlkit-vision"');
+    expect(out).toContain('exclude module: "expo-wearos-bridge"');
+    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+    else process.env.CABLESNAP_FDROID = previous;
+  });
+
+  it("places every exclusion inside the CABLESNAP_FDROID gate", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    process.env.CABLESNAP_FDROID = "1";
+    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    const gateStart = out.indexOf('if (System.getenv("CABLESNAP_FDROID") == "1")');
+    const gateEnd = out.indexOf("\n}\n", gateStart);
+    const exclusions = out.indexOf('exclude group: "com.google.firebase"');
+    expect(gateStart).toBeGreaterThan(-1);
+    expect(gateEnd).toBeGreaterThan(gateStart);
+    expect(exclusions).toBeGreaterThan(gateStart);
+    expect(exclusions).toBeLessThan(gateEnd);
+    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+    else process.env.CABLESNAP_FDROID = previous;
+  });
+
+  it("omits F-Droid exclusions from Play prebuild output", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    delete process.env.CABLESNAP_FDROID;
+    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    expect(out).not.toContain("cablesnap:wearos:fdroid-excludes");
+    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+    else process.env.CABLESNAP_FDROID = previous;
   });
 
   it("emits an androidComponents.beforeVariants selector for releaseFdroid", () => {

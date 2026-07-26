@@ -168,63 +168,16 @@ const RELEASE_FDROID_BUILD_TYPE = `
 // no classes from it land in the F-Droid APK.
 const FDROID_EXCLUDES_BLOCK = `
 ${FDROID_EXCLUDES_MARKER}
-configurations {
-    releaseFdroidImplementation {
-        // F-Droid Inclusion Criteria reject GMS — exclude the entire group
-        // transitively from the F-Droid runtime + compile classpath.
-        exclude group: "com.google.android.gms"
-        // F-Droid also rejects Firebase (proprietary, GMS-dependent). Without
-        // this exclusion, expo-notifications' transitive dep
-        // \`com.google.firebase:firebase-messaging\` brings \`firebase-common\`
-        // into the F-Droid APK, whose \`<provider android:name="com.google.firebase.provider.FirebaseInitProvider" />\`
-        // (auto-registered by the firebase-common AAR manifest) runs at app
-        // start and references \`com.google.android.gms.common.internal.Preconditions\`
-        // — which is excluded above, producing
-        // \`NoClassDefFoundError\` → app crashes before MainActivity loads.
-        // CableSnap only uses local notifications (see \`lib/notifications.ts\`,
-        // every API wrapped in \`require()\` + try/catch), so dropping Firebase
-        // is safe: scheduled reminders + rest-complete notifications still
-        // work via expo-notifications' local-notification path which does not
-        // touch FirebaseMessaging at runtime. Push tokens (PushTokenModule)
-        // would fail, but CableSnap doesn't use them.
-        exclude group: "com.google.firebase"
-        // F-Droid also rejects Google ML Kit (proprietary). \`expo-camera\`
-        // pulls in \`com.google.mlkit:barcode-scanning\` for its built-in
-        // barcode scanner; that drags \`com.google.mlkit:common\` whose
-        // \`<provider MlKitInitProvider>\` auto-runs at app start and (same
-        // pattern as Firebase) calls into the now-missing GMS Preconditions
-        // class → NoClassDefFoundError → crash. Surfaced by run 25244727127.
-        // Functional impact in F-Droid: barcode scanning in food search
-        // (components/BarcodeScanner.tsx) won't detect codes — the camera
-        // preview still renders but \`onBarcodeScanned\` never fires. Manual
-        // food entry remains fully functional. Acceptable trade-off for FOSS
-        // distribution; the alternative is shipping no F-Droid build at all.
-        exclude group: "com.google.mlkit"
-        // \`androidx.camera:camera-mlkit-vision\` is a thin wrapper around
-        // ML Kit and is non-functional once \`com.google.mlkit\` is excluded.
-        // Its classes reference the missing MLKit types and would throw at
-        // class-load time if any UI invokes the wrapper. Excluding it as a
-        // module (NOT the whole \`androidx.camera\` group, which provides
-        // core camera functionality CableSnap requires) keeps the camera
-        // preview working without the MLKit-dependent vision pipeline.
-        exclude module: "camera-mlkit-vision"
-        // Drop the Expo Wear bridge library project so its compiled
-        // .class files never reach app-releaseFdroid.apk.
-        exclude module: "expo-wearos-bridge"
-    }
-    releaseFdroidRuntimeClasspath {
-        exclude group: "com.google.android.gms"
-        exclude group: "com.google.firebase"
-        exclude group: "com.google.mlkit"
-        exclude module: "camera-mlkit-vision"
-        exclude module: "expo-wearos-bridge"
-    }
-    releaseFdroidCompileClasspath {
-        exclude group: "com.google.android.gms"
-        exclude group: "com.google.firebase"
-        exclude group: "com.google.mlkit"
-        exclude module: "camera-mlkit-vision"
-        exclude module: "expo-wearos-bridge"
+if (System.getenv("CABLESNAP_FDROID") == "1") {
+    allprojects {
+        configurations.all {
+            exclude group: "com.google.android.gms"
+            exclude group: "com.google.firebase"
+            exclude group: "com.google.mlkit"
+            exclude group: "com.android.installreferrer"
+            exclude module: "camera-mlkit-vision"
+            exclude module: "expo-wearos-bridge"
+        }
     }
 }
 `;
@@ -255,21 +208,6 @@ function patchAppBuildGradle(contents) {
       );
     }
     out = out.replace(releaseBlockRegex, `$1${RELEASE_FDROID_BUILD_TYPE}`);
-  }
-
-  // 2. Inject the configurations excludes at the top level (outside
-  //    android { ... }). We anchor on the top-level `dependencies {` block
-  //    and insert the excludes immediately before it. Anchoring on the
-  //    line start (`\ndependencies\s*\{`) ensures we don't match a nested
-  //    dependencies block accidentally.
-  if (!out.includes(FDROID_EXCLUDES_MARKER)) {
-    const depsAnchor = /(\ndependencies\s*\{)/;
-    if (!depsAnchor.test(out)) {
-      throw new Error(
-        "with-wearos-module: could not find top-level `dependencies {` anchor in app/build.gradle",
-      );
-    }
-    out = out.replace(depsAnchor, `${FDROID_EXCLUDES_BLOCK}\n$1`);
   }
 
   return out;
@@ -328,17 +266,27 @@ subprojects { subproject ->
 `;
 
 function patchProjectBuildGradle(contents) {
+  let out = contents;
   if (contents.includes(SUBPROJECT_FILTER_MARKER)) {
-    return contents;
+    if (
+      contents.includes(FDROID_EXCLUDES_MARKER) ||
+      process.env.CABLESNAP_FDROID !== "1"
+    ) {
+      return contents;
+    }
+    return contents + FDROID_EXCLUDES_BLOCK;
   }
   // Append at end-of-file. `subprojects { ... }` blocks are
   // order-independent — Gradle accumulates and applies them in the
   // configuration phase before any subproject is evaluated.
-  let out = contents;
   if (!out.endsWith("\n")) {
     out = out + "\n";
   }
-  return out + SUBPROJECT_FILTER_BLOCK;
+  return (
+    out +
+    (process.env.CABLESNAP_FDROID === "1" ? FDROID_EXCLUDES_BLOCK : "") +
+    SUBPROJECT_FILTER_BLOCK
+  );
 }
 
 // ---------------------------------------------------------------------------

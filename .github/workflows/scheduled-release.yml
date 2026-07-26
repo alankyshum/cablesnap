@@ -402,33 +402,23 @@ jobs:
           echo "Built artifacts:"
           ls -lh cablesnap.apk cablesnap-fdroid.apk cablesnap-wear.apk
 
-      - name: AC10b — verify F-Droid APK contains zero GMS Wearable classes
+      - name: AC10b — verify F-Droid APK contains no proprietary SUSS classes
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
-          # Plan AC10b: the F-Droid flavor APK MUST NOT carry any
-          # com/google/android/gms/wearable/* classes. We verify by listing
-          # the APK's classes.dex entries and grepping. If even one shows up,
-          # fail the release — that means the with-wearos-module plugin's
-          # configurations { releaseFdroidImplementation { exclude ... } }
-          # block stopped working as expected.
           set -euo pipefail
-          # Extract DEX files and search for GMS Wearable class descriptors.
-          # `unzip -l` only lists zip entries (classes.dex, classes2.dex, etc.)
-          # — individual Java class paths are compiled INTO the binary DEX
-          # format and invisible to zip-level listing. We must inspect DEX
-          # contents directly via `strings` on the extracted dex files.
           TMPDIR_DEX=$(mktemp -d)
+          trap 'rm -rf "$TMPDIR_DEX"' EXIT
           unzip -q -o cablesnap-fdroid.apk 'classes*.dex' -d "$TMPDIR_DEX"
-          GMS_COUNT=$(strings "$TMPDIR_DEX"/classes*.dex \
-            | grep -c 'com/google/android/gms/wearable' \
-            || true)
-          rm -rf "$TMPDIR_DEX"
-          echo "GMS Wearable class hits in cablesnap-fdroid.apk (via dex strings): $GMS_COUNT"
-          if [ "$GMS_COUNT" -ne 0 ]; then
-            echo "::error::AC10b violated — cablesnap-fdroid.apk contains $GMS_COUNT GMS Wearable class entries."
+          HITS=$(strings "$TMPDIR_DEX"/classes*.dex \
+            | grep -oE 'com/google/firebase[A-Za-z/]*|com/google/mlkit[A-Za-z/]*|com/google/android/gms[A-Za-z/]*|com/android/installreferrer[A-Za-z/]*' \
+            | sort -u || true)
+          printf '%s\n' "$HITS"
+          if [ -n "$HITS" ]; then
+            echo "::error::AC10b violated — proprietary SUSS classes found in cablesnap-fdroid.apk:"
+            printf '%s\n' "$HITS"
             exit 1
           fi
-          echo "AC10b OK — F-Droid APK is GMS-Wearable-free."
+          echo "AC10b OK — F-Droid APK contains none of the four SUSS prefixes."
 
       - name: Verify APK signature matches committed fingerprint
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'

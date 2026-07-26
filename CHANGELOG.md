@@ -33,6 +33,7 @@ _No user-facing changes yet._
 <!-- versionCode: 156 -->
 
 - **F-Droid builds no longer embed the Sentry DSN**, allowing the Tracking AntiFeature to be removed from the official listing.
+- **F-Droid builds now exclude Firebase, ML Kit, Google Play Services, and Install Referrer dependencies**, keeping proprietary classes out of the APK.
 
 ## v0.26.87 — 2026-07-26
 <!-- versionCode: 155 -->
