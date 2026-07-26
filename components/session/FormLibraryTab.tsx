@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
   selectTogglePressable: {
     minHeight: 44,
     minWidth: 44,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     justifyContent: "center",
     alignItems: "center",
   },
