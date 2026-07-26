@@ -1,6 +1,6 @@
 {
   "name": "cablesnap",
-  "version": "0.26.85",
+  "version": "0.26.86",
   "license": "AGPL-3.0-or-later",
   "main": "expo-router/entry",
   "engines": {

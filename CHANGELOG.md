@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.86 — 2026-07-25
+<!-- versionCode: 154 -->
+
 - **Estimated pacing bar boundaries now visible under protanopia** — the Working and Rest segments in the post-workout Estimated pacing bar are now separated by a crisp 2 px divider and a strengthened dash texture on the Working segment, making the boundary clearly visible under red-green colour vision deficiency (protanopia) as well as in grayscale. The fix is purely structural — segment colours and labels are unchanged. ([BLD-3880](/BLD/issues/BLD-3880))
 - **Heatmap legend accessibility under deuteranopia** — Adjusts the workout-frequency heatmap legend colors to ensure steps are distinct and distinguishable under deuteranopia. ([BLD-3874](/BLD/issues/BLD-3874))
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
