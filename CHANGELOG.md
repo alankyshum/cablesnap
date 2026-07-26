@@ -26,6 +26,7 @@ _No user-facing changes yet._
 - **F-Droid builds now exclude Firebase, ML Kit, Google Play Services, and Install Referrer dependencies**, keeping proprietary classes out of the APK.
 - **F-Droid runtime resolution now removes direct proprietary Expo dependencies**, preventing those classes from entering the APK.
 - **F-Droid builds keep proprietary Expo dependencies compile-only**, preserving native compilation while excluding their classes from runtime packaging.
+- **F-Droid dependency stripping now applies before Android library dependencies resolve**, covering direct Expo module declarations as well as transitive dependencies.
 
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
