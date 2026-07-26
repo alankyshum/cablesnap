@@ -312,6 +312,9 @@ describe("patchProjectBuildGradle", () => {
     }
     expect(out).toContain('exclude module: "camera-mlkit-vision"');
     expect(out).toContain('exclude module: "expo-wearos-bridge"');
+    expect(out).toMatch(
+      /afterEvaluate\s*\{[\s\S]*configurations\.matching\s*\{[\s\S]*endsWith\("RuntimeClasspath"\)[\s\S]*dependencies\.removeAll[\s\S]*dependency\.group in \[[\s\S]*com\.android\.installreferrer/,
+    );
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
     else process.env.CABLESNAP_FDROID = previous;
   });

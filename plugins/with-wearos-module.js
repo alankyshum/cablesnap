@@ -178,6 +178,21 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             exclude module: "camera-mlkit-vision"
             exclude module: "expo-wearos-bridge"
         }
+        afterEvaluate {
+            configurations.matching { it.name.endsWith("RuntimeClasspath") }.all {
+                dependencies.removeAll { dependency ->
+                    dependency.group in [
+                        "com.google.android.gms",
+                        "com.google.firebase",
+                        "com.google.mlkit",
+                        "com.android.installreferrer",
+                    ] || dependency.name in [
+                        "camera-mlkit-vision",
+                        "expo-wearos-bridge",
+                    ]
+                }
+            }
+        }
     }
 }
 `;
