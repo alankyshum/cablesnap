@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 _No user-facing changes yet._
+- **Progress calendar toggle is easier to tap**, increasing the list/calendar switch touch target to meet the 44dp accessibility minimum. ([BLD-4077](/BLD/issues/BLD-4077))
 - **F-Droid builds now exclude Firebase, ML Kit, Google Play Services, and Install Referrer dependencies**, keeping proprietary classes out of the APK.
 - **F-Droid runtime resolution now removes direct proprietary Expo dependencies**, preventing those classes from entering the APK.
 - **F-Droid builds keep proprietary Expo dependencies compile-only**, preserving native compilation while excluding their classes from runtime packaging.
