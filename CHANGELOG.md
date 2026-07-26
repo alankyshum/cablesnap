@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 _No user-facing changes yet._
+- **Aligned water quick-add buttons** — Water quick-add chips now stay vertically centered on each row, fixing a slight misalignment visible on mobile. ([BLD-4042](/BLD/issues/BLD-4042))
 - **F-Droid builds now exclude Firebase, ML Kit, Google Play Services, and Install Referrer dependencies**, keeping proprietary classes out of the APK.
 - **F-Droid runtime resolution now removes direct proprietary Expo dependencies**, preventing those classes from entering the APK.
 - **F-Droid builds keep proprietary Expo dependencies compile-only**, preserving native compilation while excluding their classes from runtime packaging.
