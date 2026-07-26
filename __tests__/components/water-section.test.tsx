@@ -82,4 +82,31 @@ describe('WaterSection', () => {
     fireEvent.press(getByLabelText('Log custom amount of water'));
     expect(onCustomPress).toHaveBeenCalled();
   });
+
+  // BLD-4090: chip row must vertically center-align chips when they wrap,
+  // so preset + custom chips of differing intrinsic heights stay aligned.
+  it('vertically centers water quick-add chips (BLD-4090)', () => {
+    const { getByLabelText } = setup();
+    const chip = getByLabelText('Log 250 ml of water');
+    // Walk up until we find the flex-wrap row that contains this chip.
+    const flatten = (s: unknown): Record<string, unknown> => {
+      if (!s) return {};
+      if (Array.isArray(s)) return Object.assign({}, ...s.map(flatten));
+      return s as Record<string, unknown>;
+    };
+    let node: { props?: { style?: unknown }; parent?: unknown } | null = chip.parent as unknown as
+      | { props?: { style?: unknown }; parent?: unknown }
+      | null;
+    let rowStyle: Record<string, unknown> | null = null;
+    while (node) {
+      const st = flatten(node.props?.style);
+      if (st.flexWrap === 'wrap' && st.flexDirection === 'row') {
+        rowStyle = st;
+        break;
+      }
+      node = (node.parent ?? null) as typeof node;
+    }
+    expect(rowStyle).toBeTruthy();
+    expect(rowStyle!.alignItems).toBe('center');
+  });
 });
