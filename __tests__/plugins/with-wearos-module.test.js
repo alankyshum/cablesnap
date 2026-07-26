@@ -9,6 +9,8 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidProguardRules,
+  PROGUARD_FDROID_RULES,
   patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
@@ -146,6 +148,11 @@ describe("patchAppBuildGradle", () => {
     // matchingFallbacks lets dependency variant resolution fall back to
     // `release` for upstream singleVariant publishing.
     expect(out).toMatch(/releaseFdroid\s*\{[\s\S]*?matchingFallbacks\s*=\s*\["release"\]/);
+    // R8 minification configuration.
+    expect(out).toContain("minifyEnabled true");
+    expect(out).toContain("shrinkResources false");
+    expect(out).toContain('proguardFiles getDefaultProguardFile("proguard-android-optimize.txt")');
+    expect(out).toContain('"proguard-fdroid.pro"');
     // Sentinel marker for idempotency.
     expect(out).toContain("// cablesnap:wearos:build-types");
   });
@@ -646,6 +653,43 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
       expect(
         fs.existsSync(path.join(tmp, "app", "src", "releaseFdroid")),
       ).toBe(true);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+});
+
+describe("writeFdroidProguardRules + PROGUARD_FDROID_RULES", () => {
+  it("declares the correct checkdiscard and dontwarn rules for SUSS classes", () => {
+    expect(PROGUARD_FDROID_RULES).toContain("-checkdiscard class com.google.firebase.messaging.**");
+    expect(PROGUARD_FDROID_RULES).toContain("-checkdiscard class com.google.android.gms.tasks.**");
+    expect(PROGUARD_FDROID_RULES).toContain("-checkdiscard class com.google.mlkit.**");
+    expect(PROGUARD_FDROID_RULES).toContain("-checkdiscard class com.android.installreferrer.**");
+    expect(PROGUARD_FDROID_RULES).toContain("-dontwarn com.google.firebase.**");
+    expect(PROGUARD_FDROID_RULES).toContain("-dontwarn com.google.android.gms.**");
+    expect(PROGUARD_FDROID_RULES).toContain("-dontwarn com.google.mlkit.**");
+    expect(PROGUARD_FDROID_RULES).toContain("-dontwarn com.android.installreferrer.**");
+  });
+
+  it("declares assumenosideeffects rules to strip Expo references", () => {
+    expect(PROGUARD_FDROID_RULES).toContain("-assumenosideeffects class expo.modules.notifications.service.ExpoFirebaseMessagingService");
+    expect(PROGUARD_FDROID_RULES).toContain("-assumenosideeffects class expo.modules.notifications.service.**");
+    expect(PROGUARD_FDROID_RULES).toContain("-assumenosideeffects class expo.modules.camera.analyzers.**");
+    expect(PROGUARD_FDROID_RULES).toContain("-assumenosideeffects class expo.modules.application.ApplicationModule");
+  });
+
+  it("writeFdroidProguardRules creates app/proguard-fdroid.pro at the platform root", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      const proguardPath = path.join(
+        tmp,
+        "app",
+        "proguard-fdroid.pro"
+      );
+      expect(fs.existsSync(proguardPath)).toBe(true);
+      const written = fs.readFileSync(proguardPath, "utf8");
+      expect(written).toBe(PROGUARD_FDROID_RULES);
     } finally {
       rmDirRecursive(tmp);
     }

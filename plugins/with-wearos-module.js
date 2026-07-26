@@ -181,6 +181,11 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // disable their propagated \`releaseFdroid\` variant entirely,
             // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
+            minifyEnabled true
+            shrinkResources false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"),
+                          "proguard-rules.pro",
+                          "proguard-fdroid.pro"
         }
 `;
 
@@ -427,6 +432,38 @@ function writeFdroidManifest(platformRoot) {
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
 }
 
+const PROGUARD_FDROID_RULES = `# Drop expo-notifications firebase-messaging service subclass.
+-assumenosideeffects class expo.modules.notifications.service.ExpoFirebaseMessagingService { *; }
+-checkdiscard class com.google.firebase.messaging.**
+-checkdiscard class com.google.android.gms.tasks.**
+-checkdiscard class com.google.mlkit.**
+-checkdiscard class com.android.installreferrer.**
+
+# Force removal of any class in these packages if it somehow slipped through.
+-repackageclasses ''
+# Explicitly strip Expo classes that carry banned string references.
+-assumenosideeffects class expo.modules.notifications.service.** { *; }
+-assumenosideeffects class expo.modules.notifications.tokens.** { *; }
+-assumenosideeffects class expo.modules.notifications.notifications.** { *; }
+-assumenosideeffects class expo.modules.notifications.topics.** { *; }
+-assumenosideeffects class expo.modules.camera.analyzers.** { *; }
+-assumenosideeffects class expo.modules.camera.records.** { *; }
+-assumenosideeffects class expo.modules.camera.utils.** { *; }
+-assumenosideeffects class expo.modules.camera.CameraViewModule { *; }
+-assumenosideeffects class expo.modules.application.ApplicationModule { *; }
+
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+-dontwarn com.google.mlkit.**
+-dontwarn com.android.installreferrer.**
+`;
+
+function writeFdroidProguardRules(platformRoot) {
+  const dir = path.join(platformRoot, "app");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "proguard-fdroid.pro"), PROGUARD_FDROID_RULES, "utf8");
+}
+
 function patchFdroidExpoDependencies(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const replacements = [
@@ -563,6 +600,7 @@ const withWearOsModule = (config) => {
       // Write/overwrite the F-Droid manifest overlay. Idempotent — same
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
+      writeFdroidProguardRules(platformRoot);
       return cfg;
     },
   ]);
@@ -579,6 +617,8 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.writeFdroidProguardRules = writeFdroidProguardRules;
+module.exports.PROGUARD_FDROID_RULES = PROGUARD_FDROID_RULES;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;

@@ -25,6 +25,7 @@ marker) at release time.
 _No user-facing changes yet._
 - **Word-order-independent exercise search** — Allows finding exercises by typing words in any order (e.g. "press bench" matches "Bench Press"). ([BLD-4157](/BLD/issues/BLD-4157))
 - **Food barcode scanning now uses a fully open-source ZXing scanner**, with the same camera overlay and supported food-barcode formats.
+- **F-Droid builds now use R8 minification and custom ProGuard rules to discard SUSS classes**, stripping any embedded proprietary class-name string references inside bundled Expo classes while preserving standard compilation. ([BLD-4144](/BLD/issues/BLD-4144))
 - **F-Droid store metadata is now maintained in this repository**, including the app description, screenshots, icon, and release notes.
 - **Progress calendar toggle is easier to tap**, increasing the list/calendar switch touch target to meet the 44dp accessibility minimum. ([BLD-4077](/BLD/issues/BLD-4077))
 - **F-Droid builds now exclude Firebase, ML Kit, Google Play Services, and Install Referrer dependencies**, keeping proprietary classes out of the APK.
