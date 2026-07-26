@@ -179,6 +179,24 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // disable their propagated \`releaseFdroid\` variant entirely,
             // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
+            // BLD-4110: enable R8 minification for the F-Droid variant only
+            // so \`proguard-fdroid-strip.pro\` (written by \`writeFdroidProguardRules\`)
+            // can eliminate proprietary classes (Firebase / MLKit / GMS-tasks /
+            // installreferrer) that are shaded inside third-party AARs
+            // (expo-notifications, expo-camera). Coordinate-level exclusions
+            // (see \`FDROID_EXCLUDES_BLOCK\`) cannot reach shaded classes; R8
+            // is the only mechanism that operates on the merged, dexed
+            // classpath. The Play \`release\` build type is UNCHANGED — this
+            // is scoped to \`releaseFdroid\` only, so barcode scanning,
+            // notifications, and Wear bridge in the Play variant are
+            // unaffected.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+                "proguard-fdroid-strip.pro"
+            )
         }
 `;
 
@@ -415,6 +433,78 @@ function writeFdroidManifest(platformRoot) {
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
 }
 
+// ---------------------------------------------------------------------------
+// F-Droid ProGuard/R8 rules — strip shaded proprietary classes at dex time.
+// ---------------------------------------------------------------------------
+//
+// BLD-4110 (CEO-directed). Coordinate-level exclusions (`FDROID_EXCLUDES_BLOCK`)
+// cannot strip classes that are shaded/repackaged INSIDE another AAR's
+// `classes.jar` — Gradle sees the outer AAR's coordinate only, so the exclude
+// is a no-op for the inner classes. The remaining leaks reported by the
+// AC10b gate (`com/google/firebase/messaging/*`, `com/google/mlkit/*`,
+// `com/google/android/gms/tasks/*`, `com/android/installreferrer/*`) all
+// arrive this way — most likely from `expo-notifications` and `expo-camera`.
+//
+// R8 (AGP's default shrinker) operates on the FULLY MERGED classpath — it
+// sees every class the app will dex, regardless of which JAR bundled it —
+// and performs dead-code elimination based on reachability from kept roots.
+// For F-Droid we disable barcode scanning, push notifications, and the
+// install-referrer analytics path, so the entire proprietary subgraph is
+// unreachable. `-assumenosideeffects` tells R8 the calls are pure so it can
+// remove them along with their transitive class references; `-dontwarn`
+// silences the resulting reference-to-removed-class warnings that would
+// otherwise fail the build.
+//
+// This runs in tandem with `FDROID_EXCLUDES_BLOCK` (belt-and-suspenders):
+// classpath-coordinate excludes handle 100% of coordinate-carried classes
+// cheaply; R8 handles the shaded remainder.
+const FDROID_PROGUARD_RULES = `# BLD-4110 — F-Droid AC10b strip proprietary SUSS classes.
+# Written by plugins/with-wearos-module.js when CABLESNAP_FDROID=1. See the
+# writeFdroidProguardRules comment there for the full rationale.
+#
+# -assumenosideeffects marks these classes' methods as pure so R8 can
+# eliminate any call to them, then dead-code-eliminate the classes themselves.
+# The four namespaces below cover every prohibited prefix listed in the
+# AC10b gate:
+#   com/google/firebase/**, com/google/mlkit/**,
+#   com/google/android/gms/tasks/**, com/android/installreferrer/**
+# GMS-wearable (com/google/android/gms/wearable/**) is already stripped by
+# FDROID_EXCLUDES_BLOCK via \`exclude group: "com.google.android.gms"\`;
+# the coordinate exclude is sufficient there since GMS-wearable ships in its
+# own Maven artifact and is not shaded into another AAR.
+-assumenosideeffects class com.google.firebase.** { *; }
+-assumenosideeffects class com.google.mlkit.** { *; }
+-assumenosideeffects class com.google.android.gms.tasks.** { *; }
+-assumenosideeffects class com.android.installreferrer.** { *; }
+
+# -dontwarn silences warnings for references to now-removed classes that R8
+# still sees in class bytecode (e.g. \`expo.modules.notifications.service.
+# ExpoFirebaseMessagingService\` extends \`FirebaseMessagingService\`). Without
+# this, R8 fails the build with "Missing class ..." even though the referring
+# code path is itself dead.
+-dontwarn com.google.firebase.**
+-dontwarn com.google.mlkit.**
+-dontwarn com.google.android.gms.**
+-dontwarn com.android.installreferrer.**
+`;
+
+function writeFdroidProguardRules(platformRoot) {
+  // Only write for F-Droid builds. The proguard-fdroid-strip.pro file is
+  // referenced by the releaseFdroid build type's proguardFiles list, but
+  // Gradle tolerates a missing proguard file if the variant is not being
+  // built — so the Play `release` build (which does not reference this file)
+  // is unaffected either way. Writing unconditionally would still be safe
+  // but wastes I/O and clutters the prebuild output.
+  if (process.env.CABLESNAP_FDROID !== "1") return;
+  const dir = path.join(platformRoot, "app");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, "proguard-fdroid-strip.pro"),
+    FDROID_PROGUARD_RULES,
+    "utf8",
+  );
+}
+
 function patchFdroidExpoDependencies(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const replacements = [
@@ -526,6 +616,9 @@ const withWearOsModule = (config) => {
       // Write/overwrite the F-Droid manifest overlay. Idempotent — same
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
+      // Write the F-Droid ProGuard/R8 strip rules — only when
+      // CABLESNAP_FDROID=1. See writeFdroidProguardRules for rationale.
+      writeFdroidProguardRules(platformRoot);
       return cfg;
     },
   ]);
@@ -542,7 +635,9 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.writeFdroidProguardRules = writeFdroidProguardRules;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
+module.exports.FDROID_PROGUARD_RULES = FDROID_PROGUARD_RULES;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;

@@ -9,8 +9,10 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidProguardRules,
   patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
+  FDROID_PROGUARD_RULES,
 } = require("../../plugins/with-wearos-module");
 
 // Minimal but realistic fixtures matching the shape Expo's Android template
@@ -251,6 +253,46 @@ describe("patchAppBuildGradle", () => {
     // test catches it.
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toContain("shrinkResources enableShrinkResources.toBoolean()");
+  });
+
+  // BLD-4110 — releaseFdroid must enable R8 minification and load the
+  // proguard-fdroid-strip.pro rules file so shaded proprietary classes
+  // (Firebase / MLKit / GMS-tasks / installreferrer) that classpath excludes
+  // cannot reach are eliminated at dex time. The Play `release` build is
+  // scoped-out — no minifyEnabled edits reach it.
+  it("enables minifyEnabled on releaseFdroid so R8 runs (BLD-4110)", () => {
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?minifyEnabled\s+true/,
+    );
+  });
+
+  it("wires proguard-fdroid-strip.pro into releaseFdroid proguardFiles (BLD-4110)", () => {
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?proguardFiles[\s\S]*?"proguard-fdroid-strip\.pro"/,
+    );
+    // Standard optimized rules + repo proguard-rules.pro must also be present.
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?getDefaultProguardFile\("proguard-android-optimize\.txt"\)[\s\S]*?"proguard-rules\.pro"/,
+    );
+  });
+
+  it("does NOT touch the Play `release` build type — no minifyEnabled or proguard-fdroid-strip.pro added there (BLD-4110 regression guard)", () => {
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    // Anchor on the fixture's exact inner `release {` opener (right after
+    // `debug { ... }` inside buildTypes). Capture up to the matching close
+    // brace — the fixture keeps release with a single nesting level.
+    const marker = "release {\n            signingConfig";
+    const relStart = out.indexOf(marker);
+    expect(relStart).toBeGreaterThan(-1);
+    // Find the closing brace for this `release { ... }`. It's the first `}`
+    // that appears on its own line following the opener at 8-space indent.
+    const closeIdx = out.indexOf("\n        }", relStart);
+    expect(closeIdx).toBeGreaterThan(relStart);
+    const releaseBlock = out.slice(relStart, closeIdx);
+    expect(releaseBlock).not.toContain("proguard-fdroid-strip.pro");
+    expect(releaseBlock).not.toContain("minifyEnabled true");
   });
 });
 
@@ -618,6 +660,115 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
       ).toBe(true);
     } finally {
       rmDirRecursive(tmp);
+    }
+  });
+});
+
+// ----------------------------------------------------------------------------
+// writeFdroidProguardRules + FDROID_PROGUARD_RULES (BLD-4110)
+// ----------------------------------------------------------------------------
+//
+// The `proguard-fdroid-strip.pro` file is the R8/ProGuard input that lets the
+// releaseFdroid variant eliminate proprietary classes shaded inside
+// third-party AARs (Firebase / MLKit / GMS-tasks / installreferrer).
+// Coordinate-level exclusions (see FDROID_EXCLUDES_BLOCK) cannot reach shaded
+// classes; R8 acting on the merged dex classpath is the durable fix.
+//
+// Contract:
+//   1. When CABLESNAP_FDROID=1, `android/app/proguard-fdroid-strip.pro` is
+//      written under the platform root.
+//   2. When CABLESNAP_FDROID is unset (or any value other than "1"), NO file
+//      is written — the Play build must not carry F-Droid-scoped rules.
+//   3. Contents cover all four leaking prefixes exactly, matching the
+//      referenced-by-proguardFiles wiring in RELEASE_FDROID_BUILD_TYPE.
+describe("writeFdroidProguardRules + FDROID_PROGUARD_RULES", () => {
+  it("covers all four prohibited prefixes with -assumenosideeffects", () => {
+    expect(FDROID_PROGUARD_RULES).toMatch(
+      /-assumenosideeffects\s+class\s+com\.google\.firebase\.\*\*/,
+    );
+    expect(FDROID_PROGUARD_RULES).toMatch(
+      /-assumenosideeffects\s+class\s+com\.google\.mlkit\.\*\*/,
+    );
+    expect(FDROID_PROGUARD_RULES).toMatch(
+      /-assumenosideeffects\s+class\s+com\.google\.android\.gms\.tasks\.\*\*/,
+    );
+    expect(FDROID_PROGUARD_RULES).toMatch(
+      /-assumenosideeffects\s+class\s+com\.android\.installreferrer\.\*\*/,
+    );
+  });
+
+  it("includes -dontwarn for all four prefixes so R8 does not fail on removed-class references", () => {
+    expect(FDROID_PROGUARD_RULES).toContain("-dontwarn com.google.firebase.**");
+    expect(FDROID_PROGUARD_RULES).toContain("-dontwarn com.google.mlkit.**");
+    expect(FDROID_PROGUARD_RULES).toContain(
+      "-dontwarn com.google.android.gms.**",
+    );
+    expect(FDROID_PROGUARD_RULES).toContain(
+      "-dontwarn com.android.installreferrer.**",
+    );
+  });
+
+  it("writes android/app/proguard-fdroid-strip.pro when CABLESNAP_FDROID=1", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    process.env.CABLESNAP_FDROID = "1";
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      const filePath = path.join(tmp, "app", "proguard-fdroid-strip.pro");
+      expect(fs.existsSync(filePath)).toBe(true);
+      expect(fs.readFileSync(filePath, "utf8")).toBe(FDROID_PROGUARD_RULES);
+    } finally {
+      rmDirRecursive(tmp);
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
+  });
+
+  it("does NOT write the file when CABLESNAP_FDROID is unset (Play build safety)", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    delete process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      expect(
+        fs.existsSync(path.join(tmp, "app", "proguard-fdroid-strip.pro")),
+      ).toBe(false);
+    } finally {
+      rmDirRecursive(tmp);
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
+  });
+
+  it("is idempotent (overwrites any existing file)", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    process.env.CABLESNAP_FDROID = "1";
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      const dir = path.join(tmp, "app");
+      fs.mkdirSync(dir, { recursive: true });
+      const filePath = path.join(dir, "proguard-fdroid-strip.pro");
+      fs.writeFileSync(filePath, "STALE PREVIOUS PREBUILD CONTENTS", "utf8");
+      writeFdroidProguardRules(tmp);
+      expect(fs.readFileSync(filePath, "utf8")).toBe(FDROID_PROGUARD_RULES);
+    } finally {
+      rmDirRecursive(tmp);
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
+  });
+
+  it("creates intermediate directories if missing (fresh prebuild --clean)", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    process.env.CABLESNAP_FDROID = "1";
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      expect(fs.existsSync(path.join(tmp, "app"))).toBe(true);
+    } finally {
+      rmDirRecursive(tmp);
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
     }
   });
 });
