@@ -328,6 +328,49 @@ describe("WorkoutHeatmap", () => {
     expect(color3).toBe("#0A2540");
   });
 
+  // BLD-4061: The legend '3+' cell must not clip its 2-char label.
+  // legendCell must use minWidth (not a fixed width) and paddingHorizontal > 0
+  // so the cell can expand to show the full "3+" text without truncation.
+  it("legend '3+' cell has paddingHorizontal so label is not clipped (BLD-4061)", () => {
+    const { StyleSheet } = require("react-native");
+    const { getAllByText } = renderScreen(<WorkoutHeatmap data={new Map()} />);
+    // The legend always renders all 4 levels; level 3 shows "3+".
+    const labels = getAllByText("3+", { includeHiddenElements: true });
+    expect(labels.length).toBeGreaterThanOrEqual(1);
+
+    // Walk up from the "3+" Text node to find the legendCell View that holds it.
+    // getAllByText returns the innermost host RNText element; its immediate parent
+    // in the React fiber tree is the custom Text (forwardRef) wrapper, so we
+    // walk up two levels to reach the legendCell View.
+    const textNode = labels[0];
+    // Walk up until we find a node whose style has `height` — that is the legendCell View.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let legendCellView: any = textNode.parent;
+    while (legendCellView) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const s = StyleSheet.flatten((legendCellView as any)?.props?.style) as Record<string, unknown>;
+      if (s && typeof s.height === "number") break;
+      legendCellView = legendCellView.parent;
+    }
+    expect(legendCellView).toBeTruthy();
+
+    // Use StyleSheet.flatten to resolve registered stylesheet IDs into a plain object.
+    // Plain object spreading alone misses properties registered via StyleSheet.create.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const flatStyle = StyleSheet.flatten((legendCellView as any)?.props?.style) as Record<string, unknown>;
+
+    // Must NOT have a fixed `width` of 18 (the clipping value before BLD-4061 fix).
+    expect(flatStyle.width).toBeUndefined();
+
+    // Must have minWidth >= 18 so the cell doesn't shrink below the normal square.
+    expect(typeof flatStyle.minWidth).toBe("number");
+    expect(flatStyle.minWidth as number).toBeGreaterThanOrEqual(18);
+
+    // Must have paddingHorizontal > 0 to give the "3+" label breathing room.
+    expect(typeof flatStyle.paddingHorizontal).toBe("number");
+    expect(flatStyle.paddingHorizontal as number).toBeGreaterThan(0);
+  });
+
   it("applies a right margin to the day labels for consistent spacing (BLD-3642)", () => {
     const { getByText } = renderScreen(
       <WorkoutHeatmap data={emptyData} />
