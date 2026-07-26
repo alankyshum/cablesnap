@@ -252,6 +252,13 @@ jest.mock('../../lib/db', () => ({
   getPreferredSubstitutesBatch: jest.fn().mockResolvedValue({}),
   getPreferredSubstitute: jest.fn().mockResolvedValue(null),
   setPreferredSubstitute: jest.fn().mockResolvedValue(undefined),
+  getShareSettings: jest.fn().mockResolvedValue({
+    promo_caption_enabled: 0,
+    promo_caption: "",
+    strava_description_enabled: 0
+  }),
+  saveShareSettings: jest.fn().mockResolvedValue(undefined),
+  getEffectivePromoCaption: jest.fn().mockResolvedValue(""),
 }))
 
 jest.mock('../../lib/db/pr-dashboard', () => ({

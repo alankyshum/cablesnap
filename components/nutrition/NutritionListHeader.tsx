@@ -204,7 +204,7 @@ export function NutritionListHeader({
               onPress={onMealTemplates}
               accessibilityLabel="View meal templates"
               accessibilityRole="link"
-              style={[styles.linkRow, { marginTop: 4 }]}
+              style={styles.linkRow}
             >
               <Text variant="caption" style={{ color: colors.primary }}>
                 Meal Templates

@@ -41,6 +41,7 @@ _No user-facing changes yet._
 - **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
 - **Nutrition card link padding** — Adds consistent edge padding to the Edit Targets and Meal Templates link rows in the nutrition card for better touch targets and visual alignment. ([BLD-4043](/BLD/issues/BLD-4043))
 - **Aligned water quick-add buttons** — Water quick-add chips now stay vertically centered on each row, fixing a slight misalignment visible on mobile. ([BLD-4042](/BLD/issues/BLD-4042))
+- **Heatmap legend '3+' cell no longer clips** — Caps the legend cell label font size so the two-character "3+" label fits within the 18 × 18 swatch with adequate padding. ([BLD-4061](/BLD/issues/BLD-4061))
 
 ## v0.26.88 — 2026-07-26
 <!-- versionCode: 156 -->
