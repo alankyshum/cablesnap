@@ -89,6 +89,29 @@ describe("patchSettingsGradle", () => {
     expect(out).toContain("// cablesnap:wearos:settings-include");
   });
 
+  it("emits an env-gated early dependency rewrite in settings.gradle", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    process.env.CABLESNAP_FDROID = "1";
+    const out = patchSettingsGradle(SETTINGS_FIXTURE);
+    expect(out).toContain('if (System.getenv("CABLESNAP_FDROID") == "1")');
+    expect(out).toContain("gradle.beforeProject { project ->");
+    expect(out).toContain("project.ext.barcodeScannerEnabled = false");
+    expect(out).toContain("compileOnly 'com.google.firebase:");
+    expect(out).toContain("compileOnly 'com.android.installreferrer:");
+    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+    else process.env.CABLESNAP_FDROID = previous;
+  });
+
+  it("omits the F-Droid settings rewrite for Play prebuild", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    delete process.env.CABLESNAP_FDROID;
+    const out = patchSettingsGradle(SETTINGS_FIXTURE);
+    expect(out).not.toContain("fdroid-settings-filter");
+    expect(out).not.toContain("beforeProject");
+    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+    else process.env.CABLESNAP_FDROID = previous;
+  });
+
   it("does not duplicate the include block on re-run", () => {
     const once = patchSettingsGradle(SETTINGS_FIXTURE);
     const twice = patchSettingsGradle(once);
@@ -312,12 +335,6 @@ describe("patchProjectBuildGradle", () => {
     }
     expect(out).toContain('exclude module: "camera-mlkit-vision"');
     expect(out).toContain('exclude module: "expo-wearos-bridge"');
-    expect(out).toContain("gradle.beforeProject { project ->");
-    expect(out).toContain("project.buildFile.exists()");
-    expect(out).toContain("implementation 'com.google.firebase:");
-    expect(out).toContain("compileOnly 'com.google.firebase:");
-    expect(out).toContain('project.name == "expo-camera"');
-    expect(out).toContain("compileOnly");
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
     else process.env.CABLESNAP_FDROID = previous;
   });

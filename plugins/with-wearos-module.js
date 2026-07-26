@@ -68,6 +68,7 @@ const {
 // to re-run on every `expo prebuild`.
 // ---------------------------------------------------------------------------
 const SETTINGS_MARKER = "// cablesnap:wearos:settings-include";
+const FDROID_SETTINGS_MARKER = "// cablesnap:wearos:fdroid-settings-filter";
 const BUILD_TYPES_MARKER = "// cablesnap:wearos:build-types";
 const FDROID_EXCLUDES_MARKER = "// cablesnap:wearos:fdroid-excludes";
 const SUBPROJECT_FILTER_MARKER = "// cablesnap:wearos:subproject-variant-filter";
@@ -93,8 +94,31 @@ include ':wear'
 project(':wear').projectDir = new File(rootProject.projectDir, 'wear')
 `;
 
+const FDROID_SETTINGS_BLOCK = `
+${FDROID_SETTINGS_MARKER}
+if (System.getenv("CABLESNAP_FDROID") == "1") {
+    gradle.beforeProject { project ->
+        if (project == gradle.rootProject || !project.buildFile.exists()) return
+        if (project.name == "expo-camera") {
+            project.ext.barcodeScannerEnabled = false
+        }
+        def buildFile = project.buildFile
+        def original = buildFile.getText("UTF-8")
+        def patched = original
+            .replace("implementation 'com.google.firebase:", "compileOnly 'com.google.firebase:")
+            .replace("implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:")
+            .replace('implementation "com.google.firebase:', 'compileOnly "com.google.firebase:')
+            .replace('implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:')
+        if (patched != original) buildFile.setText(patched, "UTF-8")
+    }
+}
+`;
+
 function patchSettingsGradle(contents) {
-  if (contents.includes(SETTINGS_MARKER)) {
+  if (
+    contents.includes(SETTINGS_MARKER) &&
+    (process.env.CABLESNAP_FDROID !== "1" || contents.includes(FDROID_SETTINGS_MARKER))
+  ) {
     return contents;
   }
   // Append at the end of settings.gradle. Order doesn't matter for
@@ -104,7 +128,14 @@ function patchSettingsGradle(contents) {
   if (!out.endsWith("\n")) {
     out = out + "\n";
   }
-  return out + SETTINGS_BLOCK;
+  if (!out.includes(SETTINGS_MARKER)) out += SETTINGS_BLOCK;
+  if (
+    process.env.CABLESNAP_FDROID === "1" &&
+    !out.includes(FDROID_SETTINGS_MARKER)
+  ) {
+    out += FDROID_SETTINGS_BLOCK;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -178,23 +209,6 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             exclude module: "camera-mlkit-vision"
             exclude module: "expo-wearos-bridge"
         }
-    }
-    // Expo modules declare these artifacts directly in their own projects.
-    // Rewrite direct declarations before project evaluation; compileOnly keeps
-    // native compilation working without adding artifacts to runtime.
-    gradle.beforeProject { project ->
-        if (project == rootProject || !project.buildFile.exists()) return
-        if (project.name == "expo-camera") {
-            project.ext.barcodeScannerEnabled = false
-        }
-        def buildFile = project.buildFile
-        def original = buildFile.getText("UTF-8")
-        def patched = original
-            .replace("implementation 'com.google.firebase:", "compileOnly 'com.google.firebase:")
-            .replace("implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:")
-            .replace('implementation "com.google.firebase:', 'compileOnly "com.google.firebase:')
-            .replace('implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:')
-        if (patched != original) buildFile.setText(patched, "UTF-8")
     }
 }
 `;
