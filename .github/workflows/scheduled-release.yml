@@ -320,6 +320,20 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npx expo prebuild --clean --platform android
 
+      - name: Strip direct proprietary Expo dependencies
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          CABLESNAP_FDROID: "1"
+        run: |
+          node - <<'NODE'
+          const { patchFdroidExpoDependencies } = require('./plugins/with-wearos-module');
+          patchFdroidExpoDependencies(process.cwd());
+          NODE
+          grep -nE 'compileOnly.*(firebase|installreferrer)|barcodeDependencyConfiguration' \
+            node_modules/expo-notifications/android/build.gradle \
+            node_modules/expo-application/android/build.gradle \
+            node_modules/expo-camera/android/build.gradle
+
       - name: Boost Gradle JVM heap
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
