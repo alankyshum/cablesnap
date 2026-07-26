@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
+- **Consistent spacing in Progress tab** — Aligns the Progress tab navigation and view-mode toggle spacing to resolve inconsistent vertical and horizontal gaps. ([BLD-3648](/BLD/issues/BLD-3648))
 
 ## v0.26.88 — 2026-07-26
 <!-- versionCode: 156 -->
