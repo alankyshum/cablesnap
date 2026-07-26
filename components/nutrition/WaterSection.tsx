@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   headerArea: { minHeight: 44, paddingVertical: 4 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   bar: { height: 6, borderRadius: radii.sm },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8, alignItems: "center" },
   chip: {
     minHeight: 44,
     minWidth: 44,
