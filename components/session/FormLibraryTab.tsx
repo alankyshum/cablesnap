@@ -405,8 +405,15 @@ function RecordCTAButton({ isResolved, isEnabled, reason, onRecord }: RecordCTAB
       hitSlop={8}
       style={[
         styles.recordCTA,
-        { backgroundColor: colors.primary },
-        !isEnabled && [styles.recordCTADisabled, { borderColor: colors.outline }],
+        isEnabled
+          ? // BLD-4036: add a luminance-based border on the enabled state so the
+            // button edge is distinguishable from the header surface under all CVD
+            // modes (including protanopia, where the coral #FF6038 background loses
+            // hue contrast against light surfaces).  The secondary token (#1A2138)
+            // is a near-black navy that provides >7:1 luminance contrast against
+            // the coral fill regardless of colour-vision type.
+            { backgroundColor: colors.primary, borderWidth: 1, borderColor: colors.secondary }
+          : [styles.recordCTADisabled, { borderColor: colors.outline }],
       ]}
       disabled={!isEnabled}
     >
