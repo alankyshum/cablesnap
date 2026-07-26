@@ -179,10 +179,9 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             exclude module: "expo-wearos-bridge"
         }
     }
-    // Expo modules declare these artifacts directly in their own build files.
-    // Root configuration exclusions only affect transitive edges. Rewrite the
-    // direct declarations before each subproject evaluates, preserving compile
-    // access while keeping the artifacts off every runtime classpath.
+    // Expo modules declare these artifacts directly in their own projects.
+    // Rewrite direct declarations before project evaluation; compileOnly keeps
+    // native compilation working without adding artifacts to runtime.
     gradle.beforeProject { project ->
         if (project == rootProject || !project.buildFile.exists()) return
         if (project.name == "expo-camera") {
@@ -190,10 +189,11 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
         }
         def buildFile = project.buildFile
         def original = buildFile.getText("UTF-8")
-        def patched = original.replaceAll(
-            /(?m)^(\\s*)implementation(\\s+['"](?:com\\.google\\.(?:android\\.gms|firebase|mlkit)|com\\.android\\.installreferrer):[^'"\\n]+['"]\\s*)$/,
-            '$1compileOnly$2',
-        )
+        def patched = original
+            .replace("implementation 'com.google.firebase:", "compileOnly 'com.google.firebase:")
+            .replace("implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:")
+            .replace('implementation "com.google.firebase:', 'compileOnly "com.google.firebase:')
+            .replace('implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:')
         if (patched != original) buildFile.setText(patched, "UTF-8")
     }
 }

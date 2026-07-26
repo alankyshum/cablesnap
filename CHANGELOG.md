@@ -31,6 +31,8 @@ _No user-facing changes yet._
 - **F-Droid prebuild rewrites direct proprietary Expo library dependencies to compile-only**, preventing them from being packaged while retaining native compilation.
 - **F-Droid Gradle setup rewrites direct proprietary dependencies before subprojects evaluate**, preventing runtime packaging across Expo modules.
 - **F-Droid prebuild disables Expo Camera barcode dependencies**, keeping camera preview available without ML Kit or Google Play Services classes.
+- **F-Droid library resolution moves proprietary direct dependencies to compile-only**, removing them from release runtime packaging.
+- **F-Droid prebuild rewrites Firebase and Install Referrer declarations before Gradle evaluation**, while disabling Camera barcode dependency resolution.
 
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->

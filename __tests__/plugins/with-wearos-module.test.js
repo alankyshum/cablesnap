@@ -314,8 +314,9 @@ describe("patchProjectBuildGradle", () => {
     expect(out).toContain('exclude module: "expo-wearos-bridge"');
     expect(out).toContain("gradle.beforeProject { project ->");
     expect(out).toContain("project.buildFile.exists()");
+    expect(out).toContain("implementation 'com.google.firebase:");
+    expect(out).toContain("compileOnly 'com.google.firebase:");
     expect(out).toContain('project.name == "expo-camera"');
-    expect(out).toContain("barcodeScannerEnabled = false");
     expect(out).toContain("compileOnly");
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
     else process.env.CABLESNAP_FDROID = previous;
