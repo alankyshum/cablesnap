@@ -245,7 +245,6 @@ describe("WorkoutHeatmap", () => {
     // withOpacity('#FF7A55', ...) -> 'rgba(255, 122, 85, ...)'
     expect(json).not.toMatch(/rgba\(255,\s*122,\s*85/);
   });
-
   // BLD-3656: assert that computed cell label font size is bumped to fontSizes.sm floor.
   it("uses fontSizes.sm as the floor for cell labels and applies size * 0.55 multiplier", () => {
     const data = new Map([["2026-04-14", 3]]);
@@ -327,5 +326,33 @@ describe("WorkoutHeatmap", () => {
     expect(color1).toBe("#90CAF9");
     expect(color2).toBe("#1E88E5");
     expect(color3).toBe("#0A2540");
+  });
+
+  it("applies a right margin to the day labels for consistent spacing (BLD-3642)", () => {
+    const { getByText } = renderScreen(
+      <WorkoutHeatmap data={emptyData} />
+    );
+    const wed = getByText("Wed");
+    const collectStyles = (node: typeof wed | null): Record<string, unknown> => {
+      let acc: Record<string, unknown> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const flatten = (style: any) => {
+        if (Array.isArray(style)) {
+          for (const s of style) {
+            flatten(s);
+          }
+        } else if (style && typeof style === "object") {
+          acc = { ...acc, ...style };
+        }
+      };
+      let cur: typeof wed | null = node;
+      while (cur) {
+        flatten(cur.props?.style);
+        cur = cur.parent as typeof wed | null;
+      }
+      return acc;
+    };
+    const flat = collectStyles(wed);
+    expect(flat.marginRight).toBe(1); // gap / 2 = 2 / 2 = 1
   });
 });

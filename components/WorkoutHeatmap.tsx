@@ -204,7 +204,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
         <View key={rowIdx} style={styles.row}>
           <Text
             variant="caption"
-            style={[styles.dayLabel, { width: labelWidth, fontSize: fontSizes.xs, color: colors.onSurfaceVariant }]}
+            style={[styles.dayLabel, { width: labelWidth, fontSize: fontSizes.xs, color: colors.onSurfaceVariant, marginRight: gap / 2 }]}
           >
             {DAY_LABELS[rowIdx]}
           </Text>
