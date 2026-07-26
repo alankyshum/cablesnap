@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.87",
+    "date": "2026-07-26",
+    "versionCode": 155,
+    "body": "- **F-Droid builds now fully disable crash reporting and telemetry** — F-Droid builds ship without a Sentry DSN, and the native Sentry SDK is not initialized. The published license is corrected to AGPL-3.0-or-later."
+  },
+  {
     "version": "0.26.86",
     "date": "2026-07-25",
     "versionCode": 154,
