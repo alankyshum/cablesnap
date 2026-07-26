@@ -36,7 +36,7 @@ import { FormClipsPlayer } from "./FormClipsPlayer";
 import { ClipThumbImage } from "./ClipThumbImage";
 import { FormVideoSheet } from "./FormVideoSheet";
 import type { SetMediaRow } from "@/lib/db/form-clips";
-import { fontSizes, radii } from "@/constants/design-tokens";
+import { fontSizes, radii, spacing } from "@/constants/design-tokens";
 
 type SheetProps = {
   setId: string;
@@ -651,18 +651,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   headerTitle: { fontSize: fontSizes.base, fontWeight: "600" },
-  countBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 },
+  countBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radii.lg },
   countBadgeText: { fontSize: fontSizes.xs, fontWeight: "700" },
   selectTogglePressable: {
     minHeight: 44,
     minWidth: 44,
-    paddingHorizontal: 8,
+    // Negative right margin cancels the internal padding at the trailing edge,
+    // so the "Select" label visually aligns with the header's 16dp gutter and
+    // the spacing to the "Form clips" title on the opposite side reads as
+    // consistent with the rest of the layout (BLD-4037).
+    marginRight: -spacing.sm,
+    paddingHorizontal: spacing.sm,
     justifyContent: "center",
     alignItems: "center",
   },
