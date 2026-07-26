@@ -179,27 +179,28 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             exclude module: "expo-wearos-bridge"
         }
     }
-    subprojects {
-        afterEvaluate {
-            def compileOnly = configurations.findByName("compileOnly")
-            if (compileOnly == null) return
+    allprojects { project ->
+        project.plugins.withId("com.android.library") {
+            def compileOnly = project.configurations.maybeCreate("compileOnly")
             ["implementation", "api"].each { configurationName ->
-                def configuration = configurations.findByName(configurationName)
-                if (configuration == null) return
-                def proprietary = configuration.dependencies.findAll { dependency ->
-                    dependency.group in [
-                        "com.google.android.gms",
-                        "com.google.firebase",
-                        "com.google.mlkit",
-                        "com.android.installreferrer",
-                    ] || dependency.name in [
-                        "camera-mlkit-vision",
-                        "expo-wearos-bridge",
-                    ]
-                }
-                proprietary.each { dependency ->
-                    configuration.dependencies.remove(dependency)
-                    compileOnly.dependencies.add(dependency)
+                project.configurations.named(configurationName) {
+                    withDependencies { dependencies ->
+                        def proprietary = dependencies.findAll { dependency ->
+                            dependency.group in [
+                                "com.google.android.gms",
+                                "com.google.firebase",
+                                "com.google.mlkit",
+                                "com.android.installreferrer",
+                            ] || dependency.name in [
+                                "camera-mlkit-vision",
+                                "expo-wearos-bridge",
+                            ]
+                        }
+                        dependencies.removeAll(proprietary)
+                        proprietary.each { dependency ->
+                            compileOnly.dependencies.add(dependency)
+                        }
+                    }
                 }
             }
         }

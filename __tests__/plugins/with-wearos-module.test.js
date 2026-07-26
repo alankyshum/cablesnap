@@ -313,7 +313,7 @@ describe("patchProjectBuildGradle", () => {
     expect(out).toContain('exclude module: "camera-mlkit-vision"');
     expect(out).toContain('exclude module: "expo-wearos-bridge"');
     expect(out).toMatch(
-      /afterEvaluate\s*\{[\s\S]*findByName\("compileOnly"\)[\s\S]*\["implementation", "api"\][\s\S]*dependencies\.remove\(dependency\)[\s\S]*compileOnly\.dependencies\.add\(dependency\)/,
+      /allprojects\s*\{ project ->[\s\S]*plugins\.withId\("com\.android\.library"\)[\s\S]*withDependencies[\s\S]*dependencies\.removeAll\(proprietary\)[\s\S]*compileOnly\.dependencies\.add\(dependency\)/,
     );
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
     else process.env.CABLESNAP_FDROID = previous;
