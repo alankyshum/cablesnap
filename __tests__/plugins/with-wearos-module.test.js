@@ -9,8 +9,10 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidProguardRules,
   patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
+  FDROID_PROGUARD_RULES,
 } = require("../../plugins/with-wearos-module");
 
 // Minimal but realistic fixtures matching the shape Expo's Android template
@@ -625,5 +627,135 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
     } finally {
       rmDirRecursive(tmp);
     }
+  });
+});
+
+// ----------------------------------------------------------------------------
+// writeFdroidProguardRules + FDROID_PROGUARD_RULES
+// ----------------------------------------------------------------------------
+//
+// The R8 ProGuard rules file strips proprietary classes that expo-camera and
+// expo-notifications shade into their own AARs. Coordinate-level excludes
+// (`configurations.all { exclude group: "com.google.mlkit" }`) cannot reach
+// shaded classes because those classes appear in the DEX under the including
+// library's coordinate. R8 dead-code elimination works across ALL DEX classes
+// regardless of which AAR they originated in. CEO-directed in BLD-4124.
+describe("writeFdroidProguardRules + FDROID_PROGUARD_RULES", () => {
+  it("FDROID_PROGUARD_RULES contains -assumenosideeffects for all four SUSS packages", () => {
+    expect(FDROID_PROGUARD_RULES).toContain(
+      "-assumenosideeffects class com.google.firebase.** { *; }",
+    );
+    expect(FDROID_PROGUARD_RULES).toContain(
+      "-assumenosideeffects class com.google.mlkit.** { *; }",
+    );
+    expect(FDROID_PROGUARD_RULES).toContain(
+      "-assumenosideeffects class com.google.android.gms.tasks.** { *; }",
+    );
+    expect(FDROID_PROGUARD_RULES).toContain(
+      "-assumenosideeffects class com.android.installreferrer.** { *; }",
+    );
+  });
+
+  it("FDROID_PROGUARD_RULES contains -dontwarn for all four SUSS packages", () => {
+    expect(FDROID_PROGUARD_RULES).toContain("-dontwarn com.google.firebase.**");
+    expect(FDROID_PROGUARD_RULES).toContain("-dontwarn com.google.mlkit.**");
+    expect(FDROID_PROGUARD_RULES).toContain(
+      "-dontwarn com.google.android.gms.tasks.**",
+    );
+    expect(FDROID_PROGUARD_RULES).toContain(
+      "-dontwarn com.android.installreferrer.**",
+    );
+  });
+
+  it("writeFdroidProguardRules creates android/app/proguard-fdroid-strip.pro when CABLESNAP_FDROID=1", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "proguard-fdroid-"));
+    try {
+      process.env.CABLESNAP_FDROID = "1";
+      writeFdroidProguardRules(tmp);
+      const proPath = path.join(tmp, "app", "proguard-fdroid-strip.pro");
+      expect(fs.existsSync(proPath)).toBe(true);
+      const written = fs.readFileSync(proPath, "utf8");
+      expect(written).toBe(FDROID_PROGUARD_RULES);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("writeFdroidProguardRules is a no-op (does not write file) when CABLESNAP_FDROID is not set", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "proguard-fdroid-"));
+    try {
+      delete process.env.CABLESNAP_FDROID;
+      writeFdroidProguardRules(tmp);
+      const proPath = path.join(tmp, "app", "proguard-fdroid-strip.pro");
+      expect(fs.existsSync(proPath)).toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("writeFdroidProguardRules is idempotent (overwrites on re-run)", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "proguard-fdroid-"));
+    try {
+      process.env.CABLESNAP_FDROID = "1";
+      const appDir = path.join(tmp, "app");
+      fs.mkdirSync(appDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(appDir, "proguard-fdroid-strip.pro"),
+        "STALE CONTENTS",
+        "utf8",
+      );
+      writeFdroidProguardRules(tmp);
+      const written = fs.readFileSync(
+        path.join(appDir, "proguard-fdroid-strip.pro"),
+        "utf8",
+      );
+      expect(written).toBe(FDROID_PROGUARD_RULES);
+      expect(written).not.toContain("STALE");
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("writeFdroidProguardRules creates intermediate directories if missing", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "proguard-fdroid-"));
+    try {
+      process.env.CABLESNAP_FDROID = "1";
+      // Do not pre-create android/app/ — plugin must create it
+      writeFdroidProguardRules(tmp);
+      expect(fs.existsSync(path.join(tmp, "app"))).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("releaseFdroid build type references proguard-fdroid-strip.pro", () => {
+    // Regression guard: ensures the RELEASE_FDROID_BUILD_TYPE constant wires
+    // the proguard file into the releaseFdroid buildType declaration.
+    const out = patchAppBuildGradle(
+      `apply plugin: "com.android.application"
+android {
+  buildTypes {
+    debug { signingConfig signingConfigs.debug }
+    release { signingConfig signingConfigs.debug }
+  }
+}
+dependencies {}
+`,
+    );
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?proguardFiles\s+getDefaultProguardFile\('proguard-android-optimize\.txt'\),\s*'proguard-rules\.pro',\s*'proguard-fdroid-strip\.pro'/,
+    );
   });
 });
