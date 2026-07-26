@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.88",
+    "date": "2026-07-26",
+    "versionCode": 156,
+    "body": "- **F-Droid builds no longer embed the Sentry DSN**, allowing the Tracking AntiFeature to be removed from the official listing."
+  },
+  {
     "version": "0.26.87",
     "date": "2026-07-26",
     "versionCode": 155,
