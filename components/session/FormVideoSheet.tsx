@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   timerText: { color: "#fff", fontSize: 16, fontWeight: "700", fontVariant: ["tabular-nums"] },
   recordBtnRow: {
     position: "absolute",
-    bottom: 48,
+    bottom: 56,
     left: 0,
     right: 0,
     alignItems: "center",
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     paddingHorizontal: 24,
-    paddingBottom: 48,
+    paddingBottom: 56,
     justifyContent: "center",
   },
   reviewBtn: {
