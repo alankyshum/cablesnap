@@ -10,6 +10,7 @@ const {
   rmDirRecursive,
   writeFdroidManifest,
   patchFdroidExpoDependencies,
+  patchFdroidSourceFiles,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
@@ -516,7 +517,337 @@ describe("patchFdroidExpoDependencies", () => {
 });
 
 // ----------------------------------------------------------------------------
-// writeFdroidManifest + FDROID_MANIFEST_CONTENTS
+// patchFdroidSourceFiles — BLD-4226 source-level proprietary class stripping
+// ----------------------------------------------------------------------------
+//
+// AC10b greps DEX *strings* for four proprietary class prefixes.  Prior
+// approaches that only patched build.gradle files left class-name strings
+// baked into compiled bytecode.  This function replaces / patches the source
+// files so no proprietary imports are present at compile time.
+
+describe("patchFdroidSourceFiles", () => {
+  // Helper: create a minimal node_modules directory tree for the three
+  // modules under test, populate their source files with content that
+  // references proprietary classes, run patchFdroidSourceFiles, then assert.
+  function withFdroidRoot(testFn) {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-src-"));
+    try {
+      // ---- expo-camera -------------------------------------------------------
+      const cameraBase = path.join(
+        tmp, "node_modules", "expo-camera", "android", "src", "main", "java",
+        "expo", "modules", "camera",
+      );
+      fs.mkdirSync(path.join(cameraBase, "analyzers"), { recursive: true });
+      fs.mkdirSync(path.join(cameraBase, "records"), { recursive: true });
+      fs.mkdirSync(path.join(cameraBase, "utils"), { recursive: true });
+
+      fs.writeFileSync(path.join(cameraBase, "analyzers", "BarcodeAnalyzer.kt"),
+        "package expo.modules.camera.analyzers\nimport com.google.mlkit.vision.barcode.BarcodeScanning\nclass BarcodeAnalyzer", "utf8");
+      fs.writeFileSync(path.join(cameraBase, "analyzers", "MLKitBarcodeAnalyzer.kt"),
+        "package expo.modules.camera.analyzers\nimport com.google.android.gms.tasks.Task\nimport com.google.mlkit.vision.barcode.BarcodeScanning\nclass MLKitBarCodeScanner", "utf8");
+      fs.writeFileSync(path.join(cameraBase, "analyzers", "BarcodeScannerResultSerializer.kt"),
+        "package expo.modules.camera.analyzers\nimport com.google.mlkit.vision.barcode.common.Barcode\nobject BarCodeScannerResultSerializer", "utf8");
+      fs.writeFileSync(path.join(cameraBase, "records", "CameraRecords.kt"),
+        "package expo.modules.camera.records\nimport com.google.mlkit.vision.barcode.common.Barcode\nval x = Barcode.FORMAT_QR_CODE", "utf8");
+      fs.writeFileSync(path.join(cameraBase, "CameraViewModule.kt"),
+        "package expo.modules.camera\nimport com.google.mlkit.vision.codescanner.GmsBarcodeScanning\nimport com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions\nclass CameraViewModule", "utf8");
+      fs.writeFileSync(path.join(cameraBase, "utils", "CameraUtils.kt"),
+        "package expo.modules.camera.utils\nobject CameraUtils {\n  fun isMLKitBarcodeScannerAvailable(): Boolean {\n    return try { Class.forName(\"com.google.mlkit.vision.barcode.BarcodeScanning\"); true } catch(_: ClassNotFoundException) { false }\n  }\n}", "utf8");
+
+      // ---- expo-notifications ------------------------------------------------
+      const notifBase = path.join(
+        tmp, "node_modules", "expo-notifications", "android", "src", "main", "java",
+        "expo", "modules", "notifications",
+      );
+      fs.mkdirSync(path.join(notifBase, "service", "delegates"), { recursive: true });
+      fs.mkdirSync(path.join(notifBase, "service", "interfaces"), { recursive: true });
+      fs.mkdirSync(path.join(notifBase, "tokens"), { recursive: true });
+      fs.mkdirSync(path.join(notifBase, "topics"), { recursive: true });
+      fs.mkdirSync(path.join(notifBase, "notifications", "debug"), { recursive: true });
+      fs.mkdirSync(path.join(notifBase, "notifications", "model", "triggers"), { recursive: true });
+      fs.mkdirSync(path.join(notifBase, "notifications"), { recursive: true });
+
+      fs.writeFileSync(path.join(notifBase, "service", "ExpoFirebaseMessagingService.kt"),
+        "package expo.modules.notifications.service\nimport com.google.firebase.messaging.FirebaseMessagingService\nclass ExpoFirebaseMessagingService : FirebaseMessagingService()", "utf8");
+      fs.writeFileSync(path.join(notifBase, "service", "delegates", "FirebaseMessagingDelegate.kt"),
+        "package expo.modules.notifications.service.delegates\nimport com.google.firebase.messaging.FirebaseMessaging\nobject FirebaseMessagingDelegate", "utf8");
+      fs.writeFileSync(path.join(notifBase, "service", "interfaces", "FirebaseMessagingDelegate.kt"),
+        "package expo.modules.notifications.service.interfaces\nimport com.google.firebase.messaging.RemoteMessage\ninterface FirebaseMessagingDelegate", "utf8");
+      fs.writeFileSync(path.join(notifBase, "tokens", "PushTokenModule.kt"),
+        "package expo.modules.notifications.tokens\nimport com.google.firebase.messaging.FirebaseMessaging\nclass PushTokenModule", "utf8");
+      fs.writeFileSync(path.join(notifBase, "topics", "TopicSubscriptionModule.kt"),
+        "package expo.modules.notifications.topics\nimport com.google.firebase.messaging.FirebaseMessaging\nclass TopicSubscriptionModule", "utf8");
+      fs.writeFileSync(path.join(notifBase, "notifications", "debug", "DebugLogging.kt"),
+        "package expo.modules.notifications.notifications.debug\nimport com.google.firebase.messaging.RemoteMessage\nobject DebugLogging", "utf8");
+      fs.writeFileSync(path.join(notifBase, "notifications", "model", "RemoteNotificationContent.kt"),
+        "package expo.modules.notifications.notifications.model\nimport com.google.firebase.messaging.RemoteMessage\nclass RemoteNotificationContent(val m: RemoteMessage)", "utf8");
+      fs.writeFileSync(path.join(notifBase, "notifications", "model", "triggers", "FirebaseNotificationTrigger.kt"),
+        "package expo.modules.notifications.notifications.model.triggers\nimport com.google.firebase.messaging.RemoteMessage\nclass FirebaseNotificationTrigger(val m: RemoteMessage)", "utf8");
+      fs.writeFileSync(path.join(notifBase, "notifications", "NotificationSerializer.java"),
+        [
+          "import com.google.firebase.messaging.RemoteMessage;",
+          "import expo.modules.notifications.notifications.model.triggers.FirebaseNotificationTrigger;",
+          "class NotificationSerializer {",
+          "  void toBundle() {",
+          "    if (requestTrigger instanceof FirebaseNotificationTrigger trigger) {",
+          "      RemoteMessage message = trigger.getRemoteMessage();",
+          "      Map<String, String> data = message.getData();",
+          "    }",
+          "  }",
+          "}",
+        ].join("\n"), "utf8");
+      fs.writeFileSync(path.join(tmp, "node_modules", "expo-notifications", "expo-module.config.json"),
+        JSON.stringify({ android: { modules: [
+          "expo.modules.notifications.tokens.PushTokenModule",
+          "expo.modules.notifications.topics.TopicSubscriptionModule",
+          "expo.modules.notifications.notifications.background.ExpoBackgroundNotificationTasksModule",
+          "expo.modules.notifications.SomeOtherModule",
+        ] } }), "utf8");
+
+      // ---- expo-application --------------------------------------------------
+      const appBase = path.join(
+        tmp, "node_modules", "expo-application", "android", "src", "main", "java",
+        "expo", "modules", "application",
+      );
+      fs.mkdirSync(appBase, { recursive: true });
+      fs.writeFileSync(path.join(appBase, "ApplicationModule.kt"),
+        [
+          "package expo.modules.application",
+          "import com.android.installreferrer.api.InstallReferrerClient",
+          "import com.android.installreferrer.api.InstallReferrerStateListener",
+          "class ApplicationModule {",
+          "  AsyncFunction(\"getInstallReferrerAsync\") { promise: Promise ->",
+          "    val referrerClient = InstallReferrerClient.newBuilder(context).build()",
+          "    referrerClient.startConnection(object : InstallReferrerStateListener {",
+          "      override fun onInstallReferrerSetupFinished(responseCode: Int) { promise.resolve(responseCode) }",
+          "      override fun onInstallReferrerServiceDisconnected() {}",
+          "    })",
+          "  }",
+          "",
+          "  AsyncFunction(\"getApplicationNameAsync\") { \"CableSnap\" }",
+          "}",
+        ].join("\n"), "utf8");
+
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidSourceFiles(tmp);
+      testFn(tmp, cameraBase, notifBase, appBase);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  }
+
+  it("is a no-op when CABLESNAP_FDROID is not set", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-noop-"));
+    try {
+      delete process.env.CABLESNAP_FDROID;
+      // Empty tmp dir — function should not throw, not create any files.
+      patchFdroidSourceFiles(tmp);
+      // No directories created
+      expect(fs.readdirSync(tmp)).toHaveLength(0);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("expo-camera: BarcodeAnalyzer.kt stub does NOT import mlkit", () => {
+    withFdroidRoot((tmp, cameraBase) => {
+      const out = fs.readFileSync(
+        path.join(cameraBase, "analyzers", "BarcodeAnalyzer.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.mlkit/);
+      expect(out).not.toMatch(/com\.google\.android\.gms/);
+      // Stub still declares the class
+      expect(out).toMatch(/class BarcodeAnalyzer/);
+    });
+  });
+
+  it("expo-camera: MLKitBarcodeAnalyzer.kt stub does NOT import mlkit or gms.tasks", () => {
+    withFdroidRoot((tmp, cameraBase) => {
+      const out = fs.readFileSync(
+        path.join(cameraBase, "analyzers", "MLKitBarcodeAnalyzer.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.mlkit/);
+      expect(out).not.toMatch(/com\.google\.android\.gms/);
+      expect(out).toMatch(/class MLKitBarCodeScanner/);
+    });
+  });
+
+  it("expo-camera: BarcodeScannerResultSerializer.kt stub does NOT import Barcode", () => {
+    withFdroidRoot((tmp, cameraBase) => {
+      const out = fs.readFileSync(
+        path.join(cameraBase, "analyzers", "BarcodeScannerResultSerializer.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.mlkit/);
+      expect(out).toMatch(/object BarCodeScannerResultSerializer/);
+    });
+  });
+
+  it("expo-camera: CameraRecords.kt has Barcode import removed and FORMAT_* replaced with integers", () => {
+    withFdroidRoot((tmp, cameraBase) => {
+      const out = fs.readFileSync(
+        path.join(cameraBase, "records", "CameraRecords.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.mlkit/);
+      // FORMAT_QR_CODE = 256
+      expect(out).not.toMatch(/Barcode\.FORMAT_QR_CODE/);
+      expect(out).toMatch(/256/);
+    });
+  });
+
+  it("expo-camera: CameraViewModule.kt has GmsBarcodeScannerOptions import removed", () => {
+    withFdroidRoot((tmp, cameraBase) => {
+      const out = fs.readFileSync(
+        path.join(cameraBase, "CameraViewModule.kt"), "utf8");
+      expect(out).not.toMatch(/GmsBarcodeScannerOptions/);
+      expect(out).not.toMatch(/GmsBarcodeScanning/);
+    });
+  });
+
+  it("expo-camera: CameraUtils.kt does NOT contain Class.forName mlkit string", () => {
+    withFdroidRoot((tmp, cameraBase) => {
+      const out = fs.readFileSync(
+        path.join(cameraBase, "utils", "CameraUtils.kt"), "utf8");
+      // The string "com.google.mlkit" must not appear in any form
+      expect(out).not.toMatch(/com\.google\.mlkit/);
+      expect(out).not.toMatch(/com\/google\/mlkit/);
+    });
+  });
+
+  it("expo-notifications: ExpoFirebaseMessagingService.kt stub does NOT extend FirebaseMessagingService", () => {
+    withFdroidRoot((tmp, _c, notifBase) => {
+      const out = fs.readFileSync(
+        path.join(notifBase, "service", "ExpoFirebaseMessagingService.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.firebase/);
+      expect(out).not.toMatch(/FirebaseMessagingService\(\)/);
+      expect(out).toMatch(/class ExpoFirebaseMessagingService/);
+    });
+  });
+
+  it("expo-notifications: FirebaseMessagingDelegate.kt stub does NOT import Firebase", () => {
+    withFdroidRoot((tmp, _c, notifBase) => {
+      const out = fs.readFileSync(
+        path.join(notifBase, "service", "delegates", "FirebaseMessagingDelegate.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.firebase/);
+      // Stub must still expose runTaskManagerTasks (called by ExpoHandlingDelegate)
+      expect(out).toMatch(/runTaskManagerTasks/);
+      expect(out).toMatch(/object FirebaseMessagingDelegate/);
+    });
+  });
+
+  it("expo-notifications: PushTokenModule.kt stub does NOT import FirebaseMessaging", () => {
+    withFdroidRoot((tmp, _c, notifBase) => {
+      const out = fs.readFileSync(
+        path.join(notifBase, "tokens", "PushTokenModule.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.firebase/);
+      expect(out).toMatch(/class PushTokenModule/);
+    });
+  });
+
+  it("expo-notifications: TopicSubscriptionModule.kt stub does NOT import Firebase", () => {
+    withFdroidRoot((tmp, _c, notifBase) => {
+      const out = fs.readFileSync(
+        path.join(notifBase, "topics", "TopicSubscriptionModule.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.firebase/);
+      expect(out).toMatch(/class TopicSubscriptionModule/);
+    });
+  });
+
+  it("expo-notifications: DebugLogging.kt stub does NOT import RemoteMessage", () => {
+    withFdroidRoot((tmp, _c, notifBase) => {
+      const out = fs.readFileSync(
+        path.join(notifBase, "notifications", "debug", "DebugLogging.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.firebase/);
+      // logRemoteMessage must still exist (called by FirebaseMessagingDelegate, which we stub)
+      expect(out).toMatch(/logRemoteMessage/);
+    });
+  });
+
+  it("expo-notifications: RemoteNotificationContent.kt stub does NOT import RemoteMessage", () => {
+    withFdroidRoot((tmp, _c, notifBase) => {
+      const out = fs.readFileSync(
+        path.join(notifBase, "notifications", "model", "RemoteNotificationContent.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.firebase/);
+      // Must still declare the class (used by NotificationsHandler instanceof check)
+      expect(out).toMatch(/class RemoteNotificationContent/);
+      expect(out).toMatch(/isDataOnly/);
+    });
+  });
+
+  it("expo-notifications: FirebaseNotificationTrigger.kt stub does NOT import RemoteMessage", () => {
+    withFdroidRoot((tmp, _c, notifBase) => {
+      const out = fs.readFileSync(
+        path.join(notifBase, "notifications", "model", "triggers", "FirebaseNotificationTrigger.kt"), "utf8");
+      expect(out).not.toMatch(/com\.google\.firebase/);
+      expect(out).toMatch(/class FirebaseNotificationTrigger/);
+    });
+  });
+
+  it("expo-notifications: NotificationSerializer.java has Firebase import and trigger branch removed", () => {
+    withFdroidRoot((tmp, _c, notifBase) => {
+      const out = fs.readFileSync(
+        path.join(notifBase, "notifications", "NotificationSerializer.java"), "utf8");
+      expect(out).not.toMatch(/com\.google\.firebase\.messaging\.RemoteMessage/);
+      expect(out).not.toMatch(/FirebaseNotificationTrigger/);
+    });
+  });
+
+  it("expo-notifications: expo-module.config.json has Firebase-backed modules removed", () => {
+    withFdroidRoot((tmp) => {
+      const config = JSON.parse(fs.readFileSync(
+        path.join(tmp, "node_modules", "expo-notifications", "expo-module.config.json"), "utf8"));
+      const modules = config.android.modules;
+      expect(modules).not.toContain("expo.modules.notifications.tokens.PushTokenModule");
+      expect(modules).not.toContain("expo.modules.notifications.topics.TopicSubscriptionModule");
+      expect(modules).not.toContain("expo.modules.notifications.notifications.background.ExpoBackgroundNotificationTasksModule");
+      // Non-Firebase modules must be preserved
+      expect(modules).toContain("expo.modules.notifications.SomeOtherModule");
+    });
+  });
+
+  it("expo-application: ApplicationModule.kt has InstallReferrerClient import removed and getInstallReferrerAsync stubbed", () => {
+    withFdroidRoot((tmp, _c, _n, appBase) => {
+      const out = fs.readFileSync(
+        path.join(appBase, "ApplicationModule.kt"), "utf8");
+      expect(out).not.toMatch(/com\.android\.installreferrer/);
+      expect(out).not.toMatch(/InstallReferrerClient/);
+      // Stub must still declare the AsyncFunction with "getInstallReferrerAsync"
+      expect(out).toMatch(/getInstallReferrerAsync/);
+      // Other functions in the file must be preserved
+      expect(out).toMatch(/getApplicationNameAsync/);
+    });
+  });
+
+  it("produces ZERO proprietary class-name strings across all patched files (AC10b proxy)", () => {
+    withFdroidRoot((tmp, cameraBase, notifBase, appBase) => {
+      const SUSS_PATTERN = /com[\./](google[\./](firebase|mlkit|android[\./]gms)|android[\./]installreferrer)/;
+      const filesToCheck = [
+        path.join(cameraBase, "analyzers", "BarcodeAnalyzer.kt"),
+        path.join(cameraBase, "analyzers", "MLKitBarcodeAnalyzer.kt"),
+        path.join(cameraBase, "analyzers", "BarcodeScannerResultSerializer.kt"),
+        path.join(cameraBase, "records", "CameraRecords.kt"),
+        path.join(cameraBase, "CameraViewModule.kt"),
+        path.join(cameraBase, "utils", "CameraUtils.kt"),
+        path.join(notifBase, "service", "ExpoFirebaseMessagingService.kt"),
+        path.join(notifBase, "service", "delegates", "FirebaseMessagingDelegate.kt"),
+        path.join(notifBase, "tokens", "PushTokenModule.kt"),
+        path.join(notifBase, "topics", "TopicSubscriptionModule.kt"),
+        path.join(notifBase, "notifications", "debug", "DebugLogging.kt"),
+        path.join(notifBase, "notifications", "model", "RemoteNotificationContent.kt"),
+        path.join(notifBase, "notifications", "model", "triggers", "FirebaseNotificationTrigger.kt"),
+        path.join(notifBase, "notifications", "NotificationSerializer.java"),
+        path.join(appBase, "ApplicationModule.kt"),
+      ];
+      for (const f of filesToCheck) {
+        const content = fs.readFileSync(f, "utf8");
+        expect({ file: path.basename(f), content }).not.toMatchObject({
+          content: expect.stringMatching(SUSS_PATTERN),
+        });
+      }
+    });
+  });
+});
 // ----------------------------------------------------------------------------
 //
 // The F-Droid build-type manifest overlay is AGP's standard mechanism for

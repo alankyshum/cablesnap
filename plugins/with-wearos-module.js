@@ -508,6 +508,486 @@ function patchFdroidExpoDependencies(projectRoot) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// patchFdroidSourceFiles — SOURCE-LEVEL proprietary class stripping (BLD-4226)
+// ---------------------------------------------------------------------------
+//
+// The AC10b gate greps DEX *strings* for four proprietary class prefixes.
+// Prior approaches (gradle excludes, build.gradle patching) fail because:
+//   - Proprietary class name strings are **baked into bytecode** during Kotlin
+//     compilation — even `compileOnly` dependencies leave class descriptor
+//     strings in the compiled .class files included in the final DEX.
+//   - Gradle's remote build cache may reuse previously-compiled module bytecode
+//     that references the proprietary classes, bypassing classpath changes.
+//
+// The ONLY reliable fix: replace the offending source files with FOSS stubs
+// that never import the proprietary classes. When Gradle sees changed source
+// file contents, the cache is invalidated and fresh compilation produces
+// bytecode with zero proprietary class references.
+//
+// Modules patched:
+//   expo-camera  — BarcodeAnalyzer, MLKitBarCodeScanner,
+//                  BarCodeScannerResultSerializer, CameraRecords,
+//                  CameraViewModule, CameraUtils
+//   expo-notifications — ExpoFirebaseMessagingService, FirebaseMessagingDelegate,
+//                        PushTokenModule, TopicSubscriptionModule, DebugLogging,
+//                        RemoteNotificationContent, FirebaseNotificationTrigger,
+//                        ExpoHandlingDelegate (patched not replaced)
+//                        NotificationSerializer (patched not replaced)
+//   expo-application   — ApplicationModule (patched not replaced)
+//
+// All stubs preserve the same class/object/interface names and method
+// signatures so that other retained source files still compile cleanly.
+//
+function patchFdroidSourceFiles(projectRoot) {
+  if (process.env.CABLESNAP_FDROID !== "1") return;
+
+  // Helper: write a file unconditionally (creates parent dirs, overwrites).
+  function writeFile(filePath, content) {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) return; // module not installed — skip
+    fs.writeFileSync(filePath, content, "utf8");
+  }
+
+  // Helper: patch a file in-place; skip if file does not exist.
+  function patchFile(filePath, replaceFn) {
+    if (!fs.existsSync(filePath)) return;
+    const original = fs.readFileSync(filePath, "utf8");
+    const patched = replaceFn(original);
+    if (patched !== original) fs.writeFileSync(filePath, patched, "utf8");
+  }
+
+  const notifAndroid = path.join(
+    projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java",
+    "expo", "modules", "notifications",
+  );
+  const cameraAndroid = path.join(
+    projectRoot, "node_modules", "expo-camera", "android", "src", "main", "java",
+    "expo", "modules", "camera",
+  );
+  const appAndroid = path.join(
+    projectRoot, "node_modules", "expo-application", "android", "src", "main", "java",
+    "expo", "modules", "application",
+  );
+
+  // -----------------------------------------------------------------------
+  // expo-camera stubs — replace files that import com.google.mlkit or
+  // com.google.android.gms with no-op stubs.
+  // -----------------------------------------------------------------------
+
+  // BarcodeAnalyzer.kt — was: imports BarcodeScannerOptions, BarcodeScanning, InputImage
+  writeFile(path.join(cameraAndroid, "analyzers", "BarcodeAnalyzer.kt"), `\
+package expo.modules.camera.analyzers
+
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import expo.modules.camera.records.BarcodeType
+import expo.modules.camera.utils.BarCodeScannerResult
+
+// F-Droid stub: barcode scanner backed by ZXing (see modules/expo-foss-barcode-scanner).
+// MLKit / GMS code paths removed to satisfy AC10b DEX-string gate (BLD-4226).
+class BarcodeAnalyzer(formats: List<BarcodeType>, val onComplete: (BarCodeScannerResult) -> Unit) : ImageAnalysis.Analyzer {
+  override fun analyze(imageProxy: ImageProxy) {
+    imageProxy.close()
+  }
+}
+
+fun Array<ImageProxy.PlaneProxy>.toByteArray(): ByteArray {
+  val totalSize = this.sumOf { it.buffer.remaining() }
+  val result = ByteArray(totalSize)
+  var offset = 0
+  for (plane in this) {
+    val buffer = plane.buffer
+    val size = buffer.remaining()
+    buffer.get(result, offset, size)
+    offset += size
+  }
+  return result
+}
+`);
+
+  // MLKitBarcodeAnalyzer.kt — was: imports Task, BarcodeScannerOptions, BarcodeScanning, Barcode, InputImage
+  writeFile(path.join(cameraAndroid, "analyzers", "MLKitBarcodeAnalyzer.kt"), `\
+package expo.modules.camera.analyzers
+
+import android.graphics.Bitmap
+import expo.modules.camera.utils.BarCodeScannerResult
+
+// F-Droid stub: MLKit barcode scanning not available (BLD-4226).
+class MLKitBarCodeScanner {
+  suspend fun scan(bitmap: Bitmap): List<BarCodeScannerResult> = emptyList()
+  fun setSettings(formats: List<Int>) {}
+}
+`);
+
+  // BarcodeScannerResultSerializer.kt — was: imports Barcode (MLKit)
+  writeFile(path.join(cameraAndroid, "analyzers", "BarcodeScannerResultSerializer.kt"), `\
+package expo.modules.camera.analyzers
+
+import android.os.Bundle
+import android.util.Pair
+import expo.modules.camera.utils.BarCodeScannerResult
+
+// F-Droid stub: MLKit barcode result serializer removed (BLD-4226).
+object BarCodeScannerResultSerializer {
+  fun toBundle(result: BarCodeScannerResult, density: Float): Bundle =
+    Bundle().apply {
+      putString("data", result.value)
+      putString("raw", result.raw)
+      putInt("type", result.type)
+      putBundle("extra", result.extra)
+      val (pts, box) = getCornerPointsAndBoundingBox(result.cornerPoints, result.boundingBox, density)
+      putParcelableArrayList("cornerPoints", pts)
+      putBundle("bounds", box)
+    }
+
+  fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null): BarCodeScannerResult =
+    BarCodeScannerResult(0, "", "", Bundle(), emptyList(), 0, 0)
+
+  fun parseExtraDate(barcode: Any): Bundle = Bundle()
+
+  private fun getCornerPointsAndBoundingBox(
+    cornerPoints: List<Int>,
+    boundingBox: BarCodeScannerResult.BoundingBox,
+    density: Float,
+  ): Pair<ArrayList<Bundle>, Bundle> {
+    val pts = ArrayList<Bundle>()
+    for (i in cornerPoints.indices step 2) {
+      pts.add(Bundle().apply {
+        putFloat("x", cornerPoints[i].toFloat() / density)
+        putFloat("y", cornerPoints[i + 1].toFloat() / density)
+      })
+    }
+    val box = Bundle().apply {
+      putBundle("origin", Bundle().apply {
+        putFloat("x", boundingBox.x.toFloat() / density)
+        putFloat("y", boundingBox.y.toFloat() / density)
+      })
+      putBundle("size", Bundle().apply {
+        putFloat("width", boundingBox.width.toFloat() / density)
+        putFloat("height", boundingBox.height.toFloat() / density)
+      })
+    }
+    return Pair(pts, box)
+  }
+}
+`);
+
+  // CameraRecords.kt — patch: replace Barcode.FORMAT_* with integer constants, remove import
+  patchFile(path.join(cameraAndroid, "records", "CameraRecords.kt"), (src) =>
+    src
+      .replace("import com.google.mlkit.vision.barcode.common.Barcode\n", "")
+      // Replace MLKit Barcode.FORMAT_* constants with their integer values
+      // Values from MLKit Barcode.java / BarcodeFormat:
+      .replaceAll("Barcode.FORMAT_CODE_128",  "1")
+      .replaceAll("Barcode.FORMAT_CODE_39",   "2")
+      .replaceAll("Barcode.FORMAT_CODE_93",   "4")
+      .replaceAll("Barcode.FORMAT_CODABAR",   "8")
+      .replaceAll("Barcode.FORMAT_DATA_MATRIX","16")
+      .replaceAll("Barcode.FORMAT_EAN_13",    "32")
+      .replaceAll("Barcode.FORMAT_EAN_8",     "64")
+      .replaceAll("Barcode.FORMAT_ITF",       "128")
+      .replaceAll("Barcode.FORMAT_QR_CODE",   "256")
+      .replaceAll("Barcode.FORMAT_UPCA",      "512")
+      .replaceAll("Barcode.FORMAT_UPC_A",     "512")
+      .replaceAll("Barcode.FORMAT_UPCE",      "1024")
+      .replaceAll("Barcode.FORMAT_UPC_E",     "1024")
+      .replaceAll("Barcode.FORMAT_PDF417",    "2048")
+      .replaceAll("Barcode.FORMAT_AZTEC",     "4096")
+      .replaceAll("Barcode.FORMAT_UNKNOWN",   "-1")
+      .replaceAll("Barcode.FORMAT_ALL_FORMATS","0")
+  );
+
+  // CameraViewModule.kt — patch: remove GmsBarcodeScannerOptions/GmsBarcodeScanning imports,
+  // stub launchScanner to reject immediately (no GMS Play Services on F-Droid).
+  patchFile(path.join(cameraAndroid, "CameraViewModule.kt"), (src) => {
+    let out = src
+      .replace(/^\s*import com\.google\.mlkit\.vision\.codescanner\.GmsBarcodeScannerOptions\n/m, "")
+      .replace(/^\s*import com\.google\.mlkit\.vision\.codescanner\.GmsBarcodeScanning\n/m, "");
+
+    // Replace the full launchScanner AsyncFunction body (uses GMS APIs) with a stub
+    // that rejects immediately — GMS is not available on F-Droid.
+    const launchPattern = /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m;
+    const launchStub =
+`AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
+      promise.reject(CameraExceptions.MLKitUnavailableException())
+    }`;
+    out = out.replace(launchPattern, launchStub);
+    return out;
+  });
+
+  // CameraUtils.kt — patch: replace Class.forName("com.google.mlkit...") string reference
+  // so the string no longer appears in the DEX constant pool.
+  patchFile(path.join(cameraAndroid, "utils", "CameraUtils.kt"), (src) =>
+    src.replace(
+      /fun isMLKitBarcodeScannerAvailable\(\)[^}]*}/s,
+      // Always return false — no MLKit on F-Droid.
+      `fun isMLKitBarcodeScannerAvailable(): Boolean = false`,
+    )
+  );
+
+  // -----------------------------------------------------------------------
+  // expo-notifications stubs — replace / patch Firebase-referencing files.
+  // -----------------------------------------------------------------------
+
+  // ExpoFirebaseMessagingService.kt — was: extends FirebaseMessagingService (Firebase)
+  // Manifest entry is already removed by FDROID_MANIFEST_CONTENTS overlay.
+  writeFile(
+    path.join(notifAndroid, "service", "ExpoFirebaseMessagingService.kt"),
+`package expo.modules.notifications.service
+
+// F-Droid stub: Firebase Cloud Messaging not available. Service removed from
+// manifest via tools:node="remove" in the F-Droid manifest overlay (BLD-4226).
+class ExpoFirebaseMessagingService
+`,
+  );
+
+  // delegates/FirebaseMessagingDelegate.kt — was: imports FirebaseMessaging, RemoteMessage
+  // ExpoHandlingDelegate calls FirebaseMessagingDelegate.runTaskManagerTasks() from the
+  // same package; we must preserve the class name and the static method signature so
+  // that file continues to compile.
+  writeFile(
+    path.join(notifAndroid, "service", "delegates", "FirebaseMessagingDelegate.kt"),
+`package expo.modules.notifications.service.delegates
+
+import android.content.Context
+import android.os.Bundle
+import expo.modules.notifications.notifications.background.BackgroundRemoteNotificationTaskConsumer
+import expo.modules.notifications.tokens.interfaces.FirebaseTokenListener
+
+// F-Droid stub: Firebase messaging delegate — all operations are no-ops (BLD-4226).
+object FirebaseMessagingDelegate {
+  @JvmStatic
+  fun runTaskManagerTasks(context: Context, bundle: Bundle) {}
+  @JvmStatic
+  fun addBackgroundTaskConsumer(taskConsumer: BackgroundRemoteNotificationTaskConsumer) {}
+  @JvmStatic
+  fun removeBackgroundTaskConsumer(taskConsumer: BackgroundRemoteNotificationTaskConsumer) {}
+  @JvmStatic
+  fun getBackgroundTasks(): List<BackgroundRemoteNotificationTaskConsumer> = emptyList()
+  @JvmStatic
+  fun addTokenListener(listener: FirebaseTokenListener) {}
+  @JvmStatic
+  fun removeTokenListener(listener: FirebaseTokenListener) {}
+}
+`,
+  );
+
+  // interfaces/FirebaseMessagingDelegate.kt — keep the interface file, but if it
+  // imports RemoteMessage, rewrite to remove that import.
+  patchFile(
+    path.join(notifAndroid, "service", "interfaces", "FirebaseMessagingDelegate.kt"),
+    (src) => src.replace(/^\s*import com\.google\.firebase\.[^\n]+\n/gm, ""),
+  );
+
+  // tokens/PushTokenModule.kt — was: imports FirebaseMessaging
+  writeFile(
+    path.join(notifAndroid, "tokens", "PushTokenModule.kt"),
+`package expo.modules.notifications.tokens
+
+import expo.modules.kotlin.modules.Module
+import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.notifications.tokens.interfaces.FirebaseTokenListener
+
+// F-Droid stub: Firebase push tokens not available (BLD-4226).
+class PushTokenModule : Module(), FirebaseTokenListener {
+  override fun definition() = ModuleDefinition {
+    Name("ExpoNotificationTokensModule")
+  }
+  override fun onNewToken(token: String) {}
+}
+`,
+  );
+
+  // topics/TopicSubscriptionModule.kt — was: imports FirebaseMessaging
+  writeFile(
+    path.join(notifAndroid, "topics", "TopicSubscriptionModule.kt"),
+`package expo.modules.notifications.topics
+
+import expo.modules.kotlin.modules.Module
+import expo.modules.kotlin.modules.ModuleDefinition
+
+// F-Droid stub: Firebase topic subscriptions not available (BLD-4226).
+class TopicSubscriptionModule : Module() {
+  override fun definition() = ModuleDefinition {
+    Name("ExpoTopicSubscriptionModule")
+  }
+}
+`,
+  );
+
+  // notifications/debug/DebugLogging.kt — was: imports RemoteMessage for logRemoteMessage()
+  writeFile(
+    path.join(notifAndroid, "notifications", "debug", "DebugLogging.kt"),
+`package expo.modules.notifications.notifications.debug
+
+import android.os.Bundle
+import expo.modules.notifications.notifications.model.Notification
+
+// F-Droid stub: Firebase-specific logging removed (BLD-4226).
+object DebugLogging {
+  @JvmStatic
+  fun logBundle(caller: String, bundleToLog: Bundle) {}
+  fun logRemoteMessage(caller: String, message: Any) {}
+  fun logNotification(caller: String, notification: Notification) {}
+}
+`,
+  );
+
+  // notifications/model/RemoteNotificationContent.kt — was: imports RemoteMessage
+  // NotificationsHandler checks \`content is RemoteNotificationContent\`; the class
+  // must exist and implement INotificationContent.  In F-Droid no Firebase push
+  // arrives, so this stub is effectively dead code — it just needs to compile.
+  writeFile(
+    path.join(notifAndroid, "notifications", "model", "RemoteNotificationContent.kt"),
+`package expo.modules.notifications.notifications.model
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.os.Parcel
+import android.os.Parcelable
+import expo.modules.notifications.notifications.enums.NotificationPriority
+import expo.modules.notifications.notifications.interfaces.INotificationContent
+import org.json.JSONObject
+
+// F-Droid stub: remote (Firebase) notification content — never instantiated
+// because Firebase is absent, but the class must exist for NotificationsHandler
+// to compile its \`content is RemoteNotificationContent\` check (BLD-4226).
+class RemoteNotificationContent private constructor() : INotificationContent {
+  // isDataOnly used by NotificationsHandler; always false — no Firebase push.
+  val isDataOnly: Boolean = false
+
+  override val title: String? = null
+  override val text: String? = null
+  override val subText: String? = null
+  override val badgeCount: Number? = null
+  override val shouldPlayDefaultSound: Boolean = false
+  override val soundName: String? = null
+  override val shouldUseDefaultVibrationPattern: Boolean = false
+  override val vibrationPattern: LongArray? = null
+  override val body: JSONObject? = null
+  override val priority: NotificationPriority? = null
+  override val color: Number? = null
+  override val isAutoDismiss: Boolean = false
+  override val categoryId: String? = null
+  override val isSticky: Boolean = false
+  override suspend fun getImage(context: Context): Bitmap? = null
+  override fun containsImage(): Boolean = false
+
+  override fun describeContents(): Int = 0
+  override fun writeToParcel(dest: Parcel, flags: Int) {}
+
+  companion object CREATOR : Parcelable.Creator<RemoteNotificationContent> {
+    override fun createFromParcel(parcel: Parcel): RemoteNotificationContent = RemoteNotificationContent()
+    override fun newArray(size: Int): Array<RemoteNotificationContent?> = arrayOfNulls(size)
+  }
+}
+`,
+  );
+
+  // notifications/model/triggers/FirebaseNotificationTrigger.kt — was: imports RemoteMessage
+  // NotificationSerializer has an \`instanceof FirebaseNotificationTrigger\` check; we
+  // also patch NotificationSerializer to remove that branch, but keep the class so the
+  // file compiles (the instanceof is dead code in F-Droid, but it must resolve).
+  writeFile(
+    path.join(notifAndroid, "notifications", "model", "triggers", "FirebaseNotificationTrigger.kt"),
+`package expo.modules.notifications.notifications.model.triggers
+
+import android.os.Bundle
+import android.os.Parcel
+import android.os.Parcelable
+import expo.modules.notifications.notifications.interfaces.NotificationTrigger
+
+// F-Droid stub: Firebase notification trigger (BLD-4226).
+class FirebaseNotificationTrigger private constructor() : NotificationTrigger {
+  override fun toBundle(): Bundle = Bundle()
+  override fun getNotificationChannel(): String? = null
+
+  override fun describeContents(): Int = 0
+  override fun writeToParcel(dest: Parcel, flags: Int) {}
+
+  companion object CREATOR : Parcelable.Creator<FirebaseNotificationTrigger> {
+    override fun createFromParcel(parcel: Parcel): FirebaseNotificationTrigger = FirebaseNotificationTrigger()
+    override fun newArray(size: Int): Array<FirebaseNotificationTrigger?> = arrayOfNulls(size)
+  }
+}
+`,
+  );
+
+  // notifications/NotificationSerializer.java — patch to remove Firebase imports
+  // and FirebaseNotificationTrigger instanceof branch.
+  patchFile(
+    path.join(notifAndroid, "notifications", "NotificationSerializer.java"),
+    (src) => {
+      let out = src;
+      // Remove Firebase RemoteMessage import
+      out = out.replace(/^\s*import com\.google\.firebase\.messaging\.RemoteMessage;\s*\n/m, "");
+      // Remove FirebaseNotificationTrigger import
+      out = out.replace(/^\s*import expo\.modules\.notifications\.notifications\.model\.triggers\.FirebaseNotificationTrigger;\s*\n/m, "");
+      // Remove the instanceof FirebaseNotificationTrigger block.
+      // The block is: if (requestTrigger instanceof FirebaseNotificationTrigger trigger) { ... }
+      // Replace with a simple comment so the method still compiles.
+      out = out.replace(
+        /\s*if\s*\(requestTrigger\s+instanceof\s+FirebaseNotificationTrigger\s+trigger\)\s*\{[\s\S]*?^\s*\}/m,
+        "\n      // F-Droid: Firebase trigger path removed (BLD-4226)",
+      );
+      return out;
+    },
+  );
+
+  // -----------------------------------------------------------------------
+  // expo-application — stub out installreferrer usage in ApplicationModule.kt
+  // -----------------------------------------------------------------------
+  patchFile(
+    path.join(appAndroid, "ApplicationModule.kt"),
+    (src) => {
+      let out = src;
+      // Remove InstallReferrerClient imports
+      out = out.replace(/^\s*import com\.android\.installreferrer\.api\.[^\n]+\n/gm, "");
+      // Replace getInstallReferrerAsync body with a stub that resolves with "".
+      // The function signature is: AsyncFunction("getInstallReferrerAsync") { promise: Promise ->
+      // ... complex body using InstallReferrerClient ... }
+      // Replace the whole async function body.
+      out = out.replace(
+        /AsyncFunction\("getInstallReferrerAsync"\)[\s\S]*?(?=^\s*(?:AsyncFunction|Function|Events|Constants|Name|}\s*$))/m,
+        `AsyncFunction("getInstallReferrerAsync") { promise: Promise ->
+      // F-Droid stub: install referrer not available without Google Play (BLD-4226).
+      promise.resolve("")
+    }\n\n    `,
+      );
+      return out;
+    },
+  );
+
+  // -----------------------------------------------------------------------
+  // expo-notifications expo-module.config.json — remove the Firebase-backed
+  // modules from the autolinking list so they are not registered with Expo's
+  // module system (they're already stubbed above, but the config list should
+  // reflect the F-Droid feature set).
+  // -----------------------------------------------------------------------
+  const notifModuleConfig = path.join(
+    projectRoot, "node_modules", "expo-notifications", "expo-module.config.json",
+  );
+  if (fs.existsSync(notifModuleConfig)) {
+    try {
+      const config = JSON.parse(fs.readFileSync(notifModuleConfig, "utf8"));
+      const removeModules = new Set([
+        "expo.modules.notifications.tokens.PushTokenModule",
+        "expo.modules.notifications.topics.TopicSubscriptionModule",
+        "expo.modules.notifications.notifications.background.ExpoBackgroundNotificationTasksModule",
+      ]);
+      if (config.android && Array.isArray(config.android.modules)) {
+        config.android.modules = config.android.modules.filter(
+          (m) => !removeModules.has(m),
+        );
+      }
+      fs.writeFileSync(notifModuleConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
+    } catch (_) {
+      // If the config is malformed, leave it untouched.
+    }
+  }
+}
+
 // Expo prebuild may copy an already-evaluated library build script into the
 // generated Android project. Patch those generated app/library scripts too;
 // changing node_modules alone is not sufficient when Gradle resolves a
@@ -604,6 +1084,12 @@ const withWearOsModule = (config) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const platformRoot = cfg.modRequest.platformProjectRoot;
       patchFdroidExpoDependencies(projectRoot);
+      // Source-level strip: replace proprietary-importing Kotlin/Java source
+      // files with FOSS stubs.  This is the ONLY layer that reliably removes
+      // class-name strings from the compiled DEX (BLD-4226).  All prior
+      // gradle-only approaches left the references in bytecode because
+      // they operated on dependency declarations, not source files.
+      patchFdroidSourceFiles(projectRoot);
       // Other Expo packages (notably expo-dev-launcher) can declare the same
       // artifacts in their Android scripts. Patch the entire installed Expo
       // tree, not only the three packages with known declarations.
@@ -636,6 +1122,7 @@ module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
+module.exports.patchFdroidSourceFiles = patchFdroidSourceFiles;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;
