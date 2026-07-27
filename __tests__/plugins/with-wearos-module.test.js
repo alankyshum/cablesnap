@@ -585,11 +585,15 @@ describe("patchFdroidExpoDependencies", () => {
 // The F-Droid build-type manifest overlay is AGP's standard mechanism for
 // per-buildType manifest customization. Files at
 // `android/app/src/<buildType>/AndroidManifest.xml` participate in manifest
-// merging at the highest priority and can use `tools:node="removeAll"` to drop
-// nodes contributed by other libraries.
+// merging at the highest priority and can use `tools:node="remove"` to drop
+// specific nodes contributed by other libraries.
 //
-// We use this to strip manifest entries from the F-Droid APK that would
-// otherwise crash the app at launch.
+// We use this to strip two manifest entries from the F-Droid APK that would
+// otherwise crash the app at launch:
+//   1. <provider FirebaseInitProvider> — auto-registered by firebase-common.aar,
+//      runs at Application init, references excluded GMS Preconditions class.
+//   2. <service ExpoFirebaseMessagingService> — declared by expo-notifications,
+//      extends FirebaseMessagingService whose parent class is now missing.
 describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
   it("declares the tools namespace required by tools:node directives", () => {
     // Without xmlns:tools on the root <manifest>, AGP's manifest merger
@@ -601,27 +605,38 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
     );
   });
 
-  it("removes Firebase via tools:node='removeAll'", () => {
+  it("removes FirebaseInitProvider via tools:node='remove'", () => {
+    // Match across attribute order — AGP's tools:node attribute can appear
+    // before or after android:authorities. We assert both the provider name
+    // and the remove directive co-occur within the same <provider> element.
     expect(FDROID_MANIFEST_CONTENTS).toMatch(
-      /<provider\b[\s\S]*?tools:node="removeAll"[\s\S]*?tools:selector="com\.google\.firebase"[\s\S]*?\/>/,
+      /<provider\b[\s\S]*?android:name="com\.google\.firebase\.provider\.FirebaseInitProvider"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
     );
   });
 
-  it("removes ExpoFirebaseMessagingService via tools:node='removeAll'", () => {
+  it("removes ExpoFirebaseMessagingService via tools:node='remove'", () => {
     expect(FDROID_MANIFEST_CONTENTS).toMatch(
-      /<service\b[\s\S]*?tools:node="removeAll"[\s\S]*?tools:selector="expo\.modules\.notifications"[\s\S]*?\/>/,
+      /<service\b[\s\S]*?android:name="expo\.modules\.notifications\.service\.ExpoFirebaseMessagingService"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
     );
   });
 
-  it("removes MlKitInitProvider via tools:node='removeAll'", () => {
+  it("removes MlKitInitProvider via tools:node='remove'", () => {
+    // Same crash pattern as FirebaseInitProvider — a content provider that
+    // auto-runs at app start and calls into excluded GMS classes. Surfaced
+    // by run 25244727127 after the Firebase fix unblocked it.
     expect(FDROID_MANIFEST_CONTENTS).toMatch(
-      /<provider\b[\s\S]*?tools:node="removeAll"[\s\S]*?tools:selector="com\.google\.mlkit"[\s\S]*?\/>/,
+      /<provider\b[\s\S]*?android:name="com\.google\.mlkit\.common\.internal\.MlKitInitProvider"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
     );
   });
 
-  it("removes the dormant ModuleDependencies service from expo-image-picker via tools:node='removeAll'", () => {
+  it("removes the dormant ModuleDependencies service from expo-image-picker (defence-in-depth)", () => {
+    // expo-image-picker declares <service ModuleDependencies android:enabled="false">
+    // for Google Photo Picker module-on-demand discovery. Disabled, so it
+    // does not crash on launch — but stripping it eliminates a dangling
+    // reference to an excluded GMS class, future-proofing against tighter
+    // manifest parsing in newer Android versions.
     expect(FDROID_MANIFEST_CONTENTS).toMatch(
-      /<service\b[\s\S]*?tools:node="removeAll"[\s\S]*?tools:selector="com\.google\.android\.gms"[\s\S]*?\/>/,
+      /<service\b[\s\S]*?android:name="com\.google\.android\.gms\.metadata\.ModuleDependencies"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
     );
   });
 

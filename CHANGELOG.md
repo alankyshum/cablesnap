@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 _No user-facing changes yet._
+- **Nutrition link vertical spacing aligned** — Aligns the vertical spacing between the 'Edit Targets' and 'Meal Templates' links in the nutrition list. ([BLD-4034](/BLD/issues/BLD-4034))
 - **F-Droid APK proprietary SUSS classes stripped** — Removed class-name strings of Firebase, ML Kit, Google Play Services, and Install Referrer from Expo AARs and manifest overlay in the F-Droid build. ([BLD-4182](/BLD/issues/BLD-4182))
 - **Word-order-independent exercise search** — Allows finding exercises by typing words in any order (e.g. "press bench" matches "Bench Press"). ([BLD-4157](/BLD/issues/BLD-4157))
 - **Food barcode scanning now uses a fully open-source ZXing scanner**, with the same camera overlay and supported food-barcode formats.

@@ -375,8 +375,9 @@ const FDROID_MANIFEST_CONTENTS = `<?xml version="1.0" encoding="utf-8"?>
              com.google.android.gms.common.internal.Preconditions. Removing
              this provider prevents NoClassDefFoundError on F-Droid launch. -->
         <provider
-            tools:node="removeAll"
-            tools:selector="com.google.firebase" />
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="\${applicationId}.firebaseinitprovider"
+            tools:node="remove" />
 
         <!-- expo-notifications declares this service inheriting from
              FirebaseMessagingService. With Firebase excluded the parent
@@ -385,8 +386,8 @@ const FDROID_MANIFEST_CONTENTS = `<?xml version="1.0" encoding="utf-8"?>
              aren't reachable in F-Droid anyway. CableSnap's local-notification
              code path (lib/notifications.ts) does not touch this service. -->
         <service
-            tools:node="removeAll"
-            tools:selector="expo.modules.notifications" />
+            android:name="expo.modules.notifications.service.ExpoFirebaseMessagingService"
+            tools:node="remove" />
 
         <!-- mlkit-common.aar — same crash pattern as FirebaseInitProvider.
              Auto-registered \`<provider MlKitInitProvider>\` runs during
@@ -395,12 +396,13 @@ const FDROID_MANIFEST_CONTENTS = `<?xml version="1.0" encoding="utf-8"?>
              on its very first line. With \`com.google.mlkit\` excluded the
              provider class itself is gone, but the manifest entry survives
              AGP's manifest merger because AAR manifests get merged before
-             classpath resolution. tools:node="removeAll" deletes the entry
+             classpath resolution. tools:node="remove" deletes the entry
              from the merged output so installProvider() never tries to
              instantiate the missing class. Surfaced by run 25244727127. -->
         <provider
-            tools:node="removeAll"
-            tools:selector="com.google.mlkit" />
+            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
+            android:authorities="\${applicationId}.mlkitinitprovider"
+            tools:node="remove" />
 
         <!-- expo-image-picker declares \`<service ModuleDependencies>\` for
              Google Photo Picker module-on-demand discovery. The declaration
@@ -411,8 +413,8 @@ const FDROID_MANIFEST_CONTENTS = `<?xml version="1.0" encoding="utf-8"?>
              dangling reference to an excluded GMS class — defence-in-depth
              against any future Android version that tightens its parser. -->
         <service
-            tools:node="removeAll"
-            tools:selector="com.google.android.gms" />
+            android:name="com.google.android.gms.metadata.ModuleDependencies"
+            tools:node="remove" />
     </application>
 </manifest>
 `;
