@@ -186,6 +186,12 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // disable their propagated \`releaseFdroid\` variant entirely,
             // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
+            // R8 -dontwarn rules for GMS/MLKit/installreferrer classes that
+            // are excluded from the F-Droid classpath but still referenced in
+            // Expo library bytecode signatures. Without these rules R8 fails
+            // with "Missing classes detected" during minifyReleaseFdroidWithR8.
+            // Written to android/app/ by the Config Plugin's withDangerousMod.
+            proguardFiles 'fdroid-r8-rules.pro'
         }
 `;
 
