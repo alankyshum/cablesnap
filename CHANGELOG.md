@@ -71,6 +71,8 @@ marker) at release time.
 
 - **F-Droid and Play Android builds now run in separate Gradle invocations**, preventing their variant graphs from sharing proprietary release artifacts.
 
+- **The isolated F-Droid build now refreshes dependency resolution and checks DEX purity before Play is built**, making any dependency-graph regression fail at its source.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 
