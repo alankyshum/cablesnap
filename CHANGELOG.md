@@ -91,6 +91,8 @@ marker) at release time.
 
 - **F-Droid source sanitization now removes Firebase-backed notification serializers and trigger models as well**, keeping the complete Expo Notifications source graph free of proprietary references.
 
+- **F-Droid CI now invokes source sanitization explicitly after prebuild**, ensuring the generated native project uses the same clean source graph as the config plugin.
+
 
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->

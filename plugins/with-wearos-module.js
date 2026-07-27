@@ -631,7 +631,7 @@ object BarCodeScannerResultSerializer {
   const app = sourceRoot("expo-application", "android", "src", "main", "java", "expo", "modules", "application", "ApplicationModule.kt");
   if (fs.existsSync(app)) {
     let source = fs.readFileSync(app, "utf8").replace(/^import com\.android\.installreferrer[^\n]+\n/gm, "");
-    source = source.replace(/AsyncFunction\("getInstallReferrerAsync"\)\s*\{[\s\S]*?^\s*\}/m,
+    source = source.replace(/\n\s*AsyncFunction\("getInstallReferrerAsync"\)[\s\S]*?\n\s*\}\n\s*\}\n\n\s*private val packageName/m,
       `AsyncFunction("getInstallReferrerAsync") { promise: Promise -> promise.resolve("") }`);
     fs.writeFileSync(app, source, "utf8");
   }
