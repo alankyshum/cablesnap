@@ -526,7 +526,7 @@ function patchFdroidAndroidGradleTree(platformRoot) {
         // those models before evaluating the freshly patched scripts, which
         // can resurrect removed Firebase/ML Kit artifacts. They are generated
         // again by Gradle, so remove them from every installed Android module.
-        if (entry.name === "build" && path.basename(dir) === "android") {
+        if (entry.name === "build" && !target.includes(`${path.sep}wear${path.sep}`)) {
           fs.rmSync(target, { recursive: true, force: true });
           continue;
         }

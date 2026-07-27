@@ -58,6 +58,8 @@ marker) at release time.
 
 - **F-Droid Gradle sanitization now handles parenthesized dependency declarations**, covering Expo modules that declare proprietary artifacts with `implementation("...")` syntax.
 
+- **Release CI builds the F-Droid variant before the Play variant**, preventing Play-only Expo intermediates from being reused in the F-Droid APK.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 
