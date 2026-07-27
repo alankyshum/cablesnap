@@ -329,17 +329,22 @@ jobs:
           const {
             patchFdroidExpoDependencies,
             patchFdroidAndroidGradleTree,
+            patchFdroidSourceFiles,
           } = require('./plugins/with-wearos-module');
           patchFdroidExpoDependencies(process.cwd());
           // Run after prebuild has materialised every generated Android
           // library script. The config plugin's dangerous-mod hook can run
           // before some Expo scripts are copied into the native project.
           patchFdroidAndroidGradleTree(process.cwd());
+          // Source-level strip: replace proprietary-importing source files with FOSS
+          // stubs so the compiled DEX contains zero proprietary class-name strings.
+          // This is the authoritative fix for AC10b (BLD-4226).
+          patchFdroidSourceFiles(process.cwd());
           NODE
           grep -nE 'compileOnly.*(firebase|installreferrer)|barcodeDependencyConfiguration' \
             node_modules/expo-notifications/android/build.gradle \
             node_modules/expo-application/android/build.gradle \
-            node_modules/expo-camera/android/build.gradle
+            node_modules/expo-camera/android/build.gradle || true
 
       - name: Disable Expo Camera barcode dependency graph for F-Droid
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
@@ -369,6 +374,14 @@ jobs:
             echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
           fi
           grep '^org.gradle.jvmargs=' "$PROPS"
+          # Disable expo-camera's MLKit barcode scanner for F-Droid.
+          # When false, expo-camera sets barcode dependencies to compileOnly.
+          # Combined with patchFdroidSourceFiles (which replaces the barcode
+          # source files with FOSS stubs), this ensures MLKit never enters
+          # the F-Droid DEX (BLD-4226).
+          if ! grep -q '^expo.camera.barcode-scanner-enabled=' "$PROPS"; then
+            echo 'expo.camera.barcode-scanner-enabled=false' >> "$PROPS"
+          fi
 
       - name: Decode release keystore and write keystore.properties
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
@@ -457,6 +470,25 @@ jobs:
             exit 1
           fi
           echo "AC10b OK — F-Droid APK contains none of the four SUSS prefixes."
+
+      - name: Positive AC10b — verify Play APK contains proprietary SUSS classes
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          TMPDIR_DEX=$(mktemp -d)
+          trap 'rm -rf "$TMPDIR_DEX"' EXIT
+          unzip -q -o cablesnap.apk 'classes*.dex' -d "$TMPDIR_DEX"
+          HITS_FIREBASE=$(strings "$TMPDIR_DEX"/classes*.dex | grep -oE 'com/google/firebase/messaging/FirebaseMessaging' | head -1 || true)
+          HITS_MLKIT=$(strings "$TMPDIR_DEX"/classes*.dex | grep -oE 'com/google/mlkit/vision/barcode/BarcodeScanner' | head -1 || true)
+          if [ -z "$HITS_FIREBASE" ]; then
+            echo "::error::Positive AC10b failed — Firebase messaging missing from Play APK (cablesnap.apk)!"
+            exit 1
+          fi
+          if [ -z "$HITS_MLKIT" ]; then
+            echo "::error::Positive AC10b failed — MLKit barcode missing from Play APK (cablesnap.apk)!"
+            exit 1
+          fi
+          echo "Positive AC10b OK — Play APK contains Firebase and MLKit classes as expected."
 
       - name: Verify APK signature matches committed fingerprint
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
