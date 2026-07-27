@@ -106,6 +106,7 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.android\\.installreferrer:[^\\r\\n]+\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.mlkit:[^\\r\\n]+\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.android\\.gms:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*add\\(barcodeDependencyConfiguration,\\s*["'](?:com\\.google\\.android\\.gms|com\\.google\\.mlkit):[^\\r\\n]+\\r?\\n?/, "")
         // Proprietary declarations are removed above for F-Droid.
         if (patched != original) buildFile.setText(patched, "UTF-8")
     }
@@ -455,6 +456,26 @@ function patchFdroidExpoDependencies(projectRoot) {
     let contents = fs.readFileSync(file, "utf8");
     for (const [from, to] of fileReplacements) contents = contents.replaceAll(from, to);
     fs.writeFileSync(file, contents, "utf8");
+  }
+
+  // expo-camera declares barcode artifacts with Gradle's `add()` helper,
+  // not ordinary implementation/api lines. Remove those declarations rather
+  // than relying on compileOnly or configuration excludes, both of which can
+  // leak into the releaseFdroid variant through variant fallback.
+  const cameraGradle = path.join(
+    projectRoot,
+    "node_modules",
+    "expo-camera",
+    "android",
+    "build.gradle",
+  );
+  if (fs.existsSync(cameraGradle)) {
+    const contents = fs.readFileSync(cameraGradle, "utf8");
+    const patched = contents.replace(
+      /^\s*add\(barcodeDependencyConfiguration,\s*["'](?:com\.google\.android\.gms|com\.google\.mlkit):[^\r\n]+\r?\n?/gm,
+      "",
+    );
+    fs.writeFileSync(cameraGradle, patched, "utf8");
   }
 }
 

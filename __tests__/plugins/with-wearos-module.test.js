@@ -485,6 +485,34 @@ describe("patchFdroidExpoDependencies", () => {
       rmDirRecursive(tmp);
     }
   });
+
+  it("removes expo-camera barcode artifacts declared through add()", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-camera-"));
+    try {
+      const dir = path.join(tmp, "node_modules", "expo-camera", "android");
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, "build.gradle"),
+        [
+          'add(barcodeDependencyConfiguration, "com.google.android.gms:play-services-code-scanner:16.1.0")',
+          'add(barcodeDependencyConfiguration, "com.google.mlkit:barcode-scanning:17.3.0")',
+          'add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:1.5.1")',
+        ].join("\n"),
+        "utf8",
+      );
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidExpoDependencies(tmp);
+      const out = fs.readFileSync(path.join(dir, "build.gradle"), "utf8");
+      expect(out).not.toContain("play-services-code-scanner");
+      expect(out).not.toContain("com.google.mlkit:barcode-scanning");
+      expect(out).toContain("camera-mlkit-vision");
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
 });
 
 // ----------------------------------------------------------------------------
