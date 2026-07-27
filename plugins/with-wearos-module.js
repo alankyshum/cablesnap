@@ -221,6 +221,43 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             }
         }
     }
+    // Some Expo modules expose compileOnly declarations through their
+    // generated release variant. Remove direct dependencies after every
+    // project has evaluated, before any releaseFdroid task resolves its
+    // classpath; configuration excludes alone do not remove those direct
+    // declarations from the fallback variant.
+    gradle.projectsEvaluated {
+        allprojects {
+            configurations.all {
+                dependencies.removeAll { dependency ->
+                    dependency.group in [
+                        "com.google.android.gms",
+                        "com.google.firebase",
+                        "com.google.mlkit",
+                        "com.android.installreferrer",
+                    ] || dependency.name == "camera-mlkit-vision"
+                }
+            }
+        }
+    }
+    // projectsEvaluated is a useful final sweep but can be after AGP has
+    // already prepared variant dependency metadata. Register the same removal
+    // as an afterEvaluate callback on every Expo project so it runs immediately
+    // after that project's build.gradle and before variant resolution.
+    gradle.beforeProject { project ->
+        project.afterEvaluate {
+            project.configurations.all {
+                dependencies.removeAll { dependency ->
+                    dependency.group in [
+                        "com.google.android.gms",
+                        "com.google.firebase",
+                        "com.google.mlkit",
+                        "com.android.installreferrer",
+                    ] || dependency.name == "camera-mlkit-vision"
+                }
+            }
+        }
+    }
 }
 `;
 

@@ -73,6 +73,10 @@ marker) at release time.
 
 - **The isolated F-Droid build now refreshes dependency resolution and checks DEX purity before Play is built**, making any dependency-graph regression fail at its source.
 
+- **F-Droid Gradle cleanup now removes proprietary dependencies after every Expo project has evaluated**, covering fallback release configurations that are declared too late for settings-time filtering.
+
+- **F-Droid CI now clears Gradle’s transformed-AAR cache before the isolated build**, preventing stale proprietary artifacts from surviving project cleanup and entering the DEX merge.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 
