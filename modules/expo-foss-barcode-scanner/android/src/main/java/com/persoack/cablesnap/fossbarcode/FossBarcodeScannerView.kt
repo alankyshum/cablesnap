@@ -29,7 +29,6 @@ class FossBarcodeScannerView(context: Context, appContext: AppContext) : ExpoVie
     barcodeView.cameraSettings = CameraSettings().apply {
       isAutoFocusEnabled = true
     }
-    barcodeView.setStatusText("")
     addView(barcodeView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
     barcodeView.decodeContinuous(object : BarcodeCallback {
       override fun barcodeResult(result: BarcodeResult) {
