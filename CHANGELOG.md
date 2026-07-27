@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **F-Droid build purity restored** — The F-Droid APK is now built entirely from open-source sources with no proprietary Google Play Services, MLKit, or InstallReferrer classes bundled. The FOSS source patcher fails loudly if upstream Expo modules ever drift out of shape, preventing silent regressions. ([BLD-4392](/BLD/issues/BLD-4392))
+- **F-Droid builds now remove proprietary Expo manifest references**, keeping the APK free of Firebase, ML Kit, Google Play Services, and Install Referrer class descriptors while retaining ZXing barcode scanning.
 - **Form library Select button spacing now matches the Record pill**, giving the session header controls consistent horizontal padding.
 - **Record and Done button spacing** — Increases the margin above the Record and Done buttons on the Form clips tab for more consistent spacing. ([BLD-4033](/BLD/issues/BLD-4033))
 - **Consistent padding for "Set a goal" button** — Adjusts the vertical padding around the "Set a goal" button in frequency settings for consistency with other cards. ([BLD-4044](/BLD/issues/BLD-4044))

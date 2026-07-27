@@ -733,6 +733,26 @@ object BarCodeScannerResultSerializer {
   }
 
   const notifications = sourceRoot("expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications");
+  // These optional integrations also leave references in AAR manifests.  A
+  // source-only rewrite is not enough: manifest merger can preserve the
+  // metadata/intent action even after the corresponding dependency is gone.
+  const cameraManifest = sourceRoot("expo-camera", "android", "src", "main", "AndroidManifest.xml");
+  if (fs.existsSync(cameraManifest)) {
+    let manifest = fs.readFileSync(cameraManifest, "utf8");
+    manifest = manifest.replace(/\s*<application>[\s\S]*?<\/application>/, "");
+    fs.writeFileSync(cameraManifest, manifest, "utf8");
+  }
+  const imagePickerManifest = sourceRoot("expo-image-picker", "android", "src", "main", "AndroidManifest.xml");
+  if (fs.existsSync(imagePickerManifest)) {
+    let manifest = fs.readFileSync(imagePickerManifest, "utf8");
+    manifest = manifest.replace(/\s*<service\b[\s\S]*?<\/service>/g, "");
+    fs.writeFileSync(imagePickerManifest, manifest, "utf8");
+  }
+  // expo-dev-launcher only uses ML Kit in its debug-only developer UI. It is
+  // not part of the F-Droid release, and deleting that source set prevents a
+  // future variant fallback from accidentally compiling it.
+  const devLauncherDebug = sourceRoot("expo-dev-launcher", "android", "src", "debug");
+  if (fs.existsSync(devLauncherDebug)) fs.rmSync(devLauncherDebug, { recursive: true, force: true });
   const notifConfig = sourceRoot("expo-notifications", "expo-module.config.json");
   if (fs.existsSync(notifConfig)) {
     const config = JSON.parse(fs.readFileSync(notifConfig, "utf8"));
@@ -838,6 +858,13 @@ class FirebaseNotificationTrigger private constructor() : NotificationTrigger {
       .replace(/\s*if\s*\(requestTrigger instanceof FirebaseNotificationTrigger trigger\)\s*\{[\s\S]*?^\s*\}\s*else if\s*\(/m,
         "\n      if (");
     fs.writeFileSync(serializer, source, "utf8");
+  }
+
+  const notificationsManifest = sourceRoot("expo-notifications", "android", "src", "main", "AndroidManifest.xml");
+  if (fs.existsSync(notificationsManifest)) {
+    let manifest = fs.readFileSync(notificationsManifest, "utf8");
+    manifest = manifest.replace(/\s*<service\b[\s\S]*?<\/service>/, "");
+    fs.writeFileSync(notificationsManifest, manifest, "utf8");
   }
 
   // Fail during prebuild rather than discovering a leaked descriptor only
