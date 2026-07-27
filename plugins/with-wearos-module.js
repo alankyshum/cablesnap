@@ -487,6 +487,23 @@ function writeFdroidManifest(platformRoot) {
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
 }
 
+/**
+ * Copy fdroid/fdroid-r8-rules.pro from the project root to android/app/fdroid-r8-rules.pro.
+ * This file contains -dontwarn directives that prevent R8 from failing on missing
+ * GMS/Firebase/MLKit/installreferrer classes that are excluded from F-Droid builds.
+ *
+ * @param {string} projectRoot  - Root of the JS project (contains the fdroid/ directory)
+ * @param {string} platformRoot - Root of the Android platform directory (android/)
+ */
+function writeFdroidR8Rules(projectRoot, platformRoot) {
+  const src = path.join(projectRoot, "fdroid", "fdroid-r8-rules.pro");
+  if (!fs.existsSync(src)) {
+    throw new Error(`fdroid-r8-rules.pro not found at ${src}`);
+  }
+  const dst = path.join(platformRoot, "app", "fdroid-r8-rules.pro");
+  fs.copyFileSync(src, dst);
+}
+
 function findLocalMavenFiles(dir, files = []) {
   if (!fs.existsSync(dir)) return files;
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -1610,6 +1627,7 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.writeFdroidR8Rules = writeFdroidR8Rules;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
