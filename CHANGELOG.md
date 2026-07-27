@@ -69,6 +69,8 @@ marker) at release time.
 
 - **F-Droid release CI now clears generated APK intermediates and reapplies app-level dependency exclusions after prebuild**, preventing stale or fallback Expo artifacts from entering the F-Droid dex merge.
 
+- **F-Droid and Play Android builds now run in separate Gradle invocations**, preventing their variant graphs from sharing proprietary release artifacts.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 

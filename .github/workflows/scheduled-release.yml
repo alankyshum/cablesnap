@@ -434,15 +434,12 @@ jobs:
           # distribution".
           set -euo pipefail
           cd android
-           # Build F-Droid first. The Play release build can populate Expo's
-           # release intermediates with proprietary AARs; releaseFdroid uses
-           # matchingFallbacks for library variants, so building it first
-           # prevents those Play intermediates from being reused by the FOSS
-           # variant.
-           ./gradlew \
-             :app:assembleReleaseFdroid \
-             :app:assembleRelease \
-             :wear:assembleRelease
+           # Build each variant in a separate Gradle invocation. A single
+           # invocation creates a combined task graph, allowing Play release
+           # library artifacts to satisfy releaseFdroid matchingFallbacks.
+           # Keeping the F-Droid graph isolated is required for DEX purity.
+           ./gradlew :app:assembleReleaseFdroid
+           ./gradlew :app:assembleRelease :wear:assembleRelease
           cd ..
           # Phone APK (Play / `release` build type) — the canonical
           # `cablesnap.apk` retained for the existing Play Store /
