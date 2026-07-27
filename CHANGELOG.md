@@ -67,6 +67,8 @@ marker) at release time.
 
 - **F-Droid prebuild now clears generated Android build intermediates before dependency resolution**, preventing stale proprietary AAR models from being reused after the Gradle scripts are sanitized.
 
+- **F-Droid release CI now clears generated APK intermediates and reapplies app-level dependency exclusions after prebuild**, preventing stale or fallback Expo artifacts from entering the F-Droid dex merge.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 

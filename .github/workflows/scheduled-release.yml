@@ -352,6 +352,25 @@ jobs:
           # the ML Kit graph while retaining CameraX preview functionality.
           printf '\nexpo.camera.barcode-scanner-enabled=false\n' >> android/gradle.properties
           grep 'expo.camera.barcode-scanner-enabled=false' android/gradle.properties
+          # Prebuild and Expo autolinking can leave publisher-side Android
+          # intermediates under the generated project. They are disposable and
+          # must not be allowed to seed the F-Droid variant's dex merge.
+          rm -rf android/app/build android/build android/wear/build
+          # Keep the F-Droid exclusions in the app project as a final
+          # post-prebuild guard, independent of config-plugin ordering.
+          cat >> android/app/build.gradle <<'GRADLE'
+
+          // cablesnap:ci:fdroid-final-excludes
+          if (System.getenv("CABLESNAP_FDROID") == "1") {
+              configurations.configureEach {
+                  exclude group: "com.google.android.gms"
+                  exclude group: "com.google.firebase"
+                  exclude group: "com.google.mlkit"
+                  exclude group: "com.android.installreferrer"
+                  exclude module: "camera-mlkit-vision"
+              }
+          }
+          GRADLE
 
       - name: Boost Gradle JVM heap
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
