@@ -595,6 +595,15 @@ function patchFdroidLibrarySources(projectRoot) {
   };
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+  const cameraConfig = sourceRoot("expo-camera", "expo-module.config.json");
+  if (fs.existsSync(cameraConfig)) {
+    const config = JSON.parse(fs.readFileSync(cameraConfig, "utf8"));
+    // The published camera AAR contains ML Kit/GMS bytecode even when its
+    // Gradle source dependency lines are removed. Force source compilation so
+    // the stubs below, rather than that AAR, are what reaches the APK.
+    if (config.android) delete config.android.publication;
+    fs.writeFileSync(cameraConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
+  }
   write(path.join(camera, "analyzers", "BarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
 
 import androidx.camera.core.ImageAnalysis
@@ -702,6 +711,11 @@ object BarCodeScannerResultSerializer {
   if (fs.existsSync(appConfig)) {
     const config = JSON.parse(fs.readFileSync(appConfig, "utf8"));
     config.platforms = (config.platforms ?? []).filter((platform) => platform !== "android");
+    // Expo autolinking otherwise prefers the publisher's prebuilt local AAR,
+    // which contains the original Install Referrer descriptors.  Removing the
+    // publication forces autolinking to compile the already-sanitized source
+    // when this module is encountered by a stale/generated project.
+    if (config.android) delete config.android.publication;
     fs.writeFileSync(appConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
   }
   const appPackageJson = sourceRoot("expo-application", "package.json");
@@ -737,7 +751,11 @@ object BarCodeScannerResultSerializer {
   const notifConfig = sourceRoot("expo-notifications", "expo-module.config.json");
   if (fs.existsSync(notifConfig)) {
     const config = JSON.parse(fs.readFileSync(notifConfig, "utf8"));
-    config.platforms = (config.platforms ?? []).filter((platform) => platform !== "android");
+    // Notifications remains Android-autolinked: CableSnap uses local
+    // notifications for rest timers and reminders. Only its Firebase-backed
+    // implementation is stubbed below.
+    config.platforms = [...new Set([...(config.platforms ?? []), "android"] )];
+    if (config.android) delete config.android.publication;
     fs.writeFileSync(notifConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
   }
   const packageJson = sourceRoot("expo-notifications", "package.json");
@@ -745,7 +763,9 @@ object BarCodeScannerResultSerializer {
     const pkg = JSON.parse(fs.readFileSync(packageJson, "utf8"));
     pkg.expo = pkg.expo ?? {};
     pkg.expo.autolinking = pkg.expo.autolinking ?? {};
-    pkg.expo.autolinking.exclude = [...new Set([...(pkg.expo.autolinking.exclude ?? []), "expo-notifications"] )];
+    pkg.expo.autolinking.exclude = (pkg.expo.autolinking.exclude ?? []).filter(
+      (name) => name !== "expo-notifications",
+    );
     fs.writeFileSync(packageJson, JSON.stringify(pkg, null, 2) + "\n", "utf8");
   }
   // Remove Firebase-backed source files; local notifications remain available.
