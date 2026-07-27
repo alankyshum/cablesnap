@@ -186,15 +186,8 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // disable their propagated \`releaseFdroid\` variant entirely,
             // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
-            // R8 -dontwarn rules for GMS/MLKit/installreferrer classes that
-            // are excluded from the F-Droid classpath but still referenced in
-            // Expo library bytecode signatures. Without these rules R8 fails
-            // with "Missing classes detected" during minifyReleaseFdroidWithR8.
-            // Written to android/app/ by the Config Plugin's withDangerousMod.
-            proguardFiles 'fdroid-r8-rules.pro'
         }
 `;
-
 
 // `configurations { ... }` blocks placed at the project script level apply to
 // the whole module. The plan's AC10b is: `unzip -l app-releaseFdroid.apk |
@@ -471,31 +464,6 @@ function writeFdroidManifest(platformRoot) {
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
 }
 
-// ---------------------------------------------------------------------------
-// Write fdroid-r8-rules.pro into android/app/
-// ---------------------------------------------------------------------------
-//
-// R8 fails with "Missing classes detected" when it encounters unresolvable
-// references to GMS/MLKit/installreferrer in Expo library bytecode after those
-// JARs are excluded from the F-Droid classpath (FDROID_EXCLUDES_BLOCK).
-// The releaseFdroid build type references 'fdroid-r8-rules.pro' via its
-// proguardFiles directive; this function writes that file from the canonical
-// source in fdroid/fdroid-r8-rules.pro so Gradle can pick it up at build time.
-//
-// The file is unconditionally overwritten on every prebuild so stale rules
-// are never left behind when rules are updated upstream.
-function writeFdroidR8Rules(projectRoot, platformRoot) {
-  const src = path.join(projectRoot, "fdroid", "fdroid-r8-rules.pro");
-  const dst = path.join(platformRoot, "app", "fdroid-r8-rules.pro");
-  if (!fs.existsSync(src)) {
-    throw new Error(
-      `with-wearos-module: fdroid/fdroid-r8-rules.pro not found at ${src} — ` +
-      "the F-Droid R8 rules file must exist in the project root's fdroid/ directory.",
-    );
-  }
-  fs.copyFileSync(src, dst);
-}
-
 function patchFdroidExpoDependencies(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const replacements = [
@@ -595,15 +563,24 @@ function patchFdroidLibrarySources(projectRoot) {
   };
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
-  const cameraConfig = sourceRoot("expo-camera", "expo-module.config.json");
-  if (fs.existsSync(cameraConfig)) {
-    const config = JSON.parse(fs.readFileSync(cameraConfig, "utf8"));
-    // The published camera AAR contains ML Kit/GMS bytecode even when its
-    // Gradle source dependency lines are removed. Force source compilation so
-    // the stubs below, rather than that AAR, are what reaches the APK.
-    if (config.android) delete config.android.publication;
-    fs.writeFileSync(cameraConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
-  }
+
+  // Balanced-brace replacement for a whole `fun <name>(...) { ... }` block.
+  // Kotlin allows nested try/catch and lambda braces inside the body, so a
+  // greedy/non-greedy regex is unsafe. Walk braces manually.
+  const replaceKotlinFunction = (source, name, replacement) => {
+    const funRegex = new RegExp(`fun\\s+${name}\\s*\\([^)]*\\)[^{]*\\{`, "m");
+    const match = funRegex.exec(source);
+    if (!match) return source;
+    let depth = 1;
+    let i = match.index + match[0].length;
+    while (i < source.length && depth > 0) {
+      const c = source[i++];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    if (depth !== 0) return source; // unbalanced; leave as-is
+    return source.slice(0, match.index) + replacement + source.slice(i);
+  };
   write(path.join(camera, "analyzers", "BarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
 
 import androidx.camera.core.ImageAnalysis
@@ -669,33 +646,74 @@ object BarCodeScannerResultSerializer {
 }
 `);
 
-  const cameraModule = path.join(camera, "CameraViewModule.kt");
-  if (fs.existsSync(cameraModule)) {
-    let source = fs.readFileSync(cameraModule, "utf8")
-      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
-      .replace(/AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
-        `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
+  // Robust sweep: any .kt file under expo-camera's Android source that still
+  // references MLKit or GMS (imports, GmsBarcodeScanning/GmsBarcodeScannerOptions
+  // calls, Class.forName reflection, or Barcode.FORMAT_* symbols) must be
+  // neutralized before Kotlin compiles it. Hardcoding CameraViewModule.kt and
+  // CameraUtils.kt broke on expo-camera bumps that added new call sites.
+  const cameraSrcRoot = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+  const neutralizeMlkitGmsInKotlin = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) { neutralizeMlkitGmsInKotlin(file); continue; }
+      if (!entry.name.endsWith(".kt")) continue;
+      const original = fs.readFileSync(file, "utf8");
+      if (!/com\.google\.(mlkit|android\.gms)|GmsBarcodeScann|Barcode\.FORMAT_/.test(original)) continue;
+      let source = original
+        // 1. Strip all MLKit / GMS imports.
+        .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
+        .replace(/^import com\.google\.android\.gms\.[^\n]+\n/gm, "")
+        // 2. Neutralize reflection probes: keep syntax valid, drop the descriptor.
+        .replace(/Class\.forName\("com\.google\.(?:mlkit|android\.gms)\.[^"]+"\)/g, "Any::class.java")
+        // 3. Any remaining GmsBarcodeScanning* or GmsBarcodeScannerOptions* call
+        //    chain becomes an unconditional throw. Kotlin still compiles because
+        //    the throw expression has type Nothing and satisfies any expected type.
+        .replace(/GmsBarcodeScanning\.[A-Za-z_]+\s*\([^)]*\)(?:\s*\.[A-Za-z_]+\s*\([^)]*\))*/g,
+          "run<Nothing> { throw CameraExceptions.MLKitUnavailableException() }")
+        .replace(/GmsBarcodeScannerOptions\.Builder\s*\(\s*\)(?:\s*\.[A-Za-z_]+\s*\([^)]*\))*(?:\s*\.build\s*\(\s*\))?/g,
+          "run<Nothing> { throw CameraExceptions.MLKitUnavailableException() }")
+        // 4. Barcode.FORMAT_* constants (MLKit) — map to numeric equivalents so
+        //    files that mention them (e.g. records) still compile without pulling
+        //    the com.google.mlkit.vision.barcode.common.Barcode class descriptor.
+        .replace(/Barcode\.FORMAT_CODE_128/g, "1")
+        .replace(/Barcode\.FORMAT_CODE_39/g, "2")
+        .replace(/Barcode\.FORMAT_CODE_93/g, "4")
+        .replace(/Barcode\.FORMAT_CODABAR/g, "8")
+        .replace(/Barcode\.FORMAT_DATA_MATRIX/g, "16")
+        .replace(/Barcode\.FORMAT_EAN_13/g, "32")
+        .replace(/Barcode\.FORMAT_EAN_8/g, "64")
+        .replace(/Barcode\.FORMAT_ITF/g, "128")
+        .replace(/Barcode\.FORMAT_QR_CODE/g, "256")
+        .replace(/Barcode\.FORMAT_UPC_A/g, "512")
+        .replace(/Barcode\.FORMAT_UPC_E/g, "1024")
+        .replace(/Barcode\.FORMAT_PDF417/g, "2048")
+        .replace(/Barcode\.FORMAT_AZTEC/g, "4096")
+        .replace(/Barcode\.FORMAT_UNKNOWN/g, "-1")
+        .replace(/Barcode\.FORMAT_ALL_FORMATS/g, "0");
+      // 5. File-specific stubs for known entry points. Kept for clarity and
+      //    because these produce a nicer runtime error path than the generic
+      //    throw substitution.
+      if (/CameraUtils\.kt$/.test(file)) {
+        // Replace the whole function including a try/catch body. We match the
+        // opening brace and then walk balanced braces to find the true end so
+        // we do not leave a dangling `catch` clause behind (the old regex
+        // stopped at the first `}` inside the try block).
+        source = replaceKotlinFunction(source, "isMLKitBarcodeScannerAvailable",
+          "fun isMLKitBarcodeScannerAvailable(): Boolean = false");
+      }
+      if (/CameraViewModule\.kt$/.test(file)) {
+        source = source.replace(
+          /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s{0,6}\}/m,
+          `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
       promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`);
-    fs.writeFileSync(cameraModule, source, "utf8");
-  }
-  const cameraUtils = path.join(camera, "utils", "CameraUtils.kt");
-  if (fs.existsSync(cameraUtils)) {
-    let source = fs.readFileSync(cameraUtils, "utf8")
-      .replace(/fun isMLKitBarcodeScannerAvailable\(\)[^}]*\}/s, "fun isMLKitBarcodeScannerAvailable(): Boolean = false")
-      .replace(/Class\.forName\("com\.google\.mlkit\.[^"]+"\)/g, "Any::class.java");
-    fs.writeFileSync(cameraUtils, source, "utf8");
-  }
-  const cameraView = path.join(camera, "CameraViewModule.kt");
-  if (fs.existsSync(cameraView)) {
-    let source = fs.readFileSync(cameraView, "utf8")
-      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
-      .replace(/AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
-        `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
-      promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`);
-    fs.writeFileSync(cameraView, source, "utf8");
-  }
+    }`,
+        );
+      }
+      if (source !== original) fs.writeFileSync(file, source, "utf8");
+    }
+  };
+  neutralizeMlkitGmsInKotlin(cameraSrcRoot);
 
   const app = sourceRoot("expo-application", "android", "src", "main", "java", "expo", "modules", "application", "ApplicationModule.kt");
   if (fs.existsSync(app)) {
@@ -711,11 +729,6 @@ object BarCodeScannerResultSerializer {
   if (fs.existsSync(appConfig)) {
     const config = JSON.parse(fs.readFileSync(appConfig, "utf8"));
     config.platforms = (config.platforms ?? []).filter((platform) => platform !== "android");
-    // Expo autolinking otherwise prefers the publisher's prebuilt local AAR,
-    // which contains the original Install Referrer descriptors.  Removing the
-    // publication forces autolinking to compile the already-sanitized source
-    // when this module is encountered by a stale/generated project.
-    if (config.android) delete config.android.publication;
     fs.writeFileSync(appConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
   }
   const appPackageJson = sourceRoot("expo-application", "package.json");
@@ -751,11 +764,7 @@ object BarCodeScannerResultSerializer {
   const notifConfig = sourceRoot("expo-notifications", "expo-module.config.json");
   if (fs.existsSync(notifConfig)) {
     const config = JSON.parse(fs.readFileSync(notifConfig, "utf8"));
-    // Notifications remains Android-autolinked: CableSnap uses local
-    // notifications for rest timers and reminders. Only its Firebase-backed
-    // implementation is stubbed below.
-    config.platforms = [...new Set([...(config.platforms ?? []), "android"] )];
-    if (config.android) delete config.android.publication;
+    config.platforms = (config.platforms ?? []).filter((platform) => platform !== "android");
     fs.writeFileSync(notifConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
   }
   const packageJson = sourceRoot("expo-notifications", "package.json");
@@ -763,9 +772,7 @@ object BarCodeScannerResultSerializer {
     const pkg = JSON.parse(fs.readFileSync(packageJson, "utf8"));
     pkg.expo = pkg.expo ?? {};
     pkg.expo.autolinking = pkg.expo.autolinking ?? {};
-    pkg.expo.autolinking.exclude = (pkg.expo.autolinking.exclude ?? []).filter(
-      (name) => name !== "expo-notifications",
-    );
+    pkg.expo.autolinking.exclude = [...new Set([...(pkg.expo.autolinking.exclude ?? []), "expo-notifications"] )];
     fs.writeFileSync(packageJson, JSON.stringify(pkg, null, 2) + "\n", "utf8");
   }
   // Remove Firebase-backed source files; local notifications remain available.
@@ -1011,8 +1018,6 @@ const withWearOsModule = (config) => {
       // Write/overwrite the F-Droid manifest overlay. Idempotent — same
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
-      // Write/overwrite the F-Droid R8 -dontwarn rules. Idempotent.
-      writeFdroidR8Rules(projectRoot, platformRoot);
       return cfg;
     },
   ]);
@@ -1029,7 +1034,6 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
-module.exports.writeFdroidR8Rules = writeFdroidR8Rules;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
