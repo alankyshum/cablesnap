@@ -369,15 +369,14 @@ function patchProjectBuildGradle(contents) {
 const FDROID_MANIFEST_CONTENTS = `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    ${FDROID_MANIFEST_MARKER}
+    \${FDROID_MANIFEST_MARKER}
     <application>
         <!-- firebase-common.aar — auto-runs at app start, calls into excluded
              com.google.android.gms.common.internal.Preconditions. Removing
              this provider prevents NoClassDefFoundError on F-Droid launch. -->
         <provider
-            android:name="com.google.firebase.provider.FirebaseInitProvider"
-            android:authorities="\${applicationId}.firebaseinitprovider"
-            tools:node="remove" />
+            tools:node="removeAll"
+            tools:selector="com.google.firebase" />
 
         <!-- expo-notifications declares this service inheriting from
              FirebaseMessagingService. With Firebase excluded the parent
@@ -386,8 +385,8 @@ const FDROID_MANIFEST_CONTENTS = `<?xml version="1.0" encoding="utf-8"?>
              aren't reachable in F-Droid anyway. CableSnap's local-notification
              code path (lib/notifications.ts) does not touch this service. -->
         <service
-            android:name="expo.modules.notifications.service.ExpoFirebaseMessagingService"
-            tools:node="remove" />
+            tools:node="removeAll"
+            tools:selector="expo.modules.notifications" />
 
         <!-- mlkit-common.aar — same crash pattern as FirebaseInitProvider.
              Auto-registered \`<provider MlKitInitProvider>\` runs during
@@ -396,13 +395,12 @@ const FDROID_MANIFEST_CONTENTS = `<?xml version="1.0" encoding="utf-8"?>
              on its very first line. With \`com.google.mlkit\` excluded the
              provider class itself is gone, but the manifest entry survives
              AGP's manifest merger because AAR manifests get merged before
-             classpath resolution. tools:node="remove" deletes the entry
+             classpath resolution. tools:node="removeAll" deletes the entry
              from the merged output so installProvider() never tries to
              instantiate the missing class. Surfaced by run 25244727127. -->
         <provider
-            android:name="com.google.mlkit.common.internal.MlKitInitProvider"
-            android:authorities="\${applicationId}.mlkitinitprovider"
-            tools:node="remove" />
+            tools:node="removeAll"
+            tools:selector="com.google.mlkit" />
 
         <!-- expo-image-picker declares \`<service ModuleDependencies>\` for
              Google Photo Picker module-on-demand discovery. The declaration
@@ -413,8 +411,8 @@ const FDROID_MANIFEST_CONTENTS = `<?xml version="1.0" encoding="utf-8"?>
              dangling reference to an excluded GMS class — defence-in-depth
              against any future Android version that tightens its parser. -->
         <service
-            android:name="com.google.android.gms.metadata.ModuleDependencies"
-            tools:node="remove" />
+            tools:node="removeAll"
+            tools:selector="com.google.android.gms" />
     </application>
 </manifest>
 `;
@@ -476,6 +474,276 @@ function patchFdroidExpoDependencies(projectRoot) {
       "",
     );
     fs.writeFileSync(cameraGradle, patched, "utf8");
+  }
+
+  // 1. Delete the files in expo-notifications that reference firebase.
+  const notificationsFilesToDelete = [
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "service", "ExpoFirebaseMessagingService.kt"),
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "service", "delegates", "FirebaseMessagingDelegate.kt"),
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "service", "interfaces", "FirebaseMessagingDelegate.kt"),
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "tokens", "PushTokenModule.kt"),
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "topics", "TopicSubscriptionModule.kt"),
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "notifications", "background", "BackgroundRemoteNotificationTaskConsumer.kt"),
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "notifications", "background", "ExpoBackgroundNotificationTasksModule.kt"),
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "notifications", "RemoteMessageSerializer.java"),
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "notifications", "model", "RemoteNotificationContent.kt"),
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "notifications", "model", "triggers", "FirebaseNotificationTrigger.kt"),
+    path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "notifications", "debug", "DebugLogging.kt")
+  ];
+  for (const file of notificationsFilesToDelete) {
+    if (fs.existsSync(file)) {
+      fs.rmSync(file, { force: true });
+    }
+  }
+
+  // 2. Modify expo-notifications/android/src/main/AndroidManifest.xml
+  const manifestFile = path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "AndroidManifest.xml");
+  if (fs.existsSync(manifestFile)) {
+    let content = fs.readFileSync(manifestFile, "utf8");
+    content = content.replace(/<service\s+android:name="\.service\.ExpoFirebaseMessagingService"[\s\S]*?<\/service>/g, "");
+    fs.writeFileSync(manifestFile, content, "utf8");
+  }
+
+  // 3. Modify expo-notifications/expo-module.config.json
+  const configFile = path.join(projectRoot, "node_modules", "expo-notifications", "expo-module.config.json");
+  if (fs.existsSync(configFile)) {
+    const config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+    if (config.android && config.android.modules) {
+      config.android.modules = config.android.modules.filter(m => 
+        m !== "expo.modules.notifications.tokens.PushTokenModule" &&
+        m !== "expo.modules.notifications.topics.TopicSubscriptionModule" &&
+        m !== "expo.modules.notifications.notifications.background.ExpoBackgroundNotificationTasksModule"
+      );
+    }
+    fs.writeFileSync(configFile, JSON.stringify(config, null, 2), "utf8");
+  }
+
+  // 4. Modify NotificationSerializer.java
+  const serializerFile = path.join(projectRoot, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "notifications", "NotificationSerializer.java");
+  if (fs.existsSync(serializerFile)) {
+    let content = fs.readFileSync(serializerFile, "utf8");
+    content = content.replace("import com.google.firebase.messaging.RemoteMessage;", "");
+    content = content.replace("import expo.modules.notifications.notifications.model.triggers.FirebaseNotificationTrigger;", "");
+    const oldIfBlock = `      if (requestTrigger instanceof FirebaseNotificationTrigger trigger) {
+        RemoteMessage message = trigger.getRemoteMessage();
+        Map<String, String> data = message.getData();
+        String dataBody = data.get("body");
+        if (isValidJSONString(dataBody)) {
+          // If the body is a JSON object string, the notification was sent by the Expo notification service,
+          // so we do the expected remapping of fields (we JSON-parse the string into an object in JS)
+          content.putString("dataString", dataBody);
+        } else {
+          // The message was sent directly from Firebase or some other service,
+          // and we copy the data as is
+          content.putBundle("data", toBundle(data));
+        }
+      }`;
+    content = content.replace(oldIfBlock, "");
+    fs.writeFileSync(serializerFile, content, "utf8");
+  }
+
+  // 5. Modify expo-application's ApplicationModule.kt (Stub getInstallReferrerAsync)
+  const appModuleFile = path.join(projectRoot, "node_modules", "expo-application", "android", "src", "main", "java", "expo", "modules", "application", "ApplicationModule.kt");
+  if (fs.existsSync(appModuleFile)) {
+    let content = fs.readFileSync(appModuleFile, "utf8");
+    content = content.replace("import com.android.installreferrer.api.InstallReferrerClient", "");
+    content = content.replace("import com.android.installreferrer.api.InstallReferrerStateListener", "");
+    const regex = /AsyncFunction\("getInstallReferrerAsync"\)\s*(\{\s*promise:\s*Promise\s*->|\{[\s\S]*?)onInstallReferrerServiceDisconnected\(\)[\s\S]*?\}\s*\}\)\s*\}/;
+    content = content.replace(regex, `AsyncFunction("getInstallReferrerAsync") { promise: Promise ->
+      promise.resolve("")
+    }`);
+    fs.writeFileSync(appModuleFile, content, "utf8");
+  }
+
+  // 6. Stub BarcodeAnalyzer.kt, MLKitBarcodeAnalyzer.kt, and BarcodeScannerResultSerializer.kt under expo-camera
+  const cameraAnalyzersDir = path.join(projectRoot, "node_modules", "expo-camera", "android", "src", "main", "java", "expo", "modules", "camera", "analyzers");
+  if (fs.existsSync(cameraAnalyzersDir)) {
+    const analyzerStub = `package expo.modules.camera.analyzers
+
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import expo.modules.camera.records.BarcodeType
+import expo.modules.camera.utils.BarCodeScannerResult
+
+class BarcodeAnalyzer(formats: List<BarcodeType>, val onComplete: (BarCodeScannerResult) -> Unit) : ImageAnalysis.Analyzer {
+  override fun analyze(imageProxy: ImageProxy) {
+    imageProxy.close()
+  }
+}
+
+fun Array<ImageProxy.PlaneProxy>.toByteArray(): ByteArray {
+  val totalSize = this.sumOf { it.buffer.remaining() }
+  val result = ByteArray(totalSize)
+  var offset = 0
+
+  for (plane in this) {
+    val buffer = plane.buffer
+    val size = buffer.remaining()
+    buffer.get(result, offset, size)
+    offset += size
+  }
+
+  return result
+}
+`;
+    const mlkitStub = `package expo.modules.camera.analyzers
+
+import android.graphics.Bitmap
+import expo.modules.camera.utils.BarCodeScannerResult
+
+class MLKitBarCodeScanner {
+  suspend fun scan(bitmap: Bitmap): List<BarCodeScannerResult> {
+    return emptyList()
+  }
+
+  fun setSettings(formats: List<Int>) {
+  }
+}
+`;
+    const serializerStub = `package expo.modules.camera.analyzers
+
+import android.os.Bundle
+import android.util.Pair
+import expo.modules.camera.utils.BarCodeScannerResult
+
+object BarCodeScannerResultSerializer {
+  fun toBundle(result: BarCodeScannerResult, density: Float) =
+    Bundle().apply {
+      putString("data", result.value)
+      putString("raw", result.raw)
+      putInt("type", result.type)
+      putBundle("extra", result.extra)
+      val cornerPointsAndBoundingBox = getCornerPointsAndBoundingBox(result.cornerPoints, result.boundingBox, density)
+      putParcelableArrayList("cornerPoints", cornerPointsAndBoundingBox.first)
+      putBundle("bounds", cornerPointsAndBoundingBox.second)
+    }
+
+  fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null): BarCodeScannerResult {
+    return BarCodeScannerResult(0, "", "", Bundle(), emptyList(), 0, 0)
+  }
+
+  private fun getCornerPointsAndBoundingBox(
+    cornerPoints: List<Int>,
+    boundingBox: BarCodeScannerResult.BoundingBox,
+    density: Float
+  ): Pair<ArrayList<Bundle>, Bundle> {
+    val convertedCornerPoints = ArrayList<Bundle>()
+    for (i in cornerPoints.indices step 2) {
+      val x = cornerPoints[i].toFloat() / density
+      val y = cornerPoints[i + 1].toFloat() / density
+
+      convertedCornerPoints.add(getPoint(x, y))
+    }
+    val boundingBoxBundle = Bundle().apply {
+      putParcelable("origin", getPoint(boundingBox.x.toFloat() / density, boundingBox.y.toFloat() / density))
+      putParcelable("size", getSize(boundingBox.width.toFloat() / density, boundingBox.height.toFloat() / density))
+    }
+    return Pair(convertedCornerPoints, boundingBoxBundle)
+  }
+
+  fun parseExtraDate(barcode: Any): Bundle {
+    return Bundle()
+  }
+
+  private fun getSize(width: Float, height: Float) =
+    Bundle().apply {
+      putFloat("width", width)
+      putFloat("height", height)
+    }
+
+  private fun getPoint(x: Float, y: Float) =
+    Bundle().apply {
+      putFloat("x", x)
+      putFloat("y", y)
+    }
+}
+`;
+    fs.writeFileSync(path.join(cameraAnalyzersDir, "BarcodeAnalyzer.kt"), analyzerStub, "utf8");
+    fs.writeFileSync(path.join(cameraAnalyzersDir, "MLKitBarcodeAnalyzer.kt"), mlkitStub, "utf8");
+    fs.writeFileSync(path.join(cameraAnalyzersDir, "BarcodeScannerResultSerializer.kt"), serializerStub, "utf8");
+  }
+
+  // 7. Modify CameraRecords.kt (Replace Barcode.FORMAT_* references)
+  const recordsFile = path.join(projectRoot, "node_modules", "expo-camera", "android", "src", "main", "java", "expo", "modules", "camera", "records", "CameraRecords.kt");
+  if (fs.existsSync(recordsFile)) {
+    let content = fs.readFileSync(recordsFile, "utf8");
+    content = content.replace("import com.google.mlkit.vision.barcode.common.Barcode", "");
+    content = content.replaceAll("Barcode.FORMAT_AZTEC", "4096");
+    content = content.replaceAll("Barcode.FORMAT_EAN_13", "32");
+    content = content.replaceAll("Barcode.FORMAT_EAN_8", "64");
+    content = content.replaceAll("Barcode.FORMAT_QR_CODE", "256");
+    content = content.replaceAll("Barcode.FORMAT_PDF417", "2048");
+    content = content.replaceAll("Barcode.FORMAT_UPC_E", "1024");
+    content = content.replaceAll("Barcode.FORMAT_DATA_MATRIX", "16");
+    content = content.replaceAll("Barcode.FORMAT_CODE_39", "2");
+    content = content.replaceAll("Barcode.FORMAT_CODE_93", "4");
+    content = content.replaceAll("Barcode.FORMAT_ITF", "128");
+    content = content.replaceAll("Barcode.FORMAT_CODABAR", "8");
+    content = content.replaceAll("Barcode.FORMAT_CODE_128", "1");
+    content = content.replaceAll("Barcode.FORMAT_UPC_A", "512");
+    content = content.replaceAll("Barcode.FORMAT_UNKNOWN", "-1");
+    fs.writeFileSync(recordsFile, content, "utf8");
+  }
+
+  // 8. Modify CameraViewModule.kt (Stub launchScanner)
+  const cameraModuleFile = path.join(projectRoot, "node_modules", "expo-camera", "android", "src", "main", "java", "expo", "modules", "camera", "CameraViewModule.kt");
+  if (fs.existsSync(cameraModuleFile)) {
+    let content = fs.readFileSync(cameraModuleFile, "utf8");
+    content = content.replace("import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions", "");
+    content = content.replace("import com.google.mlkit.vision.codescanner.GmsBarcodeScanning", "");
+    
+    const oldLaunchScannerBlock = `AsyncFunction("launchScanner") { settings: BarcodeSettings, promise: Promise ->
+      if (!CameraUtils.isMLKitBarcodeScannerAvailable()) {
+        promise.reject(CameraExceptions.MLKitUnavailableException())
+        return@AsyncFunction
+      }
+
+      if (!CameraUtils.hasGooglePlayServices(appContext.reactContext)) {
+        promise.reject(CameraExceptions.GooglePlayServicesUnavailableException())
+        return@AsyncFunction
+      }
+
+      val reactContext = appContext.reactContext
+
+      if (reactContext == null) {
+        promise.reject(Exceptions.ReactContextLost())
+        return@AsyncFunction
+      }
+
+      try {
+        val options = GmsBarcodeScannerOptions.Builder().apply {
+          if (settings.barcodeTypes.isNotEmpty()) {
+            setBarcodeFormats(
+              settings.barcodeTypes.first().mapToBarcode(),
+              *settings.barcodeTypes.drop(1).map { it.mapToBarcode() }.toIntArray()
+            )
+          }
+        }.build()
+
+        val scanner = GmsBarcodeScanning.getClient(reactContext, options)
+        scanner.startScan()
+          .addOnSuccessListener { barcode ->
+            val result = BarCodeScannerResultSerializer.parseBarcodeScanningResult(barcode)
+            sendEvent("onModernBarcodeScanned", BarCodeScannerResultSerializer.toBundle(result, 1.0f))
+            promise.resolve()
+          }
+          .addOnCanceledListener {
+            promise.reject(CameraExceptions.BarcodeScanningCancelledException())
+          }
+          .addOnFailureListener {
+            promise.reject(CameraExceptions.BarcodeScanningFailedException())
+          }
+      } catch (_: Exception) {
+        promise.reject(CameraExceptions.GooglePlayServicesUnavailableException())
+      }
+    }`;
+
+    const newLaunchScannerBlock = `AsyncFunction("launchScanner") { settings: BarcodeSettings, promise: Promise ->
+      promise.reject(CameraExceptions.MLKitUnavailableException())
+    }`;
+
+    content = content.replace(oldLaunchScannerBlock, newLaunchScannerBlock);
+    fs.writeFileSync(cameraModuleFile, content, "utf8");
   }
 }
 

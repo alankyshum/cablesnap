@@ -513,6 +513,69 @@ describe("patchFdroidExpoDependencies", () => {
       rmDirRecursive(tmp);
     }
   });
+
+  it("deletes and stubs target files for expo-notifications, expo-application, and expo-camera", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-stubs-"));
+    try {
+      // Create directories
+      const notifServiceDir = path.join(tmp, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "service");
+      const notifTokensDir = path.join(tmp, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications", "tokens");
+      const notifMainDir = path.join(tmp, "node_modules", "expo-notifications", "android", "src", "main");
+      const appMainDir = path.join(tmp, "node_modules", "expo-application", "android", "src", "main", "java", "expo", "modules", "application");
+      const cameraAnalyzersDir = path.join(tmp, "node_modules", "expo-camera", "android", "src", "main", "java", "expo", "modules", "camera", "analyzers");
+      
+      fs.mkdirSync(notifServiceDir, { recursive: true });
+      fs.mkdirSync(notifTokensDir, { recursive: true });
+      fs.mkdirSync(appMainDir, { recursive: true });
+      fs.mkdirSync(cameraAnalyzersDir, { recursive: true });
+
+      // Write mock files
+      const firebaseServiceFile = path.join(notifServiceDir, "ExpoFirebaseMessagingService.kt");
+      const pushTokenFile = path.join(notifTokensDir, "PushTokenModule.kt");
+      const manifestFile = path.join(notifMainDir, "AndroidManifest.xml");
+      const configFile = path.join(tmp, "node_modules", "expo-notifications", "expo-module.config.json");
+      const appModuleFile = path.join(appMainDir, "ApplicationModule.kt");
+      const barcodeAnalyzerFile = path.join(cameraAnalyzersDir, "BarcodeAnalyzer.kt");
+
+      fs.writeFileSync(firebaseServiceFile, "class ExpoFirebaseMessagingService", "utf8");
+      fs.writeFileSync(pushTokenFile, "class PushTokenModule", "utf8");
+      fs.writeFileSync(manifestFile, `<manifest><application><service android:name=".service.ExpoFirebaseMessagingService"></service></application></manifest>`, "utf8");
+      fs.writeFileSync(configFile, JSON.stringify({ android: { modules: ["expo.modules.notifications.tokens.PushTokenModule"] } }), "utf8");
+      fs.writeFileSync(appModuleFile, `import com.android.installreferrer.api.InstallReferrerClient\nAsyncFunction("getInstallReferrerAsync") {\n      val installReferrer = StringBuilder()\n      var isSettled = false\n\n      val referrerClient = InstallReferrerClient.newBuilder(context).build()\n\n      referrerClient.startConnection(object : InstallReferrerStateListener {\n        override fun onInstallReferrerSetupFinished(responseCode: Int) {\n          if (isSettled) return\n\n          when (responseCode) {\n            InstallReferrerClient.InstallReferrerResponse.OK -> {\n              // Connection established and response received\n              try {\n                val response = referrerClient.installReferrer\n                installReferrer.append(response.installReferrer)\n              } catch (e: RemoteException) {\n                promise.reject("ERR_APPLICATION_INSTALL_REFERRER_REMOTE_EXCEPTION", "RemoteException getting install referrer information. This may happen if the process hosting the remote object is no longer available.", e)\n                return\n              } finally {\n                isSettled = true\n              }\n              promise.resolve(installReferrer.toString())\n            }\n\n            InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED -> { // API not available in the current Play Store app\n              isSettled = true\n              promise.reject("ERR_APPLICATION_INSTALL_REFERRER_UNAVAILABLE", "The current Play Store app doesn't provide the installation referrer API, or the Play Store may not be installed.", null)\n            }\n\n            InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE -> { // Connection could not be established\n              isSettled = true\n              promise.reject("ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code $responseCode", null)\n            }\n\n            else -> {\n              isSettled = true\n              promise.reject("ERR_APPLICATION_INSTALL_REFERRER", "General error retrieving the install referrer: response code $responseCode", null)\n            }\n          }\n          referrerClient.endConnection()\n        }\n\n        override fun onInstallReferrerServiceDisconnected() {\n          if (isSettled) return\n          isSettled = true\n          promise.reject("ERR_APPLICATION_INSTALL_REFERRER_SERVICE_DISCONNECTED", "Connection to install referrer service was lost.", null)\n        }\n      })\n    }`, "utf8");
+      fs.writeFileSync(barcodeAnalyzerFile, "original barcode analyzer content", "utf8");
+
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidExpoDependencies(tmp);
+
+      // Verify deletions
+      expect(fs.existsSync(firebaseServiceFile)).toBe(false);
+      expect(fs.existsSync(pushTokenFile)).toBe(false);
+
+      // Verify Manifest modification
+      const updatedManifest = fs.readFileSync(manifestFile, "utf8");
+      expect(updatedManifest).not.toContain("ExpoFirebaseMessagingService");
+
+      // Verify Config modification
+      const updatedConfig = JSON.parse(fs.readFileSync(configFile, "utf8"));
+      expect(updatedConfig.android.modules).not.toContain("expo.modules.notifications.tokens.PushTokenModule");
+
+      // Verify ApplicationModule stub
+      const updatedAppModule = fs.readFileSync(appModuleFile, "utf8");
+      expect(updatedAppModule).not.toContain("InstallReferrerClient");
+      expect(updatedAppModule).toContain("promise.resolve(\"\")");
+
+      // Verify BarcodeAnalyzer stub
+      const updatedAnalyzer = fs.readFileSync(barcodeAnalyzerFile, "utf8");
+      expect(updatedAnalyzer).toContain("class BarcodeAnalyzer");
+      expect(updatedAnalyzer).not.toContain("com.google.mlkit");
+
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
 });
 
 // ----------------------------------------------------------------------------
@@ -522,15 +585,11 @@ describe("patchFdroidExpoDependencies", () => {
 // The F-Droid build-type manifest overlay is AGP's standard mechanism for
 // per-buildType manifest customization. Files at
 // `android/app/src/<buildType>/AndroidManifest.xml` participate in manifest
-// merging at the highest priority and can use `tools:node="remove"` to drop
+// merging at the highest priority and can use `tools:node="removeAll"` to drop
 // nodes contributed by other libraries.
 //
-// We use this to strip two manifest entries from the F-Droid APK that would
-// otherwise crash the app at launch:
-//   1. <provider FirebaseInitProvider> — auto-registered by firebase-common.aar,
-//      runs at Application init, references excluded GMS Preconditions class.
-//   2. <service ExpoFirebaseMessagingService> — declared by expo-notifications,
-//      extends FirebaseMessagingService whose parent class is now missing.
+// We use this to strip manifest entries from the F-Droid APK that would
+// otherwise crash the app at launch.
 describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
   it("declares the tools namespace required by tools:node directives", () => {
     // Without xmlns:tools on the root <manifest>, AGP's manifest merger
@@ -542,38 +601,27 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
     );
   });
 
-  it("removes FirebaseInitProvider via tools:node='remove'", () => {
-    // Match across attribute order — AGP's tools:node attribute can appear
-    // before or after android:authorities. We assert both the provider name
-    // and the remove directive co-occur within the same <provider> element.
+  it("removes Firebase via tools:node='removeAll'", () => {
     expect(FDROID_MANIFEST_CONTENTS).toMatch(
-      /<provider\b[\s\S]*?android:name="com\.google\.firebase\.provider\.FirebaseInitProvider"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
+      /<provider\b[\s\S]*?tools:node="removeAll"[\s\S]*?tools:selector="com\.google\.firebase"[\s\S]*?\/>/,
     );
   });
 
-  it("removes ExpoFirebaseMessagingService via tools:node='remove'", () => {
+  it("removes ExpoFirebaseMessagingService via tools:node='removeAll'", () => {
     expect(FDROID_MANIFEST_CONTENTS).toMatch(
-      /<service\b[\s\S]*?android:name="expo\.modules\.notifications\.service\.ExpoFirebaseMessagingService"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
+      /<service\b[\s\S]*?tools:node="removeAll"[\s\S]*?tools:selector="expo\.modules\.notifications"[\s\S]*?\/>/,
     );
   });
 
-  it("removes MlKitInitProvider via tools:node='remove'", () => {
-    // Same crash pattern as FirebaseInitProvider — a content provider that
-    // auto-runs at app start and calls into excluded GMS classes. Surfaced
-    // by run 25244727127 after the Firebase fix unblocked it.
+  it("removes MlKitInitProvider via tools:node='removeAll'", () => {
     expect(FDROID_MANIFEST_CONTENTS).toMatch(
-      /<provider\b[\s\S]*?android:name="com\.google\.mlkit\.common\.internal\.MlKitInitProvider"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
+      /<provider\b[\s\S]*?tools:node="removeAll"[\s\S]*?tools:selector="com\.google\.mlkit"[\s\S]*?\/>/,
     );
   });
 
-  it("removes the dormant ModuleDependencies service from expo-image-picker (defence-in-depth)", () => {
-    // expo-image-picker declares <service ModuleDependencies android:enabled="false">
-    // for Google Photo Picker module-on-demand discovery. Disabled, so it
-    // does not crash on launch — but stripping it eliminates a dangling
-    // reference to an excluded GMS class, future-proofing against tighter
-    // manifest parsing in newer Android versions.
+  it("removes the dormant ModuleDependencies service from expo-image-picker via tools:node='removeAll'", () => {
     expect(FDROID_MANIFEST_CONTENTS).toMatch(
-      /<service\b[\s\S]*?android:name="com\.google\.android\.gms\.metadata\.ModuleDependencies"[\s\S]*?tools:node="remove"[\s\S]*?\/>/,
+      /<service\b[\s\S]*?tools:node="removeAll"[\s\S]*?tools:selector="com\.google\.android\.gms"[\s\S]*?\/>/,
     );
   });
 
@@ -584,16 +632,14 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
     // at the manifest root, the merger would silently no-op the removal.
     const appOpen = FDROID_MANIFEST_CONTENTS.indexOf("<application>");
     const appClose = FDROID_MANIFEST_CONTENTS.indexOf("</application>");
-    const providerIdx = FDROID_MANIFEST_CONTENTS.indexOf("FirebaseInitProvider");
-    const serviceIdx = FDROID_MANIFEST_CONTENTS.indexOf(
-      "ExpoFirebaseMessagingService",
-    );
+    const firebaseIdx = FDROID_MANIFEST_CONTENTS.indexOf("com.google.firebase");
+    const notificationsIdx = FDROID_MANIFEST_CONTENTS.indexOf("expo.modules.notifications");
     expect(appOpen).toBeGreaterThan(-1);
     expect(appClose).toBeGreaterThan(appOpen);
-    expect(providerIdx).toBeGreaterThan(appOpen);
-    expect(providerIdx).toBeLessThan(appClose);
-    expect(serviceIdx).toBeGreaterThan(appOpen);
-    expect(serviceIdx).toBeLessThan(appClose);
+    expect(firebaseIdx).toBeGreaterThan(appOpen);
+    expect(firebaseIdx).toBeLessThan(appClose);
+    expect(notificationsIdx).toBeGreaterThan(appOpen);
+    expect(notificationsIdx).toBeLessThan(appClose);
   });
 
   it("writeFdroidManifest creates app/src/releaseFdroid/AndroidManifest.xml at the platform root", () => {
