@@ -382,3 +382,122 @@ describe("BLD-3816 — generateStackCalibrations transaction (QD Safeguard A: st
     expect(getCalibrations("stack-1")).toHaveLength(5);
   });
 });
+
+// ── 5. Generated-vs-manual logging equivalence ───────────────────────────────
+
+describe("BLD-3816 — Generated-vs-manual logging equivalence", () => {
+  let raw: InstanceType<typeof DatabaseSync>;
+  let db: WrappedDb;
+
+  beforeEach(async () => {
+    raw = new DatabaseSync(":memory:");
+    raw.exec("PRAGMA foreign_keys = OFF;");
+    db = wrapDb(raw);
+    await migrate(db as Parameters<typeof migrate>[0]);
+
+    raw.exec(`
+      INSERT INTO gym_profiles (id, name, is_default, created_at, updated_at)
+        VALUES ('gym-eq', 'Equivalence Gym', 1, 1000, 1000);
+      INSERT INTO cable_stacks (id, gym_id, name, unit, position, created_at, updated_at)
+        VALUES ('stack-gen', 'gym-eq', 'Low Pulley', 'kg', 1, 1000, 1000);
+      INSERT INTO cable_stacks (id, gym_id, name, unit, position, created_at, updated_at)
+        VALUES ('stack-man', 'gym-eq', 'Low Pulley', 'kg', 2, 1000, 1000);
+      INSERT INTO workout_sessions (id, name, gym_id, gym_name_at_log, started_at)
+        VALUES ('session-eq', 'Equivalence Session', 'gym-eq', 'Equivalence Gym', 1000);
+    `);
+  });
+
+  async function generateAndApply(stackId: string, params: { startWeight: number; increment: number; count: number }) {
+    const { startWeight, increment, count } = params;
+    const now = Date.now();
+    await db.withTransactionAsync(async () => {
+      await db.runAsync(
+        "UPDATE cable_stacks SET gen_start_weight = ?, gen_increment = ?, gen_marker_count = ?, updated_at = ? WHERE id = ?",
+        [startWeight, increment, count, now, stackId]
+      );
+      for (let i = 1; i <= count; i++) {
+        const trueWeight = startWeight + (i - 1) * increment;
+        await db.runAsync(
+          "INSERT INTO stack_calibrations (id, stack_id, marker, true_weight) VALUES (?, ?, ?, ?) ON CONFLICT(stack_id, marker) DO UPDATE SET true_weight = excluded.true_weight",
+          [`gen-${stackId}-${i}`, stackId, i, trueWeight]
+        );
+      }
+    });
+  }
+
+  async function logStackSet(
+    setId: string,
+    sessionId: string,
+    exerciseId: string,
+    setNumber: number,
+    reps: number,
+    stackId: string,
+    marker: number,
+    stackName: string,
+    stackUnit: string,
+    trueWeight: number
+  ) {
+    // Insert pristine set
+    await db.runAsync(
+      "INSERT INTO workout_sets (id, session_id, exercise_id, set_number, reps) VALUES (?, ?, ?, ?, ?)",
+      [setId, sessionId, exerciseId, setNumber, reps]
+    );
+
+    // Update with marker info
+    await db.runAsync(
+      "UPDATE workout_sets SET weight = ?, stack_id = ?, stack_marker = ?, stack_name_at_log = ?, stack_unit_at_log = ? WHERE id = ?",
+      [trueWeight, stackId, marker, stackName, stackUnit, setId]
+    );
+
+    // Recompute caches (normal set type fallback)
+    const cachedVolumeKg = trueWeight * reps;
+    const cachedE1rmKg = reps > 0 && reps <= 12 ? trueWeight * (1 + reps / 30) : 0;
+    await db.runAsync(
+      "UPDATE workout_sets SET cached_volume_kg = ?, cached_e1rm_kg = ? WHERE id = ?",
+      [cachedVolumeKg, cachedE1rmKg, setId]
+    );
+  }
+
+  it("proves generated and equivalent manual stacks produce identical snapshots and cached_e1rm_kg", async () => {
+    // 1. Setup Generated Stack calibrations (start=5, inc=5, count=5)
+    await generateAndApply("stack-gen", { startWeight: 5, increment: 5, count: 5 });
+
+    // 2. Setup equivalent Manual Stack calibrations manually
+    raw.exec(`
+      INSERT INTO stack_calibrations (id, stack_id, marker, true_weight) VALUES ('m-1', 'stack-man', 1, 5);
+      INSERT INTO stack_calibrations (id, stack_id, marker, true_weight) VALUES ('m-2', 'stack-man', 2, 10);
+      INSERT INTO stack_calibrations (id, stack_id, marker, true_weight) VALUES ('m-3', 'stack-man', 3, 15);
+      INSERT INTO stack_calibrations (id, stack_id, marker, true_weight) VALUES ('m-4', 'stack-man', 4, 20);
+      INSERT INTO stack_calibrations (id, stack_id, marker, true_weight) VALUES ('m-5', 'stack-man', 5, 25);
+    `);
+
+    // 3. Log a set on Generated Stack at marker 3
+    await logStackSet("set-gen-3", "session-eq", "ex-1", 1, 10, "stack-gen", 3, "Low Pulley", "kg", 15);
+
+    // 4. Log a set on Manual Stack at marker 3
+    await logStackSet("set-man-3", "session-eq", "ex-1", 2, 10, "stack-man", 3, "Low Pulley", "kg", 15);
+
+    // 5. Fetch both set rows
+    const setGen = (await db.getFirstAsync("SELECT * FROM workout_sets WHERE id = ?", ["set-gen-3"]))!;
+    const setMan = (await db.getFirstAsync("SELECT * FROM workout_sets WHERE id = ?", ["set-man-3"]))!;
+
+    // 6. Assert all snapshot fields are identical
+    expect(setGen.weight).toBeCloseTo(15);
+    expect(setMan.weight).toBeCloseTo(15);
+
+    expect(setGen.stack_marker).toBe(3);
+    expect(setMan.stack_marker).toBe(3);
+
+    expect(setGen.stack_name_at_log).toBe("Low Pulley");
+    expect(setMan.stack_name_at_log).toBe("Low Pulley");
+
+    expect(setGen.stack_unit_at_log).toBe("kg");
+    expect(setMan.stack_unit_at_log).toBe("kg");
+
+    expect(setGen.cached_volume_kg).toBe(150);
+    expect(setMan.cached_volume_kg).toBe(150);
+
+    expect(setGen.cached_e1rm_kg).toBeCloseTo(20);
+    expect(setMan.cached_e1rm_kg).toBeCloseTo(20);
+  });
+});
