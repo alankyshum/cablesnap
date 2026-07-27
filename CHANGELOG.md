@@ -83,6 +83,8 @@ marker) at release time.
 
 - **F-Droid R8 now ignores missing optional integration warnings after stripping those dependencies**, allowing the release shrinker to finish and remove the unreachable code paths.
 
+- **F-Droid build setup now removes stale project and transformed-AAR intermediates before dependency resolution**, keeping the isolated build reproducible after failed attempts.
+
 
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
