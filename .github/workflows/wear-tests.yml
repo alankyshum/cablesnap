@@ -161,7 +161,7 @@ jobs:
         run: |
           set -euo pipefail
           cd android
-          ./gradlew :app:assembleReleaseFdroid
+          ./gradlew :app:assembleReleaseFdroid --no-build-cache
           cd ..
           APK=android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk
           if [ ! -f "$APK" ]; then
@@ -178,6 +178,28 @@ jobs:
             exit 1
           fi
           echo "AC10b OK — F-Droid APK is GMS-Wearable-free."
+
+      - name: AC10b Diagnostic on Failure
+        if: failure()
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk
+          if [ -f "$APK" ]; then
+            TMPDIR_DEX=$(mktemp -d)
+            trap 'rm -rf "$TMPDIR_DEX"' EXIT
+            unzip -q -o "$APK" 'classes*.dex' -d "$TMPDIR_DEX"
+            for dex in "$TMPDIR_DEX"/classes*.dex; do
+              echo "=== Diagnostic for $dex ==="
+              strings "$dex" | grep -oE 'com/google/firebase[A-Za-z0-9_$./-]*|com/google/mlkit[A-Za-z0-9_$./-]*|com/google/android/gms[A-Za-z0-9_$./-]*|com/android/installreferrer[A-Za-z0-9_$./-]*' | sort -u | head -50 || true
+            done
+          fi
+          echo "=== Tracing intermediate JARs for SUSS leaks ==="
+          find android -name "*.jar" -o -name "*.aar" | while read -r archive; do
+            if unzip -l "$archive" 2>/dev/null | grep -E 'Firebase|MlKit|Gms|InstallReferrer|installreferrer' >/dev/null; then
+              echo "Leaking archive: $archive"
+              unzip -l "$archive" | grep -E 'Firebase|MlKit|Gms|InstallReferrer|installreferrer' | head -10
+            fi
+          done
 
       - name: AC9 — F-Droid APK GMS/Firebase/MLKit-free except wearable
         # AC9 (BLD-1151/BLD-1153/BLD-1154): Verify that no actual GMS/Firebase/

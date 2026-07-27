@@ -1,10 +1,32 @@
 const http = require("http");
+const path = require("path");
 const {
   getSentryExpoConfig
 } = require("@sentry/react-native/metro");
 
 const config = getSentryExpoConfig(__dirname);
 config.resolver.assetExts.push("wasm");
+
+const isFdroidBuild = process.env.CABLESNAP_FDROID === "1";
+if (isFdroidBuild) {
+  config.resolver.resolveRequest = (context, moduleName, platform) => {
+    if (moduleName === "expo-notifications") {
+      return context.resolveRequest(
+        context,
+        path.join(__dirname, "modules/expo-notifications-foss"),
+        platform
+      );
+    }
+    if (moduleName === "expo-application") {
+      return context.resolveRequest(
+        context,
+        path.join(__dirname, "modules/expo-application-foss"),
+        platform
+      );
+    }
+    return context.resolveRequest(context, moduleName, platform);
+  };
+}
 
 // Inject COOP/COEP headers into every HTTP response so expo-sqlite
 // can use OPFS (persistent storage) on web.  Metro's enhanceMiddleware
