@@ -439,17 +439,18 @@ jobs:
            # library artifacts to satisfy releaseFdroid matchingFallbacks.
            # Keeping the F-Droid graph isolated is required for DEX purity.
            ./gradlew :app:assembleReleaseFdroid
+           # Preserve the clean F-Droid APK before the Play invocation can
+           # reuse or overwrite app/build outputs.
+           cp app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk ../cablesnap-fdroid.apk
+           rm -rf app/build
            ./gradlew :app:assembleRelease :wear:assembleRelease
           cd ..
           # Phone APK (Play / `release` build type) — the canonical
           # `cablesnap.apk` retained for the existing Play Store /
           # GitHub-Release pipeline.
           cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
-          # Phone APK (`releaseFdroid` build type) — what the F-Droid build
-          # server's `Builds:` recipe also produces locally; we attach it as
-          # a separate release asset so external mirrors can verify the
-          # GMS-free build matches.
-          cp android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk cablesnap-fdroid.apk
+           # Phone APK (`releaseFdroid` build type) was copied immediately
+           # after its isolated Gradle invocation above.
           # Watch APK — Wear OS 4 standalone artifact; Play-only (F-Droid
           # rejects GMS).
           cp android/wear/build/outputs/apk/release/wear-release.apk cablesnap-wear.apk
