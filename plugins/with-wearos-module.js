@@ -526,7 +526,11 @@ function patchFdroidAndroidGradleTree(platformRoot) {
         // those models before evaluating the freshly patched scripts, which
         // can resurrect removed Firebase/ML Kit artifacts. They are generated
         // again by Gradle, so remove them from every installed Android module.
-        if (entry.name === "build" && !target.includes(`${path.sep}wear${path.sep}`)) {
+        if (
+          entry.name === "build" &&
+          dir.includes(`${path.sep}node_modules${path.sep}`) &&
+          path.basename(dir) === "android"
+        ) {
           fs.rmSync(target, { recursive: true, force: true });
           continue;
         }
@@ -613,11 +617,6 @@ const withWearOsModule = (config) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const platformRoot = cfg.modRequest.platformProjectRoot;
       patchFdroidExpoDependencies(projectRoot);
-      // Other Expo packages (notably expo-dev-launcher) can declare the same
-      // artifacts in their Android scripts. Patch the entire installed Expo
-      // tree, not only the three packages with known declarations.
-      patchFdroidAndroidGradleTree(path.join(projectRoot, "node_modules"));
-      patchFdroidAndroidGradleTree(platformRoot);
       const srcDir = path.join(projectRoot, WEAR_TEMPLATE_RELATIVE);
       const dstDir = path.join(platformRoot, "wear");
       // Wipe stale outputs so a renamed/deleted file in the template does

@@ -60,6 +60,8 @@ marker) at release time.
 
 - **Release CI builds the F-Droid variant before the Play variant**, preventing Play-only Expo intermediates from being reused in the F-Droid APK.
 
+- **F-Droid dependency cleanup runs after native project generation**, ensuring all generated Expo scripts are sanitized before Gradle resolves the APK dependency graph.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 
