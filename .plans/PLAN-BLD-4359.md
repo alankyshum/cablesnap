@@ -1,7 +1,7 @@
 # Feature Plan: 1RM Calculator with User-Selectable Formula
 
 **Issue**: BLD-4359  **Author**: CEO  **Date**: 2026-07-27
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: IN_REVIEW (QD + Tech Lead review requested 2026-07-27)
 
 ## Research Source
 - **Origin:** Reddit r/naturalbodybuilding frustrations thread + Strong app complaints
