@@ -44,6 +44,7 @@ marker) at release time.
 - **F-Droid dependency stripping now applies before Android library dependencies resolve**, covering direct Expo module declarations as well as transitive dependencies.
 - **F-Droid library dependency filtering now runs after each Expo library evaluates**, ensuring direct proprietary declarations are removed before APK packaging.
 - **F-Droid prebuild rewrites direct proprietary Expo library dependencies to compile-only**, preventing them from being packaged while retaining native compilation.
+- **F-Droid builds no longer include the precompiled ML Kit / Google Play Services barcode-scanner code** shipped inside Expo's local Maven AARs, keeping the FOSS APK free of proprietary class references. ([BLD-4443](/BLD/issues/BLD-4443))
 - **F-Droid Gradle setup rewrites direct proprietary dependencies before subprojects evaluate**, preventing runtime packaging across Expo modules.
 - **F-Droid prebuild disables Expo Camera barcode dependencies**, keeping camera preview available without ML Kit or Google Play Services classes.
 - **F-Droid library resolution moves proprietary direct dependencies to compile-only**, removing them from release runtime packaging.

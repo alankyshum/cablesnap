@@ -571,6 +571,25 @@ function patchFdroidExpoDependencies(projectRoot) {
     }
   }
 
+  // BLD-4443: Strip `android.publication` from expo-module.config.json for the
+  // three packages that ship a precompiled local-maven-repo AAR. Autolinking
+  // uses the publication block to depend on the module via a maven coordinate;
+  // without it, autolinking falls back to source-project inclusion so Gradle
+  // compiles the FOSS-patched sources instead of the proprietary AAR bytecode.
+  // The local-maven-repo/ tree itself is deleted in patchFdroidLibrarySources
+  // (which runs after prebuild writes node_modules); this pre-prebuild strip
+  // ensures autolinking never attempts to resolve the maven coordinate.
+  for (const pkgName of ["expo-camera", "expo-application", "expo-notifications"]) {
+    const configPath = path.join(projectRoot, "node_modules", pkgName, "expo-module.config.json");
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+      if (config.android && config.android.publication) {
+        delete config.android.publication;
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+      }
+    }
+  }
+
   // The Expo Android publisher artifacts include local Maven POM/module
   // metadata. Gradle can resolve those metadata files even after the source
   // build.gradle has been sanitized, reintroducing the original optional
@@ -620,6 +639,7 @@ function scrubFdroidLocalMavenMetadata(projectRoot) {
     }
   };
   visit(root);
+
 }
 
 // Source-level F-Droid patch. Gradle exclusions do not remove proprietary
@@ -807,6 +827,7 @@ object BarCodeScannerResultSerializer {
     }
   };
   neutralizeMlkitGmsInKotlin(cameraSrcRoot);
+
 
   const app = sourceRoot("expo-application", "android", "src", "main", "java", "expo", "modules", "application", "ApplicationModule.kt");
   if (fs.existsSync(app)) {
