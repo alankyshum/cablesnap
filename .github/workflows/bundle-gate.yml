@@ -57,7 +57,13 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: |
+          npm ci --legacy-peer-deps || {
+            echo '::warning::npm ci failed — purging npm cache and node_modules, retrying once (suspected poisoned cache; see BLD-4266)'
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci --legacy-peer-deps
+          }
 
       - name: Run bundle gate
         run: bash scripts/verify-scenario-hook-not-in-bundle.sh
