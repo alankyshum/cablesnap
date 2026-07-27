@@ -9,7 +9,6 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
-  patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
@@ -88,28 +87,6 @@ describe("patchSettingsGradle", () => {
     );
     // Sentinel marker is present so re-runs are idempotent.
     expect(out).toContain("// cablesnap:wearos:settings-include");
-  });
-
-  it("emits an env-gated early dependency rewrite in settings.gradle", () => {
-    const previous = process.env.CABLESNAP_FDROID;
-    process.env.CABLESNAP_FDROID = "1";
-    const out = patchSettingsGradle(SETTINGS_FIXTURE);
-    expect(out).toContain('if (System.getenv("CABLESNAP_FDROID") == "1")');
-    expect(out).toContain("gradle.beforeProject { project ->");
-    expect(out).toContain("com\\.google\\.firebase:");
-    expect(out).toContain("com\\.android\\.installreferrer:");
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
-  });
-
-  it("omits the F-Droid settings rewrite for Play prebuild", () => {
-    const previous = process.env.CABLESNAP_FDROID;
-    delete process.env.CABLESNAP_FDROID;
-    const out = patchSettingsGradle(SETTINGS_FIXTURE);
-    expect(out).not.toContain("fdroid-settings-filter");
-    expect(out).not.toContain("beforeProject");
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
   });
 
   it("does not duplicate the include block on re-run", () => {
@@ -201,10 +178,28 @@ describe("patchAppBuildGradle", () => {
     expect(releaseFdroidIdx).toBeGreaterThan(releaseInnerIdx);
   });
 
-  it("leaves dependency exclusions to the project-level patch", () => {
-    expect(patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE)).not.toContain(
-      "cablesnap:wearos:fdroid-excludes",
-    );
+  it("emits app-level variant-scoped dependency exclusions and DEX packaging options for F-Droid", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    process.env.CABLESNAP_FDROID = "1";
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toContain("cablesnap:wearos:fdroid-excludes:app");
+    expect(out).toContain("cablesnap:wearos:fdroid-dex-packaging");
+    expect(out).toContain("releaseFdroidImplementation");
+    expect(out).toContain("releaseFdroidRuntimeClasspath");
+    expect(out).toContain("releaseFdroidCompileClasspath");
+    expect(out).toContain("com/google/firebase/**");
+    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+    else process.env.CABLESNAP_FDROID = previous;
+  });
+
+  it("omits dependency exclusions and packaging options from Play build", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    delete process.env.CABLESNAP_FDROID;
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).not.toContain("cablesnap:wearos:fdroid-excludes:app");
+    expect(out).not.toContain("cablesnap:wearos:fdroid-dex-packaging");
+    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+    else process.env.CABLESNAP_FDROID = previous;
   });
 
   it("does NOT exclude the entire androidx.camera group (regression guard)", () => {
@@ -318,53 +313,6 @@ describe("patchProjectBuildGradle", () => {
     );
   });
 
-  it("emits gated all-project F-Droid exclusions for every SUSS group", () => {
-    const previous = process.env.CABLESNAP_FDROID;
-    process.env.CABLESNAP_FDROID = "1";
-    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
-    expect(out).toMatch(
-      /if \(System\.getenv\("CABLESNAP_FDROID"\) == "1"\)\s*\{[\s\S]*allprojects\s*\{[\s\S]*configurations\.all\s*\{/,
-    );
-    for (const group of [
-      "com.google.android.gms",
-      "com.google.firebase",
-      "com.google.mlkit",
-      "com.android.installreferrer",
-    ]) {
-      expect(out).toContain(`exclude group: "${group}"`);
-    }
-    expect(out).toContain("resolutionStrategy.eachDependency");
-    expect(out).toContain("F-Droid build rejected proprietary dependency");
-    expect(out).toContain('exclude module: "camera-mlkit-vision"');
-    expect(out).toContain('exclude module: "expo-wearos-bridge"');
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
-  });
-
-  it("places every exclusion inside the CABLESNAP_FDROID gate", () => {
-    const previous = process.env.CABLESNAP_FDROID;
-    process.env.CABLESNAP_FDROID = "1";
-    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
-    const gateStart = out.indexOf('if (System.getenv("CABLESNAP_FDROID") == "1")');
-    const gateEnd = out.indexOf("\n}\n", gateStart);
-    const exclusions = out.indexOf('exclude group: "com.google.firebase"');
-    expect(gateStart).toBeGreaterThan(-1);
-    expect(gateEnd).toBeGreaterThan(gateStart);
-    expect(exclusions).toBeGreaterThan(gateStart);
-    expect(exclusions).toBeLessThan(gateEnd);
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
-  });
-
-  it("omits F-Droid exclusions from Play prebuild output", () => {
-    const previous = process.env.CABLESNAP_FDROID;
-    delete process.env.CABLESNAP_FDROID;
-    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
-    expect(out).not.toContain("cablesnap:wearos:fdroid-excludes");
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
-  });
-
   it("emits an androidComponents.beforeVariants selector for releaseFdroid", () => {
     const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
     expect(out).toMatch(
@@ -459,59 +407,6 @@ describe("copyDirRecursive + rmDirRecursive", () => {
     expect(() => copyDirRecursive(missing, dst)).toThrow(
       /with-wearos-module.*wear-template/,
     );
-  });
-});
-
-describe("patchFdroidExpoDependencies", () => {
-  it("removes direct proprietary Expo dependency sources only for F-Droid", () => {
-    const previous = process.env.CABLESNAP_FDROID;
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-deps-"));
-    try {
-      for (const [pkg, contents] of [
-        ["expo-notifications", "implementation 'com.google.firebase:firebase-messaging:25.0.1'"],
-        ["expo-application", "implementation 'com.android.installreferrer:installreferrer:2.2'"],
-      ]) {
-        const dir = path.join(tmp, "node_modules", pkg, "android");
-        fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(path.join(dir, "build.gradle"), contents, "utf8");
-      }
-      process.env.CABLESNAP_FDROID = "1";
-      patchFdroidExpoDependencies(tmp);
-      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-notifications", "android", "build.gradle"), "utf8")).not.toMatch(/com\.google\.firebase:/);
-      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-application", "android", "build.gradle"), "utf8")).not.toMatch(/com\.android\.installreferrer:/);
-    } finally {
-      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-      else process.env.CABLESNAP_FDROID = previous;
-      rmDirRecursive(tmp);
-    }
-  });
-
-  it("removes expo-camera barcode artifacts declared through add()", () => {
-    const previous = process.env.CABLESNAP_FDROID;
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-camera-"));
-    try {
-      const dir = path.join(tmp, "node_modules", "expo-camera", "android");
-      fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(
-        path.join(dir, "build.gradle"),
-        [
-          'add(barcodeDependencyConfiguration, "com.google.android.gms:play-services-code-scanner:16.1.0")',
-          'add(barcodeDependencyConfiguration, "com.google.mlkit:barcode-scanning:17.3.0")',
-          'add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:1.5.1")',
-        ].join("\n"),
-        "utf8",
-      );
-      process.env.CABLESNAP_FDROID = "1";
-      patchFdroidExpoDependencies(tmp);
-      const out = fs.readFileSync(path.join(dir, "build.gradle"), "utf8");
-      expect(out).not.toContain("play-services-code-scanner");
-      expect(out).not.toContain("com.google.mlkit:barcode-scanning");
-      expect(out).not.toContain("camera-mlkit-vision");
-    } finally {
-      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-      else process.env.CABLESNAP_FDROID = previous;
-      rmDirRecursive(tmp);
-    }
   });
 });
 
