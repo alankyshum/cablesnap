@@ -46,16 +46,27 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Without this exclusion the debug APK is an Expo development launcher
     // that shows "Development Servers" instead of launching the app.
     ...(isCI ? [] : ["expo-dev-client" as const]),
-    [
-      "expo-notifications",
-      {
-        // BLD-1263: bundle the custom "ca-ching" rest-complete sound into
-        // Android res/raw + the iOS bundle so the rest-complete channel can
-        // reference it. File name must be a valid Android resource id
-        // (lowercase + underscore, no hyphens).
-        sounds: ["./assets/sounds/cha_ching.wav"],
-      },
-    ],
+    ...(isFdroidBuild
+      ? [
+          [
+            "./modules/expo-notifications-foss",
+            {
+              sounds: ["./assets/sounds/cha_ching.wav"],
+            },
+          ] as [string, Record<string, unknown>],
+        ]
+      : [
+          [
+            "expo-notifications",
+            {
+              // BLD-1263: bundle the custom "ca-ching" rest-complete sound into
+              // Android res/raw + the iOS bundle so the rest-complete channel can
+              // reference it. File name must be a valid Android resource id
+              // (lowercase + underscore, no hyphens).
+              sounds: ["./assets/sounds/cha_ching.wav"],
+            },
+          ] as [string, Record<string, unknown>],
+        ]),
     "expo-sqlite",
     "expo-audio",
     "expo-sharing",
