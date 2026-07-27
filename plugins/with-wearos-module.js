@@ -464,6 +464,21 @@ function writeFdroidManifest(platformRoot) {
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
 }
 
+// Copy the canonical F-Droid R8 rules into the generated Android app. This is
+// deliberately done during prebuild so a clean native regeneration cannot
+// drop the rules required by the dependency-free releaseFdroid classpath.
+function writeFdroidR8Rules(projectRoot, platformRoot) {
+  const src = path.join(projectRoot, "fdroid", "fdroid-r8-rules.pro");
+  const dst = path.join(platformRoot, "app", "fdroid-r8-rules.pro");
+  if (!fs.existsSync(src)) {
+    throw new Error(
+      `with-wearos-module: fdroid/fdroid-r8-rules.pro not found at ${src} — ` +
+      "the F-Droid R8 rules file must exist in the project root's fdroid/ directory.",
+    );
+  }
+  fs.copyFileSync(src, dst);
+}
+
 function patchFdroidExpoDependencies(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const replacements = [
@@ -1018,6 +1033,7 @@ const withWearOsModule = (config) => {
       // Write/overwrite the F-Droid manifest overlay. Idempotent — same
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
+      writeFdroidR8Rules(projectRoot, platformRoot);
       return cfg;
     },
   ]);
@@ -1034,6 +1050,7 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.writeFdroidR8Rules = writeFdroidR8Rules;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;

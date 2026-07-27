@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **F-Droid prebuild now copies its R8 rules into the generated app**, preserving the missing-optional-class handling on every clean native regeneration.
 - **F-Droid barcode scanning now neutralizes every expo-camera ML Kit/GMS call path**, including newly added scanner entry points, while the open-source ZXing scanner remains enabled.
 - **F-Droid Expo modules now compile sanitized source instead of publisher AARs**, preventing prebuilt Camera and notification bytecode from restoring ML Kit, Firebase, or Play Services classes.
 - **F-Droid autolinking now omits unused expo-application**, preventing Install Referrer classes from entering the native module graph.
