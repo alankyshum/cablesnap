@@ -9,6 +9,8 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidProguardRules,
+  FDROID_PROGUARD_RULES,
   patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
@@ -251,6 +253,89 @@ describe("patchAppBuildGradle", () => {
     // test catches it.
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toContain("shrinkResources enableShrinkResources.toBoolean()");
+  });
+
+  it("attaches variant-scoped proguard rules to releaseFdroid only (BLD-4340)", () => {
+    // R8 (minifyEnabled true on releaseFdroid) hard-errors on missing
+    // references to proprietary GMS/Firebase/ML Kit/InstallReferrer classes
+    // that the F-Droid graph deliberately excludes. The fix is a variant-
+    // local proguard file with -dontwarn rules for those packages.
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    // The proguardFile entry MUST live inside the releaseFdroid { ... }
+    // block so it is scoped to that variant. The Play `release` block above
+    // it must not be modified.
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?proguardFile\s+"proguard-fdroid\.pro"[\s\S]*?\n\s*\}/,
+    );
+    // Regression guard: Play release shrinker config unchanged. The fixture's
+    // `release { ... }` block ends right after the enableShrinkResources
+    // line; assert that block still contains no proguardFile references so a
+    // future refactor cannot silently weaken the Play shrinker.
+    const releaseBlock = out.match(
+      /release\s*\{\s*signingConfig signingConfigs\.debug[\s\S]*?enableShrinkResources[^\n]*\n\s*\}/,
+    );
+    expect(releaseBlock).not.toBeNull();
+    expect(releaseBlock[0]).not.toContain("proguardFile");
+    expect(releaseBlock[0]).not.toContain("proguard-fdroid.pro");
+  });
+});
+
+// ----------------------------------------------------------------------------
+// writeFdroidProguardRules + FDROID_PROGUARD_RULES (BLD-4340)
+// ----------------------------------------------------------------------------
+describe("writeFdroidProguardRules + FDROID_PROGUARD_RULES", () => {
+  it("declares -dontwarn for every proprietary package excluded from the F-Droid graph", () => {
+    // These packages match FDROID_EXCLUDES_BLOCK / FDROID_APP_EXCLUDES_BLOCK.
+    // R8's "Missing classes detected" error fires when compile-time
+    // references survive to types in these packages after exclusion.
+    expect(FDROID_PROGUARD_RULES).toContain("-dontwarn com.android.installreferrer.**");
+    expect(FDROID_PROGUARD_RULES).toContain("-dontwarn com.google.android.gms.**");
+    expect(FDROID_PROGUARD_RULES).toContain("-dontwarn com.google.firebase.**");
+    // `com.google.mlkit.**` covers vision.codescanner.* and vision.common.*
+    // (subpackage glob), so no additional entries are required.
+    expect(FDROID_PROGUARD_RULES).toContain("-dontwarn com.google.mlkit.**");
+  });
+
+  it("does NOT emit -keep rules that would add proprietary classes back to the dex (AC10b)", () => {
+    // -dontwarn silences R8's missing-class check. -keep would defeat the
+    // whole point of the F-Droid exclusions.
+    expect(FDROID_PROGUARD_RULES).not.toMatch(/^-keep/m);
+    expect(FDROID_PROGUARD_RULES).not.toContain("-keepclassmembers");
+  });
+
+  it("writes android/app/proguard-fdroid.pro at the platform root", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      const target = path.join(tmp, "app", "proguard-fdroid.pro");
+      expect(fs.existsSync(target)).toBe(true);
+      expect(fs.readFileSync(target, "utf8")).toBe(FDROID_PROGUARD_RULES);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("is idempotent (overwrites existing file)", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      const target = path.join(tmp, "app", "proguard-fdroid.pro");
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, "stale contents\n", "utf8");
+      writeFdroidProguardRules(tmp);
+      expect(fs.readFileSync(target, "utf8")).toBe(FDROID_PROGUARD_RULES);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("creates the app/ directory if it is missing", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      expect(fs.existsSync(path.join(tmp, "app", "proguard-fdroid.pro"))).toBe(true);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });
 
