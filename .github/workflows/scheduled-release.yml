@@ -243,6 +243,38 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: npm ci
 
+      # BLD-4265 / BLD-4269: `expo prebuild` fails at `withAndroidDangerousBaseMod` with
+      # `Cannot find module './utils/history'` when `actions/setup-node` restores a
+      # corrupted/partial `@expo/config-plugins` tarball from the npm cache, leaving
+      # `node_modules/@expo/config-plugins/build/utils/history.js` missing after `npm ci`.
+      # The setup-node cache layer silently re-serves the broken tarball on every rerun,
+      # so the fix requires purging the npm cache and reinstalling without it.
+      # On the happy path (healthy install) this step adds negligible overhead
+      # (one stat + one node -e).
+      - name: Verify npm install integrity (@expo/config-plugins)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          GUARD_FILE="node_modules/@expo/config-plugins/build/utils/history.js"
+          integrity_ok() {
+            [ -f "$GUARD_FILE" ] && node -e "require('@expo/config-plugins').History" 2>/dev/null
+          }
+          if integrity_ok; then
+            echo "Install integrity OK: $GUARD_FILE present and require('@expo/config-plugins').History succeeds."
+          else
+            echo "::warning::Install-integrity check failed — $GUARD_FILE missing or require threw."
+            echo "::warning::Purging node_modules and reinstalling without npm cache (BLD-4265 corrupt-cache failure mode)."
+            rm -rf node_modules
+            npm ci --prefer-offline=false --no-audit --no-fund
+            if integrity_ok; then
+              echo "Recovered: $GUARD_FILE present and require('@expo/config-plugins').History succeeds after clean reinstall."
+            else
+              echo "::error::$GUARD_FILE still missing / require still fails after clean reinstall."
+              echo "::error::BLD-4265: @expo/config-plugins upstream tarball appears broken. Aborting release — do not ship."
+              exit 1
+            fi
+          fi
+
       # Lint + unit test gate — mirrors ci.yml exactly so a red suite can never
       # ship via the scheduled cron. Runs AFTER npm ci (node_modules ready) and
       # BEFORE version bump/build so a failing check aborts fast and leaves main
