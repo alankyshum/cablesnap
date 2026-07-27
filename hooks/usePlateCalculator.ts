@@ -20,8 +20,8 @@ function getBarSettingKey(unit: "kg" | "lb") {
   return `plate_calculator_bar_${unit}`;
 }
 
-export function usePlateCalculator(initialWeight?: string) {
-  const [unit, setUnit] = useState<"kg" | "lb">("kg");
+export function usePlateCalculator(initialWeight?: string, overrideUnit?: "kg" | "lb") {
+  const [unit, setUnit] = useState<"kg" | "lb">(overrideUnit ?? "kg");
   const [target, setTarget] = useState(initialWeight ?? "");
   const [bar, setBar] = useState<number | null>(null);
   const [custom, setCustom] = useState("");
@@ -33,7 +33,7 @@ export function usePlateCalculator(initialWeight?: string) {
       (async () => {
         try {
           const body = await getBodySettings();
-          const nextUnit = body.weight_unit;
+          const nextUnit = overrideUnit ?? body.weight_unit;
           const nextPresets = nextUnit === "kg" ? KG_BARS : LB_BARS;
           const storedBar = await getAppSetting(getBarSettingKey(nextUnit));
           const parsedStoredBar = storedBar == null ? Number.NaN : parseFloat(storedBar);
@@ -55,8 +55,8 @@ export function usePlateCalculator(initialWeight?: string) {
         } catch {
           if (!active) return;
           // Fall back to defaults if settings unavailable
-          setUnit("kg");
-          setBar(DEFAULT_BAR_BY_UNIT.kg);
+          setUnit(overrideUnit ?? "kg");
+          setBar(DEFAULT_BAR_BY_UNIT[overrideUnit ?? "kg"]);
           setCustom("");
         }
         if (active) setReady(true);
@@ -64,7 +64,7 @@ export function usePlateCalculator(initialWeight?: string) {
       return () => {
         active = false;
       };
-    }, [initialWeight])
+    }, [initialWeight, overrideUnit])
   );
 
   const presets = unit === "kg" ? KG_BARS : LB_BARS;

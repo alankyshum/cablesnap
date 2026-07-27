@@ -73,6 +73,7 @@ export function InlinePlateSheet({
         <PlateCalculatorContent
           initialWeight={initialWeight}
           onActiveBarChanged={handleActiveBarChanged}
+          unit={unit}
         />
       </BottomSheetScrollView>
     </BottomSheetModal>

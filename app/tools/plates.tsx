@@ -16,6 +16,7 @@ export { Barbell as BarbellDiagram } from "../../components/plates/BarbellDiagra
 type PlateCalculatorContentProps = {
   initialWeight?: string;
   onActiveBarChanged?: (bar: number) => void;
+  unit?: "kg" | "lb";
 };
 
 export function PlateCalculatorContent(props: PlateCalculatorContentProps) {
