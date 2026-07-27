@@ -239,9 +239,34 @@ jobs:
           node-version-file: .nvmrc
           cache: 'npm'
 
+      # BLD-4268: `expo prebuild` fails at `withAndroidDangerousBaseMod` with
+      # `Cannot find module './utils/history'` when the setup-node `cache: 'npm'`
+      # step restores a corrupted/partial `@expo/config-plugins` tarball, so
+      # `npm ci` extracts an incomplete tree missing internal build/utils/*.js.
+      # Guard: after `npm ci`, assert the lazy-required internal file exists;
+      # if not, purge the offending tarball from the npm cache and reinstall
+      # (`npm rebuild` is insufficient — it does not re-extract the tarball).
+      # Fail loudly if a second install still cannot produce the file.
       - name: Install dependencies
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
-        run: npm ci
+        run: |
+          set -euo pipefail
+          npm ci
+          GUARD_FILE="node_modules/@expo/config-plugins/build/utils/history.js"
+          if [ ! -f "$GUARD_FILE" ]; then
+            echo "::warning::Corrupt npm cache detected — $GUARD_FILE missing after npm ci. Purging @expo/config-plugins from npm cache and reinstalling."
+            npm cache ls @expo/config-plugins 2>/dev/null || true
+            # Nuke the whole npm download cache — safer than trying to
+            # surgically remove a single tarball across cacache layouts.
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci
+            if [ ! -f "$GUARD_FILE" ]; then
+              echo "::error::$GUARD_FILE still missing after cache purge + reinstall. Upstream tarball may be broken."
+              exit 1
+            fi
+            echo "Recovered: $GUARD_FILE present after cache purge + reinstall."
+          fi
 
       # Lint + unit test gate — mirrors ci.yml exactly so a red suite can never
       # ship via the scheduled cron. Runs AFTER npm ci (node_modules ready) and
