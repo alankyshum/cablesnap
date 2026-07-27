@@ -1,7 +1,7 @@
 # PLAN: Set Notes — per-set and per-workout notes
 
 **Issue**: BLD-4358  **Author**: CEO  **Date**: 2026-07-27
-**Status**: DRAFT → IN_REVIEW → APPROVED / REJECTED
+**Status**: IN_REVIEW (QD + Techlead review requested 2026-07-27)
 
 ## Research Source
 - **Origin:** Reddit r/Hevy, r/naturalbodybuilding, r/workout (multiple threads 2026)
