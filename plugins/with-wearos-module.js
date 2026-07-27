@@ -99,9 +99,6 @@ ${FDROID_SETTINGS_MARKER}
 if (System.getenv("CABLESNAP_FDROID") == "1") {
     gradle.beforeProject { project ->
         if (project == gradle.rootProject || !project.buildFile.exists()) return
-        if (project.name == "expo-camera") {
-            project.ext.barcodeScannerEnabled = false
-        }
         def buildFile = project.buildFile
         def original = buildFile.getText("UTF-8")
         def patched = original
@@ -109,12 +106,6 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             .replace("implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:")
             .replace('implementation "com.google.firebase:', 'compileOnly "com.google.firebase:')
             .replace('implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:')
-            .replace('add(barcodeDependencyConfiguration, "com.google.android.gms:', 'add("compileOnly", "com.google.android.gms:')
-            .replace('add(barcodeDependencyConfiguration, "com.google.mlkit:', 'add("compileOnly", "com.google.mlkit:')
-            .replace('add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:', 'add("compileOnly", "androidx.camera:camera-mlkit-vision:')
-            .replace('add(barcodeDependencyConfiguration, "com.google.android.gms:', 'add("compileOnly", "com.google.android.gms:')
-            .replace('add(barcodeDependencyConfiguration, "com.google.mlkit:', 'add("compileOnly", "com.google.mlkit:')
-            .replace('add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:', 'add("compileOnly", "androidx.camera:camera-mlkit-vision:')
         if (patched != original) buildFile.setText(patched, "UTF-8")
     }
 }
@@ -438,10 +429,6 @@ function patchFdroidExpoDependencies(projectRoot) {
         ["implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:"],
         ['implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:'],
       ],
-    ],
-    [
-      path.join(projectRoot, "node_modules", "expo-camera", "android", "build.gradle"),
-      [["def barcodeDependencyConfiguration = isBarcodeScannerEnabled ? \"implementation\" : \"compileOnly\"", "def barcodeDependencyConfiguration = \"compileOnly\""]],
     ],
   ];
   for (const [file, fileReplacements] of replacements) {

@@ -96,12 +96,8 @@ describe("patchSettingsGradle", () => {
     const out = patchSettingsGradle(SETTINGS_FIXTURE);
     expect(out).toContain('if (System.getenv("CABLESNAP_FDROID") == "1")');
     expect(out).toContain("gradle.beforeProject { project ->");
-    expect(out).toContain("project.ext.barcodeScannerEnabled = false");
     expect(out).toContain("compileOnly 'com.google.firebase:");
     expect(out).toContain("compileOnly 'com.android.installreferrer:");
-    expect(out).toContain('add("compileOnly", "com.google.mlkit:');
-    expect(out).toContain('add("compileOnly", "com.google.android.gms:');
-    expect(out).toContain('add("compileOnly", "androidx.camera:camera-mlkit-vision:');
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
     else process.env.CABLESNAP_FDROID = previous;
   });
@@ -465,14 +461,13 @@ describe("copyDirRecursive + rmDirRecursive", () => {
 });
 
 describe("patchFdroidExpoDependencies", () => {
-  it("rewrites the three direct Expo dependency sources only for F-Droid", () => {
+  it("rewrites direct proprietary Expo dependency sources only for F-Droid", () => {
     const previous = process.env.CABLESNAP_FDROID;
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-deps-"));
     try {
       for (const [pkg, contents] of [
         ["expo-notifications", "implementation 'com.google.firebase:firebase-messaging:25.0.1'"],
         ["expo-application", "implementation 'com.android.installreferrer:installreferrer:2.2'"],
-        ["expo-camera", 'def barcodeDependencyConfiguration = isBarcodeScannerEnabled ? "implementation" : "compileOnly"'],
       ]) {
         const dir = path.join(tmp, "node_modules", pkg, "android");
         fs.mkdirSync(dir, { recursive: true });
@@ -482,7 +477,6 @@ describe("patchFdroidExpoDependencies", () => {
       patchFdroidExpoDependencies(tmp);
       expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-notifications", "android", "build.gradle"), "utf8")).toContain("compileOnly 'com.google.firebase:");
       expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-application", "android", "build.gradle"), "utf8")).toContain("compileOnly 'com.android.installreferrer:");
-      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-camera", "android", "build.gradle"), "utf8")).toContain('def barcodeDependencyConfiguration = "compileOnly"');
     } finally {
       if (previous === undefined) delete process.env.CABLESNAP_FDROID;
       else process.env.CABLESNAP_FDROID = previous;
