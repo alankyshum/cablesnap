@@ -102,12 +102,14 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
         def buildFile = project.buildFile
         def original = buildFile.getText("UTF-8")
         def patched = original
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.firebase:[^\\r\\n]+\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.android\\.installreferrer:[^\\r\\n]+\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.mlkit:[^\\r\\n]+\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.android\\.gms:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.firebase:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.android\\.installreferrer:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.mlkit:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.android\\.gms:[^\\r\\n]+\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*add\\(barcodeDependencyConfiguration,\\s*["'](?:com\\.google\\.android\\.gms|com\\.google\\.mlkit):[^\\r\\n]+\\r?\\n?/, "")
-        // Proprietary declarations are removed above for F-Droid.
+        // Proprietary declarations are removed above for F-Droid. Do not
+        // retain them as compileOnly: releaseFdroid can inherit those
+        // declarations through variant fallback and package their classes.
         if (patched != original) buildFile.setText(patched, "UTF-8")
     }
 }
@@ -222,6 +224,22 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
 }
 `;
 
+// The app's releaseFdroid configuration can consume a library's release
+// variant via matchingFallbacks. Keep the exclusions on the app itself too;
+// project-level exclusions do not reliably propagate across that fallback.
+const FDROID_APP_EXCLUDES_BLOCK = `
+${FDROID_EXCLUDES_MARKER}:app
+if (System.getenv("CABLESNAP_FDROID") == "1") {
+    configurations.configureEach {
+        exclude group: "com.google.android.gms"
+        exclude group: "com.google.firebase"
+        exclude group: "com.google.mlkit"
+        exclude group: "com.android.installreferrer"
+        exclude module: "camera-mlkit-vision"
+    }
+}
+`;
+
 function patchAppBuildGradle(contents) {
   let out = contents;
 
@@ -250,6 +268,12 @@ function patchAppBuildGradle(contents) {
     out = out.replace(releaseBlockRegex, `$1${RELEASE_FDROID_BUILD_TYPE}`);
   }
 
+  if (
+    process.env.CABLESNAP_FDROID === "1" &&
+    !out.includes(`${FDROID_EXCLUDES_MARKER}:app`)
+  ) {
+    out += FDROID_APP_EXCLUDES_BLOCK;
+  }
   return out;
 }
 
@@ -455,6 +479,11 @@ function patchFdroidExpoDependencies(projectRoot) {
     if (!fs.existsSync(file)) continue;
     let contents = fs.readFileSync(file, "utf8");
     for (const [from, to] of fileReplacements) contents = contents.replaceAll(from, to);
+    if (process.env.CABLESNAP_FDROID === "1") {
+      contents = contents
+        .replace(/^\s*(?:implementation|api|compileOnly)\s+["']com\.google\.firebase:[^\r\n]+\r?\n?/gm, "")
+        .replace(/^\s*(?:implementation|api|compileOnly)\s+["']com\.android\.installreferrer:[^\r\n]+\r?\n?/gm, "");
+    }
     fs.writeFileSync(file, contents, "utf8");
   }
 
@@ -749,6 +778,34 @@ object BarCodeScannerResultSerializer {
   }
 }
 
+// Expo prebuild may copy an already-evaluated library build script into the
+// generated Android project. Patch those generated app/library scripts too;
+// changing node_modules alone is not sufficient when Gradle resolves a
+// release library variant through releaseFdroid.matchingFallbacks.
+function patchFdroidAndroidGradleTree(platformRoot) {
+  if (process.env.CABLESNAP_FDROID !== "1") return;
+  const banned = /^\s*(?:implementation|api|compileOnly|debugOnly)\s+["'](?:com\.google\.firebase|com\.google\.mlkit|com\.google\.android\.gms|com\.android\.installreferrer):[^\r\n]+\r?\n?/gm;
+  const barcode = /^\s*add\(barcodeDependencyConfiguration,\s*["'](?:com\.google\.android\.gms|com\.google\.mlkit):[^\r\n]+\r?\n?/gm;
+
+  function visit(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const target = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        // The Play-only Wear APK is still built in this workflow; do not
+        // remove its GMS wearable dependency while patching the phone tree.
+        if (entry.name === "wear") continue;
+        visit(target);
+      } else if (entry.name === "build.gradle" || entry.name === "build.gradle.kts") {
+        const original = fs.readFileSync(target, "utf8");
+        const patched = original.replace(banned, "").replace(barcode, "");
+        if (patched !== original) fs.writeFileSync(target, patched, "utf8");
+      }
+    }
+  }
+
+  visit(platformRoot);
+}
+
 function copyDirRecursive(srcDir, dstDir) {
   if (!fs.existsSync(srcDir)) {
     throw new Error(
@@ -817,6 +874,11 @@ const withWearOsModule = (config) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const platformRoot = cfg.modRequest.platformProjectRoot;
       patchFdroidExpoDependencies(projectRoot);
+      // Other Expo packages (notably expo-dev-launcher) can declare the same
+      // artifacts in their Android scripts. Patch the entire installed Expo
+      // tree, not only the three packages with known declarations.
+      patchFdroidAndroidGradleTree(path.join(projectRoot, "node_modules"));
+      patchFdroidAndroidGradleTree(platformRoot);
       const srcDir = path.join(projectRoot, WEAR_TEMPLATE_RELATIVE);
       const dstDir = path.join(platformRoot, "wear");
       // Wipe stale outputs so a renamed/deleted file in the template does
@@ -843,6 +905,7 @@ module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
+module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;

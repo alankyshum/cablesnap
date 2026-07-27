@@ -25,6 +25,7 @@ marker) at release time.
 _No user-facing changes yet._
 - **Nutrition link vertical spacing aligned** — Aligns the vertical spacing between the 'Edit Targets' and 'Meal Templates' links in the nutrition list. ([BLD-4034](/BLD/issues/BLD-4034))
 - **F-Droid APK proprietary SUSS classes stripped** — Removed class-name strings of Firebase, ML Kit, Google Play Services, and Install Referrer from Expo AARs and manifest overlay in the F-Droid build. ([BLD-4182](/BLD/issues/BLD-4182))
+- **Consistent padding for "Set a goal" button** — Adjusts the vertical padding around the "Set a goal" button in frequency settings for consistency with other cards. ([BLD-4044](/BLD/issues/BLD-4044))
 - **Word-order-independent exercise search** — Allows finding exercises by typing words in any order (e.g. "press bench" matches "Bench Press"). ([BLD-4157](/BLD/issues/BLD-4157))
 - **Food barcode scanning now uses a fully open-source ZXing scanner**, with the same camera overlay and supported food-barcode formats.
 - **F-Droid store metadata is now maintained in this repository**, including the app description, screenshots, icon, and release notes.
@@ -48,6 +49,12 @@ _No user-facing changes yet._
 - **F-Droid Gradle resolution now rejects proprietary dependency groups outright**, preventing transitive Firebase, ML Kit, Play Services, or Install Referrer classes from entering the APK.
 - **F-Droid dependency patching removes proprietary declarations instead of retaining compile-only artifacts**, ensuring Firebase and Install Referrer classes cannot be packaged.
 - **F-Droid prebuild now removes Expo Camera barcode artifacts declared through Gradle’s `add()` helper**, closing the remaining ML Kit and Play Services packaging path.
+
+- **F-Droid builds now remove proprietary Firebase and Install Referrer declarations before variant resolution**, preventing those classes from leaking into the release APK.
+
+- **F-Droid dependency filtering now removes proprietary declarations from every Gradle configuration**, including compile-only and debug-only paths inherited during variant fallback.
+
+- **F-Droid prebuild now sanitizes all generated and installed Expo Gradle scripts**, preventing dormant scanner or launcher dependencies from re-entering the APK.
 
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
@@ -115,10 +122,6 @@ _No user-facing changes yet._
 - **Consistent spacing for Workout History Import button** — Aligns the vertical spacing and gaps around the "Choose CSV File..." button inside the settings card to match standard design patterns and other buttons. (BLD-3499)
 - **Added customizable weight-step increments (micro-loading)** — you can now configure the weight step (0.5 kg, 1.25 kg, 2.5 kg, 5 kg or 1 lb, 2.5 lb, 5 lb, 10 lb) in Units settings, which applies across all steppers in your workout sessions and quick-adds. ([BLD-3517](/BLD/issues/BLD-3517))
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
-=======
-- **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
-- **What's New now supports inline code and tappable web or email links** in release notes.
->>>>>>> 4c987e2d (feat(release-notes): strip internal refs and support code/link markdown)
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->

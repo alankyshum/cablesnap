@@ -463,7 +463,7 @@ describe("copyDirRecursive + rmDirRecursive", () => {
 });
 
 describe("patchFdroidExpoDependencies", () => {
-  it("rewrites direct proprietary Expo dependency sources only for F-Droid", () => {
+  it("removes direct proprietary Expo dependency sources only for F-Droid", () => {
     const previous = process.env.CABLESNAP_FDROID;
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-deps-"));
     try {
@@ -477,8 +477,8 @@ describe("patchFdroidExpoDependencies", () => {
       }
       process.env.CABLESNAP_FDROID = "1";
       patchFdroidExpoDependencies(tmp);
-      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-notifications", "android", "build.gradle"), "utf8")).toContain("compileOnly 'com.google.firebase:");
-      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-application", "android", "build.gradle"), "utf8")).toContain("compileOnly 'com.android.installreferrer:");
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-notifications", "android", "build.gradle"), "utf8")).not.toMatch(/com\.google\.firebase:/);
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-application", "android", "build.gradle"), "utf8")).not.toMatch(/com\.android\.installreferrer:/);
     } finally {
       if (previous === undefined) delete process.env.CABLESNAP_FDROID;
       else process.env.CABLESNAP_FDROID = previous;
