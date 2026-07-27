@@ -186,6 +186,12 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // disable their propagated \`releaseFdroid\` variant entirely,
             // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
+            // R8 -dontwarn rules for GMS/MLKit/installreferrer classes that
+            // are excluded from the F-Droid classpath but still referenced in
+            // Expo library bytecode signatures. Without these rules R8 fails
+            // with "Missing classes detected" during minifyReleaseFdroidWithR8.
+            // Written to android/app/ by the Config Plugin's withDangerousMod.
+            proguardFiles 'fdroid-r8-rules.pro'
         }
 `;
 
@@ -564,6 +570,56 @@ function patchFdroidExpoDependencies(projectRoot) {
       }
     }
   }
+
+  // The Expo Android publisher artifacts include local Maven POM/module
+  // metadata. Gradle can resolve those metadata files even after the source
+  // build.gradle has been sanitized, reintroducing the original optional
+  // artifacts through the publication graph. Remove the banned dependency
+  // entries from both metadata formats before dependency resolution.
+  scrubFdroidLocalMavenMetadata(projectRoot);
+}
+
+function scrubFdroidLocalMavenMetadata(projectRoot) {
+  const root = path.join(projectRoot, "node_modules");
+  const bannedGroups = new Set([
+    "com.android.installreferrer",
+    "com.google.firebase",
+    "com.google.mlkit",
+    "com.google.android.gms",
+  ]);
+  const isBanned = (group, module) => bannedGroups.has(group) || module === "camera-mlkit-vision";
+  const visit = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        visit(file);
+      } else if (file.includes("local-maven-repo") && entry.name.endsWith(".pom")) {
+        const original = fs.readFileSync(file, "utf8");
+        const patched = original.replace(/^[ \t]*<dependency>([\s\S]*?)<\/dependency>\r?\n?/gm, (match, body) => {
+          const group = body.match(/<groupId>\s*([^<\s]+)\s*<\/groupId>/)?.[1] ?? "";
+          const module = body.match(/<artifactId>\s*([^<\s]+)\s*<\/artifactId>/)?.[1] ?? "";
+          return isBanned(group, module) ? "" : match;
+        });
+        if (patched !== original) fs.writeFileSync(file, patched, "utf8");
+      } else if (file.includes("local-maven-repo") && entry.name.endsWith(".module")) {
+        const original = fs.readFileSync(file, "utf8");
+        try {
+          const metadata = JSON.parse(original);
+          for (const variant of metadata.variants ?? []) {
+            variant.dependencies = (variant.dependencies ?? []).filter(
+              (dependency) => !isBanned(dependency.group, dependency.module),
+            );
+          }
+          const patched = `${JSON.stringify(metadata, null, 2)}\n`;
+          if (patched !== original) fs.writeFileSync(file, patched, "utf8");
+        } catch {
+          // Ignore malformed publisher metadata; Gradle will report it as such.
+        }
+      }
+    }
+  };
+  visit(root);
 }
 
 // Source-level F-Droid patch. Gradle exclusions do not remove proprietary
@@ -576,8 +632,38 @@ function patchFdroidLibrarySources(projectRoot) {
   const write = (file, contents) => {
     if (fs.existsSync(path.dirname(file))) fs.writeFileSync(file, contents, "utf8");
   };
+  // expo-modules-autolinking can consume a publisher-side local AAR from an
+  // Android module's build directory even after its publication entry and
+  // source files have been rewritten. Those AARs are generated artifacts, so
+  // remove them before Gradle configures the module; otherwise the original
+  // Camera AAR restores ML Kit/GMS bytecode exactly as seen in AC10b.
+  for (const packageName of [
+    "expo-camera",
+    "expo-application",
+    "expo-notifications",
+    "expo-dev-launcher",
+  ]) {
+    const buildDir = sourceRoot(packageName, "android", "build");
+    if (fs.existsSync(buildDir)) fs.rmSync(buildDir, { recursive: true, force: true });
+    // Expo publishes a precompiled AAR beside the source module. Removing
+    // only its POM/module metadata is insufficient: Gradle can still select
+    // the AAR itself, which is the exact source of the surviving ML Kit/GMS
+    // classes seen by AC10b.
+    const localMavenRepo = sourceRoot(packageName, "local-maven-repo");
+    if (fs.existsSync(localMavenRepo)) {
+      fs.rmSync(localMavenRepo, { recursive: true, force: true });
+    }
+  }
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+  const cameraConfig = sourceRoot("expo-camera", "expo-module.config.json");
+  if (fs.existsSync(cameraConfig)) {
+    const config = JSON.parse(fs.readFileSync(cameraConfig, "utf8"));
+    // Force Expo autolinking to use the sanitized Android source project.
+    // The publisher AAR contains the original ML Kit/GMS bytecode.
+    if (config.android) delete config.android.publication;
+    fs.writeFileSync(cameraConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
+  }
 
   // Balanced-brace replacement for a whole `fun <name>(...) { ... }` block.
   // Kotlin allows nested try/catch and lambda braces inside the body, so a
@@ -1000,6 +1086,18 @@ function rmDirRecursive(target) {
 }
 
 const withWearOsModule = (config) => {
+  // This runs during config evaluation, before Expo autolinking generates
+  // Android's project dependency graph. The dangerous-mod hook below is too
+  // late to affect that graph: removing a publisher AAR there leaves a
+  // generated `host.exp.exponent:expo.modules.camera` dependency pointing at
+  // a repository that no longer exists. Apply the source/publication rewrite
+  // first, then repeat it in dangerous-mod for idempotence after prebuild.
+  if (process.env.CABLESNAP_FDROID === "1") {
+    const projectRoot = process.cwd();
+    patchFdroidExpoDependencies(projectRoot);
+    patchFdroidLibrarySources(projectRoot);
+  }
+
   // 1. Patch settings.gradle to register :wear.
   config = withSettingsGradle(config, (cfg) => {
     cfg.modResults.contents = patchSettingsGradle(cfg.modResults.contents);
@@ -1069,6 +1167,7 @@ module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
 module.exports.writeFdroidR8Rules = writeFdroidR8Rules;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
+module.exports.scrubFdroidLocalMavenMetadata = scrubFdroidLocalMavenMetadata;
 module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;

@@ -22,6 +22,12 @@ marker) at release time.
 
 ## Unreleased
 
+- **F-Droid Camera autolinking now compiles sanitized source instead of the publisher AAR**, eliminating the remaining ML Kit and Google Play Services barcode classes.
+- **F-Droid CI now sanitizes Expo modules before prebuild autolinking**, preventing clean native generation from selecting proprietary publisher AARs.
+- **F-Droid sanitization now runs before Expo autolinking**, so the generated Android graph cannot retain a dependency on a deleted proprietary Expo AAR.
+- **F-Droid prebuild now removes Expo publisher AAR repositories**, ensuring sanitized source is compiled instead of prebuilt Camera bytecode containing proprietary classes.
+- **F-Droid dependency metadata is now scrubbed before Gradle resolution**, preventing Expo local Maven POM/module files from restoring proprietary Camera artifacts.
+- **F-Droid prebuild now removes stale Expo Android build artifacts**, preventing publisher AARs from restoring proprietary Camera classes after source sanitization.
 - **F-Droid prebuild now copies its R8 rules into the generated app**, preserving the missing-optional-class handling on every clean native regeneration.
 - **F-Droid barcode scanning now neutralizes every expo-camera ML Kit/GMS call path**, including newly added scanner entry points, while the open-source ZXing scanner remains enabled.
 - **F-Droid Expo modules now compile sanitized source instead of publisher AARs**, preventing prebuilt Camera and notification bytecode from restoring ML Kit, Firebase, or Play Services classes.
@@ -98,6 +104,7 @@ marker) at release time.
 - **F-Droid source sanitization now removes Firebase-backed notification serializers and trigger models as well**, keeping the complete Expo Notifications source graph free of proprietary references.
 
 - **F-Droid CI now invokes source sanitization explicitly after prebuild**, ensuring the generated native project uses the same clean source graph as the config plugin.
+- **Improved Progress empty-state text contrast** — Increases the contrast of the description text on the Progress tab empty-state screen to meet WCAG AA guidelines. ([BLD-3657](/BLD/issues/BLD-3657))
 
 
 ## v0.26.89 — 2026-07-26

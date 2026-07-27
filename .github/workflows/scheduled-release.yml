@@ -332,6 +332,24 @@ jobs:
       # promotion + regen). The cached node_modules are reused here for
       # `expo prebuild` and the Android build.
 
+      - name: Sanitize Expo sources before autolinking
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          CABLESNAP_FDROID: "1"
+        run: |
+          # expo-modules-autolinking runs while prebuild evaluates the native
+          # project. Calling this only after prebuild is too late: it has
+          # already emitted dependencies on publisher local AARs. Remove
+          # those artifacts and rewrite sources before autolinking scans them.
+          node - <<'NODE'
+          const {
+            patchFdroidExpoDependencies,
+            patchFdroidLibrarySources,
+          } = require('./plugins/with-wearos-module');
+          patchFdroidExpoDependencies(process.cwd());
+          patchFdroidLibrarySources(process.cwd());
+          NODE
+
       - name: Generate native project
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
