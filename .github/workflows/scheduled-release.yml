@@ -336,10 +336,22 @@ jobs:
            // before some Expo scripts are copied into the native project.
            patchFdroidAndroidGradleTree(process.cwd());
           NODE
-          grep -nE 'compileOnly.*(firebase|installreferrer)|barcodeDependencyConfiguration' \
-            node_modules/expo-notifications/android/build.gradle \
-            node_modules/expo-application/android/build.gradle \
-            node_modules/expo-camera/android/build.gradle
+           grep -nE 'compileOnly.*(firebase|installreferrer)|barcodeDependencyConfiguration' \
+             node_modules/expo-notifications/android/build.gradle \
+             node_modules/expo-application/android/build.gradle \
+             node_modules/expo-camera/android/build.gradle
+
+       - name: Disable Expo Camera barcode dependency graph for F-Droid
+         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+         env:
+           CABLESNAP_FDROID: "1"
+         run: |
+           # CableSnap renders the open-source expo-foss-barcode-scanner view
+           # for Android. Disable Expo Camera's optional scanner graph as a
+           # second, property-level guard; this prevents AGP from resolving
+           # the ML Kit graph while retaining CameraX preview functionality.
+           printf '\nexpo.camera.barcode-scanner-enabled=false\n' >> android/gradle.properties
+           grep 'expo.camera.barcode-scanner-enabled=false' android/gradle.properties
 
       - name: Boost Gradle JVM heap
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'

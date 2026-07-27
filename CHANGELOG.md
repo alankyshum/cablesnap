@@ -62,6 +62,8 @@ marker) at release time.
 
 - **F-Droid dependency cleanup runs after native project generation**, ensuring all generated Expo scripts are sanitized before Gradle resolves the APK dependency graph.
 
+- **F-Droid CI disables Expo Camera’s optional barcode dependency graph**, while CableSnap continues using the embedded open-source ZXing scanner on Android.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 

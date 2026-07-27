@@ -237,6 +237,16 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
         exclude group: "com.android.installreferrer"
         exclude module: "camera-mlkit-vision"
     }
+    configurations.matching { it.name.toLowerCase().contains("releasefdroid") }.configureEach {
+        // Explicitly bind the excludes to the F-Droid variant. This remains
+        // effective when AGP resolves an Expo library through matchingFallbacks
+        // to its release variant.
+        exclude group: "com.google.android.gms"
+        exclude group: "com.google.firebase"
+        exclude group: "com.google.mlkit"
+        exclude group: "com.android.installreferrer"
+        exclude module: "camera-mlkit-vision"
+    }
 }
 `;
 
@@ -528,8 +538,8 @@ function patchFdroidAndroidGradleTree(platformRoot) {
         // again by Gradle, so remove them from every installed Android module.
         if (
           entry.name === "build" &&
-          dir.includes(`${path.sep}node_modules${path.sep}`) &&
-          path.basename(dir) === "android"
+          path.basename(dir) === "android" &&
+          !dir.includes(`${path.sep}wear${path.sep}`)
         ) {
           fs.rmSync(target, { recursive: true, force: true });
           continue;
