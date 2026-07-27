@@ -102,10 +102,10 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
         def buildFile = project.buildFile
         def original = buildFile.getText("UTF-8")
         def patched = original
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.firebase:[^\\r\\n]+\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.android\\.installreferrer:[^\\r\\n]+\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.mlkit:[^\\r\\n]+\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.android\\.gms:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.firebase:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.android\\.installreferrer:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.mlkit:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.android\\.gms:[^\\r\\n]+\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*add\\(barcodeDependencyConfiguration,\\s*["'](?:com\\.google\\.android\\.gms|com\\.google\\.mlkit):[^\\r\\n]+\\r?\\n?/, "")
         // Proprietary declarations are removed above for F-Droid. Do not
         // retain them as compileOnly: releaseFdroid can inherit those
