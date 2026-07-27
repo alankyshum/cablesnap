@@ -9,8 +9,10 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidProguard,
   patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
+  FDROID_PROGUARD_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
 // Minimal but realistic fixtures matching the shape Expo's Android template
@@ -146,6 +148,8 @@ describe("patchAppBuildGradle", () => {
     // matchingFallbacks lets dependency variant resolution fall back to
     // `release` for upstream singleVariant publishing.
     expect(out).toMatch(/releaseFdroid\s*\{[\s\S]*?matchingFallbacks\s*=\s*\["release"\]/);
+    // Asserts that proguard-fdroid.pro is declared for releaseFdroid build type.
+    expect(out).toMatch(/releaseFdroid\s*\{[\s\S]*?proguardFile\s+["']proguard-fdroid\.pro["']/);
     // Sentinel marker for idempotency.
     expect(out).toContain("// cablesnap:wearos:build-types");
   });
@@ -646,6 +650,50 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
       expect(
         fs.existsSync(path.join(tmp, "app", "src", "releaseFdroid")),
       ).toBe(true);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+});
+
+describe("writeFdroidProguard + FDROID_PROGUARD_CONTENTS", () => {
+  it("contains -dontwarn keep rules for all four packages", () => {
+    expect(FDROID_PROGUARD_CONTENTS).toContain("-dontwarn com.android.installreferrer.**");
+    expect(FDROID_PROGUARD_CONTENTS).toContain("-dontwarn com.google.android.gms.**");
+    expect(FDROID_PROGUARD_CONTENTS).toContain("-dontwarn com.google.firebase.**");
+    expect(FDROID_PROGUARD_CONTENTS).toContain("-dontwarn com.google.mlkit.**");
+  });
+
+  it("writeFdroidProguard creates app/proguard-fdroid.pro at the platform root", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguard(tmp);
+      const proguardPath = path.join(
+        tmp,
+        "app",
+        "proguard-fdroid.pro",
+      );
+      expect(fs.existsSync(proguardPath)).toBe(true);
+      const written = fs.readFileSync(proguardPath, "utf8");
+      expect(written).toBe(FDROID_PROGUARD_CONTENTS);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("writeFdroidProguard is idempotent (overwrites existing file)", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      const dir = path.join(tmp, "app");
+      fs.mkdirSync(dir, { recursive: true });
+      const proguardPath = path.join(dir, "proguard-fdroid.pro");
+      fs.writeFileSync(proguardPath, "STALE PREVIOUS RULES", "utf8");
+
+      writeFdroidProguard(tmp);
+
+      const written = fs.readFileSync(proguardPath, "utf8");
+      expect(written).toBe(FDROID_PROGUARD_CONTENTS);
+      expect(written).not.toContain("STALE");
     } finally {
       rmDirRecursive(tmp);
     }

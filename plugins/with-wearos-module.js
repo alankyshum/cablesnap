@@ -75,6 +75,8 @@ const SUBPROJECT_FILTER_MARKER = "// cablesnap:wearos:subproject-variant-filter"
 // Sentinel for the F-Droid manifest strip that removes FirebaseInitProvider and
 // ExpoFirebaseMessagingService — see FDROID_MANIFEST_CONTENTS below.
 const FDROID_MANIFEST_MARKER = "<!-- cablesnap:wearos:fdroid-manifest-strip -->";
+// Sentinel for the F-Droid ProGuard rules file.
+const FDROID_PROGUARD_MARKER = "# cablesnap:wearos:fdroid-proguard";
 
 // Where the wear-template lives in the source tree, and where the prebuild
 // output expects to find the `:wear` subproject.
@@ -186,6 +188,8 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // disable their propagated \`releaseFdroid\` variant entirely,
             // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
+            // Inject R8 -dontwarn keep rules for the F-Droid build to stop treating missing classes as a hard error.
+            proguardFile "proguard-fdroid.pro"
         }
 `;
 
@@ -462,6 +466,19 @@ function writeFdroidManifest(platformRoot) {
   const dir = path.join(platformRoot, "app", "src", "releaseFdroid");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
+}
+
+const FDROID_PROGUARD_CONTENTS = `${FDROID_PROGUARD_MARKER}
+-dontwarn com.android.installreferrer.**
+-dontwarn com.google.android.gms.**
+-dontwarn com.google.firebase.**
+-dontwarn com.google.mlkit.**
+`;
+
+function writeFdroidProguard(platformRoot) {
+  const dir = path.join(platformRoot, "app");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "proguard-fdroid.pro"), FDROID_PROGUARD_CONTENTS, "utf8");
 }
 
 function patchFdroidExpoDependencies(projectRoot) {
@@ -881,6 +898,9 @@ const withWearOsModule = (config) => {
       // Write/overwrite the F-Droid manifest overlay. Idempotent — same
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
+      // Write/overwrite the F-Droid proguard configuration. Idempotent — same
+      // contents every prebuild — so safe to clobber unconditionally.
+      writeFdroidProguard(platformRoot);
       return cfg;
     },
   ]);
@@ -897,9 +917,11 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.writeFdroidProguard = writeFdroidProguard;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
+module.exports.FDROID_PROGUARD_CONTENTS = FDROID_PROGUARD_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;
