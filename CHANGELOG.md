@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **F-Droid prebuild now removes Expo publisher AAR repositories**, ensuring sanitized source is compiled instead of prebuilt Camera bytecode containing proprietary classes.
 - **F-Droid dependency metadata is now scrubbed before Gradle resolution**, preventing Expo local Maven POM/module files from restoring proprietary Camera artifacts.
 - **F-Droid prebuild now removes stale Expo Android build artifacts**, preventing publisher AARs from restoring proprietary Camera classes after source sanitization.
 - **F-Droid prebuild now copies its R8 rules into the generated app**, preserving the missing-optional-class handling on every clean native regeneration.

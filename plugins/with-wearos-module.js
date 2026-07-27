@@ -645,6 +645,14 @@ function patchFdroidLibrarySources(projectRoot) {
   ]) {
     const buildDir = sourceRoot(packageName, "android", "build");
     if (fs.existsSync(buildDir)) fs.rmSync(buildDir, { recursive: true, force: true });
+    // Expo publishes a precompiled AAR beside the source module. Removing
+    // only its POM/module metadata is insufficient: Gradle can still select
+    // the AAR itself, which is the exact source of the surviving ML Kit/GMS
+    // classes seen by AC10b.
+    const localMavenRepo = sourceRoot(packageName, "local-maven-repo");
+    if (fs.existsSync(localMavenRepo)) {
+      fs.rmSync(localMavenRepo, { recursive: true, force: true });
+    }
   }
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
