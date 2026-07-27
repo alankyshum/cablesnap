@@ -513,6 +513,50 @@ describe("patchFdroidExpoDependencies", () => {
       rmDirRecursive(tmp);
     }
   });
+
+  it("removes publication blocks from expo-module.config.json for target modules", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-module-configs-"));
+    try {
+      const mockConfig = {
+        platforms: ["android"],
+        android: {
+          modules: ["some.Module"],
+          publication: {
+            groupId: "host.exp.exponent",
+            artifactId: "some-artifact",
+            version: "1.0.0",
+            repository: "local-maven-repo"
+          }
+        }
+      };
+      
+      const modules = ["expo-camera", "expo-notifications", "expo-application"];
+      for (const mod of modules) {
+        const dir = path.join(tmp, "node_modules", mod);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(
+          path.join(dir, "expo-module.config.json"),
+          JSON.stringify(mockConfig, null, 2),
+          "utf8"
+        );
+      }
+      
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidExpoDependencies(tmp);
+      
+      for (const mod of modules) {
+        const configPath = path.join(tmp, "node_modules", mod, "expo-module.config.json");
+        const written = JSON.parse(fs.readFileSync(configPath, "utf8"));
+        expect(written.android.publication).toBeUndefined();
+        expect(written.android.modules).toContain("some.Module");
+      }
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
 });
 
 // ----------------------------------------------------------------------------

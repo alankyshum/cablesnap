@@ -466,6 +466,31 @@ function writeFdroidManifest(platformRoot) {
 
 function patchFdroidExpoDependencies(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
+
+  // Force Expo autolinker to build target packages from source rather than
+  // resolving their precompiled AARs from local-maven-repo. This guarantees that
+  // our Kotlin/Java source stubs are actually compiled and packed into the APK,
+  // and completely avoids parsing/including their prebuilt POM dependencies.
+  const modulesWithPublication = [
+    "expo-camera",
+    "expo-notifications",
+    "expo-application",
+  ];
+  for (const mod of modulesWithPublication) {
+    const configPath = path.join(projectRoot, "node_modules", mod, "expo-module.config.json");
+    if (fs.existsSync(configPath)) {
+      try {
+        const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+        if (config.android && config.android.publication) {
+          delete config.android.publication;
+          fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf8");
+        }
+      } catch (err) {
+        console.error(`Error patching ${mod} expo-module.config.json:`, err);
+      }
+    }
+  }
+
   const replacements = [
     [
       path.join(projectRoot, "node_modules", "expo-notifications", "android", "build.gradle"),
