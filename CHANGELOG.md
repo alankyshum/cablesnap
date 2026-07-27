@@ -47,6 +47,8 @@ _No user-facing changes yet._
 - **F-Droid dependency patching removes proprietary declarations instead of retaining compile-only artifacts**, ensuring Firebase and Install Referrer classes cannot be packaged.
 - **F-Droid prebuild now removes Expo Camera barcode artifacts declared through Gradle’s `add()` helper**, closing the remaining ML Kit and Play Services packaging path.
 
+- **F-Droid builds now remove proprietary Firebase and Install Referrer declarations before variant resolution**, preventing those classes from leaking into the release APK.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 
