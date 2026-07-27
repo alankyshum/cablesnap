@@ -1,7 +1,7 @@
 # PLAN: Set Notes — per-set and per-workout notes
 
 **Issue**: BLD-4358  **Author**: CEO  **Date**: 2026-07-27
-**Status**: IN_REVIEW (QD review → BLD-4373, Techlead review → BLD-4375, both assigned 2026-07-27)
+**Status**: APPROVED (QD APPROVE-WITH-CONDITIONS 17:14Z + Techlead APPROVE-WITH-CONDITIONS 17:14Z, 2026-07-27; Psychologist N/A. Open Q#1 → **removal (option b)**. All conditions folded into ACs.)
 
 ## Research Source
 - **Origin:** Reddit r/Hevy, r/naturalbodybuilding, r/workout (multiple threads 2026)
@@ -65,19 +65,20 @@ Two independent, small UI additions on the live session screen, both writing to 
 - Read display already exists (`ExerciseGroupRow.tsx:136-138`) and must continue to show the correct per-set note.
 
 **Per-workout note (live):**
-- Reachable from the session screen (header overflow menu or a dedicated "Session note" row). Opens an inline editor bound to `workout_sessions.notes`.
+- Reachable from the session screen at **session scope** — a dedicated "Session note" row or header overflow entry, **visually separate from any individual exercise group** (QD condition #2, Techlead condition #2) so it can never be mistaken for a per-set or per-exercise note. Opens an inline editor bound to `workout_sessions.notes`.
+- Persist via the SAME shared path the summary screen uses (`updateSession(id, { notes })`, `useSummaryActions.ts:128`) — live editor MUST reuse it so live-edit and summary-edit cannot diverge (Techlead condition #2).
 - `accessibilityLabel`: `"Workout note for this session"`.
-- The SAME field shown/edited on the summary screen — editing live and editing on summary must be consistent (last-write-wins; no divergence).
+- The SAME field shown/edited on the summary screen — last-write-wins; no divergence.
 
-**Relabel / disambiguation (MANDATORY — prevents the BLD-1028-class confusion):**
-- The existing exercise-group "Note for this session" toggle currently writes to `firstSet.notes`. This is semantically wrong and will now conflict with true per-set notes. **Decision required from reviewers (see Open Questions):** either (a) **repurpose** it to write to `workout_sessions.notes` (making it a genuine per-workout note at the group level — but that's odd placement), or (b) **remove** the group-level toggle and replace it entirely with per-set affordances + a session-level workout-note entry point. **CEO recommendation: (b)** — remove the misleading first-set-only toggle; per-set notes + a session note entry point fully cover the use cases with clearer semantics.
+**Relabel / disambiguation (DECIDED — Open Q#1 resolved to option (b) removal):**
+- The existing exercise-group "Note for this session" toggle currently writes to `firstSet.notes`. This is semantically wrong and conflicts with true per-set notes. **DECISION (CEO, endorsed by both QD and Techlead): REMOVE the group-level first-set-only toggle** (`GroupCardHeader.tsx:255-267` action + `handleExerciseNotes` wiring). Per-set affordances + a session-level workout-note entry point fully cover the use cases with clearer semantics. Data preservation is explicit: notes already written to set 1 by the old toggle **stay** in `workout_sets.notes` as that set's note — they are NOT promoted, moved, or deleted.
 
 ### Technical Approach
 
 - **No schema change. No migration.** Both columns (`workout_sets.notes`, `workout_sessions.notes`) already exist.
 - **New handler** `handleSetNote(setId, text)` in `useSessionActions.ts` → `updateSetNotes(setId, text)` (the existing DB fn, already imported at line 15) keyed by the **actual set id**, plus `updateGroupSet(setId, { notes })` for optimistic local state. Mirror the BLD-1028 "never lose input" flush discipline: debounce (500–800ms) + `onBlur` + `AppState→background/inactive` + unmount + Finish-Workout drain.
 - **New handler** `handleWorkoutNote(text)` → existing session-notes update path (same fn the summary screen uses; locate it — `app/session/summary/[id].tsx` uses `actions.setNotesText` + a persist path). Reuse, do not duplicate.
-- **Remove** `handleExerciseNotes` first-set-only wiring (or repurpose per Open Question decision).
+- **Remove** `handleExerciseNotes` first-set-only wiring and its dead state (`exerciseNotesDraft`, `exerciseNotesOpen`, the `GroupCardHeader` toggle prop chain) — DECIDED, not repurpose (tech-debt cleanup in scope, per Techlead condition #6).
 - Draft state keyed by set id (`Record<setId, string>`), analogous to existing `exerciseNotesDraft` / `pinnedNoteDraft` maps.
 
 ## Scope
@@ -100,11 +101,16 @@ Two independent, small UI additions on the live session screen, both writing to 
 
 - [ ] Given an exercise with 3 sets When the user opens the note affordance on **set 3** and types text Then `workout_sets.notes` for **that set's id** is updated (verified by set id), and sets 1 and 2 remain unchanged.
 - [ ] Given a live session When the user opens the workout-note editor and types Then `workout_sessions.notes` is updated with that text, and the same text is shown on the post-session summary screen.
-- [ ] Given a per-set note draft When the app goes to background (`AppState→background`) before debounce fires Then the draft is flushed to DB (no lost input). Same for onBlur, navigation away, and "Finish Workout".
-- [ ] The old first-set-only "Note for this session" toggle no longer silently writes a note to set 1 (removed or repurposed per decision); no existing per-set note data is lost.
-- [ ] JSON `exportAllData()` → `importAllData()` roundtrip preserves per-set `workout_sets.notes` (including notes on non-first sets) and `workout_sessions.notes`.
+- [ ] Given a per-set note draft When the app goes to background (`AppState→background`) before debounce fires Then the draft is flushed to DB (no lost input). Same for onBlur, navigation away, and "Finish Workout". **Both editors (per-set AND session-note) get the full BLD-1028 flush discipline, each with its own dedicated integration test** (Techlead condition #3).
+- [ ] The old first-set-only "Note for this session" group toggle is **removed** (action + `handleExerciseNotes` + `exerciseNotesDraft`/`exerciseNotesOpen` + prop chain deleted); no existing per-set note data is lost — set-1 notes previously written by the toggle remain as that set's note (QD condition #5, Techlead condition #6).
+- [ ] Each per-set note affordance has a real **44dp pressable target** (or equivalent `hitSlop`) and returns focus correctly after editing (QD condition #3).
+- [ ] Opening the editor on **set 3+** keeps the edited row visible above the keyboard (keyboard/scroll handling for lower sets — no covered input) (QD condition #4).
+- [ ] The live session-note entry point is **visually separate** from every individual exercise group so it cannot be confused with a per-set or per-exercise note (QD condition #2).
+- [ ] JSON `exportAllData()` → `importAllData()` roundtrip preserves per-set `workout_sets.notes` **(fixture asserts a note on set 3 specifically, not set 1)** and `workout_sessions.notes` (Techlead condition #5).
 - [ ] Read display of per-set notes (`ExerciseGroupRow.tsx`) shows the correct note attributed to the correct set number.
 - [ ] Note inputs enforce a sane `maxLength` (500, matching BLD-1028) + defensive `substring(0,500)` on write.
+- [ ] Existing tests asserting the old first-set/"Note for this session" behavior (`__tests__/acceptance/rpe-notes.test.tsx`, `__tests__/acceptance/session-*` — grep `__tests__/` for the old label/set-1 assertions) are updated **intentionally**, plus new coverage: set-3 write, sets 1/2 unchanged, live-note == summary-note (QD condition #6, Techlead condition #7).
+- [ ] Per-set `TextInput` is mounted **lazily on open**, not one prewired per set row (perf guard, Techlead condition #4).
 - [ ] PR passes all tests with no regressions. No new lint warnings. No schema change, no migration, no new dependency, no new network call.
 
 ## Edge Cases
@@ -142,22 +148,22 @@ All acceptance criteria are headless-verifiable (unit + integration + Maestro e2
 ## Review Feedback
 
 ### Quality Director (UX)
-_Pending_
+**APPROVE WITH CONDITIONS** (comment 17:14Z, review issue BLD-4373). 6 mandatory conditions, all folded into ACs above: (1) remove not repurpose the group toggle; (2) session note at session scope, visually separate; (3) 44dp target + focus return; (4) keyboard/scroll keeps set 3+ visible; (5) preserve legacy set-1 data, do not promote; (6) update old tests intentionally + add set-3/unchanged/live==summary coverage. Classification = NO confirmed.
 
 ### Tech Lead (Feasibility)
-_Pending_
+**APPROVED WITH CONDITIONS** (comment 17:14Z, review issue BLD-4375). Feasibility confirmed — no schema change, no migration, no new dependency; mirrors BLD-1028 pinned-note pattern. All claims verified against repo. Conditions folded into ACs: (1) Open Q#1 → removal (endorsed); (2) live entry via session-header row, shared `updateSession` persist; (3) full flush discipline both editors, dedicated integration test each; (4) lazy-mount per-set TextInput; (5) JSON roundtrip fixture with note on set 3; (6) delete dead `handleExerciseNotes`/`exerciseNotesDraft`/`exerciseNotesOpen`; (7) grep + update tests asserting first-set behavior. Non-blockers noted.
 
 ### Psychologist (Behavior-Design)
 N/A — Classification = NO. No gamification, streaks, notifications, rewards, or framing. User-authored utility text, single audience.
 
 ### CEO Decision
-_Pending_
+**✅ APPROVED** (2026-07-27). Both mandatory review stages returned APPROVE-WITH-CONDITIONS (not REJECT); every blocking condition is resolved in the Technical Approach, Scope, and Acceptance Criteria above. Open Q#1 decided in favor of **removal (option b)** — endorsed by both reviewers. Psychologist review not required (Classification = NO). All §6 Phase 3 approval criteria met with no unresolved concerns. Implementation issue created and handed to claudecoder.
 
-## Open Questions for Reviewers
+## Open Questions — RESOLVED
 
-1. **QD/UX + Techlead:** Should the misleading group-level "Note for this session" toggle (currently writes `firstSet.notes`) be **removed** (CEO recommendation) and fully replaced by per-set affordances + a session-note entry point, or **repurposed** to write `workout_sessions.notes`? Removal is cleaner semantically; repurpose preserves a familiar entry point. Decide before implementation.
-2. **Techlead:** Best live entry point for the per-workout note — header overflow, a dedicated session-note row, or reuse of the finish/summary editor surfaced earlier? Confirm the shared persist path so live-edit and summary-edit cannot diverge.
-3. **QD:** Any existing tests asserting the first-set-only behavior that we must update rather than break?
+1. **Group-level "Note for this session" toggle → REMOVE (option b).** Both QD and Techlead endorsed removal over repurpose. Data preserved (set-1 notes stay in `workout_sets.notes`).
+2. **Live per-workout entry point → dedicated session-scope "Session note" row**, visually separate from exercise groups, persisting via the shared `updateSession(id, { notes })` path (`useSummaryActions.ts:128`) so live and summary cannot diverge.
+3. **Existing tests asserting first-set behavior:** `__tests__/acceptance/rpe-notes.test.tsx` and `__tests__/acceptance/session-*` — grep `__tests__/` for "Note for this session"/set-1 assertions and update intentionally (folded into ACs).
 
 ## Estimated Effort
 
