@@ -160,6 +160,34 @@ jobs:
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           set -euo pipefail
+          # Keep the F-Droid exclusions in the app project as a final
+          # post-prebuild guard, independent of config-plugin ordering.
+          cat >> android/app/build.gradle <<'GRADLE'
+
+          // cablesnap:ci:fdroid-final-excludes
+          if (System.getenv("CABLESNAP_FDROID") == "1") {
+              configurations.configureEach {
+                  exclude group: "com.google.android.gms"
+                  exclude group: "com.google.firebase"
+                  exclude group: "com.google.mlkit"
+                  exclude group: "com.android.installreferrer"
+                  exclude module: "camera-mlkit-vision"
+              }
+          }
+          GRADLE
+          cat >> android/app/proguard-rules.pro <<'PROGUARD'
+
+          # F-Droid deliberately removes these optional Expo integrations.
+          # Their native methods remain in compile-time Expo library classes,
+          # so R8 must be told that the absent optional types are intentional;
+          # unreachable methods are then removed from the releaseFdroid dex.
+          -dontwarn com.android.installreferrer.**
+          -dontwarn com.google.android.gms.**
+          -dontwarn com.google.firebase.**
+          -dontwarn com.google.mlkit.**
+          -ignorewarnings
+          PROGUARD
+
           cd android
           ./gradlew :app:assembleReleaseFdroid
           cd ..

@@ -64,6 +64,10 @@ jobs:
           else
             echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
           fi
+          # android.r8.failOnMissingClasses was removed in AGP 8.0; strip it so
+          # Gradle does not hard-reject the generated gradle.properties.
+          sed -i '/^android\.r8\.failOnMissingClasses=/d' "$PROPS"
+          echo "android.r8.failOnMissingClasses stripped (remaining: $(grep -c 'android.r8.failOnMissingClasses' "$PROPS" || true))"
 
       - name: Assemble :app assembleRelease (Play flavor) + verify GMS-Wearable PRESENT
         env:

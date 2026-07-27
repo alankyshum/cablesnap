@@ -432,6 +432,12 @@ jobs:
             echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
           fi
           grep '^org.gradle.jvmargs=' "$PROPS"
+          # android.r8.failOnMissingClasses was removed in AGP 8.0 and is
+          # hard-rejected by the Android Gradle plugin used in Expo SDK 55 /
+          # RN 0.83. expo prebuild emits it via the default Expo template;
+          # strip it here so every subsequent Gradle invocation succeeds.
+          sed -i '/^android\.r8\.failOnMissingClasses=/d' "$PROPS"
+          echo "android.r8.failOnMissingClasses stripped (was present: $(grep -c 'android.r8.failOnMissingClasses' "$PROPS" || true) occurrences remaining)"
 
       - name: Decode release keystore and write keystore.properties
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
