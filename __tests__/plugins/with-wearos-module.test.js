@@ -151,6 +151,13 @@ describe("patchAppBuildGradle", () => {
     expect(out).toContain("// cablesnap:wearos:build-types");
   });
 
+  it("declares proguardFiles explicitly on the releaseFdroid block", () => {
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?proguardFiles\s+['"]fdroid-r8-rules\.pro['"]/,
+    );
+  });
+
   it("uses debug signing for releaseFdroid without making it debuggable", () => {
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toMatch(
