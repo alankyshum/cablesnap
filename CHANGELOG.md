@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Per-set notes and session notes during live workouts** — You can now add a note to each individual set (saved against the actual set, not just the first), and write a workout-level note directly from the active session screen. ([BLD-4385](/BLD/issues/BLD-4385))
 - **F-Droid autolinking now omits unused expo-application**, preventing Install Referrer classes from entering the native module graph.
 - **F-Droid sanitization now covers every installed Expo Android module**, including debug-only ML Kit declarations that could otherwise re-enter the release dependency graph.
 - **F-Droid builds now remove proprietary Expo manifest references**, keeping the APK free of Firebase, ML Kit, Google Play Services, and Install Referrer class descriptors while retaining ZXing barcode scanning.
