@@ -25,6 +25,7 @@ marker) at release time.
 - **Record and Done button spacing** — Increases the margin above the Record and Done buttons on the Form clips tab for more consistent spacing. ([BLD-4033](/BLD/issues/BLD-4033))
 - **Consistent padding for "Set a goal" button** — Adjusts the vertical padding around the "Set a goal" button in frequency settings for consistency with other cards. ([BLD-4044](/BLD/issues/BLD-4044))
 - **Word-order-independent exercise search** — Allows finding exercises by typing words in any order (e.g. "press bench" matches "Bench Press"). ([BLD-4157](/BLD/issues/BLD-4157))
+- **F-Droid APK now contains zero proprietary class references** — Firebase, ML Kit, Google Play Services, and Install Referrer class names are fully removed from the DEX by replacing the source files of the affected Expo modules (expo-camera, expo-notifications, expo-application) with FOSS stubs at build time. Fixes AC10b release gate. ([BLD-4226](/BLD/issues/BLD-4226))
 - **Food barcode scanning now uses a fully open-source ZXing scanner**, with the same camera overlay and supported food-barcode formats.
 - **F-Droid store metadata is now maintained in this repository**, including the app description, screenshots, icon, and release notes.
 - **Progress calendar toggle is easier to tap**, increasing the list/calendar switch touch target to meet the 44dp accessibility minimum. ([BLD-4077](/BLD/issues/BLD-4077))
