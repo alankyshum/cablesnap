@@ -662,6 +662,87 @@ object BarCodeScannerResultSerializer {
     const file = path.join(notifications, ...relative);
     if (fs.existsSync(file)) fs.writeFileSync(file, "package expo.modules.notifications;\n", "utf8");
   }
+  write(path.join(notifications, "service", "interfaces", "FirebaseMessagingDelegate.kt"), `package expo.modules.notifications.service.interfaces
+
+interface FirebaseMessagingDelegate {
+  fun onMessageReceived(remoteMessage: Any?)
+  fun onNewToken(token: String)
+}
+`);
+  write(path.join(notifications, "notifications", "debug", "DebugLogging.kt"), `package expo.modules.notifications.notifications.debug
+
+import android.os.Bundle
+import expo.modules.notifications.notifications.model.Notification
+
+object DebugLogging {
+  fun logBundle(caller: String, bundleToLog: Bundle) {}
+  fun logRemoteMessage(caller: String, message: Any) {}
+  fun logNotification(caller: String, notification: Notification) {}
+}
+`);
+  write(path.join(notifications, "notifications", "model", "RemoteNotificationContent.kt"), `package expo.modules.notifications.notifications.model
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.os.Parcel
+import android.os.Parcelable
+import expo.modules.notifications.notifications.enums.NotificationPriority
+import expo.modules.notifications.notifications.interfaces.INotificationContent
+import org.json.JSONObject
+
+class RemoteNotificationContent private constructor() : INotificationContent {
+  val isDataOnly: Boolean = false
+  override val title: String? = null
+  override val text: String? = null
+  override val subText: String? = null
+  override val badgeCount: Number? = null
+  override val shouldPlayDefaultSound: Boolean = false
+  override val soundName: String? = null
+  override val shouldUseDefaultVibrationPattern: Boolean = false
+  override val vibrationPattern: LongArray? = null
+  override val body: JSONObject? = null
+  override val priority: NotificationPriority? = null
+  override val color: Number? = null
+  override val isAutoDismiss: Boolean = false
+  override val categoryId: String? = null
+  override val isSticky: Boolean = false
+  override suspend fun getImage(context: Context): Bitmap? = null
+  override fun containsImage(): Boolean = false
+  override fun describeContents(): Int = 0
+  override fun writeToParcel(dest: Parcel, flags: Int) {}
+  companion object CREATOR : Parcelable.Creator<RemoteNotificationContent> {
+    override fun createFromParcel(parcel: Parcel) = RemoteNotificationContent()
+    override fun newArray(size: Int): Array<RemoteNotificationContent?> = arrayOfNulls(size)
+  }
+}
+`);
+  write(path.join(notifications, "notifications", "model", "triggers", "FirebaseNotificationTrigger.kt"), `package expo.modules.notifications.notifications.model.triggers
+
+import android.os.Bundle
+import android.os.Parcel
+import android.os.Parcelable
+import expo.modules.notifications.notifications.interfaces.NotificationTrigger
+
+class FirebaseNotificationTrigger private constructor() : NotificationTrigger {
+  override fun toBundle(): Bundle = Bundle()
+  override fun getNotificationChannel(): String? = null
+  override fun describeContents(): Int = 0
+  override fun writeToParcel(dest: Parcel, flags: Int) {}
+  companion object CREATOR : Parcelable.Creator<FirebaseNotificationTrigger> {
+    override fun createFromParcel(parcel: Parcel) = FirebaseNotificationTrigger()
+    override fun newArray(size: Int): Array<FirebaseNotificationTrigger?> = arrayOfNulls(size)
+  }
+}
+`);
+  const serializer = path.join(notifications, "notifications", "NotificationSerializer.java");
+  if (fs.existsSync(serializer)) {
+    let source = fs.readFileSync(serializer, "utf8")
+      .replace(/^import com\.google\.firebase\.[^\n]+\n/gm, "")
+      .replace(/^import expo\.modules\.notifications\.notifications\.model\.triggers\.FirebaseNotificationTrigger;\n/gm, "")
+      .replace(/\s*if\s*\(requestTrigger instanceof FirebaseNotificationTrigger trigger\)\s*\{[\s\S]*?^\s*\}\s*else if\s*\(/m,
+        "\n      if (");
+    fs.writeFileSync(serializer, source, "utf8");
+  }
 
   // Fail during prebuild rather than discovering a leaked descriptor only
   // after a 30-minute Android build.

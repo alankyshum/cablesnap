@@ -89,6 +89,8 @@ marker) at release time.
 
 - **F-Droid prebuild now replaces Expo Camera, Application, and Notifications proprietary source paths with FOSS-safe stubs**, preventing proprietary class descriptors from being emitted into DEX.
 
+- **F-Droid source sanitization now removes Firebase-backed notification serializers and trigger models as well**, keeping the complete Expo Notifications source graph free of proprietary references.
+
 
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
