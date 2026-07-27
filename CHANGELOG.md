@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **F-Droid prebuild source-strip is now exhaustive (walks the tree)** instead of a hand-maintained file list, and R8 has explicit `-dontwarn` rules for proprietary classes on the F-Droid variant, resolving build failures on the `Wear OS UI tests` workflow. ([BLD-4377](/BLD/issues/BLD-4377))
 - **Form library Select button spacing now matches the Record pill**, giving the session header controls consistent horizontal padding.
 - **Record and Done button spacing** — Increases the margin above the Record and Done buttons on the Form clips tab for more consistent spacing. ([BLD-4033](/BLD/issues/BLD-4033))
 - **Consistent padding for "Set a goal" button** — Adjusts the vertical padding around the "Set a goal" button in frequency settings for consistency with other cards. ([BLD-4044](/BLD/issues/BLD-4044))

@@ -9,8 +9,11 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidProguard,
   patchFdroidExpoDependencies,
+  patchFdroidLibrarySources,
   FDROID_MANIFEST_CONTENTS,
+  FDROID_PROGUARD_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
 // Minimal but realistic fixtures matching the shape Expo's Android template
@@ -647,6 +650,69 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
         fs.existsSync(path.join(tmp, "app", "src", "releaseFdroid")),
       ).toBe(true);
     } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("writeFdroidProguard writes the -dontwarn F-Droid rules", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguard(tmp);
+      const proguardPath = path.join(tmp, "app", "proguard-rules-fdroid.pro");
+      expect(fs.existsSync(proguardPath)).toBe(true);
+      const written = fs.readFileSync(proguardPath, "utf8");
+      expect(written).toBe(FDROID_PROGUARD_CONTENTS);
+      expect(written).toContain("-dontwarn com.google.firebase.**");
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+});
+
+describe("patchFdroidLibrarySources", () => {
+  it("scrubs forbidden references and replaces files with original package statement", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-sources-"));
+    try {
+      // Create directories
+      const notificationsDir = path.join(tmp, "node_modules", "expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications");
+      fs.mkdirSync(notificationsDir, { recursive: true });
+
+      const fileWithForbidden = path.join(notificationsDir, "NotificationSerializer.java");
+      fs.writeFileSync(
+        fileWithForbidden,
+        `package expo.modules.notifications.notifications;
+
+import com.google.firebase.messaging.RemoteMessage;
+
+public class NotificationSerializer {
+    // some proprietary content
+}`,
+        "utf8",
+      );
+
+      const fileWithoutForbidden = path.join(notificationsDir, "FossSafeClass.java");
+      const safeContent = `package expo.modules.notifications.notifications;
+
+public class FossSafeClass {
+    // some safe content
+}`;
+      fs.writeFileSync(fileWithoutForbidden, safeContent, "utf8");
+
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidLibrarySources(tmp);
+
+      // Verify the forbidden reference is scrubbed to just the package statement
+      const scrubbedContent = fs.readFileSync(fileWithForbidden, "utf8");
+      expect(scrubbedContent).toBe("package expo.modules.notifications.notifications;\n");
+
+      // Verify the safe file is completely untouched
+      const safeFileContent = fs.readFileSync(fileWithoutForbidden, "utf8");
+      expect(safeFileContent).toBe(safeContent);
+
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
       rmDirRecursive(tmp);
     }
   });

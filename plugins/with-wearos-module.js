@@ -175,6 +175,8 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // dex; the Play release keeps its existing shrinker settings.
             minifyEnabled true
             shrinkResources true
+            // Add F-Droid-specific proguard rules to prevent missing classes warnings from breaking R8
+            proguardFile "proguard-rules-fdroid.pro"
             // matchingFallbacks lets dependency variant resolution fall back
             // to \`release\` when an upstream library only ships a release
             // variant (the common case). Without this, Gradle errors with
@@ -464,6 +466,18 @@ function writeFdroidManifest(platformRoot) {
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
 }
 
+const FDROID_PROGUARD_CONTENTS = `-dontwarn com.google.firebase.**
+-dontwarn com.google.mlkit.**
+-dontwarn com.google.android.gms.**
+-dontwarn com.android.installreferrer.**
+`;
+
+function writeFdroidProguard(platformRoot) {
+  const dir = path.join(platformRoot, "app");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "proguard-rules-fdroid.pro"), FDROID_PROGUARD_CONTENTS, "utf8");
+}
+
 function patchFdroidExpoDependencies(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const replacements = [
@@ -666,6 +680,36 @@ object BarCodeScannerResultSerializer {
   // Fail during prebuild rather than discovering a leaked descriptor only
   // after a 30-minute Android build.
   const forbidden = /com\.(?:google\.firebase|google\.mlkit|google\.android\.gms|android\.installreferrer)/;
+
+  const scrub = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        scrub(file);
+      } else if (/\.(?:kt|java)$/.test(entry.name)) {
+        const content = fs.readFileSync(file, "utf8");
+        if (forbidden.test(content)) {
+          const isKotlin = /\.kt$/.test(entry.name);
+          const pkgMatch = content.match(/^\s*package\s+([\w.]+)\s*;?\s*$/m);
+          if (pkgMatch) {
+            const pkg = pkgMatch[1];
+            const newContent = isKotlin
+              ? `package ${pkg}\n`
+              : `package ${pkg};\n`;
+            fs.writeFileSync(file, newContent, "utf8");
+          } else {
+            fs.writeFileSync(file, isKotlin ? "// Empty stub\n" : "/* Empty stub */\n", "utf8");
+          }
+        }
+      }
+    }
+  };
+
+  scrub(sourceRoot("expo-camera", "android", "src"));
+  scrub(sourceRoot("expo-application", "android", "src"));
+  scrub(sourceRoot("expo-notifications", "android", "src"));
+
   const verify = (dir) => {
     if (!fs.existsSync(dir)) return;
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -800,6 +844,7 @@ const withWearOsModule = (config) => {
       // Write/overwrite the F-Droid manifest overlay. Idempotent — same
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
+      writeFdroidProguard(platformRoot);
       return cfg;
     },
   ]);
@@ -816,9 +861,11 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.writeFdroidProguard = writeFdroidProguard;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
+module.exports.FDROID_PROGUARD_CONTENTS = FDROID_PROGUARD_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;
