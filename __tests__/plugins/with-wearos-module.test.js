@@ -10,7 +10,9 @@ const {
   rmDirRecursive,
   writeFdroidManifest,
   patchFdroidExpoDependencies,
+  applyFdroidProguardRules,
   FDROID_MANIFEST_CONTENTS,
+  FDROID_PROGUARD_SENTINEL,
 } = require("../../plugins/with-wearos-module");
 
 // Minimal but realistic fixtures matching the shape Expo's Android template
@@ -205,6 +207,36 @@ describe("patchAppBuildGradle", () => {
     expect(patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE)).not.toContain(
       "cablesnap:wearos:fdroid-excludes",
     );
+  });
+
+  it("emits an explicit proguardFiles declaration on the releaseFdroid block", () => {
+    // ROOT CAUSE GUARD (BLD-4367): The Expo prebuild template emits a
+    // `release { }` block WITHOUT proguardFiles because
+    // `enableProguardInReleaseBuilds` defaults to false. `releaseFdroid
+    // { initWith release }` therefore inherits an EMPTY proguardFiles list.
+    // R8 full-mode never reads android/app/proguard-rules.pro for the
+    // releaseFdroid variant and hard-errors on the excluded optional packages.
+    // The explicit proguardFiles line on releaseFdroid breaks the inheritance
+    // gap and ensures R8 always reads proguard-rules.pro.
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?proguardFiles\s+getDefaultProguardFile\("proguard-android-optimize\.txt"\),\s*"proguard-rules\.pro"/,
+    );
+  });
+
+  it("does NOT emit proguardFiles on the parent release block (regression guard)", () => {
+    // We must NEVER touch the `release { }` block — it is the Play build
+    // type and must stay exactly as Expo emitted it. Adding proguardFiles
+    // there could accidentally enable proguard for the Play release when
+    // enableProguardInReleaseBuilds is false (Expo's default).
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    const releaseIdx = out.indexOf("release {\n");
+    const releaseFdroidIdx = out.indexOf("releaseFdroid {");
+    expect(releaseIdx).toBeGreaterThan(-1);
+    expect(releaseFdroidIdx).toBeGreaterThan(releaseIdx);
+    // proguardFiles must not appear in the original release block range
+    const releaseSection = out.slice(releaseIdx, releaseFdroidIdx);
+    expect(releaseSection).not.toContain("proguardFiles");
   });
 
   it("does NOT exclude the entire androidx.camera group (regression guard)", () => {
@@ -647,6 +679,193 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
         fs.existsSync(path.join(tmp, "app", "src", "releaseFdroid")),
       ).toBe(true);
     } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+});
+
+// ----------------------------------------------------------------------------
+// applyFdroidProguardRules — append committed dontwarn fragment to proguard
+// ----------------------------------------------------------------------------
+//
+// Root cause for BLD-4367: the Expo prebuild template emits `release { }`
+// WITHOUT proguardFiles (because enableProguardInReleaseBuilds defaults to
+// false). releaseFdroid { initWith release } therefore inherits an empty
+// proguardFiles list, so R8 never reads android/app/proguard-rules.pro.
+// The releaseFdroid block now declares proguardFiles explicitly, and this
+// function ensures the -dontwarn rules are present in proguard-rules.pro
+// before gradlew runs. The source of truth is plugins/fdroid-proguard-rules.pro.
+describe("applyFdroidProguardRules", () => {
+  // Locate plugins/fdroid-proguard-rules.pro relative to the repo root
+  // (the test file lives at __tests__/plugins/, so go two levels up).
+  const repoRoot = path.join(__dirname, "..", "..");
+  const rulesSrcPath = path.join(repoRoot, "plugins", "fdroid-proguard-rules.pro");
+
+  it("fdroid-proguard-rules.pro is committed and starts with the sentinel", () => {
+    // This is the source-of-truth check. If the file is missing or lacks
+    // the sentinel, the idempotency guard in applyFdroidProguardRules will
+    // never trigger and the rules may be applied multiple times.
+    expect(fs.existsSync(rulesSrcPath)).toBe(true);
+    const contents = fs.readFileSync(rulesSrcPath, "utf8");
+    expect(contents.startsWith(FDROID_PROGUARD_SENTINEL)).toBe(true);
+  });
+
+  it("fdroid-proguard-rules.pro contains -dontwarn for all excluded SUSS packages", () => {
+    const contents = fs.readFileSync(rulesSrcPath, "utf8");
+    for (const pkg of [
+      "com.android.installreferrer.**",
+      "com.google.android.gms.**",
+      "com.google.firebase.**",
+      "com.google.mlkit.**",
+    ]) {
+      expect(contents).toContain(`-dontwarn ${pkg}`);
+    }
+  });
+
+  it("fdroid-proguard-rules.pro contains -dontwarn for referencing Expo modules", () => {
+    // Belt-and-suspenders: R8 full-mode may fail if a reference from the
+    // expo module class itself cannot be proven dead. Covering the
+    // referencing module packages ensures R8 never aborts even when it
+    // cannot fully inline the optional guard.
+    const contents = fs.readFileSync(rulesSrcPath, "utf8");
+    for (const pkg of [
+      "expo.modules.application.**",
+      "expo.modules.camera.**",
+      "expo.modules.notifications.**",
+    ]) {
+      expect(contents).toContain(`-dontwarn ${pkg}`);
+    }
+  });
+
+  it("appends the fragment to proguard-rules.pro when CABLESNAP_FDROID=1", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      const platformRoot = path.join(tmp, "android");
+      const appDir = path.join(platformRoot, "app");
+      fs.mkdirSync(appDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(appDir, "proguard-rules.pro"),
+        "# Add project specific ProGuard rules here.\n",
+        "utf8",
+      );
+      process.env.CABLESNAP_FDROID = "1";
+      applyFdroidProguardRules(platformRoot, repoRoot);
+      const result = fs.readFileSync(
+        path.join(appDir, "proguard-rules.pro"),
+        "utf8",
+      );
+      expect(result).toContain(FDROID_PROGUARD_SENTINEL);
+      expect(result).toContain("-dontwarn com.google.firebase.**");
+      expect(result).toContain("-dontwarn com.android.installreferrer.**");
+      expect(result).toContain("-dontwarn com.google.mlkit.**");
+      expect(result).toContain("-dontwarn com.google.android.gms.**");
+      expect(result).toContain("-dontwarn expo.modules.application.**");
+      expect(result).toContain("-dontwarn expo.modules.camera.**");
+      expect(result).toContain("-dontwarn expo.modules.notifications.**");
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("is idempotent — running twice does not duplicate the fragment", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-idemp-"));
+    try {
+      const platformRoot = path.join(tmp, "android");
+      const appDir = path.join(platformRoot, "app");
+      fs.mkdirSync(appDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(appDir, "proguard-rules.pro"),
+        "# existing rules\n",
+        "utf8",
+      );
+      process.env.CABLESNAP_FDROID = "1";
+      applyFdroidProguardRules(platformRoot, repoRoot);
+      applyFdroidProguardRules(platformRoot, repoRoot); // second call must be no-op
+      const result = fs.readFileSync(
+        path.join(appDir, "proguard-rules.pro"),
+        "utf8",
+      );
+      const sentinelCount = result.split(FDROID_PROGUARD_SENTINEL).length - 1;
+      expect(sentinelCount).toBe(1);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("does nothing when CABLESNAP_FDROID is not set (Play build)", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-play-"));
+    try {
+      const platformRoot = path.join(tmp, "android");
+      const appDir = path.join(platformRoot, "app");
+      fs.mkdirSync(appDir, { recursive: true });
+      const original = "# Play build proguard-rules.pro\n";
+      fs.writeFileSync(
+        path.join(appDir, "proguard-rules.pro"),
+        original,
+        "utf8",
+      );
+      delete process.env.CABLESNAP_FDROID;
+      applyFdroidProguardRules(platformRoot, repoRoot);
+      const result = fs.readFileSync(
+        path.join(appDir, "proguard-rules.pro"),
+        "utf8",
+      );
+      expect(result).toBe(original); // unchanged
+      expect(result).not.toContain(FDROID_PROGUARD_SENTINEL);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("creates proguard-rules.pro if it does not yet exist (fresh prebuild)", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-fresh-"));
+    try {
+      const platformRoot = path.join(tmp, "android");
+      const appDir = path.join(platformRoot, "app");
+      fs.mkdirSync(appDir, { recursive: true });
+      // Do NOT create proguard-rules.pro — simulate a truly fresh prebuild.
+      process.env.CABLESNAP_FDROID = "1";
+      applyFdroidProguardRules(platformRoot, repoRoot);
+      const result = fs.readFileSync(
+        path.join(appDir, "proguard-rules.pro"),
+        "utf8",
+      );
+      expect(result).toContain(FDROID_PROGUARD_SENTINEL);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("throws a clear error when plugins/fdroid-proguard-rules.pro is missing", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(
+      path.join(os.tmpdir(), "fdroid-proguard-missing-"),
+    );
+    try {
+      const platformRoot = path.join(tmp, "android");
+      const appDir = path.join(platformRoot, "app");
+      fs.mkdirSync(appDir, { recursive: true });
+      fs.writeFileSync(path.join(appDir, "proguard-rules.pro"), "", "utf8");
+      process.env.CABLESNAP_FDROID = "1";
+      // Pass a projectRoot that has no plugins/fdroid-proguard-rules.pro
+      expect(() => applyFdroidProguardRules(platformRoot, tmp)).toThrow(
+        /fdroid-proguard-rules\.pro/,
+      );
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
       rmDirRecursive(tmp);
     }
   });

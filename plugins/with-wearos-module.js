@@ -75,6 +75,10 @@ const SUBPROJECT_FILTER_MARKER = "// cablesnap:wearos:subproject-variant-filter"
 // Sentinel for the F-Droid manifest strip that removes FirebaseInitProvider and
 // ExpoFirebaseMessagingService — see FDROID_MANIFEST_CONTENTS below.
 const FDROID_MANIFEST_MARKER = "<!-- cablesnap:wearos:fdroid-manifest-strip -->";
+// Sentinel for the proguard fragment appended to android/app/proguard-rules.pro.
+// This matches the first line of plugins/fdroid-proguard-rules.pro so the
+// function is idempotent — if the file already contains the block, skip it.
+const FDROID_PROGUARD_SENTINEL = "# cablesnap:wearos:fdroid-proguard";
 
 // Where the wear-template lives in the source tree, and where the prebuild
 // output expects to find the `:wear` subproject.
@@ -186,6 +190,16 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // disable their propagated \`releaseFdroid\` variant entirely,
             // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
+            // Explicit proguardFiles is required even though initWith release
+            // copies most settings. The Expo prebuild template emits a
+            // \`release { }\` block WITHOUT proguardFiles (because
+            // enableProguardInReleaseBuilds defaults to false), so the
+            // inherited list is empty. Without this line R8 only sees the
+            // AGP default rules and never reads android/app/proguard-rules.pro
+            // — causing a missing-class hard error on the excluded optional
+            // packages (com.android.installreferrer, com.google.firebase,
+            // com.google.mlkit, com.google.android.gms).
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
 `;
 
@@ -564,6 +578,51 @@ function patchFdroidAndroidGradleTree(platformRoot) {
   visit(platformRoot);
 }
 
+// ---------------------------------------------------------------------------
+// applyFdroidProguardRules — append plugins/fdroid-proguard-rules.pro to
+// android/app/proguard-rules.pro (with sentinel, idempotent).
+// ---------------------------------------------------------------------------
+//
+// R8 in full mode (AGP 8+) treats missing classes as hard errors that
+// -dontwarn does NOT suppress unless the rules file is actually wired into
+// the variant's proguardFiles list.  The releaseFdroid block above adds the
+// explicit `proguardFiles` line, and this function ensures the -dontwarn
+// rules for the excluded optional packages are present in proguard-rules.pro
+// before `./gradlew :app:assembleReleaseFdroid` runs.
+//
+// The source-of-truth for the dontwarn rules is the committed file
+// plugins/fdroid-proguard-rules.pro.  Centralising it there means:
+//   - The rules are auditable, versioned, and testable via unit tests.
+//   - The workflow's heredoc cat >> was a one-shot append that could not be
+//     verified by unit tests and was lost on expo prebuild --clean.
+//   - The plugin now owns the full wiring — prebuild runs the plugin, the
+//     plugin writes the rules, Gradle reads them.  No YAML gymnastics needed.
+function applyFdroidProguardRules(platformRoot, projectRoot) {
+  // Only apply when building the F-Droid variant.
+  if (process.env.CABLESNAP_FDROID !== "1") return;
+
+  const proguardDest = path.join(platformRoot, "app", "proguard-rules.pro");
+  const rulesSrc = path.join(projectRoot, "plugins", "fdroid-proguard-rules.pro");
+
+  if (!fs.existsSync(rulesSrc)) {
+    throw new Error(
+      `with-wearos-module: fdroid-proguard-rules.pro not found at ${rulesSrc}. ` +
+        "This file must be committed at plugins/fdroid-proguard-rules.pro.",
+    );
+  }
+
+  // Read the destination; if the sentinel is already present, skip (idempotent).
+  const existing = fs.existsSync(proguardDest)
+    ? fs.readFileSync(proguardDest, "utf8")
+    : "";
+  if (existing.includes(FDROID_PROGUARD_SENTINEL)) return;
+
+  const fragment = fs.readFileSync(rulesSrc, "utf8");
+  // Ensure a clean newline separation before appending.
+  const separator = existing.length > 0 && !existing.endsWith("\n") ? "\n" : "";
+  fs.writeFileSync(proguardDest, existing + separator + "\n" + fragment, "utf8");
+}
+
 function copyDirRecursive(srcDir, dstDir) {
   if (!fs.existsSync(srcDir)) {
     throw new Error(
@@ -622,9 +681,9 @@ const withWearOsModule = (config) => {
     return cfg;
   });
 
-  // 4. Copy wear-template → android/wear, and write the F-Droid build-type
-  //    manifest overlay that strips Firebase manifest contributors. Both
-  //    operations live in the same withDangerousMod step because they share
+  // 4. Copy wear-template → android/wear, write the F-Droid build-type
+  //    manifest overlay, and append the F-Droid proguard dontwarn fragment
+  //    to android/app/proguard-rules.pro. All operations share
   //    `platformProjectRoot` and want a single regen-cycle on prebuild.
   config = withDangerousMod(config, [
     "android",
@@ -641,6 +700,9 @@ const withWearOsModule = (config) => {
       // Write/overwrite the F-Droid manifest overlay. Idempotent — same
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
+      // Append the committed F-Droid proguard dontwarn fragment so R8 can
+      // resolve missing optional classes. Idempotent via sentinel check.
+      applyFdroidProguardRules(platformRoot, projectRoot);
       return cfg;
     },
   ]);
@@ -659,6 +721,8 @@ module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
+module.exports.applyFdroidProguardRules = applyFdroidProguardRules;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
+module.exports.FDROID_PROGUARD_SENTINEL = FDROID_PROGUARD_SENTINEL;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;
