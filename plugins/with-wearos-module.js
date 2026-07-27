@@ -656,6 +656,14 @@ function patchFdroidLibrarySources(projectRoot) {
   }
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+  const cameraConfig = sourceRoot("expo-camera", "expo-module.config.json");
+  if (fs.existsSync(cameraConfig)) {
+    const config = JSON.parse(fs.readFileSync(cameraConfig, "utf8"));
+    // Force Expo autolinking to use the sanitized Android source project.
+    // The publisher AAR contains the original ML Kit/GMS bytecode.
+    if (config.android) delete config.android.publication;
+    fs.writeFileSync(cameraConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
+  }
 
   // Balanced-brace replacement for a whole `fun <name>(...) { ... }` block.
   // Kotlin allows nested try/catch and lambda braces inside the body, so a
