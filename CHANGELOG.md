@@ -64,6 +64,8 @@ marker) at release time.
 
 - **F-Droid CI disables Expo Camera’s optional barcode dependency graph**, while CableSnap continues using the embedded open-source ZXing scanner on Android.
 
+- **F-Droid prebuild now clears generated Android build intermediates before dependency resolution**, preventing stale proprietary AAR models from being reused after the Gradle scripts are sanitized.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 

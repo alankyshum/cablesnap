@@ -538,7 +538,7 @@ function patchFdroidAndroidGradleTree(platformRoot) {
         // again by Gradle, so remove them from every installed Android module.
         if (
           entry.name === "build" &&
-          path.basename(dir) === "android" &&
+          (path.basename(dir) === "android" || dir.includes(`${path.sep}android${path.sep}`)) &&
           !dir.includes(`${path.sep}wear${path.sep}`)
         ) {
           fs.rmSync(target, { recursive: true, force: true });
