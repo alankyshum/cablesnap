@@ -107,7 +107,9 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.mlkit:[^\\r\\n]+\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.android\\.gms:[^\\r\\n]+\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*add\\(barcodeDependencyConfiguration,\\s*["'](?:com\\.google\\.android\\.gms|com\\.google\\.mlkit):[^\\r\\n]+\\r?\\n?/, "")
-        // Proprietary declarations are removed above for F-Droid.
+        // Proprietary declarations are removed above for F-Droid. Do not
+        // retain them as compileOnly: releaseFdroid can inherit those
+        // declarations through variant fallback and package their classes.
         if (patched != original) buildFile.setText(patched, "UTF-8")
     }
 }
@@ -455,6 +457,11 @@ function patchFdroidExpoDependencies(projectRoot) {
     if (!fs.existsSync(file)) continue;
     let contents = fs.readFileSync(file, "utf8");
     for (const [from, to] of fileReplacements) contents = contents.replaceAll(from, to);
+    if (process.env.CABLESNAP_FDROID === "1") {
+      contents = contents
+        .replace(/^\s*(?:implementation|api|compileOnly)\s+["']com\.google\.firebase:[^\r\n]+\r?\n?/gm, "")
+        .replace(/^\s*(?:implementation|api|compileOnly)\s+["']com\.android\.installreferrer:[^\r\n]+\r?\n?/gm, "");
+    }
     fs.writeFileSync(file, contents, "utf8");
   }
 
