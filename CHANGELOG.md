@@ -79,6 +79,8 @@ marker) at release time.
 
 - **The F-Droid release variant now enables R8 shrinking**, removing unreachable compile-only proprietary classes while retaining the open-source ZXing scanner.
 
+- **F-Droid R8 configuration now treats absent optional Expo integration types as intentional**, allowing unreachable Firebase, ML Kit, Play Services, and Install Referrer code to be removed cleanly.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 

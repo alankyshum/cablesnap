@@ -403,6 +403,17 @@ jobs:
               }
           }
           GRADLE
+          cat >> android/app/proguard-rules.pro <<'PROGUARD'
+
+          # F-Droid deliberately removes these optional Expo integrations.
+          # Their native methods remain in compile-time Expo library classes,
+          # so R8 must be told that the absent optional types are intentional;
+          # unreachable methods are then removed from the releaseFdroid dex.
+          -dontwarn com.android.installreferrer.**
+          -dontwarn com.google.android.gms.**
+          -dontwarn com.google.firebase.**
+          -dontwarn com.google.mlkit.**
+          PROGUARD
 
       - name: Boost Gradle JVM heap
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
