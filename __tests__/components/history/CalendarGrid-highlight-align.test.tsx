@@ -28,7 +28,7 @@
  */
 
 import React from "react";
-import { StyleSheet, Pressable, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
 import { useSharedValue, useAnimatedStyle } from "react-native-reanimated";
 import { render } from "@testing-library/react-native";
@@ -118,13 +118,13 @@ describe("CalendarGrid highlight alignment (BLD-3654)", () => {
         s.borderRadius === CELL_SIZE / 2
       );
     });
-    unmount();
     // April 2026 has 30 days — every day cell must have the highlight inner View.
     expect(highlightViews.length).toBeGreaterThanOrEqual(30);
     const first = StyleSheet.flatten(highlightViews[0].props.style) as Record<string, unknown>;
     expect(first.width).toBe(CELL_SIZE);
     expect(first.height).toBe(CELL_SIZE);
     expect(first.borderRadius).toBe(CELL_SIZE / 2);
+    unmount();
   });
 
   /**
@@ -132,24 +132,17 @@ describe("CalendarGrid highlight alignment (BLD-3654)", () => {
    * backgroundColor. All decoration moved to the inner highlight View.
    */
   it("outer Pressable (day cell) carries no backgroundColor — decoration is on inner View only", () => {
-    const { UNSAFE_getAllByType, unmount } = renderInProviders(
+    const { getAllByTestId, unmount } = renderInProviders(
       <CalendarHarness selected={SELECTED_KEY} />
     );
-    const allPressables = UNSAFE_getAllByType(Pressable);
-    // Day cell Pressables are identified by their percent column width.
-    const dayPressables = (
-      allPressables as Array<{ props: { style?: unknown } }>
-    ).filter((p) => {
-      const s = StyleSheet.flatten(p.props.style) as Record<string, unknown> | null;
-      return typeof s?.width === "string" && String(s.width).endsWith("%");
-    });
+    const dayPressables = getAllByTestId(/^cal-day-/);
     const pressablesWithBg = dayPressables.filter((p) => {
       const s = StyleSheet.flatten(p.props.style) as Record<string, unknown> | null;
       return s?.backgroundColor && s.backgroundColor !== "transparent";
     });
-    unmount();
     expect(dayPressables.length).toBeGreaterThanOrEqual(30);
     expect(pressablesWithBg.length).toBe(0);
+    unmount();
   });
 
   /**
@@ -157,20 +150,14 @@ describe("CalendarGrid highlight alignment (BLD-3654)", () => {
    * The today-ring moved to the inner highlight View.
    */
   it("outer Pressable (day cell) carries no borderWidth — today ring is on inner View only", () => {
-    const { UNSAFE_getAllByType, unmount } = renderInProviders(<CalendarHarness />);
-    const allPressables = UNSAFE_getAllByType(Pressable);
-    const dayPressables = (
-      allPressables as Array<{ props: { style?: unknown } }>
-    ).filter((p) => {
-      const s = StyleSheet.flatten(p.props.style) as Record<string, unknown> | null;
-      return typeof s?.width === "string" && String(s.width).endsWith("%");
-    });
+    const { getAllByTestId, unmount } = renderInProviders(<CalendarHarness />);
+    const dayPressables = getAllByTestId(/^cal-day-/);
     const pressablesWithBorder = dayPressables.filter((p) => {
       const s = StyleSheet.flatten(p.props.style) as Record<string, unknown> | null;
       return (s?.borderWidth as number) > 0;
     });
-    unmount();
     expect(pressablesWithBorder.length).toBe(0);
+    unmount();
   });
 
   /**
@@ -193,12 +180,12 @@ describe("CalendarGrid highlight alignment (BLD-3654)", () => {
         s.backgroundColor === colors.primary
       );
     });
-    unmount();
     expect(selectedHighlight.length).toBeGreaterThan(0);
     const s = StyleSheet.flatten(selectedHighlight[0].props.style) as Record<string, unknown>;
     // Square: width equals height (the circle is not wider than tall)
     expect(s.width).toBe(s.height);
     expect(s.borderRadius).toBe(CELL_SIZE / 2);
+    unmount();
   });
 
   /**
@@ -206,20 +193,14 @@ describe("CalendarGrid highlight alignment (BLD-3654)", () => {
    * percent column width so tapping works across the entire column.
    */
   it("outer Pressable uses full percent column width for touch target", () => {
-    const { UNSAFE_getAllByType, unmount } = renderInProviders(<CalendarHarness />);
-    const allPressables = UNSAFE_getAllByType(Pressable);
-    const dayPressables = (
-      allPressables as Array<{ props: { style?: unknown } }>
-    ).filter((p) => {
-      const s = StyleSheet.flatten(p.props.style) as Record<string, unknown> | null;
-      return typeof s?.width === "string" && String(s.width).endsWith("%");
-    });
-    unmount();
+    const { getAllByTestId, unmount } = renderInProviders(<CalendarHarness />);
+    const dayPressables = getAllByTestId(/^cal-day-/);
     // Every day Pressable must use the percent column width.
     expect(dayPressables.length).toBeGreaterThanOrEqual(30);
     for (const p of dayPressables) {
       const s = StyleSheet.flatten(p.props.style) as Record<string, unknown>;
       expect(s.width).toBe(COLUMN_WIDTH_PCT);
     }
+    unmount();
   });
 });

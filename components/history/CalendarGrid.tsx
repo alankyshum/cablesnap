@@ -103,7 +103,7 @@ export default function CalendarGrid({
       // (cellSize × cellSize centered square). Previously the highlight was painted
       // directly on the Pressable, which made it wider than tall on narrow viewports
       // (column width > cellSize), so the pill/ring shifted right of the date glyph.
-      <Pressable key={key} ref={isSel ? selectedCellRef : undefined} onPress={() => onTapDay(key)} accessibilityLabel={label} accessibilityRole="button"
+      <Pressable key={key} testID={`cal-day-${key}`} ref={isSel ? selectedCellRef : undefined} onPress={() => onTapDay(key)} accessibilityLabel={label} accessibilityRole="button"
         style={[styles.cell, { width: COLUMN_WIDTH_PCT, height: cellSize }]}>
         {/* Inner highlight: always a perfect circle (cellSize × cellSize) centered
             within the full-width touch target. Today ring + background live here. */}
