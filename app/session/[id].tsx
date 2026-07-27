@@ -177,10 +177,11 @@ export default function ActiveSession() {
   }, []);
 
   const {
-    elapsed, clockStartedAt, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, nextHint, hintTimer,
+    elapsed, clockStartedAt, setNotesOpen, setNotesDraft, workoutNoteDraft, pinnedNoteDraft, nextHint, hintTimer,
     handleUpdate, handleCheck, handleAddSet,
     handleDelete,
-    handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes,
+    toggleSetNote, handleSetNoteDraftChange, handleSaveSetNote,
+    handleWorkoutNoteDraftChange, handleSaveWorkoutNote,
     handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill,
     handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough,
     handleMarkerConfirm, handleManualWeightSave,
@@ -461,8 +462,8 @@ export default function ActiveSession() {
       step={step}
       unit={unit}
       suggestions={suggestions}
-      exerciseNotesOpen={!!exerciseNotesOpen[group.exercise_id]}
-      exerciseNotesDraft={exerciseNotesDraft[group.exercise_id]}
+      setNotesOpen={setNotesOpen}
+      setNotesDraft={setNotesDraft}
       pinnedNoteDraft={pinnedNoteDraft[group.exercise_id]}
       linkIds={linkIds}
       groups={groups}
@@ -472,9 +473,9 @@ export default function ActiveSession() {
       onDelete={handleDelete}
       onAddSet={handleAddSet}
       onAddWarmups={handleAddWarmups}
-      onExerciseNotes={handleExerciseNotes}
-      onExerciseNotesDraftChange={handleExerciseNotesDraftChange}
-      onToggleExerciseNotes={toggleExerciseNotes}
+      onToggleSetNote={toggleSetNote}
+      onSetNoteDraftChange={handleSetNoteDraftChange}
+      onSetNoteSave={handleSaveSetNote}
       onPinnedNoteDraftChange={handlePinnedNoteDraftChange}
       onPinnedNoteSave={handleSavePinnedNote}
       onBackfillCopy={(exId, text) => { handleDismissBackfill(exId); handleSavePinnedNote(exId, text); }}
@@ -512,11 +513,18 @@ export default function ActiveSession() {
       onPreferredSwap={handlePreferredSwap}
     />
     );
-  }, [step, unit, suggestions, plateauHints, exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, handleExerciseNotes, handleExerciseNotesDraftChange, toggleExerciseNotes, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, intensityMode, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal, handlePreferredSwap, appliedPreferredSwaps]);
+  }, [step, unit, suggestions, plateauHints, setNotesOpen, setNotesDraft, pinnedNoteDraft, linkIds, groups, palette, handleUpdate, handleCheck, handleDelete, handleAddSet, handleAddWarmups, toggleSetNote, handleSetNoteDraftChange, handleSaveSetNote, handlePinnedNoteDraftChange, handleSavePinnedNote, handleDismissBackfill, handleLoadBackfill, handleCycleSetType, handleLongPressSetType, handleOpenBodyweightModifier, handleClearBodyweightModifier, variant, bodyweightGrip, handleShowDetail, handleSwapOpen, handleDeleteExercise, handleMoveUp, handleMoveDown, handlePrefillFromPrevious, handleApplyBreakThrough, hasClipMap, handleVideoGlyph, handleOpenPulleyPinPicker, hasSetupPhotoMap, setupPhotoUriMap, handleSetupPhotoGlyph, captureRpe, handleRpeChange, intensityMode, pulleyPinTrackingEnabled, session?.gym_id, handleMarkerConfirm, handleManualWeightSave, handleAddSegment, handleDeleteSegment, handleCollapseToNormal, handlePreferredSwap, appliedPreferredSwaps]);
 
   const listHeader = useMemo(() => (
-    <SessionListHeader nextHint={nextHint} gymName={session?.gym_name_at_log ?? null} colors={colors} />
-  ), [nextHint, session?.gym_name_at_log, colors]);
+    <SessionListHeader
+      nextHint={nextHint}
+      gymName={session?.gym_name_at_log ?? null}
+      colors={colors}
+      notesText={workoutNoteDraft ?? ""}
+      onNotesChange={handleWorkoutNoteDraftChange}
+      onNotesSave={handleSaveWorkoutNote}
+    />
+  ), [nextHint, session?.gym_name_at_log, colors, workoutNoteDraft, handleWorkoutNoteDraftChange, handleSaveWorkoutNote]);
 
   const listFooter = useMemo(() => (
     <SessionListFooter

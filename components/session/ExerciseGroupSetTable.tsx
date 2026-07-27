@@ -20,6 +20,11 @@ export type ExerciseGroupSetTableProps = {
     primary: string;
     tertiary?: string;
   };
+  setNotesOpen?: Record<string, boolean>;
+  setNotesDraft?: Record<string, string>;
+  onToggleSetNote?: (setId: string) => void;
+  onSetNoteDraftChange?: (setId: string, text: string) => void;
+  onSetNoteSave?: (setId: string, text: string) => void;
   onUpdate: (setId: string, field: "weight" | "reps" | "duration_seconds", val: string) => void;
   onCheck: (set: SetWithMeta) => void;
   onDelete: (setId: string) => void;
@@ -60,6 +65,8 @@ export type ExerciseGroupSetTableProps = {
 
 export function ExerciseGroupSetTable({
   group, step, unit, isDurationMode, showWarmupButton, colors,
+  setNotesOpen = {}, setNotesDraft = {},
+  onToggleSetNote, onSetNoteDraftChange, onSetNoteSave,
   onUpdate, onCheck, onDelete, onAddSet, onAddWarmups,
   onCycleSetType, onLongPressSetType,
   onOpenBodyweightModifier, onClearBodyweightModifier,
@@ -83,27 +90,34 @@ export function ExerciseGroupSetTable({
         <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>{isDurationMode ? "DURATION" : "REPS"}</Text>
         <View style={styles.colTrailing} />
       </View>
-      {group.sets.map((set, idx) => (
-        <SetRow
-          key={set.id}
-          set={group.track_unilateral ? (set.left || set) : set}
-          rightSet={group.track_unilateral ? set.right : undefined}
-          trackUnilateral={group.track_unilateral}
-          step={step}
-          unit={unit}
-          trackingMode={isDurationMode ? "duration" : "reps"}
-          equipment={group.equipment}
-          onUpdate={onUpdate}
-          onCheck={onCheck}
-          onDelete={onDelete}
-          onCycleSetType={onCycleSetType}
-          onLongPressSetType={onLongPressSetType}
-          isBodyweight={group.is_bodyweight}
-          onOpenBodyweightModifier={onOpenBodyweightModifier}
-          onClearBodyweightModifier={onClearBodyweightModifier}
-          onOpenVariantPicker={onOpenVariantPicker}
-          onClearVariant={onClearVariant}
-          exerciseName={group.name}
+      {group.sets.map((set, idx) => {
+        const actualSet = group.track_unilateral ? (set.left || set) : set;
+        return (
+          <SetRow
+            key={set.id}
+            set={actualSet}
+            rightSet={group.track_unilateral ? set.right : undefined}
+            trackUnilateral={group.track_unilateral}
+            step={step}
+            unit={unit}
+            trackingMode={isDurationMode ? "duration" : "reps"}
+            equipment={group.equipment}
+            notesOpen={!!setNotesOpen[actualSet.id]}
+            notesDraft={setNotesDraft[actualSet.id]}
+            onToggleNotes={onToggleSetNote}
+            onNotesDraftChange={onSetNoteDraftChange}
+            onNotesSave={onSetNoteSave}
+            onUpdate={onUpdate}
+            onCheck={onCheck}
+            onDelete={onDelete}
+            onCycleSetType={onCycleSetType}
+            onLongPressSetType={onLongPressSetType}
+            isBodyweight={group.is_bodyweight}
+            onOpenBodyweightModifier={onOpenBodyweightModifier}
+            onClearBodyweightModifier={onClearBodyweightModifier}
+            onOpenVariantPicker={onOpenVariantPicker}
+            onClearVariant={onClearVariant}
+            exerciseName={group.name}
           onOpenBodyweightGripPicker={onOpenBodyweightGripPicker}
           onClearBodyweightGrip={onClearBodyweightGrip}
           exerciseId={group.exercise_id}
@@ -127,7 +141,8 @@ export function ExerciseGroupSetTable({
           onDeleteSegment={onDeleteSegment}
           onCollapseToNormal={onCollapseToNormal}
         />
-      ))}
+        );
+      })}
       <View style={styles.actionRow}>
         <Button
           variant="ghost"

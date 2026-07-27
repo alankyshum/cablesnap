@@ -293,21 +293,13 @@ describe('Session UX Acceptance', () => {
     })
   })
 
-  describe('Exercise-level notes (BLD-275)', () => {
-    it('does NOT render a per-set notes button', async () => {
+  describe('Set-level notes', () => {
+    it('renders a per-set notes button', async () => {
       setupSession()
       const { findByText, queryAllByLabelText } = renderScreen(<ActiveSession />)
       await findByText('Squat')
-      const setNotesButtons = queryAllByLabelText('Set notes')
-      expect(setNotesButtons.length).toBe(0)
-    })
-
-    it('renders an exercise-level notes button in the header', async () => {
-      setupSession()
-      const { findByText, findByLabelText } = renderScreen(<ActiveSession />)
-      await findByText('Squat')
-      const notesBtn = await findByLabelText('Note for this session — Squat')
-      expect(notesBtn).toBeTruthy()
+      const setNotesButtons = queryAllByLabelText(/Add note for set \d+ of Squat/)
+      expect(setNotesButtons.length).toBeGreaterThan(0)
     })
 
     it('renders delete button per set row', async () => {

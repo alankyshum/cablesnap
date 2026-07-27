@@ -66,15 +66,11 @@ function makeGroup(overrides: Partial<ExerciseGroup> = {}): ExerciseGroup {
 
 const baseProps = {
   group: makeGroup(),
-  exerciseNotesOpen: false,
-  exerciseNotesDraft: undefined,
   firstSet: undefined as SetWithMeta | undefined,
   suggestion: null,
   step: 2.5,
   onUpdate: jest.fn(),
   onExerciseNotes: jest.fn(),
-  onExerciseNotesDraftChange: jest.fn(),
-  onToggleExerciseNotes: jest.fn(),
   onShowDetail: jest.fn(),
   onSwap: jest.fn(),
   onDeleteExercise: jest.fn(),

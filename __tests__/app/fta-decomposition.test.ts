@@ -241,7 +241,9 @@ describe("FTA decomposition structural tests", () => {
     // BLD-1158b: bumped 650 → 720 for Tempo Coach state + CoachOverlay render + SetOptionsSheet coach props.
     // BLD-2561: bumped 720 → 722 for appliedPreferredSwaps prop wiring in GroupCardHeader render.
     // BLD-2701: bumped 722 → 728 for useIntensityMode hook + intensityMode prop wiring to ExerciseGroupCard.
-    ["app/session/[id].tsx", 728, "session main file"],
+    // BLD-4385: bumped 728 → 731 for workoutNoteDraft/handleWorkoutNoteDraftChange/handleSaveWorkoutNote
+    // SessionListHeader prop wiring (3 new props + expanded useMemo deps).
+    ["app/session/[id].tsx", 731, "session main file"],
     ["components/SubstitutionSheet.tsx", 260, "substitution sheet main file"],
     ["app/progress/achievements.tsx", 200, "achievements main file"],
     ["components/ShareCard.tsx", 200, "share card main file"],

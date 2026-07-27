@@ -27,6 +27,7 @@ import {
   dismissExerciseBackfill,
   getExerciseBackfillCandidate,
   updatePulleyPin,
+  updateSession,
 } from "../lib/db";
 import {
   getLastBodyweightModifier,
@@ -242,8 +243,13 @@ export function useSessionActions({
     clockStartedAtRef.current = session?.clock_started_at ?? null;
   }, [session?.clock_started_at]);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [exerciseNotesOpen, setExerciseNotesOpen] = useState<Record<string, boolean>>({});
-  const [exerciseNotesDraft, setExerciseNotesDraft] = useState<Record<string, string>>({});
+  const [setNotesOpen, setSetNotesOpen] = useState<Record<string, boolean>>({});
+  const [setNotesDraft, setSetNotesDraft] = useState<Record<string, string>>({});
+  const setNotesDebounceRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const setNotesPendingFlushRef = useRef<Record<string, string>>({});
+  const [workoutNoteDraft, setWorkoutNoteDraft] = useState<string | null>(null);
+  const workoutNoteDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const workoutNotePendingFlushRef = useRef<string | null>(null);
   // BLD-1028: per-exercise pinned note draft. Separate from exerciseNotesDraft
   // which drives workout_sets.notes (per-set, per-session).
   const [pinnedNoteDraft, setPinnedNoteDraft] = useState<Record<string, string>>({});
@@ -277,10 +283,43 @@ export function useSessionActions({
     await Promise.all(writes);
   }, []);
 
-  // Cleanup: flush any pending pinned-note drafts on unmount.
+  const flushAllSetNotes = useCallback(async () => {
+    const pending = setNotesPendingFlushRef.current;
+    setNotesPendingFlushRef.current = {};
+    const writes: Promise<void>[] = [];
+    for (const [setId, text] of Object.entries(pending)) {
+      const debounce = setNotesDebounceRef.current[setId];
+      if (debounce) {
+        clearTimeout(debounce);
+        delete setNotesDebounceRef.current[setId];
+      }
+      const safeText = text.substring(0, 500);
+      writes.push(updateSetNotes(setId, safeText));
+      updateGroupSet(setId, { notes: safeText });
+    }
+    await Promise.all(writes);
+  }, [updateGroupSet]);
+
+  const flushWorkoutNote = useCallback(async () => {
+    const pending = workoutNotePendingFlushRef.current;
+    if (pending !== null) {
+      workoutNotePendingFlushRef.current = null;
+      if (workoutNoteDebounceRef.current) {
+        clearTimeout(workoutNoteDebounceRef.current);
+        workoutNoteDebounceRef.current = null;
+      }
+      await updateSession(id!, { notes: pending });
+    }
+  }, [id]);
+
+  // Cleanup: flush any pending drafts on unmount.
   useEffect(() => {
-    return () => { void flushAllPinnedNotes(); };
-  }, [flushAllPinnedNotes]);
+    return () => {
+      void flushAllPinnedNotes();
+      void flushAllSetNotes();
+      void flushWorkoutNote();
+    };
+  }, [flushAllPinnedNotes, flushAllSetNotes, flushWorkoutNote]);
 
   // BLD-553 battery fix: pause setInterval when app is backgrounded. On some
   // RN runtimes setInterval continues to schedule wake-ups with the screen
@@ -328,12 +367,16 @@ export function useSessionActions({
       } else if (next === "background") {
         sessionBreadcrumb("session.appstate.background");
         stop();
-        // BLD-1028: flush any pending pinned-note drafts on background.
+        // BLD-1028: flush any pending drafts on background.
         void flushAllPinnedNotes();
+        void flushAllSetNotes();
+        void flushWorkoutNote();
       } else if (next === "inactive") {
         sessionBreadcrumb("session.appstate.inactive");
         stop();
         void flushAllPinnedNotes();
+        void flushAllSetNotes();
+        void flushWorkoutNote();
       } else {
         stop();
       }
@@ -1225,22 +1268,65 @@ export function useSessionActions({
     queryClient.invalidateQueries({ queryKey: ["plateau"] });
   }, []);
 
-  const handleExerciseNotes = useCallback(async (exerciseId: string, text: string) => {
-    const group = groups.find((g) => g.exercise_id === exerciseId);
-    if (!group || group.sets.length === 0) return;
-    const firstSetId = group.sets[0].id;
-    updateGroupSet(firstSetId, { notes: text });
-    setExerciseNotesDraft((prev) => { const n = { ...prev }; delete n[exerciseId]; return n; });
-    await updateSetNotes(firstSetId, text);
-  }, [updateGroupSet, groups]);
-
-  const handleExerciseNotesDraftChange = useCallback((exerciseId: string, text: string) => {
-    setExerciseNotesDraft((prev) => ({ ...prev, [exerciseId]: text }));
+  const toggleSetNote = useCallback((setId: string) => {
+    setSetNotesOpen((prev) => ({ ...prev, [setId]: !prev[setId] }));
   }, []);
 
-  const toggleExerciseNotes = useCallback((exerciseId: string) => {
-    setExerciseNotesOpen((prev) => ({ ...prev, [exerciseId]: !prev[exerciseId] }));
-  }, []);
+  const handleSetNoteDraftChange = useCallback((setId: string, text: string) => {
+    const safeText = text.substring(0, 500);
+    setSetNotesDraft((prev) => ({ ...prev, [setId]: safeText }));
+    setNotesPendingFlushRef.current[setId] = safeText;
+
+    const existing = setNotesDebounceRef.current[setId];
+    if (existing) clearTimeout(existing);
+
+    setNotesDebounceRef.current[setId] = setTimeout(() => {
+      delete setNotesDebounceRef.current[setId];
+      delete setNotesPendingFlushRef.current[setId];
+      updateGroupSet(setId, { notes: safeText });
+      void updateSetNotes(setId, safeText);
+    }, 600);
+  }, [updateGroupSet]);
+
+  const handleSaveSetNote = useCallback((setId: string, text: string) => {
+    const safeText = text.substring(0, 500);
+    const existing = setNotesDebounceRef.current[setId];
+    if (existing) clearTimeout(existing);
+    delete setNotesDebounceRef.current[setId];
+    delete setNotesPendingFlushRef.current[setId];
+    setSetNotesDraft((prev) => {
+      const n = { ...prev };
+      delete n[setId];
+      return n;
+    });
+    updateGroupSet(setId, { notes: safeText });
+    void updateSetNotes(setId, safeText);
+  }, [updateGroupSet]);
+
+  const handleWorkoutNoteDraftChange = useCallback((text: string) => {
+    const safeText = text.substring(0, 500);
+    setWorkoutNoteDraft(safeText);
+    workoutNotePendingFlushRef.current = safeText;
+
+    if (workoutNoteDebounceRef.current) clearTimeout(workoutNoteDebounceRef.current);
+
+    workoutNoteDebounceRef.current = setTimeout(() => {
+      workoutNoteDebounceRef.current = null;
+      workoutNotePendingFlushRef.current = null;
+      void updateSession(id!, { notes: safeText });
+    }, 600);
+  }, [id]);
+
+  const handleSaveWorkoutNote = useCallback(() => {
+    const text = workoutNotePendingFlushRef.current;
+    if (text === null) return; // already flushed or no draft
+
+    if (workoutNoteDebounceRef.current) clearTimeout(workoutNoteDebounceRef.current);
+    workoutNoteDebounceRef.current = null;
+    workoutNotePendingFlushRef.current = null;
+    setWorkoutNoteDraft(null);
+    void updateSession(id!, { notes: text });
+  }, [id]);
 
   // BLD-1028: Pinned per-exercise note handlers.
 
@@ -1460,8 +1546,10 @@ export function useSessionActions({
         try {
           // BLD-1137: cancel any active rest timer notifications before completing.
           dismissRest();
-          // BLD-1028: flush any pending pinned-note drafts before completing.
+          // BLD-1028: flush any pending drafts before completing.
           await flushAllPinnedNotes();
+          await flushAllSetNotes();
+          await flushWorkoutNote();
           await completeSession(id!);
         } catch (err) {
           console.warn("[finish] failed to complete workout:", err);
@@ -1830,8 +1918,9 @@ export function useSessionActions({
      * Consumers (header) use this to render the "Starts when you log your
      * first set" caption and the appropriate a11y label. */
     clockStartedAt,
-    exerciseNotesOpen,
-    exerciseNotesDraft,
+    setNotesOpen,
+    setNotesDraft,
+    workoutNoteDraft,
     pinnedNoteDraft,
     nextHint,
     hintTimer,
@@ -1839,9 +1928,11 @@ export function useSessionActions({
     handleCheck,
     handleAddSet,
     handleDelete,
-    handleExerciseNotes,
-    handleExerciseNotesDraftChange,
-    toggleExerciseNotes,
+    toggleSetNote,
+    handleSetNoteDraftChange,
+    handleSaveSetNote,
+    handleWorkoutNoteDraftChange,
+    handleSaveWorkoutNote,
     handlePinnedNoteDraftChange,
     handleSavePinnedNote,
     handleDismissBackfill,

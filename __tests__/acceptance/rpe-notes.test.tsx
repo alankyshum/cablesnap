@@ -242,33 +242,48 @@ describe('Notes Field in Active Session', () => {
     mockDb.getSessionSets.mockResolvedValue(makeSessionSets('sess-notes'))
   })
 
-  it('renders exercise-level notes button with a11y label', async () => {
+  it('renders per-set notes button with a11y label', async () => {
     const { findAllByLabelText } = renderScreen(<ActiveSession />)
-    const noteButtons = await findAllByLabelText('Note for this session — Bench Press')
-    expect(noteButtons.length).toBeGreaterThan(0)
+    const noteButtons1 = await findAllByLabelText('Add note for set 1 of Bench Press')
+    const noteButtons2 = await findAllByLabelText('Add note for set 2 of Bench Press')
+    expect(noteButtons1.length).toBeGreaterThan(0)
+    expect(noteButtons2.length).toBeGreaterThan(0)
   })
 
-  it('pressing notes button shows notes input', async () => {
+  it('pressing set notes button shows notes input', async () => {
     const { findAllByLabelText, getByPlaceholderText } = renderScreen(<ActiveSession />)
-    const noteButtons = await findAllByLabelText('Note for this session — Bench Press')
+    const noteButtons = await findAllByLabelText('Add note for set 2 of Bench Press')
     fireEvent.press(noteButtons[0])
 
     await waitFor(() => {
-      expect(getByPlaceholderText('Add exercise notes...')).toBeTruthy()
+      expect(getByPlaceholderText('Note for this set (e.g. form, grip, pin position)')).toBeTruthy()
     })
   })
 
-  it('typing in notes field and blurring calls updateSetNotes', async () => {
+  it('typing in set notes field and blurring calls updateSetNotes on the specific set id', async () => {
     const { findAllByLabelText, getByPlaceholderText } = renderScreen(<ActiveSession />)
-    const noteButtons = await findAllByLabelText('Note for this session — Bench Press')
+    const noteButtons = await findAllByLabelText('Add note for set 2 of Bench Press')
     fireEvent.press(noteButtons[0])
 
-    const input = await waitFor(() => getByPlaceholderText('Add exercise notes...'))
+    const input = await waitFor(() => getByPlaceholderText('Note for this set (e.g. form, grip, pin position)'))
     fireEvent.changeText(input, 'Felt strong today')
     fireEvent(input, 'blur')
 
     await waitFor(() => {
-      expect(mockDb.updateSetNotes).toHaveBeenCalledWith('set-1', 'Felt strong today')
+      expect(mockDb.updateSetNotes).toHaveBeenCalledWith('set-2', 'Felt strong today')
+    })
+  })
+
+  it('renders live session notes card and can edit', async () => {
+    const { findByLabelText } = renderScreen(<ActiveSession />)
+    const input = await findByLabelText('Workout note for this session')
+    expect(input).toBeTruthy()
+
+    fireEvent.changeText(input, 'Session felt good!')
+    fireEvent(input, 'blur')
+
+    await waitFor(() => {
+      expect(mockDb.updateSession).toHaveBeenCalledWith('sess-notes', { notes: 'Session felt good!' })
     })
   })
 })

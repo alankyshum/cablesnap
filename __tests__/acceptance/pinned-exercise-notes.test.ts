@@ -168,9 +168,9 @@ describe("BLD-1028 Test 4 — A11y labels and canonical names", () => {
     expect(expectedLabel).toBe("Pinned note for Bench Press");
   });
 
-  it("per-set notes button still exists (independent feature — not replaced by pinned notes)", () => {
-    const perSetLabel = "Note for this session";
-    expect(perSetLabel).toContain("session");
+  it("per-set notes button still exists (independent feature — now per-set note button)", () => {
+    const perSetLabel = "Note for set";
+    expect(perSetLabel).toContain("Note");
   });
 
   it("PinnedExerciseNoteEditor component can be imported", () => {

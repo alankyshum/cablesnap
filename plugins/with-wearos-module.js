@@ -186,8 +186,15 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // disable their propagated \`releaseFdroid\` variant entirely,
             // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
+            // R8 -dontwarn rules for GMS/MLKit/installreferrer classes that
+            // are excluded from the F-Droid classpath but still referenced in
+            // Expo library bytecode signatures. Without these rules R8 fails
+            // with "Missing classes detected" during minifyReleaseFdroidWithR8.
+            // Written to android/app/ by the Config Plugin's withDangerousMod.
+            proguardFiles 'fdroid-r8-rules.pro'
         }
 `;
+
 
 // `configurations { ... }` blocks placed at the project script level apply to
 // the whole module. The plan's AC10b is: `unzip -l app-releaseFdroid.apk |
@@ -462,6 +469,31 @@ function writeFdroidManifest(platformRoot) {
   const dir = path.join(platformRoot, "app", "src", "releaseFdroid");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
+}
+
+// ---------------------------------------------------------------------------
+// Write fdroid-r8-rules.pro into android/app/
+// ---------------------------------------------------------------------------
+//
+// R8 fails with "Missing classes detected" when it encounters unresolvable
+// references to GMS/MLKit/installreferrer in Expo library bytecode after those
+// JARs are excluded from the F-Droid classpath (FDROID_EXCLUDES_BLOCK).
+// The releaseFdroid build type references 'fdroid-r8-rules.pro' via its
+// proguardFiles directive; this function writes that file from the canonical
+// source in fdroid/fdroid-r8-rules.pro so Gradle can pick it up at build time.
+//
+// The file is unconditionally overwritten on every prebuild so stale rules
+// are never left behind when rules are updated upstream.
+function writeFdroidR8Rules(projectRoot, platformRoot) {
+  const src = path.join(projectRoot, "fdroid", "fdroid-r8-rules.pro");
+  const dst = path.join(platformRoot, "app", "fdroid-r8-rules.pro");
+  if (!fs.existsSync(src)) {
+    throw new Error(
+      `with-wearos-module: fdroid/fdroid-r8-rules.pro not found at ${src} — ` +
+      "the F-Droid R8 rules file must exist in the project root's fdroid/ directory.",
+    );
+  }
+  fs.copyFileSync(src, dst);
 }
 
 function patchFdroidExpoDependencies(projectRoot) {
@@ -959,6 +991,8 @@ const withWearOsModule = (config) => {
       // Write/overwrite the F-Droid manifest overlay. Idempotent — same
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
+      // Write/overwrite the F-Droid R8 -dontwarn rules. Idempotent.
+      writeFdroidR8Rules(projectRoot, platformRoot);
       return cfg;
     },
   ]);
@@ -975,6 +1009,7 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.writeFdroidR8Rules = writeFdroidR8Rules;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;

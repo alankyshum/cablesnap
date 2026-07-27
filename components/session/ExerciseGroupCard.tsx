@@ -16,8 +16,8 @@ export type GroupCardProps = {
   step: number;
   unit: "kg" | "lb";
   suggestions: Record<string, Suggestion | null>;
-  exerciseNotesOpen: boolean;
-  exerciseNotesDraft: string | undefined;
+  setNotesOpen?: Record<string, boolean>;
+  setNotesDraft?: Record<string, string>;
   /** BLD-1028 */
   pinnedNoteDraft?: string;
   linkIds: string[];
@@ -28,9 +28,9 @@ export type GroupCardProps = {
   onDelete: (setId: string) => void;
   onAddSet: (exerciseId: string) => void;
   onAddWarmups: (exerciseId: string) => void;
-  onExerciseNotes: (exerciseId: string, text: string) => void;
-  onExerciseNotesDraftChange: (exerciseId: string, text: string) => void;
-  onToggleExerciseNotes: (exerciseId: string) => void;
+  onToggleSetNote?: (setId: string) => void;
+  onSetNoteDraftChange?: (setId: string, text: string) => void;
+  onSetNoteSave?: (setId: string, text: string) => void;
   /** BLD-1028 */
   onPinnedNoteDraftChange: (exerciseId: string, text: string) => void;
   onPinnedNoteSave: (exerciseId: string, text: string) => void;
@@ -95,9 +95,9 @@ export type GroupCardProps = {
 
 export const ExerciseGroupCard = memo(function ExerciseGroupCard({
   group, step, unit, suggestions,
-  exerciseNotesOpen, exerciseNotesDraft, pinnedNoteDraft, linkIds, groups, palette,
+  setNotesOpen = {}, setNotesDraft = {}, pinnedNoteDraft, linkIds, groups, palette,
   onUpdate, onCheck, onDelete, onAddSet, onAddWarmups,
-  onExerciseNotes, onExerciseNotesDraftChange, onToggleExerciseNotes,
+  onToggleSetNote, onSetNoteDraftChange, onSetNoteSave,
   onPinnedNoteDraftChange, onPinnedNoteSave, onBackfillCopy, onBackfillDismiss, onLoadBackfill,
   onCycleSetType, onLongPressSetType,
   onOpenBodyweightModifier, onClearBodyweightModifier,
@@ -151,11 +151,16 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       isDurationMode={isDurationMode}
       showWarmupButton={showWarmupButton}
       colors={colors}
+      setNotesOpen={setNotesOpen}
+      setNotesDraft={setNotesDraft}
       onUpdate={onUpdate}
       onCheck={onCheck}
       onDelete={onDelete}
       onAddSet={onAddSet}
       onAddWarmups={onAddWarmups}
+      onToggleSetNote={onToggleSetNote}
+      onSetNoteDraftChange={onSetNoteDraftChange}
+      onSetNoteSave={onSetNoteSave}
       onCycleSetType={onCycleSetType}
       onLongPressSetType={onLongPressSetType}
       onOpenBodyweightModifier={onOpenBodyweightModifier}
@@ -204,8 +209,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
       <View style={group.link_id ? { borderLeftWidth: 4, borderLeftColor: groupColor, paddingLeft: 8 } : undefined}>
         <GroupCardHeader
           group={group}
-          exerciseNotesOpen={exerciseNotesOpen}
-          exerciseNotesDraft={exerciseNotesDraft}
           pinnedNoteDraft={pinnedNoteDraft}
           firstSet={firstSet}
           previousPerformance={group.previousSummary}
@@ -214,9 +217,6 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
           suggestion={suggestion}
           step={step}
           onUpdate={onUpdate}
-          onExerciseNotes={onExerciseNotes}
-          onExerciseNotesDraftChange={onExerciseNotesDraftChange}
-          onToggleExerciseNotes={onToggleExerciseNotes}
           onPinnedNoteDraftChange={onPinnedNoteDraftChange}
           onPinnedNoteSave={onPinnedNoteSave}
           onBackfillCopy={onBackfillCopy}

@@ -472,11 +472,12 @@ describe("Workout session exercise header three-row layout (BLD-203/BLD-390, red
     expect(block![0]).toMatch(/flexWrap:\s*["']wrap["']/);
   });
 
-  it("title row contains exercise name; controls row contains swap/notes/Details", () => {
+  it("title row contains exercise name; controls row contains swap/Details (BLD-4385: per-exercise note button removed)", () => {
     expect(groupCardHeaderSrc).toContain("styles.groupTitle");
     expect(groupCardHeaderSrc).toContain("Details");
     expect(groupCardHeaderSrc).toContain("swap-horizontal");
-    expect(groupCardHeaderSrc).toContain("note-text");
+    // BLD-4385: exercise-level notes toggle removed from header; per-set notes live in SetRow
+    expect(groupCardHeaderSrc).not.toContain("onToggleExerciseNotes");
   });
 
   it("training-mode selector is no longer rendered in the header (BLD-850)", () => {

@@ -80,9 +80,6 @@ function makeGroup(overrides: Partial<ExerciseGroup> = {}): ExerciseGroup {
 
 /** Stable no-op callbacks to prevent memo busting from changing function refs. */
 const stableCallbacks = {
-  onExerciseNotes: jest.fn(),
-  onExerciseNotesDraftChange: jest.fn(),
-  onToggleExerciseNotes: jest.fn(),
   onPinnedNoteDraftChange: jest.fn(),
   onPinnedNoteSave: jest.fn(),
   onBackfillCopy: jest.fn(),
@@ -107,8 +104,6 @@ describe("GroupCardHeader — BLD-2386 CORRECTION 3 — memo regression guard", 
       <GroupCardHeader
         group={makeGroup()}
         currentMode={"normal" as TrainingMode}
-        exerciseNotesOpen={false}
-        exerciseNotesDraft={undefined}
         firstSet={undefined as SetWithMeta | undefined}
         suggestion={null}
         step={2.5}
@@ -137,8 +132,6 @@ describe("GroupCardHeader — BLD-2386 CORRECTION 3 — memo regression guard", 
           <GroupCardHeader
             group={group}
             currentMode={"normal" as TrainingMode}
-            exerciseNotesOpen={false}
-            exerciseNotesDraft={undefined}
             firstSet={undefined as SetWithMeta | undefined}
             suggestion={null}
             step={2.5}
@@ -180,8 +173,6 @@ describe("GroupCardHeader — BLD-2386 CORRECTION 3 — memo regression guard", 
       <GroupCardHeader
         group={group}
         currentMode={"normal" as TrainingMode}
-        exerciseNotesOpen={false}
-        exerciseNotesDraft={undefined}
         firstSet={undefined as SetWithMeta | undefined}
         suggestion={null}
         step={2.5}
@@ -204,8 +195,6 @@ describe("GroupCardHeader — BLD-2386 CORRECTION 3 — memo regression guard", 
       <GroupCardHeader
         group={group}
         currentMode={"normal" as TrainingMode}
-        exerciseNotesOpen={false}
-        exerciseNotesDraft={undefined}
         firstSet={undefined as SetWithMeta | undefined}
         suggestion={null}
         step={2.5}

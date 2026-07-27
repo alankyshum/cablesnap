@@ -5,7 +5,6 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { ExerciseNotesPanel } from "./ExerciseNotesPanel";
 import { PinnedExerciseNoteEditor } from "./PinnedExerciseNoteEditor";
 import { BackfillNoteSuggestion } from "./BackfillNoteSuggestion";
 import { LastNextRow } from "./LastNextRow";
@@ -34,8 +33,6 @@ export type GroupCardHeaderProps = {
    * removed. Mode-picker UI moves to the Details modal in a follow-up.
    */
   currentMode?: TrainingMode | undefined;
-  exerciseNotesOpen: boolean;
-  exerciseNotesDraft: string | undefined;
   /** BLD-1028: current draft of the pinned note (or undefined if not editing). */
   pinnedNoteDraft?: string;
   firstSet: SetWithMeta | undefined;
@@ -49,9 +46,6 @@ export type GroupCardHeaderProps = {
   step?: number;
   onUpdate?: (setId: string, field: "weight" | "reps" | "duration_seconds", val: string) => void;
   onModeChange?: (exerciseId: string, mode: TrainingMode) => void;
-  onExerciseNotes: (exerciseId: string, text: string) => void;
-  onExerciseNotesDraftChange: (exerciseId: string, text: string) => void;
-  onToggleExerciseNotes: (exerciseId: string) => void;
   /** BLD-1028 */
   onPinnedNoteDraftChange: (exerciseId: string, text: string) => void;
   onPinnedNoteSave: (exerciseId: string, text: string) => void;
@@ -91,19 +85,13 @@ function GroupCardHeaderInner({
   // semantics from BLD-560 and parent callsite stability.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   currentMode: _currentMode,
-  exerciseNotesOpen,
-  exerciseNotesDraft,
   pinnedNoteDraft,
-  firstSet,
   previousPerformance,
   previousPerformanceA11y,
   previousSetupPhotoUri,
   suggestion,
   step,
   onUpdate,
-  onExerciseNotes,
-  onExerciseNotesDraftChange,
-  onToggleExerciseNotes,
   onPinnedNoteDraftChange,
   onPinnedNoteSave,
   onBackfillCopy,
@@ -134,7 +122,6 @@ function GroupCardHeaderInner({
     (require("../../lib/dev/render-counter") as typeof import("../../lib/dev/render-counter")).countRender("GroupCardHeader");
   }
   const colors = useThemeColors();
-  const notesValue = exerciseNotesDraft ?? firstSet?.notes ?? "";
   const eid = group.exercise_id;
   const [explainerVisible, setExplainerVisible] = useState(false);
   // BLD-1028: local state for whether the pinned note editor is open.
@@ -252,19 +239,6 @@ function GroupCardHeaderInner({
                 color={group.pinnedNote ? colors.primary : colors.onSurfaceVariant}
               />
             </Pressable>
-            {/* Per-set session note toggle (relabeled: "Note for this session") */}
-            <Pressable
-              onPress={() => onToggleExerciseNotes(eid)}
-              accessibilityLabel={`Note for this session — ${group.name}`}
-              hitSlop={8}
-              style={styles.iconBtn}
-            >
-              <MaterialCommunityIcons
-                name={firstSet?.notes ? "note-text" : "note-text-outline"}
-                size={24}
-                color={colors.onSurfaceVariant}
-              />
-            </Pressable>
           </View>
         </View>
 
@@ -353,15 +327,6 @@ function GroupCardHeaderInner({
             onPinnedNoteSave(exId, text);
             setPinnedNoteOpen(false);
           }}
-        />
-      )}
-      {/* Per-set session note panel (relabeled for clarity) */}
-      {exerciseNotesOpen && (
-        <ExerciseNotesPanel
-          exerciseId={eid}
-          value={notesValue}
-          onDraftChange={onExerciseNotesDraftChange}
-          onSave={onExerciseNotes}
         />
       )}
     </>

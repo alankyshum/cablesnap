@@ -520,6 +520,41 @@ describe("importData", () => {
     expect(imported.perTable.workout_sets.inserted).toBe(1);
     expect(imported.perTable.app_settings.inserted).toBe(1);
   });
+
+  it("preserves per-set notes (specifically on set 3) and workout_sessions.notes during round-trip", async () => {
+    const tableRows: Record<string, unknown[]> = {
+      exercises: [{ id: "e1", name: "Bench", category: "chest", primary_muscles: "", secondary_muscles: "", equipment: "barbell", instructions: "", difficulty: "beginner", is_custom: 0 }],
+      workout_templates: [{ id: "t1", name: "Push", created_at: 1, updated_at: 1 }],
+      template_exercises: [{ id: "te1", template_id: "t1", exercise_id: "e1", position: 0, target_sets: 3, target_reps: "8", rest_seconds: 60 }],
+      workout_sessions: [{ id: "s1", template_id: "t1", name: "Push Day", started_at: 1, completed_at: 2, duration_seconds: 3600, notes: "Session note test" }],
+      workout_sets: [
+        { id: "ws1", session_id: "s1", exercise_id: "e1", set_number: 1, weight: 100, reps: 8, completed: 1, completed_at: 2, notes: "" },
+        { id: "ws2", session_id: "s1", exercise_id: "e1", set_number: 2, weight: 100, reps: 8, completed: 1, completed_at: 2, notes: "" },
+        { id: "ws3", session_id: "s1", exercise_id: "e1", set_number: 3, weight: 100, reps: 8, completed: 1, completed_at: 2, notes: "Set 3 note test" },
+      ],
+      app_settings: [{ key: "theme", value: "dark" }],
+    };
+
+    mockDb.getAllAsync.mockImplementation(async (sql: string) => {
+      if (sql.includes("PRAGMA table_info(exercises)")) return EXERCISES_COLUMNS;
+      const table = sql.replace("SELECT * FROM ", "");
+      return tableRows[table] ?? [];
+    });
+
+    interface ExportedMock {
+      data: {
+        workout_history: {
+          workout_sets: Array<{ id: string; notes: string }>;
+          workout_sessions: Array<{ id: string; notes: string }>;
+        };
+      };
+    }
+
+    const exported = (await exportAllData()) as unknown as ExportedMock;
+    expect(exported.data.workout_history.workout_sets.find((s) => s.id === "ws3")?.notes).toBe("Set 3 note test");
+    expect(exported.data.workout_history.workout_sets.find((s) => s.id === "ws1")?.notes).toBe("");
+    expect(exported.data.workout_history.workout_sessions.find((s) => s.id === "s1")?.notes).toBe("Session note test");
+  });
 });
 
 // ---- Import Meal Templates ----
