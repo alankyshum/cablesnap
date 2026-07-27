@@ -9,8 +9,10 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidProguardRules,
   patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
+  FDROID_PROGUARD_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
 // Minimal but realistic fixtures matching the shape Expo's Android template
@@ -649,5 +651,117 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
     } finally {
       rmDirRecursive(tmp);
     }
+  });
+});
+
+// ----------------------------------------------------------------------------
+// writeFdroidProguardRules + FDROID_PROGUARD_CONTENTS
+// ----------------------------------------------------------------------------
+//
+// The F-Droid variant strips proprietary GMS/Firebase/MLKit/InstallReferrer
+// dependencies from the classpath (see FDROID_EXCLUDES_BLOCK +
+// patchFdroidExpoDependencies + patchFdroidLibrarySources). Expo module
+// bytecode still references those classes at descriptor level, so R8's
+// missing-class check fails :app:minifyReleaseFdroidWithR8 with "Missing
+// classes detected while running R8" unless we quiet the warnings for the
+// stripped packages. `-dontwarn` is the least-privilege directive: it does
+// NOT retain any class (which would violate the AC10b GMS-free invariant).
+//
+// Regression driver: Wear OS UI tests run #30288872823 on main (BLD-4381 /
+// BLD-4384). Before this fix, the build failed with missing classes in
+// `com.android.installreferrer.api.*`, `com.google.android.gms.tasks.*`,
+// and `com.google.mlkit.vision.*`.
+describe("writeFdroidProguardRules + FDROID_PROGUARD_CONTENTS", () => {
+  it("emits -dontwarn (never -keep) for every stripped proprietary package", () => {
+    // Package list MUST stay in lockstep with the strip lists in
+    // FDROID_EXCLUDES_BLOCK / patchFdroidExpoDependencies. If a future
+    // sanitization step adds a new group, this test must also update.
+    expect(FDROID_PROGUARD_CONTENTS).toMatch(
+      /^-dontwarn com\.android\.installreferrer\.\*\*$/m,
+    );
+    expect(FDROID_PROGUARD_CONTENTS).toMatch(
+      /^-dontwarn com\.google\.android\.gms\.\*\*$/m,
+    );
+    expect(FDROID_PROGUARD_CONTENTS).toMatch(
+      /^-dontwarn com\.google\.firebase\.\*\*$/m,
+    );
+    expect(FDROID_PROGUARD_CONTENTS).toMatch(
+      /^-dontwarn com\.google\.mlkit\.\*\*$/m,
+    );
+  });
+
+  it("never emits -keep for the stripped packages (AC10b GMS-free invariant)", () => {
+    // `-keep` would tell R8 to retain the class if found. It would not
+    // itself re-introduce classes (there are none to retain), but it would
+    // permanently pin any future accidental drag-in. The AC10b grep gate
+    // (`unzip -l | grep -c com/google/android/gms == 0`) would then start
+    // failing silently if a transitive dep leaked. `-dontwarn` is the only
+    // acceptable directive here.
+    expect(FDROID_PROGUARD_CONTENTS).not.toMatch(/^-keep\b/m);
+  });
+
+  it("writeFdroidProguardRules writes app/src/releaseFdroid/proguard-fdroid.pro", () => {
+    // The proguard file lives alongside the F-Droid manifest overlay so a
+    // single `withDangerousMod` step owns both files. AGP resolves the path
+    // relative to the app module (`app/`), which is why the build.gradle
+    // reference is `src/releaseFdroid/proguard-fdroid.pro`.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      const proguardPath = path.join(
+        tmp,
+        "app",
+        "src",
+        "releaseFdroid",
+        "proguard-fdroid.pro",
+      );
+      expect(fs.existsSync(proguardPath)).toBe(true);
+      expect(fs.readFileSync(proguardPath, "utf8")).toBe(FDROID_PROGUARD_CONTENTS);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("writeFdroidProguardRules is idempotent (overwrites stale contents)", () => {
+    // Runs on every prebuild — must clobber any prior file safely.
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      const dir = path.join(tmp, "app", "src", "releaseFdroid");
+      fs.mkdirSync(dir, { recursive: true });
+      const proguardPath = path.join(dir, "proguard-fdroid.pro");
+      fs.writeFileSync(proguardPath, "STALE PREVIOUS PROGUARD RULES", "utf8");
+
+      writeFdroidProguardRules(tmp);
+
+      const written = fs.readFileSync(proguardPath, "utf8");
+      expect(written).toBe(FDROID_PROGUARD_CONTENTS);
+      expect(written).not.toContain("STALE");
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("writeFdroidProguardRules creates intermediate directories if missing", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-proguard-"));
+    try {
+      writeFdroidProguardRules(tmp);
+      expect(
+        fs.existsSync(path.join(tmp, "app", "src", "releaseFdroid")),
+      ).toBe(true);
+    } finally {
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("patchAppBuildGradle wires the proguard file into the releaseFdroid build type", () => {
+    // The proguard file is worthless unless the releaseFdroid build type
+    // actually references it via `proguardFile ...`. This is the coupling
+    // test between patchAppBuildGradle and writeFdroidProguardRules — if a
+    // future refactor drops the proguardFile directive, R8 will start
+    // failing again with "Missing classes detected". Guard against that.
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?proguardFile\s+['"]src\/releaseFdroid\/proguard-fdroid\.pro['"]/,
+    );
   });
 });

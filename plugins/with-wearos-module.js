@@ -75,6 +75,10 @@ const SUBPROJECT_FILTER_MARKER = "// cablesnap:wearos:subproject-variant-filter"
 // Sentinel for the F-Droid manifest strip that removes FirebaseInitProvider and
 // ExpoFirebaseMessagingService — see FDROID_MANIFEST_CONTENTS below.
 const FDROID_MANIFEST_MARKER = "<!-- cablesnap:wearos:fdroid-manifest-strip -->";
+// Sentinel that fences the F-Droid R8 -dontwarn rules file. Placed in a
+// comment on the first line so re-reads can detect a pre-existing plugin-
+// authored file.
+const FDROID_PROGUARD_MARKER = "# cablesnap:wearos:fdroid-proguard-dontwarn";
 
 // Where the wear-template lives in the source tree, and where the prebuild
 // output expects to find the `:wear` subproject.
@@ -186,6 +190,17 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // disable their propagated \`releaseFdroid\` variant entirely,
             // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
+            // Append F-Droid-specific R8 -dontwarn rules for the proprietary
+            // packages that are stripped from the classpath by the F-Droid
+            // sanitization (Firebase / GMS / MLKit / InstallReferrer). Expo
+            // module bytecode still references those classes at descriptor
+            // level, so R8 fails hard with "Missing classes detected while
+            // running R8" unless we quiet the warnings. This is scoped to the
+            // releaseFdroid variant only — the Play \`release\` variant keeps
+            // its default R8 behaviour and continues to fail-fast on any
+            // genuinely missing class. \`-dontwarn\` (never \`-keep\`)
+            // preserves the GMS-free invariant verified by AC10b.
+            proguardFile 'src/releaseFdroid/proguard-fdroid.pro'
         }
 `;
 
@@ -462,6 +477,66 @@ function writeFdroidManifest(platformRoot) {
   const dir = path.join(platformRoot, "app", "src", "releaseFdroid");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
+}
+
+// ---------------------------------------------------------------------------
+// F-Droid R8 -dontwarn rules — quiet R8 for stripped proprietary packages.
+// ---------------------------------------------------------------------------
+//
+// Context: the F-Droid sanitization pass (patchFdroidExpoDependencies +
+// patchFdroidLibrarySources + FDROID_EXCLUDES_BLOCK + the settings.gradle
+// early rewrite) removes proprietary dependencies from the classpath. Expo
+// module bytecode that still exists in the compiled AAR/kt classes references
+// those descriptors (method signatures, type parameters, thrown types). R8's
+// default policy is to fail with "Missing classes detected while running R8"
+// when it encounters descriptors that resolve to no class on the classpath,
+// even if the referencing code is unreachable from any live entry point.
+//
+// The correct fix — and the *only* fix that keeps the build GMS-free — is to
+// tell R8 to stop warning about these packages. We MUST NOT use `-keep`:
+//   - `-keep com.google.mlkit.**` would force R8 to preserve any class it
+//     could find, which is fine (there are none), but would also disable
+//     tree-shaking for those descriptors in the app's own code.
+//   - Worse, any future dep drag-in that pulls a proprietary class back into
+//     the classpath would then be permanently retained, silently breaking
+//     the AC10b GMS-free grep gate.
+// `-dontwarn` is the least-privilege directive: R8 simply skips the missing-
+// class check for the listed packages. Nothing is added; nothing is retained
+// beyond what R8 would already reach.
+//
+// Scope: this proguard file is wired into the `releaseFdroid` build type via
+// `proguardFile 'src/releaseFdroid/proguard-fdroid.pro'`. The Play `release`
+// build type is untouched — its R8 continues to fail-fast on any genuinely
+// missing class, which is the desired defence for the shipped Play APK.
+//
+// Package list mirrors the sanitization list in FDROID_EXCLUDES_BLOCK and the
+// settings.gradle early-rewrite regex. Adding a new proprietary group to the
+// F-Droid strip in the future requires adding the matching `-dontwarn` rule
+// here — the two lists MUST stay in lockstep.
+const FDROID_PROGUARD_CONTENTS = `${FDROID_PROGUARD_MARKER}
+# R8 -dontwarn rules for proprietary dependencies stripped from the F-Droid
+# variant. See plugins/with-wearos-module.js (writeFdroidProguardRules) for
+# the full rationale. DO NOT convert any of these to -keep — that would
+# violate the AC10b GMS-free invariant.
+#
+# The Wear OS UI tests workflow's :app:minifyReleaseFdroidWithR8 task fails
+# on run #30288872823 (2026-07-27) with "Missing classes detected while
+# running R8" for descriptors in these packages, referenced from Expo module
+# bytecode (expo-application, expo-camera, expo-notifications).
+-dontwarn com.android.installreferrer.**
+-dontwarn com.google.android.gms.**
+-dontwarn com.google.firebase.**
+-dontwarn com.google.mlkit.**
+`;
+
+function writeFdroidProguardRules(platformRoot) {
+  const dir = path.join(platformRoot, "app", "src", "releaseFdroid");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, "proguard-fdroid.pro"),
+    FDROID_PROGUARD_CONTENTS,
+    "utf8",
+  );
 }
 
 function patchFdroidExpoDependencies(projectRoot) {
@@ -881,6 +956,11 @@ const withWearOsModule = (config) => {
       // Write/overwrite the F-Droid manifest overlay. Idempotent — same
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
+      // Write/overwrite the F-Droid R8 -dontwarn rules file next to the
+      // manifest overlay. Referenced from the `releaseFdroid` build type
+      // via `proguardFile 'src/releaseFdroid/proguard-fdroid.pro'`. Same
+      // idempotency contract as writeFdroidManifest.
+      writeFdroidProguardRules(platformRoot);
       return cfg;
     },
   ]);
@@ -897,9 +977,11 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.writeFdroidProguardRules = writeFdroidProguardRules;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
+module.exports.FDROID_PROGUARD_CONTENTS = FDROID_PROGUARD_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;
