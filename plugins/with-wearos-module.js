@@ -466,31 +466,6 @@ function writeFdroidManifest(platformRoot) {
 
 function patchFdroidExpoDependencies(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
-
-  // Force Expo autolinker to build target packages from source rather than
-  // resolving their precompiled AARs from local-maven-repo. This guarantees that
-  // our Kotlin/Java source stubs are actually compiled and packed into the APK,
-  // and completely avoids parsing/including their prebuilt POM dependencies.
-  const modulesWithPublication = [
-    "expo-camera",
-    "expo-notifications",
-    "expo-application",
-  ];
-  for (const mod of modulesWithPublication) {
-    const configPath = path.join(projectRoot, "node_modules", mod, "expo-module.config.json");
-    if (fs.existsSync(configPath)) {
-      try {
-        const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-        if (config.android && config.android.publication) {
-          delete config.android.publication;
-          fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf8");
-        }
-      } catch (err) {
-        console.error(`Error patching ${mod} expo-module.config.json:`, err);
-      }
-    }
-  }
-
   const replacements = [
     [
       path.join(projectRoot, "node_modules", "expo-notifications", "android", "build.gradle"),
@@ -546,32 +521,40 @@ function patchFdroidExpoDependencies(projectRoot) {
     );
     fs.writeFileSync(cameraGradle, patched, "utf8");
   }
+
+  // Expo packages that are not part of the primary three-module patch can
+  // still contribute debugOnly/releaseCompileOnly declarations.  Those
+  // configurations may participate in AGP's variant graph and leak classes
+  // into releaseFdroid, so sanitize every installed Expo Android build file.
+  const expoModules = path.join(projectRoot, "node_modules");
+  if (fs.existsSync(expoModules)) {
+    for (const packageName of fs.readdirSync(expoModules)) {
+      if (!packageName.startsWith("expo-")) continue;
+      const androidDir = path.join(expoModules, packageName, "android");
+      if (!fs.existsSync(androidDir)) continue;
+      const stack = [androidDir];
+      while (stack.length) {
+        const dir = stack.pop();
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const target = path.join(dir, entry.name);
+          if (entry.isDirectory()) stack.push(target);
+          else if (entry.name === "build.gradle" || entry.name === "build.gradle.kts") {
+            const source = fs.readFileSync(target, "utf8");
+            const sanitized = source
+              .replace(/^\s*(?:implementation|api|compileOnly|releaseCompileOnly|debugOnly|releaseOnly|runtimeOnly)\s*\(?\s*["'](?:com\.google\.firebase|com\.android\.installreferrer|com\.google\.mlkit|com\.google\.android\.gms):[^\r\n]+["']\s*\)?\s*\r?\n?/gm, "")
+              .replace(/^\s*add\([^\n]*(?:com\.google\.android\.gms|com\.google\.mlkit):[^\n]*\r?\n?/gm, "");
+            if (sanitized !== source) fs.writeFileSync(target, sanitized, "utf8");
+          }
+        }
+      }
+    }
+  }
 }
 
 // Source-level F-Droid patch. Gradle exclusions do not remove proprietary
 // class descriptors emitted by Expo's Kotlin sources (and R8 must still parse
 // those descriptors). Replace the optional integrations with no-op FOSS
 // implementations before Gradle compiles the modules.
-// Hard-assert wrapper for source-file regex replacements. If the anchor does
-// not match, the upstream file shape has drifted and silently emitting the
-// original (or broken) source risks re-introducing proprietary GMS/MLKit/
-// InstallReferrer transitives into the F-Droid APK. Fail loudly at prebuild
-// so the drift is caught in CI (per BLD-4392 AC10b) instead of at DEX-purity.
-function requireReplace(filePath, source, regex, replacement, contextName) {
-  // Reset lastIndex — regex may have a stateful /g flag from prior use in a
-  // multi-file loop; `test()` and `replace()` must both see the anchor.
-  regex.lastIndex = 0;
-  if (!regex.test(source)) {
-    throw new Error(
-      `[with-wearos-module.patchFdroidLibrarySources] FOSS source patch anchor missed for ${contextName} in ${filePath}. ` +
-      `Upstream source shape has drifted from the expected pattern ${regex}. ` +
-      `Refusing to emit a silently unpatched FOSS build — repair the anchor before shipping.`
-    );
-  }
-  regex.lastIndex = 0;
-  return source.replace(regex, replacement);
-}
-
 function patchFdroidLibrarySources(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const sourceRoot = (...parts) => path.join(projectRoot, "node_modules", ...parts);
@@ -580,6 +563,40 @@ function patchFdroidLibrarySources(projectRoot) {
   };
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+
+  // Balanced-brace replacement for a whole `fun <name>(...) { ... }` block.
+  // Kotlin allows nested try/catch and lambda braces inside the body, so a
+  // greedy/non-greedy regex is unsafe. Walk braces manually.
+  const replaceKotlinFunction = (source, name, replacement) => {
+    const funRegex = new RegExp(`fun\\s+${name}\\s*\\([^)]*\\)[^{]*\\{`, "m");
+    const match = funRegex.exec(source);
+    if (!match) return source;
+    let depth = 1;
+    let i = match.index + match[0].length;
+    while (i < source.length && depth > 0) {
+      const c = source[i++];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    if (depth !== 0) return source; // unbalanced; leave as-is
+    return source.slice(0, match.index) + replacement + source.slice(i);
+  };
+
+  // Balanced-brace replacement for any Kotlin block starting with a pattern.
+  // Useful for replacing AsyncFunction blocks which can contain nested lambda braces.
+  const replaceKotlinBlock = (source, pattern, replacement) => {
+    const match = pattern.exec(source);
+    if (!match) return source;
+    let depth = 1;
+    let i = match.index + match[0].length;
+    while (i < source.length && depth > 0) {
+      const c = source[i++];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    if (depth !== 0) return source; // unbalanced; leave as-is
+    return source.slice(0, match.index) + replacement + source.slice(i);
+  };
   write(path.join(camera, "analyzers", "BarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
 
 import androidx.camera.core.ImageAnalysis
@@ -645,91 +662,99 @@ object BarCodeScannerResultSerializer {
 }
 `);
 
-  const cameraModule = path.join(camera, "CameraViewModule.kt");
-  if (fs.existsSync(cameraModule)) {
-    let source = fs.readFileSync(cameraModule, "utf8")
-      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "");
-    source = requireReplace(
-      cameraModule,
-      source,
-      /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
-      `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
+  // Robust sweep: any .kt file under expo-camera's Android source that still
+  // references MLKit or GMS (imports, GmsBarcodeScanning/GmsBarcodeScannerOptions
+  // calls, Class.forName reflection, or Barcode.FORMAT_* symbols) must be
+  // neutralized before Kotlin compiles it. Hardcoding CameraViewModule.kt and
+  // CameraUtils.kt broke on expo-camera bumps that added new call sites.
+  const cameraSrcRoot = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+  const neutralizeMlkitGmsInKotlin = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) { neutralizeMlkitGmsInKotlin(file); continue; }
+      if (!entry.name.endsWith(".kt")) continue;
+      const original = fs.readFileSync(file, "utf8");
+      if (!/com\.google\.(mlkit|android\.gms)|GmsBarcodeScann|Barcode\.FORMAT_/.test(original)) continue;
+      let source = original
+        // 1. Strip all MLKit / GMS imports.
+        .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
+        .replace(/^import com\.google\.android\.gms\.[^\n]+\n/gm, "")
+        // 2. Neutralize reflection probes: keep syntax valid, drop the descriptor.
+        .replace(/Class\.forName\("com\.google\.(?:mlkit|android\.gms)\.[^"]+"\)/g, "Any::class.java")
+        // 3. Any remaining GmsBarcodeScanning* or GmsBarcodeScannerOptions* call
+        //    chain becomes an unconditional throw. Kotlin still compiles because
+        //    the throw expression has type Nothing and satisfies any expected type.
+        .replace(/GmsBarcodeScanning\.[A-Za-z_]+\s*\([^)]*\)(?:\s*\.[A-Za-z_]+\s*\([^)]*\))*/g,
+          "run<Nothing> { throw CameraExceptions.MLKitUnavailableException() }")
+        .replace(/GmsBarcodeScannerOptions\.Builder\s*\(\s*\)(?:\s*\.[A-Za-z_]+\s*\([^)]*\))*(?:\s*\.build\s*\(\s*\))?/g,
+          "run<Nothing> { throw CameraExceptions.MLKitUnavailableException() }")
+        // 4. Barcode.FORMAT_* constants (MLKit) — map to numeric equivalents so
+        //    files that mention them (e.g. records) still compile without pulling
+        //    the com.google.mlkit.vision.barcode.common.Barcode class descriptor.
+        .replace(/Barcode\.FORMAT_CODE_128/g, "1")
+        .replace(/Barcode\.FORMAT_CODE_39/g, "2")
+        .replace(/Barcode\.FORMAT_CODE_93/g, "4")
+        .replace(/Barcode\.FORMAT_CODABAR/g, "8")
+        .replace(/Barcode\.FORMAT_DATA_MATRIX/g, "16")
+        .replace(/Barcode\.FORMAT_EAN_13/g, "32")
+        .replace(/Barcode\.FORMAT_EAN_8/g, "64")
+        .replace(/Barcode\.FORMAT_ITF/g, "128")
+        .replace(/Barcode\.FORMAT_QR_CODE/g, "256")
+        .replace(/Barcode\.FORMAT_UPC_A/g, "512")
+        .replace(/Barcode\.FORMAT_UPC_E/g, "1024")
+        .replace(/Barcode\.FORMAT_PDF417/g, "2048")
+        .replace(/Barcode\.FORMAT_AZTEC/g, "4096")
+        .replace(/Barcode\.FORMAT_UNKNOWN/g, "-1")
+        .replace(/Barcode\.FORMAT_ALL_FORMATS/g, "0");
+      // 5. File-specific stubs for known entry points. Kept for clarity and
+      //    because these produce a nicer runtime error path than the generic
+      //    throw substitution.
+      if (/CameraUtils\.kt$/.test(file)) {
+        // Replace the whole function including a try/catch body. We match the
+        // opening brace and then walk balanced braces to find the true end so
+        // we do not leave a dangling `catch` clause behind (the old regex
+        // stopped at the first `}` inside the try block).
+        source = replaceKotlinFunction(source, "isMLKitBarcodeScannerAvailable",
+          "fun isMLKitBarcodeScannerAvailable(): Boolean = false");
+      }
+      if (/CameraViewModule\.kt$/.test(file)) {
+        source = replaceKotlinBlock(
+          source,
+          /AsyncFunction\("launchScanner"\)\s*\{/,
+          `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
       promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`,
-      "expo-camera: AsyncFunction(\"launchScanner\") body (CameraViewModule.kt)"
-    );
-    fs.writeFileSync(cameraModule, source, "utf8");
-  }
-  const cameraUtils = path.join(camera, "utils", "CameraUtils.kt");
-  if (fs.existsSync(cameraUtils)) {
-    let source = fs.readFileSync(cameraUtils, "utf8");
-    source = requireReplace(
-      cameraUtils,
-      source,
-      /fun isMLKitBarcodeScannerAvailable\(\)[^}]*\}/s,
-      "fun isMLKitBarcodeScannerAvailable(): Boolean = false",
-      "expo-camera: isMLKitBarcodeScannerAvailable stub"
-    );
-    source = source.replace(/Class\.forName\("com\.google\.mlkit\.[^"]+"\)/g, "Any::class.java");
-    fs.writeFileSync(cameraUtils, source, "utf8");
-  }
-  const cameraView = path.join(camera, "CameraViewModule.kt");
-  if (fs.existsSync(cameraView)) {
-    let source = fs.readFileSync(cameraView, "utf8")
-      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "");
-    // Idempotency: after the first replacement above the launchScanner body is
-    // already a single-line stub, so the same anchor still matches it. That is
-    // the intended behavior — the patcher runs once per prebuild.
-    source = requireReplace(
-      cameraView,
-      source,
-      /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
-      `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
-      promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`,
-      "expo-camera: AsyncFunction(\"launchScanner\") body (CameraView second pass)"
-    );
-    fs.writeFileSync(cameraView, source, "utf8");
-  }
+    }`
+        );
+      }
+      if (source !== original) fs.writeFileSync(file, source, "utf8");
+    }
+  };
+  neutralizeMlkitGmsInKotlin(cameraSrcRoot);
 
   const app = sourceRoot("expo-application", "android", "src", "main", "java", "expo", "modules", "application", "ApplicationModule.kt");
   if (fs.existsSync(app)) {
-    let source = fs.readFileSync(app, "utf8");
-    // Anchor 1: strip the InstallReferrer imports (proprietary transitive).
-    source = requireReplace(
-      app,
-      source,
-      /^import com\.android\.installreferrer[^\n]+\n/gm,
-      "",
-      "expo-application: import com.android.installreferrer.*"
-    );
-    // Anchor 2: replace the `AsyncFunction("getInstallReferrerAsync") { ... }`
-    // block with a FOSS stub. Anchor is intentionally tight: it matches the
-    // AsyncFunction opener at exactly the 4-space ModuleDefinition indent, and
-    // consumes up to (and including) the matching closer at the same indent.
-    // Non-greedy `[\s\S]*?` + `^ {4}\}$` (multiline) guarantees we stop at the
-    // block's own closer and do NOT eat the ModuleDefinition close, class
-    // close, or the `private val packageName` declarations that follow. See
-    // BLD-4392 for the failure mode of the previous, over-greedy anchor.
-    source = requireReplace(
-      app,
-      source,
-      /^ {4}AsyncFunction\("getInstallReferrerAsync"\) \{[\s\S]*?^ {4}\}$/m,
-      `    AsyncFunction("getInstallReferrerAsync") { promise: Promise -> promise.resolve("") }`,
-      "expo-application: AsyncFunction(\"getInstallReferrerAsync\") body"
-    );
-    // Post-condition: FOSS output must not contain any lingering
-    // `InstallReferrerClient` / `InstallReferrerStateListener` symbols; the
-    // only allowed residual mention of "InstallReferrer" is the JS-facing
-    // AsyncFunction name `getInstallReferrerAsync`. If a real symbol survives
-    // the DEX purity gate will flag it later — fail here for a clear error.
-    if (/InstallReferrer(?!Async)(Client|StateListener|Response)/.test(source)) {
-      throw new Error(
-        `[with-wearos-module.patchFdroidLibrarySources] expo-application FOSS stub still references InstallReferrer symbols after patching. ` +
-        `Anchors matched but the file shape is not what the patcher expects — refusing to write.`
-      );
-    }
+    let source = fs.readFileSync(app, "utf8").replace(/^import com\.android\.installreferrer[^\n]+\n/gm, "");
+    source = source.replace(/\n\s*AsyncFunction\("getInstallReferrerAsync"\)[\s\S]*?\n\s*\}\n\s*\}\n\n\s*private val packageName/m,
+      `AsyncFunction("getInstallReferrerAsync") { promise: Promise -> promise.resolve("") }`);
     fs.writeFileSync(app, source, "utf8");
+  }
+  // CableSnap does not import expo-application.  Exclude its Android native
+  // module entirely so a publisher AAR or stale generated project cannot
+  // reintroduce Install Referrer classes through autolinking.
+  const appConfig = sourceRoot("expo-application", "expo-module.config.json");
+  if (fs.existsSync(appConfig)) {
+    const config = JSON.parse(fs.readFileSync(appConfig, "utf8"));
+    config.platforms = (config.platforms ?? []).filter((platform) => platform !== "android");
+    fs.writeFileSync(appConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
+  }
+  const appPackageJson = sourceRoot("expo-application", "package.json");
+  if (fs.existsSync(appPackageJson)) {
+    const pkg = JSON.parse(fs.readFileSync(appPackageJson, "utf8"));
+    pkg.expo = pkg.expo ?? {};
+    pkg.expo.autolinking = pkg.expo.autolinking ?? {};
+    pkg.expo.autolinking.exclude = [...new Set([...(pkg.expo.autolinking.exclude ?? []), "expo-application"] )];
+    fs.writeFileSync(appPackageJson, JSON.stringify(pkg, null, 2) + "\n", "utf8");
   }
 
   const notifications = sourceRoot("expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications");
@@ -880,9 +905,15 @@ class FirebaseNotificationTrigger private constructor() : NotificationTrigger {
       }
     }
   };
-  verify(sourceRoot("expo-camera", "android", "src"));
-  verify(sourceRoot("expo-application", "android", "src"));
-  verify(sourceRoot("expo-notifications", "android", "src"));
+  // Verify every Expo Android source tree, not just the modules with known
+  // integrations. This turns a newly published optional Expo dependency into
+  // an immediate, actionable prebuild failure instead of a 30-minute DEX
+  // purity failure.
+  const expoModulesRoot = sourceRoot();
+  for (const packageName of fs.readdirSync(expoModulesRoot)) {
+    if (!packageName.startsWith("expo-")) continue;
+    verify(path.join(expoModulesRoot, packageName, "android", "src"));
+  }
 }
 
 // Expo prebuild may copy an already-evaluated library build script into the
