@@ -77,6 +77,8 @@ marker) at release time.
 
 - **F-Droid CI now clears Gradle’s transformed-AAR cache before the isolated build**, preventing stale proprietary artifacts from surviving project cleanup and entering the DEX merge.
 
+- **The F-Droid release variant now enables R8 shrinking**, removing unreachable compile-only proprietary classes while retaining the open-source ZXing scanner.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 

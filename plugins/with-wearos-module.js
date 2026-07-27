@@ -170,6 +170,12 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // variant non-debuggable while allowing fdroidserver to replace
             // the debug signature with its own signing key.
             signingConfig signingConfigs.debug
+            // The F-Droid graph keeps some Expo library code compile-only so
+            // native compilation still succeeds. R8 is required here to
+            // discard those unreachable compile-only classes from the final
+            // dex; the Play release keeps its existing shrinker settings.
+            minifyEnabled true
+            shrinkResources true
             // matchingFallbacks lets dependency variant resolution fall back
             // to \`release\` when an upstream library only ships a release
             // variant (the common case). Without this, Gradle errors with
