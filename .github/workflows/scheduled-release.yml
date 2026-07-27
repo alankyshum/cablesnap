@@ -326,8 +326,15 @@ jobs:
           CABLESNAP_FDROID: "1"
         run: |
           node - <<'NODE'
-          const { patchFdroidExpoDependencies } = require('./plugins/with-wearos-module');
-          patchFdroidExpoDependencies(process.cwd());
+           const {
+             patchFdroidExpoDependencies,
+             patchFdroidAndroidGradleTree,
+           } = require('./plugins/with-wearos-module');
+           patchFdroidExpoDependencies(process.cwd());
+           // Run after prebuild has materialised every generated Android
+           // library script. The config plugin's dangerous-mod hook can run
+           // before some Expo scripts are copied into the native project.
+           patchFdroidAndroidGradleTree(process.cwd());
           NODE
           grep -nE 'compileOnly.*(firebase|installreferrer)|barcodeDependencyConfiguration' \
             node_modules/expo-notifications/android/build.gradle \
