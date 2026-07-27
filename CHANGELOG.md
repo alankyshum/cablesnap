@@ -28,6 +28,8 @@ marker) at release time.
 - **F-Droid autolinking now omits unused expo-application**, preventing Install Referrer classes from entering the native module graph.
 - **F-Droid sanitization now covers every installed Expo Android module**, including debug-only ML Kit declarations that could otherwise re-enter the release dependency graph.
 - **F-Droid builds now remove proprietary Expo manifest references**, keeping the APK free of Firebase, ML Kit, Google Play Services, and Install Referrer class descriptors while retaining ZXing barcode scanning.
+- **F-Droid builds now swap expo-notifications and expo-application for FOSS shims**, ensuring complete DEX purity and eliminating proprietary class references. ([BLD-4330](/BLD/issues/BLD-4330))
+- **F-Droid prebuild now scrubs proprietary SUSS dependencies from prebuilt AAR metadata**, ensuring transitive InstallReferrer and Firebase messaging packages are fully stripped. ([BLD-4324](/BLD/issues/BLD-4324))
 - **Form library Select button spacing now matches the Record pill**, giving the session header controls consistent horizontal padding.
 - **Record and Done button spacing** — Increases the margin above the Record and Done buttons on the Form clips tab for more consistent spacing. ([BLD-4033](/BLD/issues/BLD-4033))
 - **Consistent padding for "Set a goal" button** — Adjusts the vertical padding around the "Set a goal" button in frequency settings for consistency with other cards. ([BLD-4044](/BLD/issues/BLD-4044))
