@@ -1061,6 +1061,18 @@ function rmDirRecursive(target) {
 }
 
 const withWearOsModule = (config) => {
+  // This runs during config evaluation, before Expo autolinking generates
+  // Android's project dependency graph. The dangerous-mod hook below is too
+  // late to affect that graph: removing a publisher AAR there leaves a
+  // generated `host.exp.exponent:expo.modules.camera` dependency pointing at
+  // a repository that no longer exists. Apply the source/publication rewrite
+  // first, then repeat it in dangerous-mod for idempotence after prebuild.
+  if (process.env.CABLESNAP_FDROID === "1") {
+    const projectRoot = process.cwd();
+    patchFdroidExpoDependencies(projectRoot);
+    patchFdroidLibrarySources(projectRoot);
+  }
+
   // 1. Patch settings.gradle to register :wear.
   config = withSettingsGradle(config, (cfg) => {
     cfg.modResults.contents = patchSettingsGradle(cfg.modResults.contents);
