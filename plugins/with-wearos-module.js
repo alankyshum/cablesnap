@@ -596,6 +596,22 @@ function patchFdroidLibrarySources(projectRoot) {
     if (depth !== 0) return source; // unbalanced; leave as-is
     return source.slice(0, match.index) + replacement + source.slice(i);
   };
+
+  // Balanced-brace replacement for any Kotlin block starting with a pattern.
+  // Useful for replacing AsyncFunction blocks which can contain nested lambda braces.
+  const replaceKotlinBlock = (source, pattern, replacement) => {
+    const match = pattern.exec(source);
+    if (!match) return source;
+    let depth = 1;
+    let i = match.index + match[0].length;
+    while (i < source.length && depth > 0) {
+      const c = source[i++];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    if (depth !== 0) return source; // unbalanced; leave as-is
+    return source.slice(0, match.index) + replacement + source.slice(i);
+  };
   write(path.join(camera, "analyzers", "BarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
 
 import androidx.camera.core.ImageAnalysis
@@ -718,11 +734,12 @@ object BarCodeScannerResultSerializer {
           "fun isMLKitBarcodeScannerAvailable(): Boolean = false");
       }
       if (/CameraViewModule\.kt$/.test(file)) {
-        source = source.replace(
-          /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s{0,6}\}/m,
+        source = replaceKotlinBlock(
+          source,
+          /AsyncFunction\("launchScanner"\)\s*\{/,
           `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
       promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`,
+    }`
         );
       }
       if (source !== original) fs.writeFileSync(file, source, "utf8");
