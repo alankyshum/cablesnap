@@ -521,6 +521,34 @@ function patchFdroidExpoDependencies(projectRoot) {
     );
     fs.writeFileSync(cameraGradle, patched, "utf8");
   }
+
+  // Expo packages that are not part of the primary three-module patch can
+  // still contribute debugOnly/releaseCompileOnly declarations.  Those
+  // configurations may participate in AGP's variant graph and leak classes
+  // into releaseFdroid, so sanitize every installed Expo Android build file.
+  const expoModules = path.join(projectRoot, "node_modules");
+  if (fs.existsSync(expoModules)) {
+    for (const packageName of fs.readdirSync(expoModules)) {
+      if (!packageName.startsWith("expo-")) continue;
+      const androidDir = path.join(expoModules, packageName, "android");
+      if (!fs.existsSync(androidDir)) continue;
+      const stack = [androidDir];
+      while (stack.length) {
+        const dir = stack.pop();
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const target = path.join(dir, entry.name);
+          if (entry.isDirectory()) stack.push(target);
+          else if (entry.name === "build.gradle" || entry.name === "build.gradle.kts") {
+            const source = fs.readFileSync(target, "utf8");
+            const sanitized = source
+              .replace(/^\s*(?:implementation|api|compileOnly|releaseCompileOnly|debugOnly|releaseOnly|runtimeOnly)\s*\(?\s*["'](?:com\.google\.firebase|com\.android\.installreferrer|com\.google\.mlkit|com\.google\.android\.gms):[^\r\n]+["']\s*\)?\s*\r?\n?/gm, "")
+              .replace(/^\s*add\([^\n]*(?:com\.google\.android\.gms|com\.google\.mlkit):[^\n]*\r?\n?/gm, "");
+            if (sanitized !== source) fs.writeFileSync(target, sanitized, "utf8");
+          }
+        }
+      }
+    }
+  }
 }
 
 // Source-level F-Droid patch. Gradle exclusions do not remove proprietary
