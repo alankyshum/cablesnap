@@ -9,6 +9,7 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidR8Rules,
   patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
@@ -648,6 +649,58 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
       ).toBe(true);
     } finally {
       rmDirRecursive(tmp);
+    }
+  });
+});
+
+// writeFdroidR8Rules
+describe("writeFdroidR8Rules", () => {
+  const REAL_PROJECT_ROOT = path.join(__dirname, "..", "..");
+
+  it("copies fdroid/fdroid-r8-rules.pro to android/app/fdroid-r8-rules.pro", () => {
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-"));
+    try {
+      fs.mkdirSync(path.join(tmpPlatformRoot, "app"), { recursive: true });
+      writeFdroidR8Rules(REAL_PROJECT_ROOT, tmpPlatformRoot);
+      const dst = path.join(tmpPlatformRoot, "app", "fdroid-r8-rules.pro");
+      expect(fs.existsSync(dst)).toBe(true);
+      const contents = fs.readFileSync(dst, "utf8");
+      expect(contents).toContain("-dontwarn com.android.installreferrer.**");
+      expect(contents).toContain("-dontwarn com.google.android.gms.tasks.**");
+      expect(contents).toContain("-dontwarn com.google.mlkit.**");
+      expect(contents).toContain("-dontwarn com.google.firebase.**");
+      expect(contents).toContain("-dontwarn com.google.android.gms.**");
+    } finally {
+      rmDirRecursive(tmpPlatformRoot);
+    }
+  });
+
+  it("writeFdroidR8Rules is idempotent (overwrites existing file)", () => {
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-"));
+    try {
+      fs.mkdirSync(path.join(tmpPlatformRoot, "app"), { recursive: true });
+      const dst = path.join(tmpPlatformRoot, "app", "fdroid-r8-rules.pro");
+      fs.writeFileSync(dst, "# stale content", "utf8");
+      writeFdroidR8Rules(REAL_PROJECT_ROOT, tmpPlatformRoot);
+      const contents = fs.readFileSync(dst, "utf8");
+      expect(contents).toContain("-dontwarn com.android.installreferrer.**");
+      expect(contents).not.toContain("# stale content");
+    } finally {
+      rmDirRecursive(tmpPlatformRoot);
+    }
+  });
+
+  it("writeFdroidR8Rules throws if fdroid/fdroid-r8-rules.pro is missing", () => {
+    const tmpProjectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-proj-"));
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-plat-"));
+    try {
+      fs.mkdirSync(path.join(tmpPlatformRoot, "app"), { recursive: true });
+      expect(() => writeFdroidR8Rules(tmpProjectRoot, tmpPlatformRoot)).toThrow(
+        /fdroid-r8-rules\.pro not found/,
+      );
+    } finally {
+      rmDirRecursive(tmpProjectRoot);
+      rmDirRecursive(tmpPlatformRoot);
     }
   });
 });
