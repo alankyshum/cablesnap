@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **F-Droid builds strictly exclude proprietary classes** — Eliminates proprietary SUSS classes (Firebase, ML Kit, Google Play Services, and Install Referrer) from the F-Droid APK, ensuring complete privacy-first compliance. ([BLD-4165](/BLD/issues/BLD-4165))
 - **Word-order-independent exercise search** — Allows finding exercises by typing words in any order (e.g. "press bench" matches "Bench Press"). ([BLD-4157](/BLD/issues/BLD-4157))
 - **Food barcode scanning now uses a fully open-source ZXing scanner**, with the same camera overlay and supported food-barcode formats.
 - **F-Droid store metadata is now maintained in this repository**, including the app description, screenshots, icon, and release notes.

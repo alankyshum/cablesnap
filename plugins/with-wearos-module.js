@@ -505,37 +505,172 @@ function writeFdroidProguardRules(platformRoot) {
   );
 }
 
+function getPackageVersionForFile(file) {
+  try {
+    const parts = file.split(path.sep);
+    const nmIndex = parts.lastIndexOf("node_modules");
+    if (nmIndex !== -1 && nmIndex + 1 < parts.length) {
+      let pkgName = parts[nmIndex + 1];
+      if (pkgName.startsWith("@") && nmIndex + 2 < parts.length) {
+        pkgName = pkgName + "/" + parts[nmIndex + 2];
+      }
+      const pkgParts = parts.slice(0, nmIndex + (pkgName.includes("/") ? 3 : 2));
+      const pkgDir = pkgParts.join(path.sep);
+      const pkgJsonPath = path.join(pkgDir, "package.json");
+      if (fs.existsSync(pkgJsonPath)) {
+        return JSON.parse(fs.readFileSync(pkgJsonPath, "utf8")).version || "unknown";
+      }
+    }
+  } catch (e) {
+    return "error: " + e.message;
+  }
+  return "unknown";
+}
+
+function replaceOrThrow(file, contents, from, to, why) {
+  const matched = from instanceof RegExp ? from.test(contents) : contents.includes(from);
+  if (!matched) {
+    if (process.env.CABLESNAP_FDROID === "1") {
+      const pkgVersion = getPackageVersionForFile(file);
+      const fileLines = contents.split("\n").map((line, i) => `${i + 1}: ${line}`).join("\n");
+      throw new Error(
+        `with-wearos-module: failed to patch ${file}:\n` +
+        `Missing anchor for ${why} (expected ${from instanceof RegExp ? from.toString() : JSON.stringify(from)}).\n` +
+        `Package Version: ${pkgVersion}\n` +
+        `File Contents:\n${fileLines}`
+      );
+    }
+    return contents;
+  }
+  return from instanceof RegExp ? contents.replace(from, to) : contents.replaceAll(from, to);
+}
+
+function writeFdroidGradleProperties(platformRoot) {
+  if (process.env.CABLESNAP_FDROID !== "1") return;
+  const propertiesFile = path.join(platformRoot, "gradle.properties");
+  if (!fs.existsSync(propertiesFile)) {
+    fs.writeFileSync(propertiesFile, "expo.camera.barcode-scanner-enabled=false\n", "utf8");
+    return;
+  }
+  let contents = fs.readFileSync(propertiesFile, "utf8");
+  if (!contents.includes("expo.camera.barcode-scanner-enabled=false")) {
+    if (!contents.endsWith("\n")) {
+      contents += "\n";
+    }
+    contents += "expo.camera.barcode-scanner-enabled=false\n";
+    fs.writeFileSync(propertiesFile, contents, "utf8");
+  }
+}
+
 function patchFdroidExpoDependencies(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
-  const replacements = [
-    [
-      path.join(projectRoot, "node_modules", "expo-notifications", "android", "build.gradle"),
-      [
-        ["implementation 'com.google.firebase:", "compileOnly 'com.google.firebase:"],
-        ['implementation "com.google.firebase:', 'compileOnly "com.google.firebase:'],
-      ],
-    ],
-    [
-      path.join(projectRoot, "node_modules", "expo-application", "android", "build.gradle"),
-      [
-        ["implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:"],
-        ['implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:'],
-      ],
-    ],
-    [
-      path.join(projectRoot, "node_modules", "expo-camera", "android", "build.gradle"),
-      [
-        ["add(barcodeDependencyConfiguration, \"com.google.android.gms:play-services-code-scanner:16.1.0\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
-        ["add(barcodeDependencyConfiguration, \"com.google.mlkit:barcode-scanning:17.3.0\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
-        ["add(barcodeDependencyConfiguration, \"androidx.camera:camera-mlkit-vision:${camerax_version}\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
-      ],
-    ],
-  ];
-  for (const [file, fileReplacements] of replacements) {
-    if (!fs.existsSync(file)) continue;
-    let contents = fs.readFileSync(file, "utf8");
-    for (const [from, to] of fileReplacements) contents = contents.replaceAll(from, to);
-    fs.writeFileSync(file, contents, "utf8");
+
+  // 1. expo-notifications
+  const notificationsGradle = path.join(projectRoot, "node_modules", "expo-notifications", "android", "build.gradle");
+  if (fs.existsSync(notificationsGradle)) {
+    let contents = fs.readFileSync(notificationsGradle, "utf8");
+    let hasFirebase = false;
+    let firebaseAnchor = "";
+    let firebaseTarget = "";
+
+    if (contents.includes("implementation 'com.google.firebase:")) {
+      firebaseAnchor = "implementation 'com.google.firebase:";
+      firebaseTarget = "compileOnly 'com.google.firebase:";
+      hasFirebase = true;
+    } else if (contents.includes("implementation \"com.google.firebase:")) {
+      firebaseAnchor = "implementation \"com.google.firebase:";
+      firebaseTarget = "compileOnly \"com.google.firebase:";
+      hasFirebase = true;
+    } else if (contents.includes("compileOnly 'com.google.firebase:") || contents.includes("compileOnly \"com.google.firebase:")) {
+      // Already patched!
+      hasFirebase = false;
+    } else {
+      firebaseAnchor = "implementation 'com.google.firebase:";
+      firebaseTarget = "compileOnly 'com.google.firebase:";
+      hasFirebase = true; // To let replaceOrThrow throw the fail-loud error
+    }
+
+    if (hasFirebase) {
+      contents = replaceOrThrow(
+        notificationsGradle,
+        contents,
+        firebaseAnchor,
+        firebaseTarget,
+        "firebase dependency"
+      );
+      fs.writeFileSync(notificationsGradle, contents, "utf8");
+    }
+  }
+
+  // 2. expo-application
+  const applicationGradle = path.join(projectRoot, "node_modules", "expo-application", "android", "build.gradle");
+  if (fs.existsSync(applicationGradle)) {
+    let contents = fs.readFileSync(applicationGradle, "utf8");
+    let hasReferrer = false;
+    let referrerAnchor = "";
+    let referrerTarget = "";
+
+    if (contents.includes("implementation 'com.android.installreferrer:")) {
+      referrerAnchor = "implementation 'com.android.installreferrer:";
+      referrerTarget = "compileOnly 'com.android.installreferrer:";
+      hasReferrer = true;
+    } else if (contents.includes("implementation \"com.android.installreferrer:")) {
+      referrerAnchor = "implementation \"com.android.installreferrer:";
+      referrerTarget = "compileOnly \"com.android.installreferrer:";
+      hasReferrer = true;
+    } else if (contents.includes("compileOnly 'com.android.installreferrer:") || contents.includes("compileOnly \"com.android.installreferrer:")) {
+      // Already patched!
+      hasReferrer = false;
+    } else {
+      referrerAnchor = "implementation 'com.android.installreferrer:";
+      referrerTarget = "compileOnly 'com.android.installreferrer:";
+      hasReferrer = true; // To let replaceOrThrow throw the fail-loud error
+    }
+
+    if (hasReferrer) {
+      contents = replaceOrThrow(
+        applicationGradle,
+        contents,
+        referrerAnchor,
+        referrerTarget,
+        "installreferrer dependency"
+      );
+      fs.writeFileSync(applicationGradle, contents, "utf8");
+    }
+  }
+
+  // 3. expo-camera
+  const cameraGradle = path.join(projectRoot, "node_modules", "expo-camera", "android", "build.gradle");
+  if (fs.existsSync(cameraGradle)) {
+    let contents = fs.readFileSync(cameraGradle, "utf8");
+    
+    const gmsD = 'add(barcodeDependencyConfiguration, "com.google.android.gms:play-services-code-scanner:16.1.0")';
+    const gmsS = "add(barcodeDependencyConfiguration, 'com.google.android.gms:play-services-code-scanner:16.1.0')";
+    const mlkitD = 'add(barcodeDependencyConfiguration, "com.google.mlkit:barcode-scanning:17.3.0")';
+    const mlkitS = "add(barcodeDependencyConfiguration, 'com.google.mlkit:barcode-scanning:17.3.0')";
+    const visionD = 'add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:${camerax_version}")';
+    const visionS = "add(barcodeDependencyConfiguration, 'androidx.camera:camera-mlkit-vision:${camerax_version}')";
+
+    const hasAnyAnchor = contents.includes(gmsD) || contents.includes(gmsS) ||
+                         contents.includes(mlkitD) || contents.includes(mlkitS) ||
+                         contents.includes(visionD) || contents.includes(visionS);
+
+    const isPatched = contents.includes("// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner");
+
+    if (!hasAnyAnchor && isPatched) {
+      // Already fully patched/stripped! Nothing to do.
+    } else {
+      const gmsAnchor = contents.includes(gmsD) ? gmsD : gmsS;
+      contents = replaceOrThrow(cameraGradle, contents, gmsAnchor, "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner", "gms code scanner");
+
+      const mlkitAnchor = contents.includes(mlkitD) ? mlkitD : mlkitS;
+      contents = replaceOrThrow(cameraGradle, contents, mlkitAnchor, "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner", "mlkit barcode scanning");
+
+      const visionAnchor = contents.includes(visionD) ? visionD : visionS;
+      contents = replaceOrThrow(cameraGradle, contents, visionAnchor, "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner", "camera mlkit vision");
+
+      fs.writeFileSync(cameraGradle, contents, "utf8");
+    }
   }
 }
 
@@ -619,6 +754,8 @@ const withWearOsModule = (config) => {
       // Write the F-Droid ProGuard/R8 strip rules — only when
       // CABLESNAP_FDROID=1. See writeFdroidProguardRules for rationale.
       writeFdroidProguardRules(platformRoot);
+      // Write the F-Droid gradle properties setting CABLESNAP_FDROID=1
+      writeFdroidGradleProperties(platformRoot);
       return cfg;
     },
   ]);
@@ -641,3 +778,5 @@ module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
 module.exports.FDROID_PROGUARD_RULES = FDROID_PROGUARD_RULES;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;
+module.exports.writeFdroidGradleProperties = writeFdroidGradleProperties;
+module.exports.replaceOrThrow = replaceOrThrow;

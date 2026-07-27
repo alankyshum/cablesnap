@@ -13,6 +13,8 @@ const {
   patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
   FDROID_PROGUARD_RULES,
+  writeFdroidGradleProperties,
+  replaceOrThrow,
 } = require("../../plugins/with-wearos-module");
 
 // Minimal but realistic fixtures matching the shape Expo's Android template
@@ -519,6 +521,91 @@ describe("patchFdroidExpoDependencies", () => {
       patchFdroidExpoDependencies(tmp);
       expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-notifications", "android", "build.gradle"), "utf8")).toContain("compileOnly 'com.google.firebase:");
       expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-application", "android", "build.gradle"), "utf8")).toContain("compileOnly 'com.android.installreferrer:");
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("throws with filename in message if anchor is removed and CABLESNAP_FDROID=1", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    process.env.CABLESNAP_FDROID = "1";
+    try {
+      expect(() => {
+        replaceOrThrow("some-file.gradle", "file contents", "missing-anchor", "to", "some dependency");
+      }).toThrow(/with-wearos-module: failed to patch some-file.gradle:[\s\S]*?[Mm]issing anchor for some dependency/);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
+  });
+
+  it("patchFdroidExpoDependencies is idempotent and does not throw when run on already-patched files", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-deps-idempotency-"));
+    try {
+      for (const [pkg, contents] of [
+        ["expo-notifications", "implementation 'com.google.firebase:firebase-messaging:25.0.1'"],
+        ["expo-application", "implementation 'com.android.installreferrer:installreferrer:2.2'"],
+        ["expo-camera", "add(barcodeDependencyConfiguration, \"com.google.android.gms:play-services-code-scanner:16.1.0\")\nadd(barcodeDependencyConfiguration, \"com.google.mlkit:barcode-scanning:17.3.0\")\nadd(barcodeDependencyConfiguration, \"androidx.camera:camera-mlkit-vision:\${camerax_version}\")"],
+      ]) {
+        const dir = path.join(tmp, "node_modules", pkg, "android");
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "build.gradle"), contents, "utf8");
+      }
+      process.env.CABLESNAP_FDROID = "1";
+      
+      // First run - should apply patches
+      patchFdroidExpoDependencies(tmp);
+      
+      // Second run - should be silent and not throw
+      expect(() => {
+        patchFdroidExpoDependencies(tmp);
+      }).not.toThrow();
+      
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-notifications", "android", "build.gradle"), "utf8")).toContain("compileOnly 'com.google.firebase:");
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-application", "android", "build.gradle"), "utf8")).toContain("compileOnly 'com.android.installreferrer:");
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-camera", "android", "build.gradle"), "utf8")).toContain("// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner");
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("is silent no-op when CABLESNAP_FDROID is unset, even if anchor is missing", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    delete process.env.CABLESNAP_FDROID;
+    try {
+      const res = replaceOrThrow("some-file.gradle", "file contents", "missing-anchor", "to", "some dependency");
+      expect(res).toBe("file contents");
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
+  });
+});
+
+describe("writeFdroidGradleProperties", () => {
+  it("appends expo.camera.barcode-scanner-enabled=false exactly once", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    process.env.CABLESNAP_FDROID = "1";
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-properties-"));
+    try {
+      const propertiesFile = path.join(tmp, "gradle.properties");
+      fs.writeFileSync(propertiesFile, "some.property=true\n", "utf8");
+      
+      // Run once
+      writeFdroidGradleProperties(tmp);
+      let content = fs.readFileSync(propertiesFile, "utf8");
+      expect(content).toContain("expo.camera.barcode-scanner-enabled=false");
+      
+      // Run twice to ensure idempotency
+      writeFdroidGradleProperties(tmp);
+      content = fs.readFileSync(propertiesFile, "utf8");
+      const occurrences = (content.match(/expo\.camera\.barcode-scanner-enabled=false/g) || []).length;
+      expect(occurrences).toBe(1);
     } finally {
       if (previous === undefined) delete process.env.CABLESNAP_FDROID;
       else process.env.CABLESNAP_FDROID = previous;

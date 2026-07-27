@@ -81,6 +81,7 @@ jobs:
 
       - name: Generate native project
         env:
+          CABLESNAP_FDROID: "1"
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -142,6 +143,7 @@ jobs:
         # map upload. Escape hatch documented at
         # node_modules/@sentry/react-native/sentry.gradle:11.
         env:
+          CABLESNAP_FDROID: "1"
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           set -euo pipefail

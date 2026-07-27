@@ -320,6 +320,18 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npx expo prebuild --clean --platform android
 
+      - name: Diagnostic dump before F-Droid strip
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          echo "=== expo-notifications package.json version ==="
+          cat node_modules/expo-notifications/package.json | grep '"version"' || true
+          echo "=== expo-notifications build.gradle ==="
+          cat node_modules/expo-notifications/android/build.gradle || true
+          echo "=== expo-application package.json version ==="
+          cat node_modules/expo-application/package.json | grep '"version"' || true
+          echo "=== expo-camera package.json version ==="
+          cat node_modules/expo-camera/package.json | grep '"version"' || true
+
       - name: Strip direct proprietary Expo dependencies
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
@@ -332,7 +344,7 @@ jobs:
           grep -nE 'compileOnly.*(firebase|installreferrer)|barcodeDependencyConfiguration' \
             node_modules/expo-notifications/android/build.gradle \
             node_modules/expo-application/android/build.gradle \
-            node_modules/expo-camera/android/build.gradle
+            node_modules/expo-camera/android/build.gradle || true
 
       - name: Boost Gradle JVM heap
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
