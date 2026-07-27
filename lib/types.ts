@@ -366,6 +366,10 @@ export type WorkoutSet = {
   // BLD-1168 Slice 7: optional mini-set segments — populated in history/detail view
   // for advanced set types (rest_pause, cluster, myo_reps). Absent for normal/warmup/dropset/failure.
   segments?: SetSegment[];
+  // BLD-4293: band-resistance logging. NULL/absent = not a band set.
+  band_ids?: string | null;
+  band_signature?: string | null;
+  band_snapshot?: string | null;
 };
 
 export type LinkedGroup = {

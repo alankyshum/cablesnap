@@ -12,6 +12,7 @@ const VALID_TABLES = new Set([
   "meal_templates", "meal_template_items", "app_settings",
   "program_schedule", "strength_goals", "water_logs",
   "gym_profiles", "cable_stacks", "stack_calibrations",
+  "bands", // BLD-4293: resistance-band library
 ]);
 
 function assertValidTable(table: string): void {
@@ -428,6 +429,17 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
     );
     CREATE UNIQUE INDEX IF NOT EXISTS uq_set_segments_set_seg ON workout_set_segments(set_id, segment_number);
     CREATE INDEX IF NOT EXISTS idx_set_segments_set ON workout_set_segments(set_id);
+
+    -- BLD-4293: personal resistance-band library.
+    CREATE TABLE IF NOT EXISTS bands (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      load_kg REAL DEFAULT NULL,
+      color_hint TEXT DEFAULT NULL,
+      created_at INTEGER NOT NULL,
+      deleted_at INTEGER DEFAULT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_bands_deleted_at ON bands(deleted_at);
   `);
 }
 

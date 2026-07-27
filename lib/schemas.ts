@@ -78,6 +78,10 @@ const setImportSchema = z.object({
   link_id: z.string().nullable().optional(),
   round: z.number().nullable().optional(),
   tempo: z.string().nullable().optional(),
+  // BLD-4293: band-resistance logging fields.
+  band_ids: z.string().nullable().optional(),
+  band_signature: z.string().nullable().optional(),
+  band_snapshot: z.string().nullable().optional(),
 });
 
 const foodEntryImportSchema = z.object({

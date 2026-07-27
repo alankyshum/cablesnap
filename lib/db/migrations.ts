@@ -181,6 +181,10 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // addColumnIfMissing is idempotent — safe to call on every boot.
   await addColumnIfMissing(database, "workout_sets", "cached_volume_kg", "REAL NOT NULL DEFAULT 0");
   await addColumnIfMissing(database, "workout_sets", "cached_e1rm_kg", "REAL NOT NULL DEFAULT 0");
+  // BLD-4293: per-set band-resistance logging columns (additive nullable).
+  await addColumnIfMissing(database, "workout_sets", "band_ids", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "workout_sets", "band_signature", "TEXT DEFAULT NULL");
+  await addColumnIfMissing(database, "workout_sets", "band_snapshot", "TEXT DEFAULT NULL");
 
   // workout_sets.set_type migration (replaces deprecated is_warmup column).
   // Kept as a single block: the UPDATEs only reference set_type (just added)
@@ -393,6 +397,24 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Migration: creating share_settings table failed: ${msg}`, { cause: err });
+  }
+
+  // BLD-4293: resistance-band library table (additive, idempotent).
+  try {
+    await database.execAsync(`
+      CREATE TABLE IF NOT EXISTS bands (
+        id TEXT PRIMARY KEY,
+        label TEXT NOT NULL,
+        load_kg REAL DEFAULT NULL,
+        color_hint TEXT DEFAULT NULL,
+        created_at INTEGER NOT NULL,
+        deleted_at INTEGER DEFAULT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_bands_deleted_at ON bands(deleted_at);
+    `);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`Migration: creating bands table failed: ${msg}`, { cause: err });
   }
 
   migrateBreadcrumb("phase_3_complete");

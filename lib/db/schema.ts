@@ -163,6 +163,13 @@ export const workoutSets = sqliteTable("workout_sets", {
   // DEFAULT 0 so pre-migration rows have a defined value (backfill in migrate() sets correct values).
   cached_volume_kg: real("cached_volume_kg").default(0).notNull(),
   cached_e1rm_kg: real("cached_e1rm_kg").default(0).notNull(),
+  // BLD-4293: band-resistance logging. NULL = not a band set.
+  // band_ids: JSON array of selected band ids.
+  // band_signature: deterministic sorted pipe-joined id string for grouping.
+  // band_snapshot: immutable JSON [{label,load_kg,color_hint}] at log time.
+  band_ids: text("band_ids"),
+  band_signature: text("band_signature"),
+  band_snapshot: text("band_snapshot"),
 }, (table) => [
   index("idx_workout_sets_exercise").on(table.exercise_id),
   index("idx_workout_sets_session").on(table.session_id),
@@ -405,6 +412,20 @@ export const achievementsEarned = sqliteTable("achievements_earned", {
   achievement_id: text("achievement_id").primaryKey(),
   earned_at: integer("earned_at").notNull(),
 });
+
+// ─── Band Library (BLD-4293) ────────────────────────────────────────────────
+// Personal resistance-band library. Each row represents one band the user owns.
+// Soft-delete (deleted_at) mirrors exercises.deleted_at.
+export const bands = sqliteTable("bands", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull(),
+  load_kg: real("load_kg"),
+  color_hint: text("color_hint"),
+  created_at: integer("created_at").notNull(),
+  deleted_at: integer("deleted_at"),
+});
+
+export type BandRow = typeof bands.$inferSelect;
 
 // ─── Integration Tables ─────────────────────────────────────────────────────
 

@@ -40,7 +40,8 @@ export type BackupTableName =
   | "program_log"
   | "program_schedule"
   | "meal_templates"
-  | "meal_template_items";
+  | "meal_template_items"
+  | "bands"; // BLD-4293
 
 export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   exercises: "Exercises",
@@ -65,6 +66,7 @@ export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   program_schedule: "Program Schedule",
   meal_templates: "Meal Templates",
   meal_template_items: "Meal Template Items",
+  bands: "Band Library", // BLD-4293
 };
 
 // FK-dependency order for import — parents before children
@@ -84,6 +86,7 @@ export const IMPORT_TABLE_ORDER: BackupTableName[] = [
   "gym_profiles",
   "cable_stacks",
   "stack_calibrations",
+  "bands",           // BLD-4293: band library before workout_sets
   "workout_sessions",
   "program_days",
   "workout_sets",
@@ -160,7 +163,7 @@ export const BACKUP_CATEGORY_LABELS: Record<BackupCategoryName, string> = {
 
 export const BACKUP_CATEGORY_TABLES: Record<BackupCategoryName, BackupTableName[]> = {
   workout_templates: ["workout_templates", "template_exercises"],
-  workout_history: ["gym_profiles", "cable_stacks", "stack_calibrations", "workout_sessions", "workout_sets"],
+  workout_history: ["gym_profiles", "cable_stacks", "stack_calibrations", "bands", "workout_sessions", "workout_sets"], // BLD-4293
   exercises: ["exercises"],
   nutrition: ["food_entries", "daily_log", "macro_targets", "meal_templates", "meal_template_items"],
   body_metrics: ["body_weight", "body_measurements", "body_settings"],
@@ -755,8 +758,8 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     case "workout_sets": {
       const setType = normalizeSetType(row.set_type ?? (row.is_warmup ? "warmup" : "normal"));
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, tempo, set_type, duration_seconds, bodyweight_modifier_kg, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log, pulley_pin, side) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.tempo ?? null, setType, row.duration_seconds ?? null, row.bodyweight_modifier_kg ?? null, row.attachment ?? null, row.mount_position ?? null, row.grip_type ?? null, row.grip_width ?? null, row.stack_id ?? null, row.stack_marker ?? null, row.stack_unit_at_log ?? null, row.stack_name_at_log ?? null, row.pulley_pin ?? null, row.side ?? null]
+        "INSERT OR IGNORE INTO workout_sets (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, rpe, notes, link_id, round, tempo, set_type, duration_seconds, bodyweight_modifier_kg, attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log, pulley_pin, side, band_ids, band_signature, band_snapshot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [row.id, row.session_id, row.exercise_id, row.set_number, row.weight, row.reps, row.completed, row.completed_at, row.set_rpe ?? row.rpe ?? null, row.set_notes ?? row.notes ?? "", row.link_id ?? null, row.round ?? null, row.tempo ?? null, setType, row.duration_seconds ?? null, row.bodyweight_modifier_kg ?? null, row.attachment ?? null, row.mount_position ?? null, row.grip_type ?? null, row.grip_width ?? null, row.stack_id ?? null, row.stack_marker ?? null, row.stack_unit_at_log ?? null, row.stack_name_at_log ?? null, row.pulley_pin ?? null, row.side ?? null, row.band_ids ?? null, row.band_signature ?? null, row.band_snapshot ?? null]
       );
       return r.changes > 0;
     }
@@ -792,6 +795,14 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       const r = await database.runAsync(
         "INSERT OR IGNORE INTO meal_template_items (id, template_id, food_entry_id, servings, sort_order) VALUES (?, ?, ?, ?, ?)",
         [row.id, row.template_id, row.food_entry_id, row.servings ?? 1, row.sort_order ?? 0]
+      );
+      return r.changes > 0;
+    }
+    case "bands": {
+      // BLD-4293: band library import.
+      const r = await database.runAsync(
+        "INSERT OR IGNORE INTO bands (id, label, load_kg, color_hint, created_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [row.id, row.label, row.load_kg ?? null, row.color_hint ?? null, row.created_at, row.deleted_at ?? null]
       );
       return r.changes > 0;
     }

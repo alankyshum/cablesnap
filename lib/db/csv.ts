@@ -34,6 +34,8 @@ export type WorkoutCSVRow = {
   mini_set_weights: string | null;
   /** Semicolon-separated rest durations (seconds) after each mini-set. */
   mini_set_rests: string | null;
+  /** BLD-4293: comma-separated band ids for band exercises. Null/empty for non-band sets. */
+  band_ids?: string | null;
 };
 
 export type NutritionCSVRow = {
@@ -120,6 +122,9 @@ export async function getWorkoutCSVData(since: number): Promise<WorkoutCSVRow[]>
           ORDER BY segment_number
         ) seg
       )`,
+      // BLD-4293: band ids exported as-is (JSON array string); importers
+      // recompute band_signature from the ids on re-import.
+      band_ids: workoutSets.band_ids,
     })
     .from(workoutSessions)
     .innerJoin(workoutSets, sql`${workoutSets.session_id} = ${workoutSessions.id}`)

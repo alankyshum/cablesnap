@@ -112,9 +112,9 @@ describe('import-export — bodyweight variant round-trip (BLD-768)', () => {
 
     const wsInsert = insertCalls.find((c) => c.sql.includes('INSERT OR IGNORE INTO workout_sets'));
     expect(wsInsert).toBeDefined();
-    // Column list ends with: ..., attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log.
-    // Param indices (0-based): 16=attachment, 17=mount_position, 18=grip_type, 19=grip_width, 20=stack_id, 21=stack_marker, 22=stack_unit_at_log, 23=stack_name_at_log.
-    expect(wsInsert!.params).toHaveLength(26);
+    // Column list ends with: ..., attachment, mount_position, grip_type, grip_width, stack_id, stack_marker, stack_unit_at_log, stack_name_at_log, pulley_pin, side, band_ids, band_signature, band_snapshot.
+    // Param indices (0-based): 16=attachment, 17=mount_position, 18=grip_type, 19=grip_width, 20=stack_id, 21=stack_marker, 22=stack_unit_at_log, 23=stack_name_at_log, 24=pulley_pin, 25=side, 26=band_ids, 27=band_signature, 28=band_snapshot.
+    expect(wsInsert!.params).toHaveLength(29);
     expect(wsInsert!.params[18]).toBe('overhand');
     expect(wsInsert!.params[19]).toBe('narrow');
   });

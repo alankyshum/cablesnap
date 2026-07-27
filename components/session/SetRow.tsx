@@ -47,6 +47,9 @@ import { isBodyweightGripExercise, formatGripTypeLabel, formatGripWidthLabel } f
 import { RpeChipStrip } from "./RpeChipStrip";
 import { SetWeightCell } from "./SetWeightCell";
 import { SetTimerCell } from "./SetTimerCell";
+import { BandResistanceChip } from "./BandResistanceChip";
+import { shouldShowBandPicker } from "@/lib/bands";
+import { parseBandSnapshot } from "@/lib/db/bands";
 import { StackMarkerHint } from "./StackMarkerHint";
 import type { StackWithCalibrations } from "@/hooks/useActiveCalibration";
 import { MiniSetEditor } from "./MiniSetEditor";
@@ -197,6 +200,8 @@ export type SetRowProps = {
   onAddSegment?: (setId: string, reps: number) => Promise<void> | void;
   onDeleteSegment?: (segmentId: string, setId: string) => Promise<void> | void;
   onCollapseToNormal?: (setId: string) => Promise<void> | void;
+  // BLD-4293: band-resistance logging. Only wired for equipment === "band".
+  onOpenBandPicker?: (setId: string) => void;
 };
 
 export const SetRow = memo(function SetRow({
@@ -213,6 +218,7 @@ export const SetRow = memo(function SetRow({
   intensityMode,
   stacks, onMarkerConfirm, onManualWeightSave,
   onAddSegment, onDeleteSegment, onCollapseToNormal,
+  onOpenBandPicker,
 }: SetRowProps) {
   const colors = useThemeColors();
   // BLD-1175: controlled next-reps input for MiniSetEditor — scoped to this row
@@ -352,6 +358,14 @@ export const SetRow = memo(function SetRow({
   // Mirrors SetWeightCell's gate (isCable && no calibrations on any stack).
   const hasCalibration = stacksProp.some((s) => s.calibrations.length > 0);
   const showStackMarkerHint = isCable && !hasCalibration;
+
+  // BLD-4293: Band exercise gate. When equipment === "band", the weight cell
+  // is replaced with BandResistanceChip.
+  const isBandExercise = shouldShowBandPicker(equipment);
+  const bandSnapshot = React.useMemo(
+    () => (isBandExercise ? parseBandSnapshot(set.band_snapshot) : null),
+    [isBandExercise, set.band_snapshot],
+  );
 
   // BLD-2674: Quick Weight Stepper gate.
   //
@@ -698,7 +712,21 @@ export const SetRow = memo(function SetRow({
             )}
           </View>
           <View style={styles.pickerCol}>
-            {isBodyweight ? (
+            {isBandExercise ? (
+              // BLD-4293: band exercise — replace weight cell with band picker chip.
+              <Pressable
+                onPress={() => onOpenBandPicker?.(set.id)}
+                hitSlop={{ top: 0, bottom: 0, left: 4, right: 4 }}
+                style={styles.bandChipPressable}
+                accessibilityRole="button"
+              >
+                <BandResistanceChip
+                  snapshot={bandSnapshot}
+                  unit={unit}
+                  setNumber={set.set_number}
+                />
+              </Pressable>
+            ) : isBodyweight ? (
               <BodyweightModifierChip
                 modifierKg={set.bodyweight_modifier_kg ?? null}
                 unit={unit}
@@ -1267,6 +1295,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 12,
+  },
+  bandChipPressable: {
+    alignSelf: "stretch",
   },
   circleCheck: {
     width: 48,
