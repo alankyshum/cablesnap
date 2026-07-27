@@ -96,8 +96,8 @@ describe("patchSettingsGradle", () => {
     const out = patchSettingsGradle(SETTINGS_FIXTURE);
     expect(out).toContain('if (System.getenv("CABLESNAP_FDROID") == "1")');
     expect(out).toContain("gradle.beforeProject { project ->");
-    expect(out).toContain("com.google.firebase:");
-    expect(out).toContain("com.android.installreferrer:");
+    expect(out).toContain("com\\.google\\.firebase:");
+    expect(out).toContain("com\\.android\\.installreferrer:");
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
     else process.env.CABLESNAP_FDROID = previous;
   });

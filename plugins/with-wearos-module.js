@@ -106,8 +106,7 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.android\\.installreferrer:[^\\r\\n]+\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.mlkit:[^\\r\\n]+\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.android\\.gms:[^\\r\\n]+\\r?\\n?/, "")
-        // com.google.firebase:, com.android.installreferrer:, com.google.mlkit:,
-        // and com.google.android.gms: declarations are removed above for F-Droid.
+        // Proprietary declarations are removed above for F-Droid.
         if (patched != original) buildFile.setText(patched, "UTF-8")
     }
 }
