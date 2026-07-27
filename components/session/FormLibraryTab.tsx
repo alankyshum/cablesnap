@@ -36,7 +36,7 @@ import { FormClipsPlayer } from "./FormClipsPlayer";
 import { ClipThumbImage } from "./ClipThumbImage";
 import { FormVideoSheet } from "./FormVideoSheet";
 import type { SetMediaRow } from "@/lib/db/form-clips";
-import { fontSizes, radii } from "@/constants/design-tokens";
+import { fontSizes, radii, spacing } from "@/constants/design-tokens";
 
 type SheetProps = {
   setId: string;
@@ -690,9 +690,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
