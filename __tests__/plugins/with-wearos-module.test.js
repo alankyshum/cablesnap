@@ -506,7 +506,7 @@ describe("patchFdroidExpoDependencies", () => {
       const out = fs.readFileSync(path.join(dir, "build.gradle"), "utf8");
       expect(out).not.toContain("play-services-code-scanner");
       expect(out).not.toContain("com.google.mlkit:barcode-scanning");
-      expect(out).toContain("camera-mlkit-vision");
+      expect(out).not.toContain("camera-mlkit-vision");
     } finally {
       if (previous === undefined) delete process.env.CABLESNAP_FDROID;
       else process.env.CABLESNAP_FDROID = previous;

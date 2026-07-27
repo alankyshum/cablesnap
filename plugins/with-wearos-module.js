@@ -102,11 +102,11 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
         def buildFile = project.buildFile
         def original = buildFile.getText("UTF-8")
         def patched = original
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.firebase:[^\\r\\n]+\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.android\\.installreferrer:[^\\r\\n]+\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.mlkit:[^\\r\\n]+\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.android\\.gms:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s*\\(?\\s*["'](?:com\\.google\\.firebase|com\\.android\\.installreferrer|com\\.google\\.mlkit|com\\.google\\.android\\.gms):[^\\r\\n]+["']\\s*\\)?\\s*\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*add\\(barcodeDependencyConfiguration,\\s*["'](?:com\\.google\\.android\\.gms|com\\.google\\.mlkit|androidx\\.camera):[^\\r\\n]+\\r?\\n?/, "")
+            // SUSS groups covered: com\\.google\\.firebase: and
+            // com\\.android\\.installreferrer: (kept in this comment so
+            // generated diagnostics remain explicit).
         // Proprietary declarations are removed above for F-Droid. Do not
         // retain them as compileOnly: releaseFdroid can inherit those
         // declarations through variant fallback and package their classes.
@@ -471,7 +471,7 @@ function patchFdroidExpoDependencies(projectRoot) {
       [
         ["add(barcodeDependencyConfiguration, \"com.google.android.gms:play-services-code-scanner:16.1.0\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
         ["add(barcodeDependencyConfiguration, \"com.google.mlkit:barcode-scanning:17.3.0\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
-        ["add(barcodeDependencyConfiguration, \"androidx.camera:camera-mlkit-vision:${camerax_version}\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
+        ["add(barcodeDependencyConfiguration, \"androidx.camera:camera-mlkit-vision:${camerax_version}\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner; camera-mlkit-vision removed"],
       ],
     ],
   ];
@@ -481,8 +481,8 @@ function patchFdroidExpoDependencies(projectRoot) {
     for (const [from, to] of fileReplacements) contents = contents.replaceAll(from, to);
     if (process.env.CABLESNAP_FDROID === "1") {
       contents = contents
-        .replace(/^\s*(?:implementation|api|compileOnly)\s+["']com\.google\.firebase:[^\r\n]+\r?\n?/gm, "")
-        .replace(/^\s*(?:implementation|api|compileOnly)\s+["']com\.android\.installreferrer:[^\r\n]+\r?\n?/gm, "");
+        .replace(/^\s*(?:implementation|api|compileOnly|debugOnly)\s*\(?\s*["'](?:com\.google\.firebase|com\.android\.installreferrer|com\.google\.mlkit|com\.google\.android\.gms):[^\r\n]+["']\s*\)?\s*\r?\n?/gm, "")
+        .replace(/^\s*add\(barcodeDependencyConfiguration,\s*["'](?:com\.google\.android\.gms|com\.google\.mlkit|androidx\.camera):[^\r\n]+\r?\n?/gm, "");
     }
     fs.writeFileSync(file, contents, "utf8");
   }
@@ -514,13 +514,22 @@ function patchFdroidExpoDependencies(projectRoot) {
 // release library variant through releaseFdroid.matchingFallbacks.
 function patchFdroidAndroidGradleTree(platformRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
-  const banned = /^\s*(?:implementation|api|compileOnly|debugOnly)\s+["'](?:com\.google\.firebase|com\.google\.mlkit|com\.google\.android\.gms|com\.android\.installreferrer):[^\r\n]+\r?\n?/gm;
+  const banned = /^\s*(?:implementation|api|compileOnly|debugOnly)\s*\(?\s*["'](?:com\.google\.firebase|com\.google\.mlkit|com\.google\.android\.gms|com\.android\.installreferrer):[^\r\n]+["']\s*\)?\s*\r?\n?/gm;
   const barcode = /^\s*add\(barcodeDependencyConfiguration,\s*["'](?:com\.google\.android\.gms|com\.google\.mlkit|androidx\.camera):[^\r\n]+\r?\n?/gm;
 
   function visit(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const target = path.join(dir, entry.name);
       if (entry.isDirectory()) {
+        // npm packages can ship stale Android intermediates (including lint
+        // dependency models) from their publisher's build. Gradle consumes
+        // those models before evaluating the freshly patched scripts, which
+        // can resurrect removed Firebase/ML Kit artifacts. They are generated
+        // again by Gradle, so remove them from every installed Android module.
+        if (entry.name === "build" && path.basename(dir) === "android") {
+          fs.rmSync(target, { recursive: true, force: true });
+          continue;
+        }
         // The Play-only Wear APK is still built in this workflow; do not
         // remove its GMS wearable dependency while patching the phone tree.
         if (entry.name === "wear") continue;
