@@ -11,6 +11,7 @@ const {
   writeFdroidManifest,
   writeFdroidR8Rules,
   patchFdroidExpoDependencies,
+  patchFdroidLibrarySources,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
@@ -515,6 +516,100 @@ describe("patchFdroidExpoDependencies", () => {
       expect(out).not.toContain("play-services-code-scanner");
       expect(out).not.toContain("com.google.mlkit:barcode-scanning");
       expect(out).not.toContain("camera-mlkit-vision");
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  // BLD-4443: expo-camera, expo-application, and expo-notifications each
+  // ship a precompiled AAR via `local-maven-repo/` referenced through their
+  // `expo-module.config.json` `android.publication` block. Expo autolinking
+  // then depends on the AAR (not the source), so `patchFdroidLibrarySources`
+  // (Kotlin source rewrite) has zero effect and the mlkit / gms / firebase /
+  // installreferrer class-name strings survive R8 into the F-Droid DEX.
+  //
+  // patchFdroidExpoDependencies (pre-prebuild): strips android.publication so
+  //   autolinking never attempts to resolve the maven coordinate.
+  // patchFdroidLibrarySources (post-prebuild): deletes local-maven-repo/ so
+  //   even if prebuild writes the directory, Gradle cannot find the AAR.
+  it.each([
+    "expo-camera",
+    "expo-application",
+    "expo-notifications",
+  ])("strips android.publication from %s expo-module.config.json under CABLESNAP_FDROID=1", (pkgName) => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-aar-"));
+    try {
+      const pkgDir = path.join(tmp, "node_modules", pkgName);
+      fs.mkdirSync(path.join(pkgDir, "android"), { recursive: true });
+      fs.writeFileSync(path.join(pkgDir, "android", "build.gradle"), "", "utf8");
+      fs.writeFileSync(
+        path.join(pkgDir, "expo-module.config.json"),
+        JSON.stringify(
+          {
+            platforms: ["android"],
+            android: {
+              modules: ["expo.modules.dummy.DummyModule"],
+              publication: {
+                groupId: "host.exp.exponent",
+                artifactId: "expo.modules.dummy",
+                version: "1.0.0",
+                repository: "local-maven-repo",
+              },
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidExpoDependencies(tmp);
+
+      // publication block removed → autolinking falls back to source project
+      const config = JSON.parse(
+        fs.readFileSync(path.join(pkgDir, "expo-module.config.json"), "utf8"),
+      );
+      expect(config.android.publication).toBeUndefined();
+      expect(config.android.modules).toContain("expo.modules.dummy.DummyModule");
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it.each([
+    "expo-camera",
+    "expo-application",
+    "expo-notifications",
+  ])("patchFdroidLibrarySources deletes local-maven-repo/ for %s", (pkgName) => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-aar-ls-"));
+    try {
+      const pkgDir = path.join(tmp, "node_modules", pkgName);
+      const aarDir = path.join(
+        pkgDir,
+        "local-maven-repo",
+        "host",
+        "exp",
+        "exponent",
+        "expo.modules.dummy",
+        "1.0.0",
+      );
+      fs.mkdirSync(aarDir, { recursive: true });
+      fs.writeFileSync(path.join(aarDir, "expo.modules.dummy-1.0.0.aar"), "PK\u0003\u0004", "utf8");
+      // Create minimal android/src tree so the verify loop doesn't throw on
+      // a real proprietary string scan.
+      fs.mkdirSync(path.join(pkgDir, "android", "src"), { recursive: true });
+
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidLibrarySources(tmp);
+
+      expect(fs.existsSync(path.join(pkgDir, "local-maven-repo"))).toBe(false);
     } finally {
       if (previous === undefined) delete process.env.CABLESNAP_FDROID;
       else process.env.CABLESNAP_FDROID = previous;
