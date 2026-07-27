@@ -44,6 +44,7 @@ _No user-facing changes yet._
 - **F-Droid release CI explicitly reapplies dependency stripping after prebuild**, preventing native project generation order from restoring proprietary Expo artifacts.
 - **F-Droid barcode scanning now strips the unused proprietary Expo Camera scanner dependencies**, while the open-source ZXing scanner remains available.
 - **F-Droid Gradle resolution now rejects proprietary dependency groups outright**, preventing transitive Firebase, ML Kit, Play Services, or Install Referrer classes from entering the APK.
+- **F-Droid dependency patching removes proprietary declarations instead of retaining compile-only artifacts**, ensuring Firebase and Install Referrer classes cannot be packaged.
 
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
