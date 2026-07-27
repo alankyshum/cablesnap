@@ -20,8 +20,9 @@
  * wire any extra prop for it.
  */
 import React, { useCallback, useEffect, useMemo, memo, useState, useRef } from "react";
-import { findNodeHandle, I18nManager, Image, Platform, Pressable, StyleSheet, View, Alert, TouchableOpacity } from "react-native";
+import { findNodeHandle, I18nManager, Image, Platform, Pressable, StyleSheet, View, Alert, TouchableOpacity, AccessibilityInfo } from "react-native";
 import { Text } from "@/components/ui/text";
+import { Input } from "@/components/ui/input";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Check, Trash2 } from "lucide-react-native";
 import WeightPicker from "../../components/WeightPicker";
@@ -197,6 +198,11 @@ export type SetRowProps = {
   onAddSegment?: (setId: string, reps: number) => Promise<void> | void;
   onDeleteSegment?: (segmentId: string, setId: string) => Promise<void> | void;
   onCollapseToNormal?: (setId: string) => Promise<void> | void;
+  notesOpen?: boolean;
+  notesDraft?: string;
+  onToggleNotes?: (setId: string) => void;
+  onNotesDraftChange?: (setId: string, text: string) => void;
+  onNotesSave?: (setId: string, text: string) => void;
 };
 
 export const SetRow = memo(function SetRow({
@@ -213,6 +219,7 @@ export const SetRow = memo(function SetRow({
   intensityMode,
   stacks, onMarkerConfirm, onManualWeightSave,
   onAddSegment, onDeleteSegment, onCollapseToNormal,
+  notesOpen, notesDraft, onToggleNotes, onNotesDraftChange, onNotesSave,
 }: SetRowProps) {
   const colors = useThemeColors();
   // BLD-1175: controlled next-reps input for MiniSetEditor — scoped to this row
@@ -232,6 +239,20 @@ export const SetRow = memo(function SetRow({
   // usePRCelebration MUST NOT fire haptic/audio. Any change here requires
   // psychologist re-review per PLAN-BLD-559.
   const { fire: fireSetCompletionFeedback } = useSetCompletionFeedback();
+
+  const noteBtnRef = useRef<View>(null);
+  const prevNotesOpen = useRef(notesOpen);
+  useEffect(() => {
+    if (prevNotesOpen.current && !notesOpen) {
+      if (noteBtnRef.current) {
+        const handle = findNodeHandle(noteBtnRef.current);
+        if (handle) {
+          AccessibilityInfo.setAccessibilityFocus(handle);
+        }
+      }
+    }
+    prevNotesOpen.current = notesOpen;
+  }, [notesOpen]);
 
   // BLD-614: one-time swipe-right discoverability hint.
   // Gated by a persistent flag in app_settings (codebase convention; AsyncStorage
@@ -826,6 +847,20 @@ export const SetRow = memo(function SetRow({
             </Pressable>
           )}
           <Pressable
+            ref={noteBtnRef}
+            onPress={() => onToggleNotes?.(set.id)}
+            hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
+            style={styles.actionBtn}
+            accessibilityRole="button"
+            accessibilityLabel={set.notes ? `Note for set ${set.set_number} of ${exerciseName}` : `Add note for set ${set.set_number} of ${exerciseName}`}
+          >
+            <MaterialCommunityIcons
+              name={set.notes ? "note-text" : "note-text-outline"}
+              size={22}
+              color={set.notes ? colors.primary : colors.onSurfaceVariant}
+            />
+          </Pressable>
+          <Pressable
             // Sighted: swipe is the primary delete path; single-tap is a
             // no-op (no onPress) so sweaty/gloved fingers cannot misfire.
             // Long-press (≥600ms) remains as a deliberate secondary path.
@@ -1150,6 +1185,31 @@ export const SetRow = memo(function SetRow({
         />
       ) : null}
 
+      {notesOpen && (
+        <View style={styles.notesEditorContainer}>
+          <Input
+            type="textarea"
+            variant="outline"
+            rows={3}
+            placeholder="Note for this set (e.g. form, grip, pin position)"
+            placeholderTextColor={colors.onSurfaceVariant}
+            value={notesDraft ?? set.notes ?? ""}
+            onChangeText={(v) => onNotesDraftChange?.(set.id, v)}
+            onBlur={() => onNotesSave?.(set.id, notesDraft ?? set.notes ?? "")}
+            maxLength={500}
+            textAlignVertical="top"
+            inputStyle={{ fontSize: fontSizes.base, color: colors.onSurface, minHeight: 80 }}
+            accessibilityLabel={`Note for set ${set.set_number} of ${exerciseName}`}
+          />
+          <Text
+            variant="caption"
+            style={{ color: colors.onSurfaceVariant, textAlign: "right", fontSize: fontSizes.xs, marginTop: 4 }}
+          >
+            {(notesDraft ?? set.notes ?? "").length}/500
+          </Text>
+        </View>
+      )}
+
       <PlateHint weight={displayedWeight} unit={unit} equipment={equipment} />
     </View>
   );
@@ -1338,5 +1398,10 @@ const styles = StyleSheet.create({
     minWidth: 32,
     minHeight: 44,
     zIndex: 10,
+  },
+  notesEditorContainer: {
+    paddingHorizontal: 36,
+    paddingBottom: 8,
+    paddingTop: 4,
   },
 });
