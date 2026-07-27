@@ -102,10 +102,12 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
         def buildFile = project.buildFile
         def original = buildFile.getText("UTF-8")
         def patched = original
-            .replace("implementation 'com.google.firebase:", "compileOnly 'com.google.firebase:")
-            .replace("implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:")
-            .replace('implementation "com.google.firebase:', 'compileOnly "com.google.firebase:')
-            .replace('implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:')
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.firebase:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.android\\.installreferrer:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.mlkit:[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly)\\s+["']com\\.google\\.android\\.gms:[^\\r\\n]+\\r?\\n?/, "")
+        // com.google.firebase:, com.android.installreferrer:, com.google.mlkit:,
+        // and com.google.android.gms: declarations are removed above for F-Droid.
         if (patched != original) buildFile.setText(patched, "UTF-8")
     }
 }
@@ -428,6 +430,14 @@ function patchFdroidExpoDependencies(projectRoot) {
       [
         ["implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:"],
         ['implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:'],
+      ],
+    ],
+    [
+      path.join(projectRoot, "node_modules", "expo-camera", "android", "build.gradle"),
+      [
+        ["add(barcodeDependencyConfiguration, \"com.google.android.gms:play-services-code-scanner:16.1.0\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
+        ["add(barcodeDependencyConfiguration, \"com.google.mlkit:barcode-scanning:17.3.0\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
+        ["add(barcodeDependencyConfiguration, \"androidx.camera:camera-mlkit-vision:${camerax_version}\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
       ],
     ],
   ];
