@@ -552,6 +552,26 @@ function patchFdroidExpoDependencies(projectRoot) {
 // class descriptors emitted by Expo's Kotlin sources (and R8 must still parse
 // those descriptors). Replace the optional integrations with no-op FOSS
 // implementations before Gradle compiles the modules.
+// Hard-assert wrapper for source-file regex replacements. If the anchor does
+// not match, the upstream file shape has drifted and silently emitting the
+// original (or broken) source risks re-introducing proprietary GMS/MLKit/
+// InstallReferrer transitives into the F-Droid APK. Fail loudly at prebuild
+// so the drift is caught in CI (per BLD-4392 AC10b) instead of at DEX-purity.
+function requireReplace(filePath, source, regex, replacement, contextName) {
+  // Reset lastIndex — regex may have a stateful /g flag from prior use in a
+  // multi-file loop; `test()` and `replace()` must both see the anchor.
+  regex.lastIndex = 0;
+  if (!regex.test(source)) {
+    throw new Error(
+      `[with-wearos-module.patchFdroidLibrarySources] FOSS source patch anchor missed for ${contextName} in ${filePath}. ` +
+      `Upstream source shape has drifted from the expected pattern ${regex}. ` +
+      `Refusing to emit a silently unpatched FOSS build — repair the anchor before shipping.`
+    );
+  }
+  regex.lastIndex = 0;
+  return source.replace(regex, replacement);
+}
+
 function patchFdroidLibrarySources(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const sourceRoot = (...parts) => path.join(projectRoot, "node_modules", ...parts);
@@ -628,36 +648,87 @@ object BarCodeScannerResultSerializer {
   const cameraModule = path.join(camera, "CameraViewModule.kt");
   if (fs.existsSync(cameraModule)) {
     let source = fs.readFileSync(cameraModule, "utf8")
-      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
-      .replace(/AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
-        `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
+      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "");
+    source = requireReplace(
+      cameraModule,
+      source,
+      /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
+      `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
       promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`);
+    }`,
+      "expo-camera: AsyncFunction(\"launchScanner\") body (CameraViewModule.kt)"
+    );
     fs.writeFileSync(cameraModule, source, "utf8");
   }
   const cameraUtils = path.join(camera, "utils", "CameraUtils.kt");
   if (fs.existsSync(cameraUtils)) {
-    let source = fs.readFileSync(cameraUtils, "utf8")
-      .replace(/fun isMLKitBarcodeScannerAvailable\(\)[^}]*\}/s, "fun isMLKitBarcodeScannerAvailable(): Boolean = false")
-      .replace(/Class\.forName\("com\.google\.mlkit\.[^"]+"\)/g, "Any::class.java");
+    let source = fs.readFileSync(cameraUtils, "utf8");
+    source = requireReplace(
+      cameraUtils,
+      source,
+      /fun isMLKitBarcodeScannerAvailable\(\)[^}]*\}/s,
+      "fun isMLKitBarcodeScannerAvailable(): Boolean = false",
+      "expo-camera: isMLKitBarcodeScannerAvailable stub"
+    );
+    source = source.replace(/Class\.forName\("com\.google\.mlkit\.[^"]+"\)/g, "Any::class.java");
     fs.writeFileSync(cameraUtils, source, "utf8");
   }
   const cameraView = path.join(camera, "CameraViewModule.kt");
   if (fs.existsSync(cameraView)) {
     let source = fs.readFileSync(cameraView, "utf8")
-      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
-      .replace(/AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
-        `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
+      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "");
+    // Idempotency: after the first replacement above the launchScanner body is
+    // already a single-line stub, so the same anchor still matches it. That is
+    // the intended behavior — the patcher runs once per prebuild.
+    source = requireReplace(
+      cameraView,
+      source,
+      /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
+      `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
       promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`);
+    }`,
+      "expo-camera: AsyncFunction(\"launchScanner\") body (CameraView second pass)"
+    );
     fs.writeFileSync(cameraView, source, "utf8");
   }
 
   const app = sourceRoot("expo-application", "android", "src", "main", "java", "expo", "modules", "application", "ApplicationModule.kt");
   if (fs.existsSync(app)) {
-    let source = fs.readFileSync(app, "utf8").replace(/^import com\.android\.installreferrer[^\n]+\n/gm, "");
-    source = source.replace(/\n\s*AsyncFunction\("getInstallReferrerAsync"\)[\s\S]*?\n\s*\}\n\s*\}\n\n\s*private val packageName/m,
-      `AsyncFunction("getInstallReferrerAsync") { promise: Promise -> promise.resolve("") }`);
+    let source = fs.readFileSync(app, "utf8");
+    // Anchor 1: strip the InstallReferrer imports (proprietary transitive).
+    source = requireReplace(
+      app,
+      source,
+      /^import com\.android\.installreferrer[^\n]+\n/gm,
+      "",
+      "expo-application: import com.android.installreferrer.*"
+    );
+    // Anchor 2: replace the `AsyncFunction("getInstallReferrerAsync") { ... }`
+    // block with a FOSS stub. Anchor is intentionally tight: it matches the
+    // AsyncFunction opener at exactly the 4-space ModuleDefinition indent, and
+    // consumes up to (and including) the matching closer at the same indent.
+    // Non-greedy `[\s\S]*?` + `^ {4}\}$` (multiline) guarantees we stop at the
+    // block's own closer and do NOT eat the ModuleDefinition close, class
+    // close, or the `private val packageName` declarations that follow. See
+    // BLD-4392 for the failure mode of the previous, over-greedy anchor.
+    source = requireReplace(
+      app,
+      source,
+      /^ {4}AsyncFunction\("getInstallReferrerAsync"\) \{[\s\S]*?^ {4}\}$/m,
+      `    AsyncFunction("getInstallReferrerAsync") { promise: Promise -> promise.resolve("") }`,
+      "expo-application: AsyncFunction(\"getInstallReferrerAsync\") body"
+    );
+    // Post-condition: FOSS output must not contain any lingering
+    // `InstallReferrerClient` / `InstallReferrerStateListener` symbols; the
+    // only allowed residual mention of "InstallReferrer" is the JS-facing
+    // AsyncFunction name `getInstallReferrerAsync`. If a real symbol survives
+    // the DEX purity gate will flag it later — fail here for a clear error.
+    if (/InstallReferrer(?!Async)(Client|StateListener|Response)/.test(source)) {
+      throw new Error(
+        `[with-wearos-module.patchFdroidLibrarySources] expo-application FOSS stub still references InstallReferrer symbols after patching. ` +
+        `Anchors matched but the file shape is not what the patcher expects — refusing to write.`
+      );
+    }
     fs.writeFileSync(app, source, "utf8");
   }
 
