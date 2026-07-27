@@ -424,7 +424,7 @@ jobs:
           trap 'rm -rf "$TMPDIR_DEX"' EXIT
           unzip -q -o cablesnap-fdroid.apk 'classes*.dex' -d "$TMPDIR_DEX"
           HITS=$(strings "$TMPDIR_DEX"/classes*.dex \
-            | grep -oE 'com/google/firebase[^[:space:]]*|com/google/mlkit[^[:space:]]*|com/google/android/gms[^[:space:]]*|com/android/installreferrer[^[:space:]]*' \
+            | grep -oE 'com/google/firebase[A-Za-z0-9_$./-]*|com/google/mlkit[A-Za-z0-9_$./-]*|com/google/android/gms[A-Za-z0-9_$./-]*|com/android/installreferrer[A-Za-z0-9_$./-]*' \
             | sort -u || true)
           printf '%s\n' "$HITS"
           if [ -n "$HITS" ]; then
