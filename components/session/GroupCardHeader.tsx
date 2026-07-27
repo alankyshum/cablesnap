@@ -33,8 +33,6 @@ export type GroupCardHeaderProps = {
    * removed. Mode-picker UI moves to the Details modal in a follow-up.
    */
   currentMode?: TrainingMode | undefined;
-  exerciseNotesOpen?: boolean;
-  exerciseNotesDraft?: string | undefined;
   /** BLD-1028: current draft of the pinned note (or undefined if not editing). */
   pinnedNoteDraft?: string;
   firstSet: SetWithMeta | undefined;
@@ -48,9 +46,6 @@ export type GroupCardHeaderProps = {
   step?: number;
   onUpdate?: (setId: string, field: "weight" | "reps" | "duration_seconds", val: string) => void;
   onModeChange?: (exerciseId: string, mode: TrainingMode) => void;
-  onExerciseNotes?: (exerciseId: string, text: string) => void;
-  onExerciseNotesDraftChange?: (exerciseId: string, text: string) => void;
-  onToggleExerciseNotes?: (exerciseId: string) => void;
   /** BLD-1028 */
   onPinnedNoteDraftChange: (exerciseId: string, text: string) => void;
   onPinnedNoteSave: (exerciseId: string, text: string) => void;

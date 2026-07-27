@@ -18,8 +18,6 @@ export type GroupCardProps = {
   suggestions: Record<string, Suggestion | null>;
   setNotesOpen?: Record<string, boolean>;
   setNotesDraft?: Record<string, string>;
-  exerciseNotesOpen?: boolean;
-  exerciseNotesDraft?: string | undefined;
   /** BLD-1028 */
   pinnedNoteDraft?: string;
   linkIds: string[];
@@ -33,9 +31,6 @@ export type GroupCardProps = {
   onToggleSetNote?: (setId: string) => void;
   onSetNoteDraftChange?: (setId: string, text: string) => void;
   onSetNoteSave?: (setId: string, text: string) => void;
-  onExerciseNotes?: (exerciseId: string, text: string) => void;
-  onExerciseNotesDraftChange?: (exerciseId: string, text: string) => void;
-  onToggleExerciseNotes?: (exerciseId: string) => void;
   /** BLD-1028 */
   onPinnedNoteDraftChange: (exerciseId: string, text: string) => void;
   onPinnedNoteSave: (exerciseId: string, text: string) => void;

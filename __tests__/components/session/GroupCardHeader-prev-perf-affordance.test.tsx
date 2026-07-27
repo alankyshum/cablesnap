@@ -66,8 +66,6 @@ function makeGroup(overrides: Partial<ExerciseGroup> = {}): ExerciseGroup {
 
 const baseProps = {
   group: makeGroup(),
-  exerciseNotesOpen: false,
-  exerciseNotesDraft: undefined,
   firstSet: undefined as SetWithMeta | undefined,
   // BLD-850: header now also accepts suggestion/step/onUpdate so it can
   // render the inline LastNextRow. We default them to nullish so the
@@ -77,8 +75,6 @@ const baseProps = {
   onUpdate: jest.fn(),
   onModeChange: jest.fn(),
   onExerciseNotes: jest.fn(),
-  onExerciseNotesDraftChange: jest.fn(),
-  onToggleExerciseNotes: jest.fn(),
   onShowDetail: jest.fn(),
   onSwap: jest.fn(),
   onDeleteExercise: jest.fn(),
