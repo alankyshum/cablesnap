@@ -83,7 +83,6 @@ marker) at release time.
 
 - **F-Droid R8 now ignores missing optional integration warnings after stripping those dependencies**, allowing the release shrinker to finish and remove the unreachable code paths.
 
-- **F-Droid CI disables R8’s fatal missing-class diagnostic for intentionally removed Expo integrations**, while the post-build DEX purity gate remains mandatory.
 
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->

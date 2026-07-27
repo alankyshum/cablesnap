@@ -376,24 +376,18 @@ jobs:
           # second, property-level guard; this prevents AGP from resolving
           # the ML Kit graph while retaining CameraX preview functionality.
           printf '\nexpo.camera.barcode-scanner-enabled=false\n' >> android/gradle.properties
-          # AGP/R8 8.x promotes missing optional classes referenced by Expo's
-          # compile-only code to fatal diagnostics even when the corresponding
-          # -dontwarn rules are present. F-Droid intentionally strips these
-          # optional integrations; let R8 shrink their unreachable references.
-          printf 'android.r8.failOnMissingClasses=false\n' >> android/gradle.properties
           grep 'expo.camera.barcode-scanner-enabled=false' android/gradle.properties
-          grep 'android.r8.failOnMissingClasses=false' android/gradle.properties
           # Prebuild and Expo autolinking can leave publisher-side Android
           # intermediates under the generated project. They are disposable and
           # must not be allowed to seed the F-Droid variant's dex merge.
-           rm -rf android/app/build android/build android/wear/build
-           # Gradle's transformed-AAR cache is outside the project and can
-           # survive clean/prebuild cycles. Remove only transform metadata so
-           # a stale proprietary AAR cannot be selected as a release fallback;
-           # Gradle will recreate the needed open-source transforms.
-           rm -rf "$HOME/.gradle/caches/9.0.0/transforms" \
-             "$HOME/.gradle/caches/9.0.0/fileContent" \
-             "$HOME/.gradle/caches/9.0.0/fileHashes"
+          rm -rf android/app/build android/build android/wear/build
+          # Gradle's transformed-AAR cache is outside the project and can
+          # survive clean/prebuild cycles. Remove only transform metadata so
+          # a stale proprietary AAR cannot be selected as a release fallback;
+          # Gradle will recreate the needed open-source transforms.
+          rm -rf "$HOME/.gradle/caches/9.0.0/transforms" \
+            "$HOME/.gradle/caches/9.0.0/fileContent" \
+            "$HOME/.gradle/caches/9.0.0/fileHashes"
           # Keep the F-Droid exclusions in the app project as a final
           # post-prebuild guard, independent of config-plugin ordering.
           cat >> android/app/build.gradle <<'GRADLE'
