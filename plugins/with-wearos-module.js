@@ -663,6 +663,23 @@ object BarCodeScannerResultSerializer {
       `AsyncFunction("getInstallReferrerAsync") { promise: Promise -> promise.resolve("") }`);
     fs.writeFileSync(app, source, "utf8");
   }
+  // CableSnap does not import expo-application.  Exclude its Android native
+  // module entirely so a publisher AAR or stale generated project cannot
+  // reintroduce Install Referrer classes through autolinking.
+  const appConfig = sourceRoot("expo-application", "expo-module.config.json");
+  if (fs.existsSync(appConfig)) {
+    const config = JSON.parse(fs.readFileSync(appConfig, "utf8"));
+    config.platforms = (config.platforms ?? []).filter((platform) => platform !== "android");
+    fs.writeFileSync(appConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
+  }
+  const appPackageJson = sourceRoot("expo-application", "package.json");
+  if (fs.existsSync(appPackageJson)) {
+    const pkg = JSON.parse(fs.readFileSync(appPackageJson, "utf8"));
+    pkg.expo = pkg.expo ?? {};
+    pkg.expo.autolinking = pkg.expo.autolinking ?? {};
+    pkg.expo.autolinking.exclude = [...new Set([...(pkg.expo.autolinking.exclude ?? []), "expo-application"] )];
+    fs.writeFileSync(appPackageJson, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+  }
 
   const notifications = sourceRoot("expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications");
   // These optional integrations also leave references in AAR manifests.  A
@@ -812,9 +829,15 @@ class FirebaseNotificationTrigger private constructor() : NotificationTrigger {
       }
     }
   };
-  verify(sourceRoot("expo-camera", "android", "src"));
-  verify(sourceRoot("expo-application", "android", "src"));
-  verify(sourceRoot("expo-notifications", "android", "src"));
+  // Verify every Expo Android source tree, not just the modules with known
+  // integrations. This turns a newly published optional Expo dependency into
+  // an immediate, actionable prebuild failure instead of a 30-minute DEX
+  // purity failure.
+  const expoModulesRoot = sourceRoot();
+  for (const packageName of fs.readdirSync(expoModulesRoot)) {
+    if (!packageName.startsWith("expo-")) continue;
+    verify(path.join(expoModulesRoot, packageName, "android", "src"));
+  }
 }
 
 // Expo prebuild may copy an already-evaluated library build script into the
