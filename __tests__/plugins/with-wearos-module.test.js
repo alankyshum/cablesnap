@@ -9,6 +9,7 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
@@ -95,10 +96,8 @@ describe("patchSettingsGradle", () => {
     const out = patchSettingsGradle(SETTINGS_FIXTURE);
     expect(out).toContain('if (System.getenv("CABLESNAP_FDROID") == "1")');
     expect(out).toContain("gradle.beforeProject { project ->");
-    expect(out).toContain("project.ext.barcodeScannerEnabled = false");
-    expect(out).toContain("compileOnly 'com.google.firebase:");
-    expect(out).toContain("compileOnly 'com.android.installreferrer:");
-    expect(out).toContain('add("compileOnly", "com.google.mlkit:');
+    expect(out).toContain("com\\.google\\.firebase:");
+    expect(out).toContain("com\\.android\\.installreferrer:");
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
     else process.env.CABLESNAP_FDROID = previous;
   });
@@ -334,6 +333,8 @@ describe("patchProjectBuildGradle", () => {
     ]) {
       expect(out).toContain(`exclude group: "${group}"`);
     }
+    expect(out).toContain("resolutionStrategy.eachDependency");
+    expect(out).toContain("F-Droid build rejected proprietary dependency");
     expect(out).toContain('exclude module: "camera-mlkit-vision"');
     expect(out).toContain('exclude module: "expo-wearos-bridge"');
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
@@ -458,6 +459,59 @@ describe("copyDirRecursive + rmDirRecursive", () => {
     expect(() => copyDirRecursive(missing, dst)).toThrow(
       /with-wearos-module.*wear-template/,
     );
+  });
+});
+
+describe("patchFdroidExpoDependencies", () => {
+  it("removes direct proprietary Expo dependency sources only for F-Droid", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-deps-"));
+    try {
+      for (const [pkg, contents] of [
+        ["expo-notifications", "implementation 'com.google.firebase:firebase-messaging:25.0.1'"],
+        ["expo-application", "implementation 'com.android.installreferrer:installreferrer:2.2'"],
+      ]) {
+        const dir = path.join(tmp, "node_modules", pkg, "android");
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "build.gradle"), contents, "utf8");
+      }
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidExpoDependencies(tmp);
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-notifications", "android", "build.gradle"), "utf8")).not.toMatch(/com\.google\.firebase:/);
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-application", "android", "build.gradle"), "utf8")).not.toMatch(/com\.android\.installreferrer:/);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("removes expo-camera barcode artifacts declared through add()", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-camera-"));
+    try {
+      const dir = path.join(tmp, "node_modules", "expo-camera", "android");
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, "build.gradle"),
+        [
+          'add(barcodeDependencyConfiguration, "com.google.android.gms:play-services-code-scanner:16.1.0")',
+          'add(barcodeDependencyConfiguration, "com.google.mlkit:barcode-scanning:17.3.0")',
+          'add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:1.5.1")',
+        ].join("\n"),
+        "utf8",
+      );
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidExpoDependencies(tmp);
+      const out = fs.readFileSync(path.join(dir, "build.gradle"), "utf8");
+      expect(out).not.toContain("play-services-code-scanner");
+      expect(out).not.toContain("com.google.mlkit:barcode-scanning");
+      expect(out).not.toContain("camera-mlkit-vision");
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
   });
 });
 

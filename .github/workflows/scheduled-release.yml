@@ -320,6 +320,39 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npx expo prebuild --clean --platform android
 
+      - name: Strip direct proprietary Expo dependencies
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          CABLESNAP_FDROID: "1"
+        run: |
+          node - <<'NODE'
+          const {
+            patchFdroidExpoDependencies,
+            patchFdroidAndroidGradleTree,
+          } = require('./plugins/with-wearos-module');
+          patchFdroidExpoDependencies(process.cwd());
+          // Run after prebuild has materialised every generated Android
+          // library script. The config plugin's dangerous-mod hook can run
+          // before some Expo scripts are copied into the native project.
+          patchFdroidAndroidGradleTree(process.cwd());
+          NODE
+          grep -nE 'compileOnly.*(firebase|installreferrer)|barcodeDependencyConfiguration' \
+            node_modules/expo-notifications/android/build.gradle \
+            node_modules/expo-application/android/build.gradle \
+            node_modules/expo-camera/android/build.gradle
+
+      - name: Disable Expo Camera barcode dependency graph for F-Droid
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          CABLESNAP_FDROID: "1"
+        run: |
+          # CableSnap renders the open-source expo-foss-barcode-scanner view
+          # for Android. Disable Expo Camera's optional scanner graph as a
+          # second, property-level guard; this prevents AGP from resolving
+          # the ML Kit graph while retaining CameraX preview functionality.
+          printf '\nexpo.camera.barcode-scanner-enabled=false\n' >> android/gradle.properties
+          grep 'expo.camera.barcode-scanner-enabled=false' android/gradle.properties
+
       - name: Boost Gradle JVM heap
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
@@ -382,10 +415,15 @@ jobs:
           # distribution".
           set -euo pipefail
           cd android
-          ./gradlew \
-            :app:assembleRelease \
-            :app:assembleReleaseFdroid \
-            :wear:assembleRelease
+           # Build F-Droid first. The Play release build can populate Expo's
+           # release intermediates with proprietary AARs; releaseFdroid uses
+           # matchingFallbacks for library variants, so building it first
+           # prevents those Play intermediates from being reused by the FOSS
+           # variant.
+           ./gradlew \
+             :app:assembleReleaseFdroid \
+             :app:assembleRelease \
+             :wear:assembleRelease
           cd ..
           # Phone APK (Play / `release` build type) — the canonical
           # `cablesnap.apk` retained for the existing Play Store /
@@ -410,7 +448,7 @@ jobs:
           trap 'rm -rf "$TMPDIR_DEX"' EXIT
           unzip -q -o cablesnap-fdroid.apk 'classes*.dex' -d "$TMPDIR_DEX"
           HITS=$(strings "$TMPDIR_DEX"/classes*.dex \
-            | grep -oE 'com/google/firebase[A-Za-z/]*|com/google/mlkit[A-Za-z/]*|com/google/android/gms[A-Za-z/]*|com/android/installreferrer[A-Za-z/]*' \
+            | grep -oE 'com/google/firebase[A-Za-z0-9_$./-]*|com/google/mlkit[A-Za-z0-9_$./-]*|com/google/android/gms[A-Za-z0-9_$./-]*|com/android/installreferrer[A-Za-z0-9_$./-]*' \
             | sort -u || true)
           printf '%s\n' "$HITS"
           if [ -n "$HITS" ]; then

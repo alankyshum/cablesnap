@@ -32,6 +32,7 @@ import { duration as durationTokens, elevation } from "../constants/design-token
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useToast } from "@/components/ui/bna-toast";
 import { fontSizes } from "@/constants/design-tokens";
+import { matchExerciseSearch } from "../lib/exercise-search-matcher";
 
 type Props = {
   visible: boolean;
@@ -188,14 +189,8 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
   }));
 
   const filtered = useMemo(() => {
-    const norm = (s: string) => s.toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
-    const q = norm(query);
-    const qNoSpace = q.replace(/ /g, "");
     return exercises.filter((ex) => {
-      if (q) {
-        const n = norm(ex.name);
-        if (!n.includes(q) && !n.replace(/ /g, "").includes(qNoSpace)) return false;
-      }
+      if (!matchExerciseSearch(ex.name, query)) return false;
       if (selected.size > 0 && !selected.has(ex.category)) return false;
       return true;
     });

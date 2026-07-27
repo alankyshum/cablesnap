@@ -1,0 +1,1 @@
+F-Droid builds no longer include the Sentry DSN, so the F-Droid release no longer needs the Tracking AntiFeature.
