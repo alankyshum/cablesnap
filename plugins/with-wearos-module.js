@@ -207,6 +207,16 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             exclude group: "com.android.installreferrer"
             exclude module: "camera-mlkit-vision"
             exclude module: "expo-wearos-bridge"
+            resolutionStrategy.eachDependency { dependency ->
+                if (dependency.requested.group in [
+                    "com.google.android.gms",
+                    "com.google.firebase",
+                    "com.google.mlkit",
+                    "com.android.installreferrer",
+                ]) {
+                    throw new GradleException("F-Droid build rejected proprietary dependency: \${dependency.requested}")
+                }
+            }
         }
     }
 }

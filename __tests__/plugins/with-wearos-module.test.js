@@ -333,6 +333,8 @@ describe("patchProjectBuildGradle", () => {
     ]) {
       expect(out).toContain(`exclude group: "${group}"`);
     }
+    expect(out).toContain("resolutionStrategy.eachDependency");
+    expect(out).toContain("F-Droid build rejected proprietary dependency");
     expect(out).toContain('exclude module: "camera-mlkit-vision"');
     expect(out).toContain('exclude module: "expo-wearos-bridge"');
     if (previous === undefined) delete process.env.CABLESNAP_FDROID;
