@@ -221,21 +221,18 @@ type ImportOptions = {
   selectedCategories?: BackupCategoryName[];
 };
 
-function getDefaultSelectedCategories(): BackupCategoryName[] {
-  return [...BACKUP_CATEGORY_ORDER];
+const getDefaultSelectedCategories = () => [...BACKUP_CATEGORY_ORDER];
+
+function getSelectedCategorySet(cats?: BackupCategoryName[]): Set<BackupCategoryName> {
+  return !cats || cats.length === 0
+    ? new Set(getDefaultSelectedCategories())
+    : new Set(cats.filter((c): c is BackupCategoryName => BACKUP_CATEGORY_ORDER.includes(c)));
 }
 
-function getSelectedCategorySet(selectedCategories?: BackupCategoryName[]): Set<BackupCategoryName> {
-  if (!selectedCategories || selectedCategories.length === 0) {
-    return new Set(getDefaultSelectedCategories());
-  }
-  return new Set(selectedCategories.filter((category): category is BackupCategoryName => BACKUP_CATEGORY_ORDER.includes(category)));
-}
-
-function getSelectedTableOrder(selectedCategories?: BackupCategoryName[]): BackupTableName[] {
-  const selected = getSelectedCategorySet(selectedCategories);
-  return IMPORT_TABLE_ORDER.filter((table) =>
-    BACKUP_CATEGORY_ORDER.some((category) => selected.has(category) && BACKUP_CATEGORY_TABLES[category].includes(table))
+function getSelectedTableOrder(cats?: BackupCategoryName[]): BackupTableName[] {
+  const selected = getSelectedCategorySet(cats);
+  return IMPORT_TABLE_ORDER.filter((t) =>
+    BACKUP_CATEGORY_ORDER.some((c) => selected.has(c) && BACKUP_CATEGORY_TABLES[c].includes(t))
   );
 }
 
@@ -341,23 +338,17 @@ export function getPresentBackupCategories(data: Record<string, unknown>): Backu
 }
 
 function parseExportArgs(
-  optionsOrProgress?: ExportOptions | ((progress: ExportProgress) => void),
-  maybeProgress?: (progress: ExportProgress) => void,
-): { options: ExportOptions; onProgress?: (progress: ExportProgress) => void } {
-  if (typeof optionsOrProgress === "function") {
-    return { options: {}, onProgress: optionsOrProgress };
-  }
-  return { options: optionsOrProgress ?? {}, onProgress: maybeProgress };
+  opts?: ExportOptions | ((p: ExportProgress) => void),
+  prog?: (p: ExportProgress) => void,
+) {
+  return typeof opts === "function" ? { options: {}, onProgress: opts } : { options: opts ?? {}, onProgress: prog };
 }
 
 function parseImportArgs(
-  progressOrOptions?: ImportOptions | ((progress: ImportProgress) => void),
-  maybeOptions?: ImportOptions,
-): { options: ImportOptions; onProgress?: (progress: ImportProgress) => void } {
-  if (typeof progressOrOptions === "function") {
-    return { options: maybeOptions ?? {}, onProgress: progressOrOptions };
-  }
-  return { options: progressOrOptions ?? {} };
+  opts?: ImportOptions | ((p: ImportProgress) => void),
+  maybeOpts?: ImportOptions,
+) {
+  return typeof opts === "function" ? { options: maybeOpts ?? {}, onProgress: opts } : { options: opts ?? {} };
 }
 
 // Numeric fields that must be non-negative for validation
