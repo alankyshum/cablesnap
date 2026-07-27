@@ -103,7 +103,6 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
         def original = buildFile.getText("UTF-8")
         def patched = original
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s*\\(?\\s*["'](?:com\\.google\\.firebase|com\\.android\\.installreferrer|com\\.google\\.mlkit|com\\.google\\.android\\.gms):[^\\r\\n]+["']\\s*\\)?\\s*\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*add\\(barcodeDependencyConfiguration,\\s*["'](?:com\\.google\\.android\\.gms|com\\.google\\.mlkit|androidx\\.camera):[^\\r\\n]+\\r?\\n?/, "")
             // SUSS groups covered: com\\.google\\.firebase: and
             // com\\.android\\.installreferrer: (kept in this comment so
             // generated diagnostics remain explicit).
@@ -223,43 +222,6 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
                     "com.android.installreferrer",
                 ]) {
                     throw new GradleException("F-Droid build rejected proprietary dependency: \${dependency.requested}")
-                }
-            }
-        }
-    }
-    // Some Expo modules expose compileOnly declarations through their
-    // generated release variant. Remove direct dependencies after every
-    // project has evaluated, before any releaseFdroid task resolves its
-    // classpath; configuration excludes alone do not remove those direct
-    // declarations from the fallback variant.
-    gradle.projectsEvaluated {
-        allprojects {
-            configurations.all {
-                dependencies.removeAll { dependency ->
-                    dependency.group in [
-                        "com.google.android.gms",
-                        "com.google.firebase",
-                        "com.google.mlkit",
-                        "com.android.installreferrer",
-                    ] || dependency.name == "camera-mlkit-vision"
-                }
-            }
-        }
-    }
-    // projectsEvaluated is a useful final sweep but can be after AGP has
-    // already prepared variant dependency metadata. Register the same removal
-    // as an afterEvaluate callback on every Expo project so it runs immediately
-    // after that project's build.gradle and before variant resolution.
-    gradle.beforeProject { project ->
-        project.afterEvaluate {
-            project.configurations.all {
-                dependencies.removeAll { dependency ->
-                    dependency.group in [
-                        "com.google.android.gms",
-                        "com.google.firebase",
-                        "com.google.mlkit",
-                        "com.android.installreferrer",
-                    ] || dependency.name == "camera-mlkit-vision"
                 }
             }
         }
