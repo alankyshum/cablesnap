@@ -87,6 +87,8 @@ marker) at release time.
 
 - **F-Droid build setup now removes stale project and transformed-AAR intermediates before dependency resolution**, keeping the isolated build reproducible after failed attempts.
 
+- **F-Droid prebuild now replaces Expo Camera, Application, and Notifications proprietary source paths with FOSS-safe stubs**, preventing proprietary class descriptors from being emitted into DEX.
+
 
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->

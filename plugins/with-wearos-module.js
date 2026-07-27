@@ -523,6 +523,164 @@ function patchFdroidExpoDependencies(projectRoot) {
   }
 }
 
+// Source-level F-Droid patch. Gradle exclusions do not remove proprietary
+// class descriptors emitted by Expo's Kotlin sources (and R8 must still parse
+// those descriptors). Replace the optional integrations with no-op FOSS
+// implementations before Gradle compiles the modules.
+function patchFdroidLibrarySources(projectRoot) {
+  if (process.env.CABLESNAP_FDROID !== "1") return;
+  const sourceRoot = (...parts) => path.join(projectRoot, "node_modules", ...parts);
+  const write = (file, contents) => {
+    if (fs.existsSync(path.dirname(file))) fs.writeFileSync(file, contents, "utf8");
+  };
+
+  const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+  write(path.join(camera, "analyzers", "BarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
+
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import expo.modules.camera.records.BarcodeType
+import expo.modules.camera.utils.BarCodeScannerResult
+
+// F-Droid: food barcode scanning is provided by expo-foss-barcode-scanner.
+class BarcodeAnalyzer(formats: List<BarcodeType>, val onComplete: (BarCodeScannerResult) -> Unit) : ImageAnalysis.Analyzer {
+  override fun analyze(imageProxy: ImageProxy) { imageProxy.close() }
+}
+`);
+  write(path.join(camera, "analyzers", "MLKitBarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
+
+import android.graphics.Bitmap
+import expo.modules.camera.utils.BarCodeScannerResult
+
+class MLKitBarCodeScanner {
+  suspend fun scan(bitmap: Bitmap): List<BarCodeScannerResult> = emptyList()
+  fun setSettings(formats: List<Int>) {}
+}
+`);
+  write(path.join(camera, "analyzers", "BarcodeScannerResultSerializer.kt"), `package expo.modules.camera.analyzers
+
+import android.os.Bundle
+import expo.modules.camera.utils.BarCodeScannerResult
+
+object BarCodeScannerResultSerializer {
+  fun toBundle(result: BarCodeScannerResult, density: Float): Bundle = Bundle().apply {
+    putString("data", result.value); putString("raw", result.raw); putInt("type", result.type)
+  }
+  fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null) =
+    BarCodeScannerResult(0, "", "", Bundle(), emptyList(), 0, 0)
+  fun parseExtraDate(barcode: Any): Bundle = Bundle()
+}
+`);
+  const cameraRecords = path.join(camera, "records", "CameraRecords.kt");
+  if (fs.existsSync(cameraRecords)) {
+    let source = fs.readFileSync(cameraRecords, "utf8")
+      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
+      .replaceAll("Barcode.FORMAT_CODE_128", "1").replaceAll("Barcode.FORMAT_CODE_39", "2")
+      .replaceAll("Barcode.FORMAT_CODE_93", "4").replaceAll("Barcode.FORMAT_CODABAR", "8")
+      .replaceAll("Barcode.FORMAT_DATA_MATRIX", "16").replaceAll("Barcode.FORMAT_EAN_13", "32")
+      .replaceAll("Barcode.FORMAT_EAN_8", "64").replaceAll("Barcode.FORMAT_ITF", "128")
+      .replaceAll("Barcode.FORMAT_QR_CODE", "256").replaceAll("Barcode.FORMAT_UPC_A", "512")
+      .replaceAll("Barcode.FORMAT_UPC_E", "1024").replaceAll("Barcode.FORMAT_PDF417", "2048")
+      .replaceAll("Barcode.FORMAT_AZTEC", "4096").replaceAll("Barcode.FORMAT_UNKNOWN", "-1")
+      .replaceAll("Barcode.FORMAT_ALL_FORMATS", "0");
+    fs.writeFileSync(cameraRecords, source, "utf8");
+  }
+  write(path.join(camera, "analyzers", "BarcodeScannerResultSerializer.kt"), `package expo.modules.camera.analyzers
+
+import android.os.Bundle
+import expo.modules.camera.utils.BarCodeScannerResult
+
+object BarCodeScannerResultSerializer {
+  fun toBundle(result: BarCodeScannerResult, density: Float): Bundle = Bundle().apply {
+    putString("data", result.value); putString("raw", result.raw); putInt("type", result.type)
+  }
+  fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null) =
+    BarCodeScannerResult(0, "", "", Bundle(), emptyList(), 0, 0)
+  fun parseExtraDate(barcode: Any): Bundle = Bundle()
+}
+`);
+
+  const cameraModule = path.join(camera, "CameraViewModule.kt");
+  if (fs.existsSync(cameraModule)) {
+    let source = fs.readFileSync(cameraModule, "utf8")
+      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
+      .replace(/AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
+        `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
+      promise.reject(CameraExceptions.MLKitUnavailableException())
+    }`);
+    fs.writeFileSync(cameraModule, source, "utf8");
+  }
+  const cameraUtils = path.join(camera, "utils", "CameraUtils.kt");
+  if (fs.existsSync(cameraUtils)) {
+    let source = fs.readFileSync(cameraUtils, "utf8")
+      .replace(/fun isMLKitBarcodeScannerAvailable\(\)[^}]*\}/s, "fun isMLKitBarcodeScannerAvailable(): Boolean = false")
+      .replace(/Class\.forName\("com\.google\.mlkit\.[^"]+"\)/g, "Any::class.java");
+    fs.writeFileSync(cameraUtils, source, "utf8");
+  }
+  const cameraView = path.join(camera, "CameraViewModule.kt");
+  if (fs.existsSync(cameraView)) {
+    let source = fs.readFileSync(cameraView, "utf8")
+      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
+      .replace(/AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
+        `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
+      promise.reject(CameraExceptions.MLKitUnavailableException())
+    }`);
+    fs.writeFileSync(cameraView, source, "utf8");
+  }
+
+  const app = sourceRoot("expo-application", "android", "src", "main", "java", "expo", "modules", "application", "ApplicationModule.kt");
+  if (fs.existsSync(app)) {
+    let source = fs.readFileSync(app, "utf8").replace(/^import com\.android\.installreferrer[^\n]+\n/gm, "");
+    source = source.replace(/AsyncFunction\("getInstallReferrerAsync"\)\s*\{[\s\S]*?^\s*\}/m,
+      `AsyncFunction("getInstallReferrerAsync") { promise: Promise -> promise.resolve("") }`);
+    fs.writeFileSync(app, source, "utf8");
+  }
+
+  const notifications = sourceRoot("expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications");
+  const notifConfig = sourceRoot("expo-notifications", "expo-module.config.json");
+  if (fs.existsSync(notifConfig)) {
+    const config = JSON.parse(fs.readFileSync(notifConfig, "utf8"));
+    config.platforms = (config.platforms ?? []).filter((platform) => platform !== "android");
+    fs.writeFileSync(notifConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
+  }
+  const packageJson = sourceRoot("expo-notifications", "package.json");
+  if (fs.existsSync(packageJson)) {
+    const pkg = JSON.parse(fs.readFileSync(packageJson, "utf8"));
+    pkg.expo = pkg.expo ?? {};
+    pkg.expo.autolinking = pkg.expo.autolinking ?? {};
+    pkg.expo.autolinking.exclude = [...new Set([...(pkg.expo.autolinking.exclude ?? []), "expo-notifications"] )];
+    fs.writeFileSync(packageJson, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+  }
+  // Remove Firebase-backed source files; local notifications remain available.
+  for (const relative of [
+    ["service", "ExpoFirebaseMessagingService.kt"],
+    ["service", "delegates", "FirebaseMessagingDelegate.kt"],
+    ["tokens", "PushTokenModule.kt"],
+    ["topics", "TopicSubscriptionModule.kt"],
+    ["notifications", "RemoteMessageSerializer.java"],
+  ]) {
+    const file = path.join(notifications, ...relative);
+    if (fs.existsSync(file)) fs.writeFileSync(file, "package expo.modules.notifications;\n", "utf8");
+  }
+
+  // Fail during prebuild rather than discovering a leaked descriptor only
+  // after a 30-minute Android build.
+  const forbidden = /com\.(?:google\.firebase|google\.mlkit|google\.android\.gms|android\.installreferrer)/;
+  const verify = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) verify(file);
+      else if (/\.(?:kt|java)$/.test(entry.name) && forbidden.test(fs.readFileSync(file, "utf8"))) {
+        throw new Error(`F-Droid source patch incomplete: proprietary reference remains in ${file}`);
+      }
+    }
+  };
+  verify(sourceRoot("expo-camera", "android", "src"));
+  verify(sourceRoot("expo-application", "android", "src"));
+  verify(sourceRoot("expo-notifications", "android", "src"));
+}
+
 // Expo prebuild may copy an already-evaluated library build script into the
 // generated Android project. Patch those generated app/library scripts too;
 // changing node_modules alone is not sufficient when Gradle resolves a
@@ -632,6 +790,7 @@ const withWearOsModule = (config) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const platformRoot = cfg.modRequest.platformProjectRoot;
       patchFdroidExpoDependencies(projectRoot);
+      patchFdroidLibrarySources(projectRoot);
       const srcDir = path.join(projectRoot, WEAR_TEMPLATE_RELATIVE);
       const dstDir = path.join(platformRoot, "wear");
       // Wipe stale outputs so a renamed/deleted file in the template does
@@ -658,6 +817,7 @@ module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
 module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
+module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
