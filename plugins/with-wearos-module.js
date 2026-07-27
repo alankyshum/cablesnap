@@ -576,6 +576,20 @@ function patchFdroidLibrarySources(projectRoot) {
   const write = (file, contents) => {
     if (fs.existsSync(path.dirname(file))) fs.writeFileSync(file, contents, "utf8");
   };
+  // expo-modules-autolinking can consume a publisher-side local AAR from an
+  // Android module's build directory even after its publication entry and
+  // source files have been rewritten. Those AARs are generated artifacts, so
+  // remove them before Gradle configures the module; otherwise the original
+  // Camera AAR restores ML Kit/GMS bytecode exactly as seen in AC10b.
+  for (const packageName of [
+    "expo-camera",
+    "expo-application",
+    "expo-notifications",
+    "expo-dev-launcher",
+  ]) {
+    const buildDir = sourceRoot(packageName, "android", "build");
+    if (fs.existsSync(buildDir)) fs.rmSync(buildDir, { recursive: true, force: true });
+  }
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
 
