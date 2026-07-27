@@ -241,7 +241,13 @@ jobs:
 
       - name: Install dependencies
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
-        run: npm ci
+        run: |
+          npm ci || {
+            echo '::warning::npm ci failed — purging npm cache and node_modules, retrying once (suspected poisoned cache; see BLD-4266)'
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci
+          }
 
       # Lint + unit test gate — mirrors ci.yml exactly so a red suite can never
       # ship via the scheduled cron. Runs AFTER npm ci (node_modules ready) and

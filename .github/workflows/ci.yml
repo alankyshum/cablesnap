@@ -53,7 +53,13 @@ jobs:
       - name: Install dependencies
         # `--legacy-peer-deps` matches `bundle-gate.yml` — known peer-dep
         # conflicts in the Expo / React Native dependency tree.
-        run: npm ci --legacy-peer-deps
+        run: |
+          npm ci --legacy-peer-deps || {
+            echo '::warning::npm ci failed — purging npm cache and node_modules, retrying once (suspected poisoned cache; see BLD-4266)'
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci --legacy-peer-deps
+          }
 
       - name: Typecheck
         run: npm run typecheck
@@ -88,7 +94,13 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: |
+          npm ci --legacy-peer-deps || {
+            echo '::warning::npm ci failed — purging npm cache and node_modules, retrying once (suspected poisoned cache; see BLD-4266)'
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci --legacy-peer-deps
+          }
 
       - name: Lint
         run: npm run lint -- --max-warnings=17
@@ -108,7 +120,13 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: |
+          npm ci --legacy-peer-deps || {
+            echo '::warning::npm ci failed — purging npm cache and node_modules, retrying once (suspected poisoned cache; see BLD-4266)'
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci --legacy-peer-deps
+          }
 
       - name: Jest
         # `--ci` disables watch/snapshot-write; `--runInBand` keeps memory
@@ -136,7 +154,13 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: |
+          npm ci --legacy-peer-deps || {
+            echo '::warning::npm ci failed — purging npm cache and node_modules, retrying once (suspected poisoned cache; see BLD-4266)'
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci --legacy-peer-deps
+          }
 
       - name: Coverage
         # --ci disables watch/snapshot-write; --runInBand keeps memory usage
@@ -168,7 +192,13 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: |
+          npm ci --legacy-peer-deps || {
+            echo '::warning::npm ci failed — purging npm cache and node_modules, retrying once (suspected poisoned cache; see BLD-4266)'
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci --legacy-peer-deps
+          }
 
       - name: Install xmllint
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libxml2-utils

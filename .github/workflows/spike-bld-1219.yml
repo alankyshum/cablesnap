@@ -71,7 +71,13 @@ jobs:
           cache: 'npm'
 
       - name: Install base dependencies (BASELINE — no HC)
-        run: npm ci
+        run: |
+          npm ci || {
+            echo '::warning::npm ci failed — purging npm cache and node_modules, retrying once (suspected poisoned cache; see BLD-4266)'
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci
+          }
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4

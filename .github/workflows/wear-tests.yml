@@ -72,7 +72,13 @@ jobs:
         # :app:assembleReleaseFdroid via matchingFallbacks) fails with
         # "Could not find libskia.a … Run `npx install-skia` to fix this."
         # Use --legacy-peer-deps to match the other CI workflows on this repo.
-        run: npm ci --legacy-peer-deps
+        run: |
+          npm ci --legacy-peer-deps || {
+            echo '::warning::npm ci failed — purging npm cache and node_modules, retrying once (suspected poisoned cache; see BLD-4266)'
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci --legacy-peer-deps
+          }
 
       - name: Run plugin unit tests
         # The Config Plugin tests are pure JS (no RN runtime). Cheap to run
