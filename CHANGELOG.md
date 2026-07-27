@@ -49,6 +49,8 @@ _No user-facing changes yet._
 
 - **F-Droid builds now remove proprietary Firebase and Install Referrer declarations before variant resolution**, preventing those classes from leaking into the release APK.
 
+- **F-Droid dependency filtering now removes proprietary declarations from every Gradle configuration**, including compile-only and debug-only paths inherited during variant fallback.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 
