@@ -106,7 +106,7 @@ if (System.getenv("CABLESNAP_FDROID") == "1") {
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.android\\.installreferrer:[^\\r\\n]+\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.mlkit:[^\\r\\n]+\\r?\\n?/, "")
             .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s+["']com\\.google\\.android\\.gms:[^\\r\\n]+\\r?\\n?/, "")
-            .replaceAll(/(?m)^\\s*add\\(barcodeDependencyConfiguration,\\s*["'](?:com\\.google\\.android\\.gms|com\\.google\\.mlkit):[^\\r\\n]+\\r?\\n?/, "")
+            .replaceAll(/(?m)^\\s*add\\(barcodeDependencyConfiguration,\\s*["'](?:com\\.google\\.android\\.gms|com\\.google\\.mlkit|androidx\\.camera):[^\\r\\n]+\\r?\\n?/, "")
         // Proprietary declarations are removed above for F-Droid. Do not
         // retain them as compileOnly: releaseFdroid can inherit those
         // declarations through variant fallback and package their classes.
@@ -515,7 +515,7 @@ function patchFdroidExpoDependencies(projectRoot) {
 function patchFdroidAndroidGradleTree(platformRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const banned = /^\s*(?:implementation|api|compileOnly|debugOnly)\s+["'](?:com\.google\.firebase|com\.google\.mlkit|com\.google\.android\.gms|com\.android\.installreferrer):[^\r\n]+\r?\n?/gm;
-  const barcode = /^\s*add\(barcodeDependencyConfiguration,\s*["'](?:com\.google\.android\.gms|com\.google\.mlkit):[^\r\n]+\r?\n?/gm;
+  const barcode = /^\s*add\(barcodeDependencyConfiguration,\s*["'](?:com\.google\.android\.gms|com\.google\.mlkit|androidx\.camera):[^\r\n]+\r?\n?/gm;
 
   function visit(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

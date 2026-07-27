@@ -54,6 +54,8 @@ _No user-facing changes yet._
 
 - **F-Droid prebuild now sanitizes all generated and installed Expo Gradle scripts**, preventing dormant scanner or launcher dependencies from re-entering the APK.
 
+- **F-Droid prebuild now removes all Expo Camera barcode configurations**, including the CameraX ML Kit vision artifact, while retaining the embedded ZXing scanner.
+
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 
