@@ -563,6 +563,24 @@ function patchFdroidLibrarySources(projectRoot) {
   };
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+
+  // Balanced-brace replacement for a whole `fun <name>(...) { ... }` block.
+  // Kotlin allows nested try/catch and lambda braces inside the body, so a
+  // greedy/non-greedy regex is unsafe. Walk braces manually.
+  const replaceKotlinFunction = (source, name, replacement) => {
+    const funRegex = new RegExp(`fun\\s+${name}\\s*\\([^)]*\\)[^{]*\\{`, "m");
+    const match = funRegex.exec(source);
+    if (!match) return source;
+    let depth = 1;
+    let i = match.index + match[0].length;
+    while (i < source.length && depth > 0) {
+      const c = source[i++];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    if (depth !== 0) return source; // unbalanced; leave as-is
+    return source.slice(0, match.index) + replacement + source.slice(i);
+  };
   write(path.join(camera, "analyzers", "BarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
 
 import androidx.camera.core.ImageAnalysis
@@ -628,33 +646,74 @@ object BarCodeScannerResultSerializer {
 }
 `);
 
-  const cameraModule = path.join(camera, "CameraViewModule.kt");
-  if (fs.existsSync(cameraModule)) {
-    let source = fs.readFileSync(cameraModule, "utf8")
-      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
-      .replace(/AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
-        `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
+  // Robust sweep: any .kt file under expo-camera's Android source that still
+  // references MLKit or GMS (imports, GmsBarcodeScanning/GmsBarcodeScannerOptions
+  // calls, Class.forName reflection, or Barcode.FORMAT_* symbols) must be
+  // neutralized before Kotlin compiles it. Hardcoding CameraViewModule.kt and
+  // CameraUtils.kt broke on expo-camera bumps that added new call sites.
+  const cameraSrcRoot = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+  const neutralizeMlkitGmsInKotlin = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) { neutralizeMlkitGmsInKotlin(file); continue; }
+      if (!entry.name.endsWith(".kt")) continue;
+      const original = fs.readFileSync(file, "utf8");
+      if (!/com\.google\.(mlkit|android\.gms)|GmsBarcodeScann|Barcode\.FORMAT_/.test(original)) continue;
+      let source = original
+        // 1. Strip all MLKit / GMS imports.
+        .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
+        .replace(/^import com\.google\.android\.gms\.[^\n]+\n/gm, "")
+        // 2. Neutralize reflection probes: keep syntax valid, drop the descriptor.
+        .replace(/Class\.forName\("com\.google\.(?:mlkit|android\.gms)\.[^"]+"\)/g, "Any::class.java")
+        // 3. Any remaining GmsBarcodeScanning* or GmsBarcodeScannerOptions* call
+        //    chain becomes an unconditional throw. Kotlin still compiles because
+        //    the throw expression has type Nothing and satisfies any expected type.
+        .replace(/GmsBarcodeScanning\.[A-Za-z_]+\s*\([^)]*\)(?:\s*\.[A-Za-z_]+\s*\([^)]*\))*/g,
+          "run<Nothing> { throw CameraExceptions.MLKitUnavailableException() }")
+        .replace(/GmsBarcodeScannerOptions\.Builder\s*\(\s*\)(?:\s*\.[A-Za-z_]+\s*\([^)]*\))*(?:\s*\.build\s*\(\s*\))?/g,
+          "run<Nothing> { throw CameraExceptions.MLKitUnavailableException() }")
+        // 4. Barcode.FORMAT_* constants (MLKit) — map to numeric equivalents so
+        //    files that mention them (e.g. records) still compile without pulling
+        //    the com.google.mlkit.vision.barcode.common.Barcode class descriptor.
+        .replace(/Barcode\.FORMAT_CODE_128/g, "1")
+        .replace(/Barcode\.FORMAT_CODE_39/g, "2")
+        .replace(/Barcode\.FORMAT_CODE_93/g, "4")
+        .replace(/Barcode\.FORMAT_CODABAR/g, "8")
+        .replace(/Barcode\.FORMAT_DATA_MATRIX/g, "16")
+        .replace(/Barcode\.FORMAT_EAN_13/g, "32")
+        .replace(/Barcode\.FORMAT_EAN_8/g, "64")
+        .replace(/Barcode\.FORMAT_ITF/g, "128")
+        .replace(/Barcode\.FORMAT_QR_CODE/g, "256")
+        .replace(/Barcode\.FORMAT_UPC_A/g, "512")
+        .replace(/Barcode\.FORMAT_UPC_E/g, "1024")
+        .replace(/Barcode\.FORMAT_PDF417/g, "2048")
+        .replace(/Barcode\.FORMAT_AZTEC/g, "4096")
+        .replace(/Barcode\.FORMAT_UNKNOWN/g, "-1")
+        .replace(/Barcode\.FORMAT_ALL_FORMATS/g, "0");
+      // 5. File-specific stubs for known entry points. Kept for clarity and
+      //    because these produce a nicer runtime error path than the generic
+      //    throw substitution.
+      if (/CameraUtils\.kt$/.test(file)) {
+        // Replace the whole function including a try/catch body. We match the
+        // opening brace and then walk balanced braces to find the true end so
+        // we do not leave a dangling `catch` clause behind (the old regex
+        // stopped at the first `}` inside the try block).
+        source = replaceKotlinFunction(source, "isMLKitBarcodeScannerAvailable",
+          "fun isMLKitBarcodeScannerAvailable(): Boolean = false");
+      }
+      if (/CameraViewModule\.kt$/.test(file)) {
+        source = source.replace(
+          /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s{0,6}\}/m,
+          `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
       promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`);
-    fs.writeFileSync(cameraModule, source, "utf8");
-  }
-  const cameraUtils = path.join(camera, "utils", "CameraUtils.kt");
-  if (fs.existsSync(cameraUtils)) {
-    let source = fs.readFileSync(cameraUtils, "utf8")
-      .replace(/fun isMLKitBarcodeScannerAvailable\(\)[^}]*\}/s, "fun isMLKitBarcodeScannerAvailable(): Boolean = false")
-      .replace(/Class\.forName\("com\.google\.mlkit\.[^"]+"\)/g, "Any::class.java");
-    fs.writeFileSync(cameraUtils, source, "utf8");
-  }
-  const cameraView = path.join(camera, "CameraViewModule.kt");
-  if (fs.existsSync(cameraView)) {
-    let source = fs.readFileSync(cameraView, "utf8")
-      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
-      .replace(/AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s*\}/m,
-        `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
-      promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`);
-    fs.writeFileSync(cameraView, source, "utf8");
-  }
+    }`,
+        );
+      }
+      if (source !== original) fs.writeFileSync(file, source, "utf8");
+    }
+  };
+  neutralizeMlkitGmsInKotlin(cameraSrcRoot);
 
   const app = sourceRoot("expo-application", "android", "src", "main", "java", "expo", "modules", "application", "ApplicationModule.kt");
   if (fs.existsSync(app)) {

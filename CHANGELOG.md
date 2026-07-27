@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **F-Droid barcode scanner path in expo-camera is now source-neutralized**, so the release APK no longer ships proprietary Google Mobile Services/ML Kit class descriptors, unblocking the F-Droid purity gate. ([BLD-4399](/BLD/issues/BLD-4399))
 - **F-Droid autolinking now omits unused expo-application**, preventing Install Referrer classes from entering the native module graph.
 - **F-Droid sanitization now covers every installed Expo Android module**, including debug-only ML Kit declarations that could otherwise re-enter the release dependency graph.
 - **F-Droid builds now remove proprietary Expo manifest references**, keeping the APK free of Firebase, ML Kit, Google Play Services, and Install Referrer class descriptors while retaining ZXing barcode scanning.
