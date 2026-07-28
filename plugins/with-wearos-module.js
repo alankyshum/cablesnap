@@ -626,7 +626,7 @@ function scrubFdroidLocalMavenMetadata(projectRoot) {
 // class descriptors emitted by Expo's Kotlin sources (and R8 must still parse
 // those descriptors). Replace the optional integrations with no-op FOSS
 // implementations before Gradle compiles the modules.
-function patchFdroidLibrarySources(projectRoot) {
+function patchFdroidLibrarySources(projectRoot, { removeGeneratedArtifacts = true } = {}) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const sourceRoot = (...parts) => path.join(projectRoot, "node_modules", ...parts);
   const write = (file, contents) => {
@@ -644,7 +644,9 @@ function patchFdroidLibrarySources(projectRoot) {
     "expo-dev-launcher",
   ]) {
     const buildDir = sourceRoot(packageName, "android", "build");
-    if (fs.existsSync(buildDir)) fs.rmSync(buildDir, { recursive: true, force: true });
+    if (removeGeneratedArtifacts && fs.existsSync(buildDir)) {
+      fs.rmSync(buildDir, { recursive: true, force: true });
+    }
     // Expo publishes a precompiled AAR beside the source module. Removing
     // only its POM/module metadata is insufficient: Gradle can still select
     // the AAR itself, which is the exact source of the surviving ML Kit/GMS
@@ -1078,7 +1080,7 @@ const withWearOsModule = (config) => {
   if (process.env.CABLESNAP_FDROID === "1") {
     const projectRoot = process.cwd();
     patchFdroidExpoDependencies(projectRoot);
-    patchFdroidLibrarySources(projectRoot);
+    patchFdroidLibrarySources(projectRoot, { removeGeneratedArtifacts: true });
   }
 
   // 1. Patch settings.gradle to register :wear.
@@ -1121,7 +1123,10 @@ const withWearOsModule = (config) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const platformRoot = cfg.modRequest.platformProjectRoot;
       patchFdroidExpoDependencies(projectRoot);
-      patchFdroidLibrarySources(projectRoot);
+      // The early config-evaluation pass already removed publisher artifacts.
+      // Do not delete a freshly generated module build directory while Expo
+      // prebuild is still materializing BuildConfig/source outputs.
+      patchFdroidLibrarySources(projectRoot, { removeGeneratedArtifacts: false });
       const srcDir = path.join(projectRoot, WEAR_TEMPLATE_RELATIVE);
       const dstDir = path.join(platformRoot, "wear");
       // Wipe stale outputs so a renamed/deleted file in the template does

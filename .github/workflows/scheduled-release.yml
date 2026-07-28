@@ -347,7 +347,9 @@ jobs:
             patchFdroidLibrarySources,
           } = require('./plugins/with-wearos-module');
           patchFdroidExpoDependencies(process.cwd());
-          patchFdroidLibrarySources(process.cwd());
+          // Prebuild has already generated module BuildConfig/source outputs;
+          // sanitize their sources without deleting those outputs.
+          patchFdroidLibrarySources(process.cwd(), { removeGeneratedArtifacts: false });
           NODE
 
       - name: Generate native project
