@@ -753,7 +753,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: radii.md,
-    marginTop: 4,
     borderWidth: 1,
   },
   grid: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 32 },
@@ -809,8 +808,8 @@ const styles = StyleSheet.create({
   checkOverlayUnselected: { backgroundColor: "rgba(0,0,0,0.45)" },
   overflowBtn: {
     position: "absolute",
-    top: 4,
-    right: 4,
+    top: 6,
+    right: 6,
     width: 28,
     height: 28,
     borderRadius: 14,
