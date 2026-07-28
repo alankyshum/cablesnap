@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.92",
+    "date": "2026-07-28",
+    "versionCode": 160,
+    "body": "- **Ellipsis (overflow) menu button on form library cards is now inset 6 dp from the top-right corner**, matching the check-overlay affordance for consistent touch target placement. ([BLD-4548](/BLD/issues/BLD-4548))\n- Left-align the \"Set a goal\" button in Weekly Training Goal settings so it\n  matches the padding of surrounding rows. ([BLD-4537](/BLD/issues/BLD-4537))"
+  },
+  {
     "version": "0.26.91",
     "date": "2026-07-28",
     "versionCode": 159,
