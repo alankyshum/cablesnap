@@ -59,6 +59,13 @@ describe("wear-tests.yml AC10b F-Droid flag (BLD-4109 regression lock)", () => {
     expect(step).toMatch(/CABLESNAP_FDROID:\s*"1"/);
   });
 
+  it("Assemble :wear step exports CABLESNAP_FDROID=\"1\"", () => {
+    const step = extractStep(yaml, "Assemble :wear (Wear OS standalone APK)");
+    expect(step).toMatch(/CABLESNAP_FDROID:\s*"1"/);
+    // Sanity: the flag must be inside this step's env block, not another.
+    expect(step).toMatch(/assembleRelease/);
+  });
+
   it("AC10b assembleReleaseFdroid step exports CABLESNAP_FDROID=\"1\"", () => {
     const step = extractStep(
       yaml,

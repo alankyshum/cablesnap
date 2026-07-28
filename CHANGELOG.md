@@ -25,7 +25,9 @@ marker) at release time.
 - **F-Droid Camera scanner rewriting now preserves the complete Kotlin module**, removing only the proprietary scanner block so camera capture functions continue to compile.
 - **F-Droid cleanup now leaves Gradle-generated Expo build directories untouched**, preventing repeated prebuild cleanup from breaking Camera compilation inputs.
 - **F-Droid prebuild now removes Expo publisher artifacts only once per config evaluation**, avoiding repeated cleanup races with Gradle-generated Camera BuildConfig inputs.
+- **F-Droid Wear OS build step now exports CABLESNAP_FDROID=1**, ensuring Gradle configurations and dependencies remain fully consistent across all compilation steps and preventing incremental build failures. ([BLD-4482](/BLD/issues/BLD-4482))
 - **F-Droid’s post-prebuild sanitization now preserves generated Expo module inputs**, avoiding Gradle fingerprint failures while keeping the source-level proprietary-class removal intact.
+- **F-Droid proprietary-dependency excludes are now scoped to `:app` only**, unblocking the Scheduled Release build after a global-scope regression broke `:expo-camera` in both F-Droid and Play variants.
 - **F-Droid source sanitization no longer deletes freshly generated Expo BuildConfig outputs**, allowing the sanitized Camera module to compile cleanly during prebuild.
 - **F-Droid Camera autolinking now compiles sanitized source instead of the publisher AAR**, eliminating the remaining ML Kit and Google Play Services barcode classes.
 - **F-Droid CI now sanitizes Expo modules before prebuild autolinking**, preventing clean native generation from selecting proprietary publisher AARs.

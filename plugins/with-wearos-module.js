@@ -215,54 +215,54 @@ let fdroidPrebuildArtifactsRemoved = false;
 // classpath under releaseFdroid never resolves it. The bridge module's own
 // `:expo-wearos-bridge` project is still configured by Gradle (cheap), but
 // no classes from it land in the F-Droid APK.
-const FDROID_EXCLUDES_BLOCK = `
-${FDROID_EXCLUDES_MARKER}
-if (System.getenv("CABLESNAP_FDROID") == "1") {
-    allprojects {
-        configurations.all {
-            exclude group: "com.google.android.gms"
-            exclude group: "com.google.firebase"
-            exclude group: "com.google.mlkit"
-            exclude group: "com.android.installreferrer"
-            exclude module: "camera-mlkit-vision"
-            exclude module: "expo-wearos-bridge"
-            resolutionStrategy.eachDependency { dependency ->
-                if (dependency.requested.group in [
-                    "com.google.android.gms",
-                    "com.google.firebase",
-                    "com.google.mlkit",
-                    "com.android.installreferrer",
-                ]) {
-                    throw new GradleException("F-Droid build rejected proprietary dependency: \${dependency.requested}")
-                }
-            }
-        }
-    }
-}
-`;
-
-// The app's releaseFdroid configuration can consume a library's release
-// variant via matchingFallbacks. Keep the exclusions on the app itself too;
-// project-level exclusions do not reliably propagate across that fallback.
+//
+// SCOPE — variant-scoped, not `allprojects`:
+// A prior iteration (commit 8072156b) placed the excludes inside an
+// `allprojects { configurations.all { exclude … } }` block appended to
+// project-level `android/build.gradle`. That scope also applied the excludes
+// to every Expo library subproject (:expo-camera, :expo-application,
+// :expo-notifications, …), corrupting their OWN R.jar / BuildConfig
+// generation and breaking both the F-Droid AND Play `release` variants
+// (Scheduled Release outage 2026-07-26, BLD-4473). The Scheduled Release
+// workflow exports `CABLESNAP_FDROID=1` across the whole Build APK step —
+// including the Play Gradle invocation — so any runtime `System.getenv`
+// gate reaching into `allprojects` fires for Play too.
+//
+// The correct scope is variant-scoped `:app` configurations only:
+// `releaseFdroidImplementation`, `releaseFdroidCompileClasspath`, and
+// `releaseFdroidRuntimeClasspath`. Library subprojects fall back to `release`
+// via matchingFallbacks (see SUBPROJECT_FILTER_BLOCK below) and are never
+// touched by these excludes, so their own compilation is unaffected. The
+// workflow's post-prebuild `cablesnap:ci:fdroid-final-excludes` step
+// (`.github/workflows/scheduled-release.yml`) re-asserts the app-scoped
+// excludes at Gradle invocation time, and the AC10b DEX-purity gate is the
+// final backstop.
 const FDROID_APP_EXCLUDES_BLOCK = `
 ${FDROID_EXCLUDES_MARKER}:app
 if (System.getenv("CABLESNAP_FDROID") == "1") {
-    configurations.configureEach {
-        exclude group: "com.google.android.gms"
-        exclude group: "com.google.firebase"
-        exclude group: "com.google.mlkit"
-        exclude group: "com.android.installreferrer"
-        exclude module: "camera-mlkit-vision"
-    }
+    // Variant-scoped: matches releaseFdroidImplementation,
+    // releaseFdroidCompileClasspath, releaseFdroidRuntimeClasspath (and
+    // any future *releaseFdroid* configuration AGP synthesises). Safe even
+    // when CABLESNAP_FDROID=1 leaks into a concurrent Play Gradle
+    // invocation — Play's release{Compile,Runtime}Classpath and
+    // releaseImplementation are NOT matched.
     configurations.matching { it.name.toLowerCase().contains("releasefdroid") }.configureEach {
-        // Explicitly bind the excludes to the F-Droid variant. This remains
-        // effective when AGP resolves an Expo library through matchingFallbacks
-        // to its release variant.
         exclude group: "com.google.android.gms"
         exclude group: "com.google.firebase"
         exclude group: "com.google.mlkit"
         exclude group: "com.android.installreferrer"
         exclude module: "camera-mlkit-vision"
+        exclude module: "expo-wearos-bridge"
+        resolutionStrategy.eachDependency { dependency ->
+            if (dependency.requested.group in [
+                "com.google.android.gms",
+                "com.google.firebase",
+                "com.google.mlkit",
+                "com.android.installreferrer",
+            ]) {
+                throw new GradleException("F-Droid build rejected proprietary dependency: \${dependency.requested}")
+            }
+        }
     }
 }
 `;
@@ -357,27 +357,21 @@ subprojects { subproject ->
 `;
 
 function patchProjectBuildGradle(contents) {
-  let out = contents;
+  // Only injects SUBPROJECT_FILTER_BLOCK. The F-Droid exclude block is
+  // scoped to `:app` via FDROID_APP_EXCLUDES_BLOCK (patchAppBuildGradle);
+  // no `allprojects` / `configurations.all` block is ever appended here.
+  // See BLD-4473 root-cause comment above FDROID_APP_EXCLUDES_BLOCK.
   if (contents.includes(SUBPROJECT_FILTER_MARKER)) {
-    if (
-      contents.includes(FDROID_EXCLUDES_MARKER) ||
-      process.env.CABLESNAP_FDROID !== "1"
-    ) {
-      return contents;
-    }
-    return contents + FDROID_EXCLUDES_BLOCK;
+    return contents;
   }
   // Append at end-of-file. `subprojects { ... }` blocks are
   // order-independent — Gradle accumulates and applies them in the
   // configuration phase before any subproject is evaluated.
+  let out = contents;
   if (!out.endsWith("\n")) {
     out = out + "\n";
   }
-  return (
-    out +
-    (process.env.CABLESNAP_FDROID === "1" ? FDROID_EXCLUDES_BLOCK : "") +
-    SUBPROJECT_FILTER_BLOCK
-  );
+  return out + SUBPROJECT_FILTER_BLOCK;
 }
 
 // ---------------------------------------------------------------------------
