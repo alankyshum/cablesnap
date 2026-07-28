@@ -755,6 +755,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     marginTop: 4,
     borderWidth: 1,
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: "center",
+    alignItems: "center",
   },
   grid: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 32 },
   // BLD-2741: Use space-between + fixed 48% width instead of gap+flex:1.
@@ -791,8 +795,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
-  thumbDate: { color: "white", fontSize: 10 },
-  thumbDuration: { color: "rgba(255,255,255,0.8)", fontSize: 10 },
+  thumbDate: { color: "white", fontSize: fontSizes.xs },
+  thumbDuration: { color: "rgba(255,255,255,0.8)", fontSize: fontSizes.xs },
   // BLD-2724: 22→24px; dark fill for unselected state on light card bg.
   checkOverlay: {
     position: "absolute",
