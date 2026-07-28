@@ -1079,6 +1079,21 @@ function rmDirRecursive(target) {
   }
 }
 
+function patchGradleWrapperProperties(platformRoot) {
+  const propertiesPath = path.join(platformRoot, "gradle", "wrapper", "gradle-wrapper.properties");
+  if (fs.existsSync(propertiesPath)) {
+    let contents = fs.readFileSync(propertiesPath, "utf8");
+    if (contents.includes("gradle-9.0.0-bin.zip")) {
+      // Pin Gradle to 8.13 to resolve the Gradle 9 compileReleaseKotlin javaSources normalization race.
+      // Gradle 9.0.0 tightened input/output state tracking, causing compileReleaseKotlin
+      // to fail when reading the generated/writing BuildConfig.java. Pinning to Gradle 8.13
+      // avoids this normalization race.
+      contents = contents.replace("gradle-9.0.0-bin.zip", "gradle-8.13-bin.zip");
+      fs.writeFileSync(propertiesPath, contents, "utf8");
+    }
+  }
+}
+
 const withWearOsModule = (config) => {
   // This runs during config evaluation, before Expo autolinking generates
   // Android's project dependency graph. The dangerous-mod hook below is too
@@ -1149,6 +1164,7 @@ const withWearOsModule = (config) => {
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
       writeFdroidR8Rules(projectRoot, platformRoot);
+      patchGradleWrapperProperties(platformRoot);
       return cfg;
     },
   ]);
@@ -1170,6 +1186,7 @@ module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
 module.exports.scrubFdroidLocalMavenMetadata = scrubFdroidLocalMavenMetadata;
 module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
 module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
+module.exports.patchGradleWrapperProperties = patchGradleWrapperProperties;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;

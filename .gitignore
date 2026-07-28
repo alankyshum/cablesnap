@@ -92,3 +92,7 @@ modules/expo-wearos-bridge/android/build/
 
 # Jest coverage output
 coverage/
+android_old/
+android_old*
+android_corrupted*
+/android_corrupted*

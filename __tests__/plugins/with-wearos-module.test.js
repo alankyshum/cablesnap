@@ -11,6 +11,7 @@ const {
   writeFdroidManifest,
   writeFdroidR8Rules,
   patchFdroidExpoDependencies,
+  patchGradleWrapperProperties,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
@@ -707,6 +708,47 @@ describe("writeFdroidR8Rules", () => {
       );
     } finally {
       rmDirRecursive(tmpProjectRoot);
+      rmDirRecursive(tmpPlatformRoot);
+    }
+  });
+});
+
+// ----------------------------------------------------------------------------
+// patchGradleWrapperProperties
+// ----------------------------------------------------------------------------
+describe("patchGradleWrapperProperties", () => {
+  const PROPERTIES_FIXTURE = `distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\\://services.gradle.org/distributions/gradle-9.0.0-bin.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+`;
+
+  it("replaces gradle-9.0.0-bin.zip with gradle-8.13-bin.zip", () => {
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "gradle-wrapper-"));
+    try {
+      const wrapperDir = path.join(tmpPlatformRoot, "gradle", "wrapper");
+      fs.mkdirSync(wrapperDir, { recursive: true });
+      const propertiesPath = path.join(wrapperDir, "gradle-wrapper.properties");
+      fs.writeFileSync(propertiesPath, PROPERTIES_FIXTURE, "utf8");
+
+      patchGradleWrapperProperties(tmpPlatformRoot);
+
+      const contents = fs.readFileSync(propertiesPath, "utf8");
+      expect(contents).toContain("gradle-8.13-bin.zip");
+      expect(contents).not.toContain("gradle-9.0.0-bin.zip");
+    } finally {
+      rmDirRecursive(tmpPlatformRoot);
+    }
+  });
+
+  it("is a no-op if the properties file does not exist", () => {
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "gradle-wrapper-"));
+    try {
+      expect(() => patchGradleWrapperProperties(tmpPlatformRoot)).not.toThrow();
+    } finally {
       rmDirRecursive(tmpPlatformRoot);
     }
   });
