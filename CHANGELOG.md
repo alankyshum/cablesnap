@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Consistent spacing in progress-tab empty state** — the workout empty state on the Progress tab now uses standard spacing tokens for even vertical rhythm. ([BLD-4569](/BLD/issues/BLD-4569))
 
 ## v0.26.90 — 2026-07-28
 <!-- versionCode: 158 -->
