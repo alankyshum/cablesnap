@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Calendar month navigation**: added spacing between the month label and the prev/next chevrons for clearer visual separation.
 
 ## v0.26.90 — 2026-07-28
 <!-- versionCode: 158 -->
