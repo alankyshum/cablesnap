@@ -73,7 +73,7 @@ export default function SetsCard({ grouped, colors }: Props) {
 }
 
 const styles = StyleSheet.create({
-  section: { marginBottom: 16 },
+  section: {},
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   // BLD-3660: Use `gap` on the wrapping container so spacing between exercise groups
   // is consistent and no trailing margin leaks past the last group.

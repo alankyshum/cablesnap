@@ -65,7 +65,7 @@ export default function PRsCard({ prs, repPrs, unit, colors }: Props) {
 }
 
 const styles = StyleSheet.create({
-  section: { marginBottom: 16 },
+  section: {},
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   row: {
     flexDirection: "row",

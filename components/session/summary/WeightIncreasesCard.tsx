@@ -45,7 +45,7 @@ export default function WeightIncreasesCard({ increases, unit, colors }: Props) 
 }
 
 const styles = StyleSheet.create({
-  section: { marginBottom: 16 },
+  section: {},
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   row: {
     flexDirection: "row",

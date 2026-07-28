@@ -60,7 +60,7 @@ export default function ComparisonCard({ comparison, colors }: Props) {
 }
 
 const styles = StyleSheet.create({
-  section: { marginBottom: 16 },
+  section: {},
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   compRow: {
     flexDirection: "row",
