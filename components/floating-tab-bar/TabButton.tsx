@@ -58,6 +58,8 @@ export function TabButton({
       )}
       <Animated.Text
         numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
         style={[tabStyles.label, { color }]}
       >
         {label}
@@ -81,5 +83,6 @@ const tabStyles = StyleSheet.create({
     marginTop: 2,
     textAlign: "center",
     includeFontPadding: false,
+    paddingHorizontal: 2,
   },
 });
