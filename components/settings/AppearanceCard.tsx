@@ -2,7 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { fontSizes } from "@/constants/design-tokens";
+import { fontSizes, spacing } from "@/constants/design-tokens";
 import { useThemeMode, type ThemeMode } from "@/lib/theme-preference";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 
@@ -19,10 +19,15 @@ export default function AppearanceCard({ colors, bareContent = false }: Props) {
   const { themeMode, setThemeMode } = useThemeMode();
 
   const content = (
-    <>
-      <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Appearance</Text>
+    <View style={styles.cardContainer}>
+      <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm }}>Appearance</Text>
       <View style={styles.row}>
-        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>Theme</Text>
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>Theme</Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs, marginTop: 2, lineHeight: 16 }}>
+            Auto follows your device system setting.
+          </Text>
+        </View>
         <View style={styles.themeToggle}>
           <SegmentedControl
             value={themeMode}
@@ -35,13 +40,10 @@ export default function AppearanceCard({ colors, bareContent = false }: Props) {
           />
         </View>
       </View>
-      <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-        Auto follows your device system setting.
-      </Text>
-    </>
+    </View>
   );
 
-  if (bareContent) return <View>{content}</View>;
+  if (bareContent) return content;
 
   return (
     <Card variant="outline" style={StyleSheet.flatten([styles.flowCard, { backgroundColor: colors.surface }])}>
@@ -52,6 +54,9 @@ export default function AppearanceCard({ colors, bareContent = false }: Props) {
 
 const styles = StyleSheet.create({
   flowCard: { padding: 14 },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  cardContainer: {
+    gap: spacing.sm,
+  },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   themeToggle: { width: 200, flexShrink: 0 },
 });

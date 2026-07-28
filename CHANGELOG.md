@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Settings: uniform vertical rhythm between Units and Appearance toggle rows (uses `spacing.sm` token; no more compounding `marginBottom`+`marginTop`).
 
 ## v0.26.91 — 2026-07-28
 <!-- versionCode: 159 -->
