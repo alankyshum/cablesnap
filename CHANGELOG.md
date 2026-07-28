@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Form Library / Compare grid: increased the overflow (⋮) menu button inset from 4dp to 8dp so it no longer looks cramped against the card corner (touch target unchanged).
 
 ## v0.26.98 — 2026-08-18
 <!-- versionCode: 166 -->
