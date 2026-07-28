@@ -715,6 +715,20 @@ import expo.modules.camera.utils.BarCodeScannerResult
 class BarcodeAnalyzer(formats: List<BarcodeType>, val onComplete: (BarCodeScannerResult) -> Unit) : ImageAnalysis.Analyzer {
   override fun analyze(imageProxy: ImageProxy) { imageProxy.close() }
 }
+
+// Camera preview still uses this helper for image capture; keep it available
+// after removing Expo Camera's ML Kit analyzer implementation.
+fun Array<ImageProxy.PlaneProxy>.toByteArray(): ByteArray {
+  val result = ByteArray(sumOf { it.buffer.remaining() })
+  var offset = 0
+  for (plane in this) {
+    val bytes = ByteArray(plane.buffer.remaining())
+    plane.buffer.get(bytes)
+    bytes.copyInto(result, offset)
+    offset += bytes.size
+  }
+  return result
+}
 `);
   write(path.join(camera, "analyzers", "MLKitBarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
 
@@ -736,7 +750,7 @@ object BarCodeScannerResultSerializer {
     putString("data", result.value); putString("raw", result.raw); putInt("type", result.type)
   }
   fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null) =
-    BarCodeScannerResult(0, "", "", Bundle(), emptyList(), 0, 0)
+    BarCodeScannerResult(0, "", "", Bundle(), mutableListOf(), 0, 0)
   fun parseExtraDate(barcode: Any): Bundle = Bundle()
 }
 `);
@@ -764,7 +778,7 @@ object BarCodeScannerResultSerializer {
     putString("data", result.value); putString("raw", result.raw); putInt("type", result.type)
   }
   fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null) =
-    BarCodeScannerResult(0, "", "", Bundle(), emptyList(), 0, 0)
+    BarCodeScannerResult(0, "", "", Bundle(), mutableListOf(), 0, 0)
   fun parseExtraDate(barcode: Any): Bundle = Bundle()
 }
 `);
