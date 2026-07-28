@@ -344,6 +344,26 @@ describe('Settings masonry — touch targets >=48px on rows (BLD-2037 P2-9)', ()
     expect(style.minHeight as number).toBeGreaterThanOrEqual(48)
   })
 
+  it('Choose CSV File and Buy me a coffee buttons have touch targets >= 44dp (BLD-4534)', async () => {
+    mockLayoutReturn = { ...mockCompactLayout }
+    const { getByTestId, findByLabelText } = renderScreen(<Settings />)
+    await waitFor(() => expect(getByTestId(MASONRY)).toBeTruthy())
+
+    const csvBtn = await findByLabelText('Choose CSV file to import workout history')
+    const csvChild = csvBtn.children?.[0] as { props?: { style?: unknown } } | undefined
+    const csvStyles = [
+      flatStyle(csvBtn.props.style),
+      csvChild?.props?.style ? flatStyle(csvChild.props.style) : {}
+    ]
+    const csvHeight = csvStyles.map(s => s.minHeight).find(h => h !== undefined)
+      ?? csvStyles.map(s => s.height).find(h => h !== undefined)
+    expect(csvHeight as number).toBeGreaterThanOrEqual(44)
+
+    const bmcBtn = await findByLabelText('Buy me a coffee')
+    const bmcStyle = flatStyle(bmcBtn.props.style)
+    expect(bmcStyle.minHeight as number).toBeGreaterThanOrEqual(44)
+  })
+
   it('feedback buttons (Report Bug, Feature Request, Errors) have touch targets >= 44dp (BLD-3500)', async () => {
     mockLayoutReturn = { ...mockCompactLayout }
     const { getByTestId, findByLabelText } = renderScreen(<Settings />)

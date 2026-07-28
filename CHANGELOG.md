@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Settings "Choose CSV File" button now meets 44dp touch-target guidance** by using the default button size (was `sm`/38px). (BLD-4534)
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
