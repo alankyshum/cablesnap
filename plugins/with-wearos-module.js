@@ -622,6 +622,81 @@ function scrubFdroidLocalMavenMetadata(projectRoot) {
   visit(root);
 }
 
+function buildEmptyAarZip() {
+  const { execSync } = require("child_process");
+  const os = require("os");
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "empty-aar-"));
+  try {
+    const jarSrcDir = path.join(tmpDir, "jar-src");
+    fs.mkdirSync(path.join(jarSrcDir, "META-INF"), { recursive: true });
+    fs.writeFileSync(
+      path.join(jarSrcDir, "META-INF", "MANIFEST.MF"),
+      "Manifest-Version: 1.0\nCreated-By: 1.0 (Android)\n",
+      "utf8"
+    );
+    const jarPath = path.join(tmpDir, "classes.jar");
+    execSync(`zip -r "${jarPath}" META-INF`, { cwd: jarSrcDir, stdio: "ignore" });
+
+    fs.writeFileSync(path.join(tmpDir, "R.txt"), "", "utf8");
+
+    const manifestContent = `<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="expo.modules.camera.stub" />\n`;
+    fs.writeFileSync(path.join(tmpDir, "AndroidManifest.xml"), manifestContent, "utf8");
+
+    const aarPath = path.join(tmpDir, "empty.aar");
+    execSync(`zip -j "${aarPath}" classes.jar R.txt AndroidManifest.xml`, { cwd: tmpDir, stdio: "ignore" });
+
+    return fs.readFileSync(aarPath);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+}
+
+function neutralizeLocalMavenAars(projectRoot) {
+  const crypto = require("crypto");
+  const sourceRoot = (...parts) => path.join(projectRoot, "node_modules", ...parts);
+
+  let emptyAarBytes = null;
+  function getEmptyAarBytes() {
+    if (!emptyAarBytes) {
+      emptyAarBytes = buildEmptyAarZip();
+    }
+    return emptyAarBytes;
+  }
+
+  for (const pkg of ["expo-camera", "expo-application", "expo-notifications", "expo-dev-launcher"]) {
+    const repoDir = sourceRoot(pkg, "local-maven-repo");
+    if (!fs.existsSync(repoDir)) continue;
+
+    const stack = [repoDir];
+    while (stack.length) {
+      const dir = stack.pop();
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          stack.push(full);
+          continue;
+        }
+        if (!entry.name.endsWith(".aar")) continue;
+
+        // Overwrite with empty AAR.
+        const aarBytes = getEmptyAarBytes();
+        fs.writeFileSync(full, aarBytes);
+
+        // Regenerate sibling checksums that Gradle verifies.
+        for (const [suffix, algo] of [
+          [".sha1", "sha1"],
+          [".sha256", "sha256"],
+          [".md5", "md5"]
+        ]) {
+          const chkPath = full + suffix;
+          const hashValue = crypto.createHash(algo).update(aarBytes).digest("hex");
+          fs.writeFileSync(chkPath, hashValue, "utf8");
+        }
+      }
+    }
+  }
+}
+
 // Source-level F-Droid patch. Gradle exclusions do not remove proprietary
 // class descriptors emitted by Expo's Kotlin sources (and R8 must still parse
 // those descriptors). Replace the optional integrations with no-op FOSS
@@ -645,25 +720,11 @@ function patchFdroidLibrarySources(projectRoot) {
   ]) {
     const buildDir = sourceRoot(packageName, "android", "build");
     if (fs.existsSync(buildDir)) fs.rmSync(buildDir, { recursive: true, force: true });
-    // Expo publishes a precompiled AAR beside the source module. Removing
-    // only its POM/module metadata is insufficient: Gradle can still select
-    // the AAR itself, which is the exact source of the surviving ML Kit/GMS
-    // classes seen by AC10b.
-    const localMavenRepo = sourceRoot(packageName, "local-maven-repo");
-    if (fs.existsSync(localMavenRepo)) {
-      fs.rmSync(localMavenRepo, { recursive: true, force: true });
-    }
   }
 
+  neutralizeLocalMavenAars(projectRoot);
+
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
-  const cameraConfig = sourceRoot("expo-camera", "expo-module.config.json");
-  if (fs.existsSync(cameraConfig)) {
-    const config = JSON.parse(fs.readFileSync(cameraConfig, "utf8"));
-    // Force Expo autolinking to use the sanitized Android source project.
-    // The publisher AAR contains the original ML Kit/GMS bytecode.
-    if (config.android) delete config.android.publication;
-    fs.writeFileSync(cameraConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
-  }
 
   // Balanced-brace replacement for a whole `fun <name>(...) { ... }` block.
   // Kotlin allows nested try/catch and lambda braces inside the body, so a

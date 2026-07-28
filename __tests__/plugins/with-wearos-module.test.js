@@ -711,3 +711,122 @@ describe("writeFdroidR8Rules", () => {
     }
   });
 });
+
+// patchFdroidLibrarySources local-maven-repo handling
+describe("patchFdroidLibrarySources local-maven-repo handling", () => {
+  const { patchFdroidLibrarySources } = require("../../plugins/with-wearos-module");
+  let tmpProjectRoot;
+  let backupFdroidEnv;
+
+  beforeEach(() => {
+    backupFdroidEnv = process.env.CABLESNAP_FDROID;
+    tmpProjectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "local-maven-test-"));
+  });
+
+  afterEach(() => {
+    if (backupFdroidEnv !== undefined) {
+      process.env.CABLESNAP_FDROID = backupFdroidEnv;
+    } else {
+      delete process.env.CABLESNAP_FDROID;
+    }
+    rmDirRecursive(tmpProjectRoot);
+  });
+
+  const seedLocalMavenRepo = (pkg, name, version) => {
+    const pkgDir = path.join(tmpProjectRoot, "node_modules", pkg);
+    const repoDir = path.join(pkgDir, "local-maven-repo", "host", "exp", "exponent", name, version);
+    fs.mkdirSync(repoDir, { recursive: true });
+
+    // Seed dummy .pom, .module, .aar and checksums
+    const pomPath = path.join(repoDir, `${name}-${version}.pom`);
+    const modulePath = path.join(repoDir, `${name}-${version}.module`);
+    const aarPath = path.join(repoDir, `${name}-${version}.aar`);
+
+    fs.writeFileSync(pomPath, "POM METADATA CONTENT", "utf8");
+    fs.writeFileSync(modulePath, '{"formatVersion":"1.1","variants":[]}', "utf8");
+    fs.writeFileSync(aarPath, "ORIGINAL BANNED AAR BYTECODE", "utf8");
+
+    fs.writeFileSync(aarPath + ".sha1", "stalesha1", "utf8");
+    fs.writeFileSync(aarPath + ".sha256", "stalesha256", "utf8");
+    fs.writeFileSync(aarPath + ".md5", "stalemd5", "utf8");
+
+    // Also need to mock any directories verified by patchFdroidLibrarySources / verify helper
+    // so verify() does not crash on missing android/src folders
+    fs.mkdirSync(path.join(pkgDir, "android", "src"), { recursive: true });
+    return { pomPath, modulePath, aarPath };
+  };
+
+  it("replaces .aar with empty stub, preserves .pom/.module, and regenerates checksums", () => {
+    process.env.CABLESNAP_FDROID = "1";
+    
+    // Seed expo-camera
+    const { pomPath, modulePath, aarPath } = seedLocalMavenRepo("expo-camera", "expo.modules.camera", "55.0.15");
+    
+    // Seed others to make sure the verification walk doesn't complain about other packages
+    seedLocalMavenRepo("expo-application", "expo.modules.application", "1.0.0");
+    seedLocalMavenRepo("expo-notifications", "expo.modules.notifications", "1.0.0");
+    seedLocalMavenRepo("expo-dev-launcher", "expo.modules.devlauncher", "1.0.0");
+
+    // Run patch
+    patchFdroidLibrarySources(tmpProjectRoot);
+
+    // 1. .pom and .module survive unchanged
+    expect(fs.existsSync(pomPath)).toBe(true);
+    expect(fs.readFileSync(pomPath, "utf8")).toBe("POM METADATA CONTENT");
+    expect(fs.existsSync(modulePath)).toBe(true);
+    expect(fs.readFileSync(modulePath, "utf8")).toBe('{"formatVersion":"1.1","variants":[]}');
+
+    // 2. .aar is replaced, not deleted
+    expect(fs.existsSync(aarPath)).toBe(true);
+    const updatedAarBytes = fs.readFileSync(aarPath);
+    expect(updatedAarBytes.toString()).not.toBe("ORIGINAL BANNED AAR BYTECODE");
+
+    // 3. .aar is a valid zip containing classes.jar and AndroidManifest.xml
+    const crypto = require("crypto");
+    const { execSync } = require("child_process");
+    const list = execSync(`unzip -l "${aarPath}"`).toString();
+    expect(list).toContain("classes.jar");
+    expect(list).toContain("AndroidManifest.xml");
+    expect(list).toContain("R.txt");
+
+    // 4. Checksums regenerated correctly
+    const expectedSha1 = crypto.createHash("sha1").update(updatedAarBytes).digest("hex");
+    const expectedSha256 = crypto.createHash("sha256").update(updatedAarBytes).digest("hex");
+    const expectedMd5 = crypto.createHash("md5").update(updatedAarBytes).digest("hex");
+
+    expect(fs.readFileSync(aarPath + ".sha1", "utf8")).toBe(expectedSha1);
+    expect(fs.readFileSync(aarPath + ".sha256", "utf8")).toBe(expectedSha256);
+    expect(fs.readFileSync(aarPath + ".md5", "utf8")).toBe(expectedMd5);
+  });
+
+  it("is idempotent - running twice yields exact same bytes", () => {
+    process.env.CABLESNAP_FDROID = "1";
+    
+    const { aarPath } = seedLocalMavenRepo("expo-camera", "expo.modules.camera", "55.0.15");
+    seedLocalMavenRepo("expo-application", "expo.modules.application", "1.0.0");
+    seedLocalMavenRepo("expo-notifications", "expo.modules.notifications", "1.0.0");
+    seedLocalMavenRepo("expo-dev-launcher", "expo.modules.devlauncher", "1.0.0");
+
+    patchFdroidLibrarySources(tmpProjectRoot);
+    const bytes1 = fs.readFileSync(aarPath);
+
+    patchFdroidLibrarySources(tmpProjectRoot);
+    const bytes2 = fs.readFileSync(aarPath);
+
+    expect(bytes1.equals(bytes2)).toBe(true);
+  });
+
+  it("does not modify anything when CABLESNAP_FDROID is not set to 1", () => {
+    delete process.env.CABLESNAP_FDROID;
+    
+    const { aarPath } = seedLocalMavenRepo("expo-camera", "expo.modules.camera", "55.0.15");
+    seedLocalMavenRepo("expo-application", "expo.modules.application", "1.0.0");
+    seedLocalMavenRepo("expo-notifications", "expo.modules.notifications", "1.0.0");
+    seedLocalMavenRepo("expo-dev-launcher", "expo.modules.devlauncher", "1.0.0");
+
+    patchFdroidLibrarySources(tmpProjectRoot);
+
+    expect(fs.readFileSync(aarPath, "utf8")).toBe("ORIGINAL BANNED AAR BYTECODE");
+    expect(fs.readFileSync(aarPath + ".sha1", "utf8")).toBe("stalesha1");
+  });
+});
