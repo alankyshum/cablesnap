@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Workout empty state vertical spacing** — Ensures consistent vertical rhythm throughout the progress empty state by removing ad-hoc overrides on the icon and CTA wrapper in favor of the base container gap. ([BLD-4569](/BLD/issues/BLD-4569))
+- **Fix CI Changelog Gate SIGPIPE failures** — Prevents the Changelog Gate workflow from failing with exit code 141 (SIGPIPE) when CHANGELOG.md is the first file returned by git diff. ([BLD-4566](/BLD/issues/BLD-4566))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->

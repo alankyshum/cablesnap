@@ -4,7 +4,7 @@ import { TrendingUp } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { fontSizes } from "@/constants/design-tokens";
+import { fontSizes, spacing } from "@/constants/design-tokens";
 
 type Props = {
   onStart?: () => void;
@@ -80,13 +80,18 @@ export default function WorkoutEmptyState({ onStart }: Props) {
   );
 }
 
+// Vertical rhythm: all gaps between icon, headline, description, and CTA are
+// driven by a single container `gap` value (spacing.base = 16px).  The
+// previous ad-hoc `marginBottom: 4` on iconCircle and `marginTop: 8` on the
+// CTA wrapper created uneven spacing (12/16/20px) flagged in UX audit BLD-4528.
+// Padding values also use design tokens to keep this component fully token-based.
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 32,
-    paddingVertical: 24,
-    gap: 12,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.xl,
+    gap: spacing.base,
   },
   iconCircle: {
     width: 72,
@@ -94,7 +99,6 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
   },
   headline: {
     fontWeight: "600",
@@ -105,7 +109,6 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   cta: {
-    marginTop: 8,
     minWidth: 180,
   },
 });

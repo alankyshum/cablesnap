@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import { StyleSheet } from 'react-native'
+import { spacing } from '@/constants/design-tokens'
 
 jest.mock('expo-router', () => {
   const push = jest.fn()
@@ -95,9 +96,6 @@ describe('WorkoutEmptyState', () => {
     const { getByTestId } = render(<WorkoutEmptyState />)
     const ctaNode = getByTestId('progress-empty-cta')
 
-    // Walk up to find the Pressable/Animated.View that holds the inline style.
-    // The testID is on the Pressable's outer element; style is on its children.
-    // We check the Pressable itself (which receives the style array).
     const hasBorder = (style: unknown): boolean => {
       if (!style) return false
       const styles = Array.isArray(style) ? style : [style]
@@ -109,8 +107,35 @@ describe('WorkoutEmptyState', () => {
       return false
     }
 
-    // The Pressable at ctaNode.parent level carries our style array with borderWidth.
     const pressable = ctaNode
     expect(hasBorder(pressable.props.style)).toBe(true)
+  })
+
+  // Vertical-rhythm regression guard for BLD-4569: ad-hoc marginBottom on the
+  // iconCircle and marginTop on the CTA wrapper were creating uneven gaps
+  // (12/16/20px) between stacked elements.  The fix removes both overrides and
+  // relies solely on the container gap (spacing.base = 16px) for consistent
+  // vertical rhythm throughout the empty state.
+  it('uses uniform token-based vertical rhythm — no ad-hoc margins on icon or CTA (BLD-4569)', () => {
+    const { getByTestId } = render(<WorkoutEmptyState />)
+
+    // Container gap must be spacing.base (16) — the single source of rhythm.
+    const container = getByTestId('progress-workouts-empty')
+    const containerStyle = StyleSheet.flatten(container.props.style)
+    expect(containerStyle.gap).toBe(spacing.base)
+
+    // Padding values must use spacing tokens (not magic numbers).
+    expect(containerStyle.paddingHorizontal).toBe(spacing.xxl)
+    expect(containerStyle.paddingVertical).toBe(spacing.xl)
+
+    // iconCircle must not carry any marginBottom override.
+    const iconCircleNode = container.children[0] as unknown as { props: { style: unknown } }
+    const iconStyle = StyleSheet.flatten(iconCircleNode.props.style as Parameters<typeof StyleSheet.flatten>[0])
+    expect((iconStyle as Record<string, unknown>).marginBottom).toBeUndefined()
+
+    // CTA wrapper must not carry any marginTop override.
+    const ctaNode = getByTestId('progress-empty-cta')
+    const ctaStyle = StyleSheet.flatten(ctaNode.props.style)
+    expect((ctaStyle as Record<string, unknown>).marginTop).toBeUndefined()
   })
 })

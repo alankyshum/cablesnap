@@ -117,7 +117,7 @@ jobs:
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
 
-          if ! git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qx 'CHANGELOG.md'; then
+          if ! git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -x 'CHANGELOG.md' >/dev/null; then
             cat <<'MSG'
           ::error::This PR touches user-facing code but does not modify CHANGELOG.md.
 
