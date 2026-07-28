@@ -154,7 +154,7 @@ describe("patchAppBuildGradle", () => {
   it("declares proguardFiles explicitly on the releaseFdroid block", () => {
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toMatch(
-      /releaseFdroid\s*\{[\s\S]*?proguardFiles\s+['"]fdroid-r8-rules\.pro['"]/,
+      /releaseFdroid\s*\{[\s\S]*?proguardFiles\s+['"]\$projectDir\/fdroid-r8-rules\.pro['"]/,
     );
   });
 
