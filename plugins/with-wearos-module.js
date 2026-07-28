@@ -736,7 +736,7 @@ object BarCodeScannerResultSerializer {
     putString("data", result.value); putString("raw", result.raw); putInt("type", result.type)
   }
   fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null) =
-    BarCodeScannerResult(0, "", "", Bundle(), emptyList(), 0, 0)
+    BarCodeScannerResult(0, "", "", Bundle(), mutableListOf<Int>(), 0, 0)
   fun parseExtraDate(barcode: Any): Bundle = Bundle()
 }
 `);
@@ -764,7 +764,7 @@ object BarCodeScannerResultSerializer {
     putString("data", result.value); putString("raw", result.raw); putInt("type", result.type)
   }
   fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null) =
-    BarCodeScannerResult(0, "", "", Bundle(), emptyList(), 0, 0)
+    BarCodeScannerResult(0, "", "", Bundle(), mutableListOf<Int>(), 0, 0)
   fun parseExtraDate(barcode: Any): Bundle = Bundle()
 }
 `);

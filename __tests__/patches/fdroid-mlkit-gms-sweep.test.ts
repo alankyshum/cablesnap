@@ -125,6 +125,24 @@ class NewScannerHelper {
     expect(out).not.toMatch(forbidden);
   });
 
+  it("BLD-4491: generated BarcodeScannerResultSerializer builds a MutableList<Int> cornerPoints (not emptyList())", () => {
+    // expo-camera's BarCodeScannerResult constructor declares
+    //   var cornerPoints: MutableList<Int>
+    // The stub previously passed emptyList() (List<Int>), which fails to
+    // type-check: "Argument type mismatch: actual type is List<T>, but
+    // MutableList<Int> was expected." This broke compileReleaseKotlin and the
+    // Scheduled Release workflow (run #30320838321). The stub must use
+    // mutableListOf<Int>() so it satisfies the MutableList<Int> parameter.
+    process.env.CABLESNAP_FDROID = "1";
+    runPatch();
+    const out = fs.readFileSync(
+      path.join(cam, "analyzers", "BarcodeScannerResultSerializer.kt"),
+      "utf8"
+    );
+    expect(out).toContain("mutableListOf<Int>()");
+    expect(out).not.toMatch(/Bundle\(\),\s*emptyList\(\)/);
+  });
+
   it("is a no-op when CABLESNAP_FDROID is not set (Play build unchanged)", () => {
     const original = `package expo.modules.camera
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
