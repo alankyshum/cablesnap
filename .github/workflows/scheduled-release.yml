@@ -377,7 +377,10 @@ jobs:
             patchFdroidAndroidGradleTree,
           } = require('./plugins/with-wearos-module');
           patchFdroidExpoDependencies(process.cwd());
-          patchFdroidLibrarySources(process.cwd());
+          patchFdroidLibrarySources(process.cwd(), {
+            removeGeneratedArtifacts: false,
+            rewriteSources: false,
+          });
           // Run after prebuild has materialised every generated Android
           // library script. The config plugin's dangerous-mod hook can run
           // before some Expo scripts are copied into the native project.

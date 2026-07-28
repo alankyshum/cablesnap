@@ -626,7 +626,10 @@ function scrubFdroidLocalMavenMetadata(projectRoot) {
 // class descriptors emitted by Expo's Kotlin sources (and R8 must still parse
 // those descriptors). Replace the optional integrations with no-op FOSS
 // implementations before Gradle compiles the modules.
-function patchFdroidLibrarySources(projectRoot, { removeGeneratedArtifacts = true } = {}) {
+function patchFdroidLibrarySources(
+  projectRoot,
+  { removeGeneratedArtifacts = true, rewriteSources = true } = {},
+) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const sourceRoot = (...parts) => path.join(projectRoot, "node_modules", ...parts);
   const write = (file, contents) => {
@@ -656,6 +659,12 @@ function patchFdroidLibrarySources(projectRoot, { removeGeneratedArtifacts = tru
       fs.rmSync(localMavenRepo, { recursive: true, force: true });
     }
   }
+
+  // The explicit CI pass runs after Expo prebuild has generated Android
+  // module outputs. Source rewriting already happened during config
+  // evaluation; avoid rewriting package/source files while Gradle is about
+  // to fingerprint generated inputs.
+  if (!rewriteSources) return;
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
   const cameraConfig = sourceRoot("expo-camera", "expo-module.config.json");
@@ -1126,7 +1135,10 @@ const withWearOsModule = (config) => {
       // The early config-evaluation pass already removed publisher artifacts.
       // Do not delete a freshly generated module build directory while Expo
       // prebuild is still materializing BuildConfig/source outputs.
-      patchFdroidLibrarySources(projectRoot, { removeGeneratedArtifacts: false });
+      patchFdroidLibrarySources(projectRoot, {
+        removeGeneratedArtifacts: false,
+        rewriteSources: false,
+      });
       const srcDir = path.join(projectRoot, WEAR_TEMPLATE_RELATIVE);
       const dstDir = path.join(platformRoot, "wear");
       // Wipe stale outputs so a renamed/deleted file in the template does
