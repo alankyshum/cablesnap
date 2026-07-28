@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  selectToggle: { fontSize: fontSizes.sm, fontWeight: "600" },
+  selectToggle: { fontSize: fontSizes.xs, fontWeight: "600" },
   recordCTA: {
     flexDirection: "row",
     alignItems: "center",

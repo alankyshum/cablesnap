@@ -13,6 +13,7 @@ import React from "react";
 import { StyleSheet } from "react-native";
 import { render } from "@testing-library/react-native";
 import { FormLibraryTab } from "../../../components/session/FormLibraryTab";
+import { fontSizes } from "../../../constants/design-tokens";
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -100,5 +101,12 @@ describe("FormLibraryTab — Select touch target (BLD-1941)", () => {
       ((flatStyle.paddingLeft ?? 0) > 0 && (flatStyle.paddingRight ?? 0) > 0);
 
     expect(hasHorizontalPadding).toBe(true);
+  });
+
+  it("AC4: selectToggle font size is matched to fontSizes.xs", () => {
+    const { getByText } = render(<FormLibraryTab exerciseId="ex-1" />);
+    const selectText = getByText("Select");
+    const flatStyle = StyleSheet.flatten(selectText.props.style ?? {});
+    expect(flatStyle.fontSize).toBe(fontSizes.xs);
   });
 });
