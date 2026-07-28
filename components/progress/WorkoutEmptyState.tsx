@@ -4,7 +4,7 @@ import { TrendingUp } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { fontSizes } from "@/constants/design-tokens";
+import { fontSizes, spacing } from "@/constants/design-tokens";
 
 type Props = {
   onStart?: () => void;
@@ -29,6 +29,7 @@ export default function WorkoutEmptyState({ onStart }: Props) {
       testID="progress-workouts-empty"
     >
       <View
+        testID="progress-empty-icon-circle"
         style={[
           styles.iconCircle,
           { backgroundColor: colors.surfaceVariant ?? colors.surface },
@@ -84,9 +85,9 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 32,
-    paddingVertical: 24,
-    gap: 12,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.xl,
+    gap: spacing.md,
   },
   iconCircle: {
     width: 72,
@@ -94,7 +95,6 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
   },
   headline: {
     fontWeight: "600",
@@ -103,9 +103,9 @@ const styles = StyleSheet.create({
   description: {
     textAlign: "center",
     maxWidth: 320,
+    marginTop: -spacing.sm,
   },
   cta: {
-    marginTop: 8,
     minWidth: 180,
   },
 });
