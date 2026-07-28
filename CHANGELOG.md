@@ -25,6 +25,7 @@ marker) at release time.
 - **Ellipsis (overflow) menu button on form library cards is now inset 6 dp from the top-right corner**, matching the check-overlay affordance for consistent touch target placement. ([BLD-4548](/BLD/issues/BLD-4548))
 - Left-align the "Set a goal" button in Weekly Training Goal settings so it
   matches the padding of surrounding rows. ([BLD-4537](/BLD/issues/BLD-4537))
+- Fix the spacing below the "About" section header in Settings to match every other section — previously the gap was double the standard spacing. ([BLD-4579](/BLD/issues/BLD-4579))
 
 ## v0.26.91 — 2026-07-28
 <!-- versionCode: 159 -->
