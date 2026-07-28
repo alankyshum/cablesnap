@@ -130,6 +130,7 @@ jobs:
         # correctness only — Sentry source-map upload is environmentally
         # optional and intentionally not configured for wear-tests.yml.
         env:
+          CABLESNAP_FDROID: "1"
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           cd android
