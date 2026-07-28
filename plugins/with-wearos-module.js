@@ -695,6 +695,21 @@ function patchFdroidLibrarySources(
     if (depth !== 0) return source; // unbalanced; leave as-is
     return source.slice(0, match.index) + replacement + source.slice(i);
   };
+  const replaceKotlinCall = (source, marker, replacement) => {
+    const start = source.indexOf(marker);
+    if (start < 0) return source;
+    const opening = source.indexOf("{", start);
+    if (opening < 0) return source;
+    let depth = 1;
+    let i = opening + 1;
+    while (i < source.length && depth > 0) {
+      const c = source[i++];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    if (depth !== 0) return source;
+    return source.slice(0, start) + replacement + source.slice(i);
+  };
   write(path.join(camera, "analyzers", "BarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
 
 import androidx.camera.core.ImageAnalysis
@@ -817,11 +832,13 @@ object BarCodeScannerResultSerializer {
           "fun isMLKitBarcodeScannerAvailable(): Boolean = false");
       }
       if (/CameraViewModule\.kt$/.test(file)) {
-        source = source.replace(
-          /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s{0,6}\}/m,
+        source = replaceKotlinCall(
+          source,
+          'AsyncFunction("launchScanner")',
           `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
       promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`,
+    }
+`,
         );
       }
       if (source !== original) fs.writeFileSync(file, source, "utf8");

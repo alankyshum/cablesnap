@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **F-Droid Camera scanner rewriting now preserves the complete Kotlin module**, removing only the proprietary scanner block so camera capture functions continue to compile.
 - **F-Droid cleanup now leaves Gradle-generated Expo build directories untouched**, preventing repeated prebuild cleanup from breaking Camera compilation inputs.
 - **F-Droid prebuild now removes Expo publisher artifacts only once per config evaluation**, avoiding repeated cleanup races with Gradle-generated Camera BuildConfig inputs.
 - **F-Droid’s post-prebuild sanitization now preserves generated Expo module inputs**, avoiding Gradle fingerprint failures while keeping the source-level proprietary-class removal intact.
