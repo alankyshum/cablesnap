@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.90 — 2026-07-28
+<!-- versionCode: 158 -->
+
 - **F-Droid Camera source stubs now retain the image-plane conversion helper and typed empty barcode results**, keeping preview/capture compilation intact after ML Kit removal.
 - **F-Droid Camera scanner rewriting now preserves the complete Kotlin module**, removing only the proprietary scanner block so camera capture functions continue to compile.
 - **F-Droid cleanup now leaves Gradle-generated Expo build directories untouched**, preventing repeated prebuild cleanup from breaking Camera compilation inputs.
