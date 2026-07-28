@@ -626,27 +626,25 @@ function scrubFdroidLocalMavenMetadata(projectRoot) {
 // class descriptors emitted by Expo's Kotlin sources (and R8 must still parse
 // those descriptors). Replace the optional integrations with no-op FOSS
 // implementations before Gradle compiles the modules.
-function patchFdroidLibrarySources(projectRoot, { removeGeneratedArtifacts = true } = {}) {
+function patchFdroidLibrarySources(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const sourceRoot = (...parts) => path.join(projectRoot, "node_modules", ...parts);
   const write = (file, contents) => {
     if (fs.existsSync(path.dirname(file))) fs.writeFileSync(file, contents, "utf8");
   };
-  // expo-modules-autolinking can consume a publisher-side local AAR from an
-  // Android module's build directory even after its publication entry and
-  // source files have been rewritten. Those AARs are generated artifacts, so
-  // remove them before Gradle configures the module; otherwise the original
-  // Camera AAR restores ML Kit/GMS bytecode exactly as seen in AC10b.
+  // GMS purity is enforced by removing the local-maven-repo (which holds the
+  // publisher-side precompiled AARs) and deleting the android.publication entry
+  // from expo-module.config.json (which forces autolinking to compile from
+  // sanitized source). The android/build directory is managed by Gradle itself;
+  // deleting it out-of-band fights Gradle 9's incremental input normalization
+  // and causes :expo-camera:compileReleaseKotlin to fail when BuildConfig.java
+  // is reported as an unreadable task input.
   for (const packageName of [
     "expo-camera",
     "expo-application",
     "expo-notifications",
     "expo-dev-launcher",
   ]) {
-    const buildDir = sourceRoot(packageName, "android", "build");
-    if (removeGeneratedArtifacts && fs.existsSync(buildDir)) {
-      fs.rmSync(buildDir, { recursive: true, force: true });
-    }
     // Expo publishes a precompiled AAR beside the source module. Removing
     // only its POM/module metadata is insufficient: Gradle can still select
     // the AAR itself, which is the exact source of the surviving ML Kit/GMS
@@ -1080,7 +1078,7 @@ const withWearOsModule = (config) => {
   if (process.env.CABLESNAP_FDROID === "1") {
     const projectRoot = process.cwd();
     patchFdroidExpoDependencies(projectRoot);
-    patchFdroidLibrarySources(projectRoot, { removeGeneratedArtifacts: true });
+    patchFdroidLibrarySources(projectRoot);
   }
 
   // 1. Patch settings.gradle to register :wear.
@@ -1123,10 +1121,7 @@ const withWearOsModule = (config) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const platformRoot = cfg.modRequest.platformProjectRoot;
       patchFdroidExpoDependencies(projectRoot);
-      // The early config-evaluation pass already removed publisher artifacts.
-      // Do not delete a freshly generated module build directory while Expo
-      // prebuild is still materializing BuildConfig/source outputs.
-      patchFdroidLibrarySources(projectRoot, { removeGeneratedArtifacts: false });
+      patchFdroidLibrarySources(projectRoot);
       const srcDir = path.join(projectRoot, WEAR_TEMPLATE_RELATIVE);
       const dstDir = path.join(platformRoot, "wear");
       // Wipe stale outputs so a renamed/deleted file in the template does
