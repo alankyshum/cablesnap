@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Select and Done toggle text in the Form clips header is now vertically aligned with the Record CTA button and title**, utilizing a consistent font size and touch targets. ([BLD-4571](/BLD/issues/BLD-4571))
+- **Ellipsis (overflow) menu button on form library cards is now inset 6 dp from the top-right corner**, matching the check-overlay affordance for consistent touch target placement. ([BLD-4548](/BLD/issues/BLD-4548))
 
 ## v0.26.91 — 2026-07-28
 <!-- versionCode: 159 -->
