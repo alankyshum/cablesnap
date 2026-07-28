@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.91 — 2026-07-28
+<!-- versionCode: 159 -->
+
 - F-Droid now uses the standard Android `release` variant, avoiding creation of
   an app-only build type that cannot be consumed by React Native libraries.
 

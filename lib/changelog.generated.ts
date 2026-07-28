@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.91",
+    "date": "2026-07-28",
+    "versionCode": 159,
+    "body": "- F-Droid now uses the standard Android `release` variant, avoiding creation of\n  an app-only build type that cannot be consumed by React Native libraries."
+  },
+  {
     "version": "0.26.90",
     "date": "2026-07-28",
     "versionCode": 158,
