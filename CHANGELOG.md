@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Fixed uneven vertical spacing around the "Record a clip" button in the empty Form Library state, and evened out the clip remove-button inset.
 
 ## v0.26.91 — 2026-07-28
 <!-- versionCode: 159 -->
