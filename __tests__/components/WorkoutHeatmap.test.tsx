@@ -322,9 +322,9 @@ describe("WorkoutHeatmap", () => {
     expect(color1).not.toBe(color3);
 
     // Assert they match the mock colors from makeMockThemeColors / Colors.light (since useColorScheme defaults to 'light')
-    // Light mock theme colors: heatmapFreq1 = '#90CAF9', heatmapFreq2 = '#1E88E5', heatmapFreq3 = '#0A2540'
-    expect(color1).toBe("#90CAF9");
-    expect(color2).toBe("#1E88E5");
+    // Light mock theme colors: heatmapFreq1 = '#509BF1', heatmapFreq2 = '#225DA0', heatmapFreq3 = '#0A2540'
+    expect(color1).toBe("#509BF1");
+    expect(color2).toBe("#225DA0");
     expect(color3).toBe("#0A2540");
   });
 
