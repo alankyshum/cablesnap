@@ -195,6 +195,12 @@ const RELEASE_FDROID_BUILD_TYPE = `
         }
 `;
 
+// Expo may evaluate config plugins more than once during a single prebuild.
+// Removing a module's generated build directory on every evaluation races
+// Gradle's generated BuildConfig inputs and produces unreadable/missing input
+// errors in compileReleaseKotlin.
+let fdroidPrebuildArtifactsRemoved = false;
+
 // `configurations { ... }` blocks placed at the project script level apply to
 // the whole module. The plan's AC10b is: `unzip -l app-releaseFdroid.apk |
 // grep -c 'com/google/android/gms/wearable' == 0`. We hit that by:
@@ -1089,7 +1095,10 @@ const withWearOsModule = (config) => {
   if (process.env.CABLESNAP_FDROID === "1") {
     const projectRoot = process.cwd();
     patchFdroidExpoDependencies(projectRoot);
-    patchFdroidLibrarySources(projectRoot, { removeGeneratedArtifacts: true });
+    patchFdroidLibrarySources(projectRoot, {
+      removeGeneratedArtifacts: !fdroidPrebuildArtifactsRemoved,
+    });
+    fdroidPrebuildArtifactsRemoved = true;
   }
 
   // 1. Patch settings.gradle to register :wear.
