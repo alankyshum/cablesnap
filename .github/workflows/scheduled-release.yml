@@ -520,7 +520,16 @@ jobs:
              ./gradlew :app:dependencies --configuration releaseFdroidRuntimeClasspath || true
              exit 1
            fi
-           rm -rf app/build
+           # Full-project clean before invocation #2 (BLD-4484).
+           # `rm -rf app/build` only clears :app; library modules like
+           # :expo-camera keep stale generated BuildConfig.java from
+           # invocation #1, which Gradle 9's stricter input normalization
+           # rejects on the second run of :expo-camera:compileReleaseKotlin.
+           # `./gradlew clean` invokes clean on every autolinked subproject.
+           # The F-Droid APK is already safely copied to ../cablesnap-fdroid.apk
+           # (outside android/), so it is untouched. Two-invocation isolation
+           # for DEX purity is preserved (PLAN-BLD-716 §"F-Droid + Play split").
+           ./gradlew clean
            ./gradlew :app:assembleRelease :wear:assembleRelease
           cd ..
           # Phone APK (Play / `release` build type) — the canonical
