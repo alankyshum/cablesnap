@@ -271,7 +271,13 @@ function patchAppBuildGradle(contents) {
   let out = contents;
 
   // 1. Inject `releaseFdroid` build type inside `android { buildTypes { ... } }`.
-  if (!out.includes(BUILD_TYPES_MARKER)) {
+  // The official F-Droid React Native template builds the ordinary `release`
+  // variant.  Allow that recipe path to opt out of the app-only variant while
+  // retaining CABLESNAP_FDROID source/dependency sanitisation.
+  if (
+    process.env.CABLESNAP_FDROID_BUILD_TYPE !== "0" &&
+    !out.includes(BUILD_TYPES_MARKER)
+  ) {
     // Anchor on the inner `release { ... }` block within buildTypes. Every
     // Expo-prebuilt app/build.gradle has exactly one. We insert immediately
     // AFTER its closing brace so `initWith release` always resolves to a
