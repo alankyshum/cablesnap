@@ -47,7 +47,6 @@ export default function ImportWorkoutsCard({
       <View style={styles.buttonFlow}>
         <Button
           variant="outline"
-          size="sm"
           icon={FileInput}
           onPress={onPick}
           loading={loading}
