@@ -632,10 +632,7 @@ function scrubFdroidLocalMavenMetadata(projectRoot) {
 // class descriptors emitted by Expo's Kotlin sources (and R8 must still parse
 // those descriptors). Replace the optional integrations with no-op FOSS
 // implementations before Gradle compiles the modules.
-function patchFdroidLibrarySources(
-  projectRoot,
-  { removeGeneratedArtifacts = true, rewriteSources = true } = {},
-) {
+function patchFdroidLibrarySources(projectRoot) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const sourceRoot = (...parts) => path.join(projectRoot, "node_modules", ...parts);
   const write = (file, contents) => {
@@ -652,31 +649,11 @@ function patchFdroidLibrarySources(
     "expo-notifications",
     "expo-dev-launcher",
   ]) {
-    // Expo publishes a precompiled AAR beside the source module. Removing
-    // only its POM/module metadata is insufficient: Gradle can still select
-    // the AAR itself, which is the exact source of the surviving ML Kit/GMS
-    // classes seen by AC10b.
-    const localMavenRepo = sourceRoot(packageName, "local-maven-repo");
-    if (removeGeneratedArtifacts && fs.existsSync(localMavenRepo)) {
-      fs.rmSync(localMavenRepo, { recursive: true, force: true });
-    }
+    const buildDir = sourceRoot(packageName, "android", "build");
+    if (fs.existsSync(buildDir)) fs.rmSync(buildDir, { recursive: true, force: true });
   }
-
-  // The explicit CI pass runs after Expo prebuild has generated Android
-  // module outputs. Source rewriting already happened during config
-  // evaluation; avoid rewriting package/source files while Gradle is about
-  // to fingerprint generated inputs.
-  if (!rewriteSources) return;
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
-  const cameraConfig = sourceRoot("expo-camera", "expo-module.config.json");
-  if (fs.existsSync(cameraConfig)) {
-    const config = JSON.parse(fs.readFileSync(cameraConfig, "utf8"));
-    // Force Expo autolinking to use the sanitized Android source project.
-    // The publisher AAR contains the original ML Kit/GMS bytecode.
-    if (config.android) delete config.android.publication;
-    fs.writeFileSync(cameraConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
-  }
 
   // Balanced-brace replacement for a whole `fun <name>(...) { ... }` block.
   // Kotlin allows nested try/catch and lambda braces inside the body, so a
@@ -1113,21 +1090,6 @@ function rmDirRecursive(target) {
 }
 
 const withWearOsModule = (config) => {
-  // This runs during config evaluation, before Expo autolinking generates
-  // Android's project dependency graph. The dangerous-mod hook below is too
-  // late to affect that graph: removing a publisher AAR there leaves a
-  // generated `host.exp.exponent:expo.modules.camera` dependency pointing at
-  // a repository that no longer exists. Apply the source/publication rewrite
-  // first, then repeat it in dangerous-mod for idempotence after prebuild.
-  if (process.env.CABLESNAP_FDROID === "1") {
-    const projectRoot = process.cwd();
-    patchFdroidExpoDependencies(projectRoot);
-    patchFdroidLibrarySources(projectRoot, {
-      removeGeneratedArtifacts: !fdroidPrebuildArtifactsRemoved,
-    });
-    fdroidPrebuildArtifactsRemoved = true;
-  }
-
   // 1. Patch settings.gradle to register :wear.
   config = withSettingsGradle(config, (cfg) => {
     cfg.modResults.contents = patchSettingsGradle(cfg.modResults.contents);
@@ -1168,13 +1130,7 @@ const withWearOsModule = (config) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const platformRoot = cfg.modRequest.platformProjectRoot;
       patchFdroidExpoDependencies(projectRoot);
-      // The early config-evaluation pass already removed publisher artifacts.
-      // Do not delete a freshly generated module build directory while Expo
-      // prebuild is still materializing BuildConfig/source outputs.
-      patchFdroidLibrarySources(projectRoot, {
-        removeGeneratedArtifacts: false,
-        rewriteSources: false,
-      });
+      patchFdroidLibrarySources(projectRoot);
       const srcDir = path.join(projectRoot, WEAR_TEMPLATE_RELATIVE);
       const dstDir = path.join(platformRoot, "wear");
       // Wipe stale outputs so a renamed/deleted file in the template does

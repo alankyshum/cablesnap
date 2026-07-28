@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- Revert unstable Wear OS F-Droid build changes to restore green main (BLD-4469)
 - F-Droid now uses the standard Android `release` variant, avoiding creation of
   an app-only build type that cannot be consumed by React Native libraries.
 
