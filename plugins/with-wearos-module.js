@@ -353,6 +353,16 @@ subprojects { subproject ->
             }
         }
     }
+    // Detach :expo-camera compileReleaseKotlin from Gradle 9 state tracking.
+    // Stricter input normalization fails on generated BuildConfig files left in
+    // a half-written state or modified during manifest-merging in split graphs.
+    if (subproject.name == "expo-camera") {
+        subproject.tasks.configureEach { task ->
+            if (task.name == "compileReleaseKotlin") {
+                task.doNotTrackState("expo-camera BuildConfig regenerates each invocation; state-tracking is unnecessary and Gradle 9 rejects the file after F-Droid manifest overlay is applied")
+            }
+        }
+    }
 }
 `;
 

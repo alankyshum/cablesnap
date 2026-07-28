@@ -385,6 +385,13 @@ describe("patchProjectBuildGradle", () => {
     expect(out).toMatch(/beforeVariants[\s\S]*?variant\.enable\s*=\s*false/);
   });
 
+  it("detaches :expo-camera compileReleaseKotlin from state tracking", () => {
+    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+    expect(out).toContain('if (subproject.name == "expo-camera")');
+    expect(out).toContain('task.name == "compileReleaseKotlin"');
+    expect(out).toContain('task.doNotTrackState(');
+  });
+
   it("does NOT use the legacy variantFilter / setIgnore API (regression guard)", () => {
     // The legacy `android.variantFilter { setIgnore(true) }` API is a
     // publishing filter — it does NOT drop the variant from the task graph,
