@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Clip duration label (e.g., "5s") on form library cards is now larger and bolder**, making it easier to read at a glance on mobile. ([BLD-4536](/BLD/issues/BLD-4536))
 - **Ellipsis (overflow) menu button on form library cards is now inset 6 dp from the top-right corner**, matching the check-overlay affordance for consistent touch target placement. ([BLD-4548](/BLD/issues/BLD-4548))
 
 ## v0.26.91 — 2026-07-28
