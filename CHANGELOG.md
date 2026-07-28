@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Buy me a coffee button in Settings now uses native theme tokens** (theme-aware background/foreground colors) instead of a static PNG badge, meeting WCAG AA contrast (≥4.5:1) under all CVD modes including deuteranopia. ([BLD-4519](/BLD/issues/BLD-4519))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->

@@ -220,6 +220,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    paddingLeft: 12,
     // BLD-1055: tightened gap (8→4) and removed paddingRight (8→0) so the
     // three chips fit inside the 358px row at 390px viewport. Combined with
     // the chip-level padding tightening below this clears the overflow that

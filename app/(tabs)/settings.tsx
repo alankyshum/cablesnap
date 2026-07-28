@@ -15,7 +15,7 @@ import BodyProfileCard from '../../components/BodyProfileCard';
 import Constants from 'expo-constants';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, Coffee } from 'lucide-react-native';
 import SessionPreferencesCard from '../../components/settings/SessionPreferencesCard';
 import HydrationCard from '../../components/settings/HydrationCard';
 import FrequencyGoalPicker from '../../components/settings/FrequencyGoalPicker';
@@ -34,7 +34,7 @@ import FeedbackCard from '../../components/settings/FeedbackCard';
 import ReminderSection from '../../components/settings/ReminderSection';
 import ReleaseNotesModal from '../../components/ReleaseNotesModal';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { spacing } from '@/constants/design-tokens';
+import { spacing, radii, fontSizes } from '@/constants/design-tokens';
 import { useSettingsData } from '@/hooks/useSettingsData';
 import BackupCategorySheet from '@/components/settings/BackupCategorySheet';
 import { handleExport, pickImportBackup, pickImportWorkoutsCsv } from './_settings-handlers';
@@ -394,16 +394,42 @@ export default function Settings() {
             >
               AGPL-3.0 License
             </Text>
+            {/*
+              BLD-4519: Replaced static PNG badge (FF6038 orange + white text)
+              with a native theme-tokened button so contrast is guaranteed ≥4.5:1
+              under all CVD modes and both light/dark themes.
+              Background: colors.secondary (#1A2138 light / #2D3350 dark)
+              Foreground: colors.onSecondary (#FFFFFF both) → ≈15.9:1 / 12.4:1
+            */}
             <Pressable
               onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
               accessibilityRole="link"
               accessibilityLabel="Buy me a coffee"
-              style={{ marginTop: spacing.sm, minHeight: 48, justifyContent: 'center' }}
+              style={({ pressed }) => ({
+                marginTop: spacing.sm,
+                minHeight: 48,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: spacing.xs,
+                backgroundColor: colors.secondary,
+                borderRadius: radii.md,
+                paddingHorizontal: spacing.base,
+                paddingVertical: spacing.sm,
+                alignSelf: 'flex-start',
+                opacity: pressed ? 0.8 : 1,
+              })}
             >
-              <Image
-                source={require('../../assets/badges/bmc-button.png')}
-                style={{ width: 180, height: 50, resizeMode: 'contain' }}
-              />
+              <Coffee size={18} color={colors.onSecondary} />
+              <Text
+                style={{
+                  color: colors.onSecondary,
+                  fontSize: fontSizes.sm,
+                  fontWeight: '600',
+                }}
+              >
+                Buy me a coffee
+              </Text>
             </Pressable>
             <Pressable
               onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
