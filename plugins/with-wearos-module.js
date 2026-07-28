@@ -695,6 +695,35 @@ function patchFdroidLibrarySources(
     if (depth !== 0) return source; // unbalanced; leave as-is
     return source.slice(0, match.index) + replacement + source.slice(i);
   };
+
+  // Balanced-brace replacement for an Expo DSL call like
+  //   AsyncFunction("name") { ...body... }
+  // that we want to neutralize wholesale. The body typically contains nested
+  // lambdas (`.addOnSuccessListener { ... }`), try/catch blocks, and other
+  // braces, so the previous non-greedy `[\s\S]*?^\s{0,6}\}` regex stopped at
+  // the first inner closing brace and produced a syntactically broken file
+  // (BLD-4489/BLD-4490: dangling if/try/catch declarations after replacement).
+  // Walk braces from the opening `{` to find the true matching close.
+  const replaceDslBlock = (source, callName, dslName, replacement) => {
+    // Match: `<callName>("<dslName>")` followed by optional params/args, then `{`.
+    // e.g. AsyncFunction("launchScanner") { or OnCreate {
+    const escapedDsl = dslName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const openRegex = new RegExp(
+      `${callName}\\s*\\(\\s*"${escapedDsl}"\\s*\\)\\s*\\{`,
+      "m",
+    );
+    const match = openRegex.exec(source);
+    if (!match) return source;
+    let depth = 1;
+    let i = match.index + match[0].length;
+    while (i < source.length && depth > 0) {
+      const c = source[i++];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    if (depth !== 0) return source; // unbalanced; leave as-is
+    return source.slice(0, match.index) + replacement + source.slice(i);
+  };
   write(path.join(camera, "analyzers", "BarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
 
 import androidx.camera.core.ImageAnalysis
@@ -817,12 +846,15 @@ object BarCodeScannerResultSerializer {
           "fun isMLKitBarcodeScannerAvailable(): Boolean = false");
       }
       if (/CameraViewModule\.kt$/.test(file)) {
-        source = source.replace(
-          /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s{0,6}\}/m,
+        // Replace the entire AsyncFunction("launchScanner") { ... } DSL block
+        // with a stub that rejects the promise. Use balanced-brace walking so
+        // nested lambdas / try / catch inside the body (e.g. addOnSuccessListener,
+        // GmsBarcodeScannerOptions.Builder().apply { ... }) don't cause an
+        // early stop like the previous non-greedy regex did (BLD-4489).
+        source = replaceDslBlock(source, "AsyncFunction", "launchScanner",
           `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
       promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`,
-        );
+    }`);
       }
       if (source !== original) fs.writeFileSync(file, source, "utf8");
     }

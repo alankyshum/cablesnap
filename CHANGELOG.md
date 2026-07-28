@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Wear OS F-Droid assemble is green again**: the expo-camera sanitization sweep now uses balanced-brace walking to replace the `launchScanner` block, fixing a Kotlin compile break on expo-camera 55.0.15 that turned the Wear OS workflow red.
 - **F-Droid cleanup now leaves Gradle-generated Expo build directories untouched**, preventing repeated prebuild cleanup from breaking Camera compilation inputs.
 - **F-Droid prebuild now removes Expo publisher artifacts only once per config evaluation**, avoiding repeated cleanup races with Gradle-generated Camera BuildConfig inputs.
 - **F-Droid’s post-prebuild sanitization now preserves generated Expo module inputs**, avoiding Gradle fingerprint failures while keeping the source-level proprietary-class removal intact.

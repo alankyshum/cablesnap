@@ -135,4 +135,98 @@ class CameraViewModule
     runPatch();
     expect(fs.readFileSync(path.join(cam, "CameraViewModule.kt"), "utf8")).toBe(original);
   });
+
+  // BLD-4490 regression guard: the real expo-camera@55.0.15 launchScanner body
+  // contains nested if/try/catch/lambda blocks. The previous non-greedy
+  // `[\s\S]*?^\s{0,6}\}` regex stopped at the first inner `}` (end of the
+  // `isMLKitBarcodeScannerAvailable()` guard), producing a corrupted file with
+  // dangling `if`/`try`/`catch` declarations at the class level → kotlinc
+  // "Expecting member declaration" at ~line 193. Balanced-brace walking is
+  // required. This fixture mirrors the shape of the real file.
+  it("BLD-4490: correctly replaces the whole launchScanner block even with nested if/try/lambda braces", () => {
+    fs.writeFileSync(path.join(cam, "CameraViewModule.kt"), `package expo.modules.camera
+
+import expo.modules.kotlin.Promise
+import expo.modules.kotlin.Exceptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import expo.modules.camera.records.BarcodeSettings
+
+class CameraViewModule {
+  fun definition() {
+    AsyncFunction("launchScanner") { settings: BarcodeSettings, promise: Promise ->
+      if (!CameraUtils.isMLKitBarcodeScannerAvailable()) {
+        promise.reject(CameraExceptions.MLKitUnavailableException())
+        return@AsyncFunction
+      }
+
+      if (!CameraUtils.hasGooglePlayServices(appContext.reactContext)) {
+        promise.reject(CameraExceptions.GooglePlayServicesUnavailableException())
+        return@AsyncFunction
+      }
+
+      val reactContext = appContext.reactContext
+
+      if (reactContext == null) {
+        promise.reject(Exceptions.ReactContextLost())
+        return@AsyncFunction
+      }
+
+      try {
+        val options = GmsBarcodeScannerOptions.Builder().apply {
+          if (settings.barcodeTypes.isNotEmpty()) {
+            setBarcodeFormats(
+              settings.barcodeTypes.first().mapToBarcode(),
+              *settings.barcodeTypes.drop(1).map { it.mapToBarcode() }.toIntArray()
+            )
+          }
+        }.build()
+
+        val scanner = GmsBarcodeScanning.getClient(reactContext, options)
+        scanner.startScan()
+          .addOnSuccessListener { barcode ->
+            promise.resolve(barcode)
+          }
+          .addOnCanceledListener {
+            promise.reject(CameraExceptions.BarcodeScanningCancelledException())
+          }
+          .addOnFailureListener {
+            promise.reject(CameraExceptions.BarcodeScanningFailedException())
+          }
+      } catch (_: Exception) {
+        promise.reject(CameraExceptions.GooglePlayServicesUnavailableException())
+      }
+    }
+
+    AsyncFunction("dismissScanner") {
+      // no-op
+    }
+  }
+}
+`);
+    process.env.CABLESNAP_FDROID = "1";
+    runPatch();
+    const out = fs.readFileSync(path.join(cam, "CameraViewModule.kt"), "utf8");
+
+    // No residual MLKit/GMS symbols anywhere in the file.
+    expect(out).not.toMatch(forbidden);
+    // The whole launchScanner block collapsed to the stub. The following
+    // AsyncFunction("dismissScanner") DSL block must remain intact.
+    expect(out).toMatch(/AsyncFunction\("launchScanner"\)\s*\{\s*_:\s*BarcodeSettings,\s*promise:\s*Promise\s*->\s*promise\.reject\(CameraExceptions\.MLKitUnavailableException\(\)\)\s*\}/);
+    expect(out).toMatch(/AsyncFunction\("dismissScanner"\)/);
+    // No dangling class-level declarations left over from the corrupted
+    // replacement: no bare `if`, `try`, or `catch` at member scope.
+    expect(out).not.toMatch(/^\s*try\s*\{/m);
+    expect(out).not.toMatch(/^\s*catch\s*\(/m);
+    // The `dismissScanner` block still sits inside the class definition — no
+    // stray braces closed the class early.
+    const dismissIdx = out.indexOf('AsyncFunction("dismissScanner")');
+    const classEndIdx = out.lastIndexOf("}");
+    expect(dismissIdx).toBeGreaterThan(-1);
+    expect(dismissIdx).toBeLessThan(classEndIdx);
+    // Kotlin brace balance sanity check on the entire file.
+    const opens = (out.match(/\{/g) || []).length;
+    const closes = (out.match(/\}/g) || []).length;
+    expect(opens).toBe(closes);
+  });
 });
