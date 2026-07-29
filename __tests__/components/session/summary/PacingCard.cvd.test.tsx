@@ -531,4 +531,79 @@ describe("PacingCard — protanopia boundary (BLD-3880)", () => {
     expect(getByTestId("pacing-divider-working-rest", { includeHiddenElements: true })).toBeTruthy();
     expect(getByTestId("pacing-divider-rest-other", { includeHiddenElements: true })).toBeTruthy();
   });
+
+  // ── 12. BLD-4685: Audit 2026-07-29 completed-workout/mobile-protanopia.png ─
+  //
+  // Diagnosis: FALSE POSITIVE (B) from the bitmap-only protanopia emulator.
+  //
+  // Background
+  // ----------
+  // The 2026-07-29 protanopia audit (scenario: completed-workout, route:
+  // /session/summary/scenario-completed-workout-1, commit 712c4076) flagged
+  // the Estimated pacing bar's Working|Other boundary as a contrast issue.
+  //
+  // In that workout Working=1:48, Rest=0:00, Other=57:12.  restFrac=0 triggers
+  // the Working|Other divider path (showDividerWorkingOther = true, BLD-3880).
+  //
+  // Why the emulator fires
+  // ----------------------
+  // Under Machado-2009 protanopia (severity=1.0) the Working coral (#FF6038)
+  // maps to dark-olive #806E35 (L≈0.160) and the Other gray (#6B7280) maps to
+  // #6E7381 (L≈0.172) — a W/O contrast of only ~1.055:1, barely above 1:1.
+  // A bitmap emulator that scores raw fill-color contrast flags this correctly.
+  //
+  // Why it is a false positive for a human viewer
+  // ----------------------------------------------
+  // TWO hue-independent structural channels remain fully intact under any CVD
+  // transform including protanopia:
+  //
+  //   1. The 2 px pure-white (#FFFFFF) inter-segment divider (BLD-3880).
+  //      White is achromatic: the Machado protanopia matrix maps it to itself
+  //      (#FFFFFF → #FFFFFF), so the divider retains full luminance contrast
+  //      against both simulated Working (~5:1) and simulated Other (~4.7:1).
+  //      This crisp hue-independent boundary line delineates the segments
+  //      regardless of fill-color similarity.
+  //
+  //   2. Shape-based textures: horizontal-dash overlay on Working vs circular-
+  //      dot overlay on Other (BLD-3880/2713/2714). Shape discrimination is
+  //      entirely color-transform-invariant — a dash and a circle look different
+  //      in any color space.
+  //
+  // The LIGHT_FLOORS.prot.WO = 1.0 floor in pacing-cvd-contrast.test.ts
+  // intentionally accepts near-1:1 fill luminance under protanopia because
+  // BLD-3880 explicitly relies on the divider + texture to carry that axis.
+  //
+  // Screenshot evidence: human inspection of completed-workout/mobile-protanopia.png
+  // (from audit-2026-07-29-712c4076.zip) confirms the bar's Working segment and
+  // Other segment are distinguishable via the white divider line and pattern texture.
+  it("BLD-4685 false-positive: Working|Other divider renders in Rest=0 scenario and uses achromatic (protanopia-invariant) white", () => {
+    // Rest=0 mirrors the completed-workout audit scenario (Working=1:48, Other=57:12)
+    const pacing = makePacing({ working: 108, rest: 0, other: 3432, gross: 3540 });
+    const { getByTestId, queryByTestId } = render(<PacingCard pacing={pacing} />);
+
+    // Working|Other divider must fire for the Rest=0 edge case (BLD-3880)
+    const divider = getByTestId("pacing-divider-working-other", { includeHiddenElements: true });
+    expect(divider).toBeTruthy();
+
+    // Divider colour must be pure white — achromatic, so invariant under the
+    // Machado protanopia transform.  It retains ~5:1 contrast against both
+    // olive-simulated Working and gray-simulated Other.
+    const style = divider.props.style;
+    const flat = Array.isArray(style) ? Object.assign({}, ...style) : style;
+    expect(flat.backgroundColor).toBe(SEGMENT_DIVIDER_COLOR_LIGHT);
+    // SEGMENT_DIVIDER_COLOR_LIGHT must be the pure-white value (verified separately
+    // in the BLD-3880 contrast suite).  Restating the invariant here ties this
+    // test to that constant so a future palette change triggers a visible failure.
+    expect(SEGMENT_DIVIDER_COLOR_LIGHT).toBe("#FFFFFF");
+
+    // No phantom dividers for the zero Rest segment
+    expect(queryByTestId("pacing-divider-working-rest", { includeHiddenElements: true })).toBeNull();
+    expect(queryByTestId("pacing-divider-rest-other", { includeHiddenElements: true })).toBeNull();
+
+    // Both Working and Other carry their shape-based texture overlays —
+    // shape discrimination is color-transform-invariant, providing a second
+    // structural channel independent of any CVD colour shift.
+    expect(getByTestId("pacing-seg-working-pattern", { includeHiddenElements: true })).toBeTruthy();
+    expect(getByTestId("pacing-seg-other-pattern", { includeHiddenElements: true })).toBeTruthy();
+  });
 });
