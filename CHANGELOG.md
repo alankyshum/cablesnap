@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Estimated pacing progress bar is no longer cropped at the top on mobile/web viewports**, adjusting margins and spacing on the pacing card components for consistent visibility. ([BLD-4542](/BLD/issues/BLD-4542))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
