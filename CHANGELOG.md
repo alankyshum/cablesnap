@@ -22,11 +22,10 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Consistent vertical spacing in the progress-tab empty state**, aligning gaps between the icon, headline, description, and CTA with standard design-token spacing. ([BLD-4569](/BLD/issues/BLD-4569))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
-
 - **Ellipsis (overflow) menu button on form library cards is now inset 6 dp from the top-right corner**, matching the check-overlay affordance for consistent touch target placement. ([BLD-4548](/BLD/issues/BLD-4548))
 - Left-align the "Set a goal" button in Weekly Training Goal settings so it
   matches the padding of surrounding rows. ([BLD-4537](/BLD/issues/BLD-4537))
