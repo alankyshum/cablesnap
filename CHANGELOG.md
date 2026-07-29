@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Set rows on the workout summary screen now have increased vertical spacing**, improving readability of exercise sets at a glance. ([BLD-4546](/BLD/issues/BLD-4546))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
