@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Contrast of settings feedback buttons (Report Bug, Feature Request, Errors) is now significantly increased**, meeting WCAG 2.1 non-text contrast requirements (≥ 3:1) and text contrast requirements (≥ 3:1) under normal vision and simulated tritanopia CVD. ([BLD-4678](/BLD/issues/BLD-4678))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
