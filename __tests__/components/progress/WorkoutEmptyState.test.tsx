@@ -129,7 +129,7 @@ describe('WorkoutEmptyState', () => {
     expect(containerStyle.paddingVertical).toBe(spacing.xl)
 
     // iconCircle must not carry any marginBottom override.
-    const iconCircleNode = container.children[0] as { props: { style: unknown } }
+    const iconCircleNode = (container.children[0] as unknown) as { props: { style: unknown } }
     const iconStyle = StyleSheet.flatten(iconCircleNode.props.style as Parameters<typeof StyleSheet.flatten>[0])
     expect((iconStyle as Record<string, unknown>).marginBottom).toBeUndefined()
 
