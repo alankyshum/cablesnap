@@ -778,7 +778,7 @@ const styles = StyleSheet.create({
   // BLD-3880: fixed-width surface-coloured gap between adjacent pacing segments.
   // Fixed pixel width (not flex) so bar segment fractions are unaffected.
   segmentDivider: { width: SEGMENT_DIVIDER_WIDTH, height: "100%" },
-  labelsRow: { flexDirection: "row", justifyContent: "space-around", flexWrap: "wrap", gap: spacing.sm },
+  labelsRow: { flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap", gap: spacing.sm },
   labelChip: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   legendDot: { width: LEGEND_DOT_SIZE, height: LEGEND_DOT_SIZE, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(0,0,0,0.18)", overflow: "hidden" },
 });
