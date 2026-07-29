@@ -46,6 +46,7 @@ import { NutritionListHeader } from "../../../components/nutrition/NutritionList
 
 const COLORS = {
   primary: "#6200ea",
+  primaryTextOnSurface: "#6200ea",
   onSurface: "#000000",
   onSurfaceVariant: "#666666",
   onBackground: "#000000",
