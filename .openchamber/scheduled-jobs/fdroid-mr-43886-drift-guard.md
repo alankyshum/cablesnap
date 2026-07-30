@@ -12,7 +12,13 @@ Run autonomously. Do not ask questions. Do not stop early. On any failure, repor
 - Fork GitLab project: `84814417`, branch `com.persoack.cablesnap`.
 - Local fork checkout: `/tmp/fdroiddata-mr`; clone/re-clone it if missing, and ensure the work is on the fork branch.
 - Skills required for this run: load `fdroid-submit-app` and `fdroid-foss-build` before doing F-Droid work.
-- Current recipe pin: v0.26.94, commit `81c6c2aa2a71d90789ad9a8b863323af6421e449`, versionCodes 162001–162004, `CurrentVersionCode: 162004`. The four per-entry sed match patterns currently match base `versionCode 162`.
+- Current recipe pin: v0.26.94, commit `81c6c2aa2a71d90789ad9a8b863323af6421e449`, versionCodes 162001–162004, `CurrentVersionCode: 162004`. The four per-entry sed match patterns currently match base `versionCode 162`:
+```
+sed -i 's/^\([[:space:]]*\)versionCode 162$/\1versionCode 162001/' android/app/build.gradle
+sed -i 's/^\([[:space:]]*\)versionCode 162$/\1versionCode 162002/' android/app/build.gradle
+sed -i 's/^\([[:space:]]*\)versionCode 162$/\1versionCode 162003/' android/app/build.gradle
+sed -i 's/^\([[:space:]]*\)versionCode 162$/\1versionCode 162004/' android/app/build.gradle
+```
 - Last reviewed maintainer note: `3624611922`.
 
 ## Step 1 — Check MR state and maintainer notes
@@ -36,7 +42,7 @@ Only when the newest `v0.26.*` tag is newer than the recipe pin, resolve its ful
 3. each `versionCode` to the four new per-entry version codes;
 4. `CurrentVersion`;
 5. `CurrentVersionCode`; and
-6. all four sed MATCH patterns, changing their base `versionCode 162` match to the new base versionCode.
+6. all four sed MATCH patterns, changing their base `versionCode 162` match to the new base versionCode. The four per-ABI Build entries are, in order: `armeabi-v7a` (162001), `arm64-v8a` (162002), `x86` (162003), `x86_64` (162004). On repin, replace the MATCH base with the new three-digit base (for example, `versionCode 162` becomes `versionCode 163`) and update the four targets accordingly (`163001` through `163004`).
 
 Preserve the existing recipe structure and only change the required pin/version fields. Then run `fdroid rewritemeta` and require an empty diff. Run `fdroid lint`. If either check fails, do not commit or push; report the failure and leave the working tree for diagnosis.
 
