@@ -20,7 +20,7 @@ Place under `fastlane/metadata/android/en-US/` in the **CableSnap repo**, NOT fd
 - `title.txt` ≤ 50 chars
 - `short_description.txt` ≤ 80 chars
 - `full_description.txt` ≤ 4000 chars
-- `changelogs/<versionCode>.txt` ≤ 500 chars (filename = literal versionCode)
+- `changelogs/<versionCode>.txt` ≤ 500 chars (filename = literal versionCode; current base example: `changelogs/162.txt`)
 - `images/icon.png` 512×512
 - `images/phoneScreenshots/N.png`
 - **NEVER** put `Summary:`/`Description:` keys in fdroiddata recipe — fdroidserver reads Fastlane metadata directly from the app repo.
