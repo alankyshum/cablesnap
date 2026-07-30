@@ -9,7 +9,7 @@ Prepare a new CableSnap app submission to the official F-Droid repository with m
 
 # F-Droid App Submission
 
-Use this skill when preparing or reviewing a CableSnap MR against gitlab.com/fdroid/fdroiddata. Every lesson below was earned through rejection rounds on MR !43886; skipping any item has already cost a round-trip.
+Use this skill when preparing or reviewing a CableSnap MR against gitlab.com/fdroid/fdroiddata. The guidance below reflects the current submission workflow and MR !43886.
 
 ## PRE-FLIGHT (do BEFORE opening the MR)
 
@@ -49,8 +49,8 @@ Control via `enableSeparateBuildPerCPUArchitecture` + `reactNativeArchitectures`
 
 ```yaml
 AntiFeatures:
-  - NonFreeNet:
-      en-US: "Optional Strava integration uses proprietary Strava API via a proxy"
+  NonFreeNet:
+    en-US: "Optional Strava integration uses proprietary Strava API via a proxy"
 ```
 
 NOT a bare list: `AntiFeatures: [NonFreeNet]` — that form is rejected.
@@ -69,7 +69,16 @@ Zero upstream precedent. It hides the entire generated dependency tree from the 
 
 ### Correct pattern
 
-Use `scandelete: node_modules` plus a **narrow** `scanignore` containing only benign build/toolchain files. Our final list had exactly five entries: `hermesc`, `ExpoModulesCorePlugin.gradle`, and the `android/build.gradle` files of netinfo, safe-area-context, and view-shot.
+Use `scandelete: node_modules` plus a **narrow** `scanignore` containing only benign build/toolchain files. The actual recipe has exactly five entries:
+
+```yaml
+scanignore:
+  - node_modules/hermes-compiler/hermesc/linux64-bin/hermesc
+  - node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle
+  - node_modules/@react-native-community/netinfo/android/build.gradle
+  - node_modules/react-native-safe-area-context/android/build.gradle
+  - node_modules/react-native-view-shot/android/build.gradle
+```
 
 - `scandelete` and `scanignore` both prefix-match.
 - `scanignore` wins over `scandelete` for the same path.
@@ -101,6 +110,16 @@ fdroid readmeta com.persoack.cablesnap
 fdroid lint -f com.persoack.cablesnap
 fdroid rewritemeta com.persoack.cablesnap
 git diff metadata/com.persoack.cablesnap.yml
+
+# Recipe sanity checks
+grep -n 'scanignore:' metadata/com.persoack.cablesnap.yml
+grep -n 'scandelete:' metadata/com.persoack.cablesnap.yml
+grep -n 'AntiFeatures:' -A5 metadata/com.persoack.cablesnap.yml
+grep -n 'commit:' metadata/com.persoack.cablesnap.yml   # 40-char SHA?
+grep -n 'VercodeOperation:' metadata/com.persoack.cablesnap.yml
+
+# ABI split check (if APK large)
+grep -A2 'VercodeOperation:' metadata/com.persoack.cablesnap.yml
 ```
 
 The final recipe must have the map-form AntiFeatures, a 40-character `commit`, the narrow scanignore/scandelete arrangement, and ABI Build entries when the APK is large. Use the exact MR template path and title before opening the MR.
