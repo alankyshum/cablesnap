@@ -133,7 +133,12 @@ export const Button = forwardRef<View, ButtonProps>(
             paddingHorizontal: 0,
           };
         default:
-          return { ...baseStyle, backgroundColor: primaryColor };
+          return {
+            ...baseStyle,
+            backgroundColor: primaryColor,
+            borderWidth: 1,
+            borderColor,
+          };
       }
     };
 
