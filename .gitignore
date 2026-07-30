@@ -92,3 +92,6 @@ modules/expo-wearos-bridge/android/build/
 
 # Jest coverage output
 coverage/
+
+# npm cache
+.npm_cache/

@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Increased the vertical buffer below the "Delete" selected clip button**, creating a spacious 24 dp gap (at least 8 dp of separation) from the nearest video clip thumbnail to prevent accidental deletions on touch devices. ([BLD-4800](/BLD/issues/BLD-4800))
 - F-Droid builds no longer include the Sentry crash-reporting dependency; crash reporting remains enabled in Play builds.
 
 ## v0.26.93 — 2026-07-30
