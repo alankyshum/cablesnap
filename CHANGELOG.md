@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Primary buttons now render with a high-contrast border on the animated container**, ensuring sufficient visibility and WCAG compliance under deuteranopia CVD emulation. ([BLD-4518](/BLD/issues/BLD-4518))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
