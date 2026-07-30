@@ -61,11 +61,11 @@ Model on real recipes: `com.mmazzarolo.breathly`, `org.therapiefinder`, `com.foc
 
 ---
 
-## THE #1 REJECTION CAUSE — scanignore
+## SCANIGNORE DISCIPLINE
 
 ### NEVER use `scanignore: node_modules`
 
-Zero upstream precedent. It hides the entire generated dependency tree from the scanner, which the maintainers reject.
+It hides the entire generated dependency tree from the scanner and is not acceptable for this submission.
 
 ### Correct pattern
 
@@ -87,7 +87,15 @@ scanignore:
 
 Patterns that worked: delete the dependency in `init:` and use an app-source Metro alias stub (Sentry); prebuild `sed -i '/play-services-wearable/d'`; and `rm -f` generated web artifacts such as `canvaskit.wasm`.
 
-fdroidserver order is `init:` → `prebuild:` → scan/scandelete → `build:`. Do not re-download binaries in `build:` after scandelete removed them (for example npm pack/install-skia), write fake stub packages into node_modules, or use unpinned network fetches in `build:`. Fallbacks belong in APP SOURCE behind an env-gated Metro resolver alias, then repin to a new tag.
+fdroidserver processing order is:
+
+1. `init:` runs.
+2. `prebuild:` runs.
+3. `scanner.scan_source()` scans the source; `scanignore` takes precedence over `scandelete` for the same prefix.
+4. `scanner.todelete()` removes flagged files matching the configured prefixes.
+5. `build:` runs.
+
+Do not re-download binaries in `build:` after `scandelete` removed them (for example npm pack/install-skia), write fake stub packages into node_modules, or use unpinned network fetches in `build:`. Fallbacks belong in app source behind an env-gated Metro resolver alias, then repin to a new tag.
 
 ## VERIFICATION DISCIPLINE
 
@@ -103,7 +111,19 @@ Reproducible Builds (`Binaries:` + `AllowedAPKSigningKeys:`) is **IRREVERSIBLE a
 
 ## VERIFICATION CHECKLIST
 
-In the CableSnap repo, verify Fastlane files and byte limits, the literal versionCode changelog filename, 512×512 icon, and phone screenshots. In the fdroiddata fork, run:
+In the CableSnap repo, verify Fastlane files and byte limits, the literal versionCode changelog filename, 512×512 icon, and phone screenshots:
+
+```bash
+ls fastlane/metadata/android/en-US/
+wc -c fastlane/metadata/android/en-US/title.txt
+wc -c fastlane/metadata/android/en-US/short_description.txt
+wc -c fastlane/metadata/android/en-US/full_description.txt
+ls fastlane/metadata/android/en-US/changelogs/
+wc -c fastlane/metadata/android/en-US/changelogs/162.txt
+file fastlane/metadata/android/en-US/images/icon.png
+```
+
+In the fdroiddata fork, run:
 
 ```bash
 fdroid readmeta com.persoack.cablesnap
@@ -120,6 +140,9 @@ grep -n 'VercodeOperation:' metadata/com.persoack.cablesnap.yml
 
 # ABI split check (if APK large)
 grep -A2 'VercodeOperation:' metadata/com.persoack.cablesnap.yml
+
+# MR template check
+ls -la .gitlab/merge_request_templates/App\ inclusion.md
 ```
 
 The final recipe must have the map-form AntiFeatures, a 40-character `commit`, the narrow scanignore/scandelete arrangement, and ABI Build entries when the APK is large. Use the exact MR template path and title before opening the MR.
