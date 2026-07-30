@@ -646,6 +646,10 @@ describe("PacingCard — protanopia boundary (BLD-3880)", () => {
         }
       }
 
+      if (!outerTextStyle || !chipViewStyle) {
+        throw new Error("outerTextStyle or chipViewStyle not found");
+      }
+
       expect(outerTextStyle).toBeTruthy();
       expect(outerTextStyle.flexShrink).toBe(1);
 
