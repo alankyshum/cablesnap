@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.94",
+    "date": "2026-07-30",
+    "versionCode": 162,
+    "body": "- F-Droid builds no longer include the Sentry crash-reporting dependency; crash reporting remains enabled in Play builds."
+  },
+  {
     "version": "0.26.93",
     "date": "2026-07-30",
     "versionCode": 161,

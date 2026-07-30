@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.94 — 2026-07-30
+<!-- versionCode: 162 -->
+
 - F-Droid builds no longer include the Sentry crash-reporting dependency; crash reporting remains enabled in Play builds.
 
 ## v0.26.93 — 2026-07-30
