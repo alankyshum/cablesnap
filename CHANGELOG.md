@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Left-align the filter chips on the History screen** to align perfectly with the search input icon. ([BLD-4520](/BLD/issues/BLD-4520))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
