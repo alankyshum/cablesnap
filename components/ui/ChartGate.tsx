@@ -19,7 +19,9 @@ type ChartGateProps = {
  * layout (card height, accessibility label on the parent) is preserved.
  *
  * On native this is a passthrough — the hook returns `true` on the first pass,
- * so `children` render with no placeholder flash.
+ * so `children` render with no placeholder flash. F-Droid chart imports are
+ * redirected by Metro to a first-party source stub, which renders its own
+ * explicit unavailable state.
  */
 export function ChartGate({ children }: ChartGateProps) {
   const ready = useSkiaWebInit();

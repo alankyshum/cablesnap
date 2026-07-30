@@ -1,10 +1,29 @@
 const http = require("http");
+const path = require("path");
 const {
   getSentryExpoConfig
 } = require("@sentry/react-native/metro");
 
 const config = getSentryExpoConfig(__dirname);
 config.resolver.assetExts.push("wasm");
+
+// F-Droid excludes victory-native and react-native-skia to keep the APK free
+// of Skia native libraries. Keep the fallback in the app source so Metro can
+// still resolve the chart imports when those packages are absent.
+if (process.env.CABLESNAP_FDROID === "1") {
+  // The stub is TypeScript source for Metro; Node cannot resolve .tsx from the
+  // Metro config itself, so pass its absolute source path directly.
+  const chartStub = path.resolve(__dirname, "lib/fdroid-chart-stub.tsx");
+  const resolveRequest = config.resolver.resolveRequest;
+  config.resolver.resolveRequest = (context, moduleName, platform) => {
+    if (moduleName === "victory-native" || moduleName === "@shopify/react-native-skia") {
+      return { type: "sourceFile", filePath: chartStub };
+    }
+    return resolveRequest
+      ? resolveRequest(context, moduleName, platform)
+      : context.resolveRequest(context, moduleName, platform);
+  };
+}
 
 // Inject COOP/COEP headers into every HTTP response so expo-sqlite
 // can use OPFS (persistent storage) on web.  Metro's enhanceMiddleware
