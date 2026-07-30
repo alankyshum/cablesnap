@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.93",
+    "date": "2026-07-30",
+    "versionCode": 161,
+    "body": "- F-Droid builds now show an explicit “Charts unavailable in this build” message\n  instead of blank chart areas while keeping full chart rendering in Play and\n  development builds."
+  },
+  {
     "version": "0.26.92",
     "date": "2026-07-28",
     "versionCode": 160,

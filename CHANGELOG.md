@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.93 — 2026-07-30
+<!-- versionCode: 161 -->
+
 - F-Droid builds now show an explicit “Charts unavailable in this build” message
   instead of blank chart areas while keeping full chart rendering in Play and
   development builds.
