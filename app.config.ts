@@ -9,6 +9,14 @@ import { ExpoConfig, ConfigContext } from "expo/config";
 // the dev client for the normal Expo Go / dev-client workflow.
 const isCI = process.env.CI === "true";
 const isFdroidBuild = process.env.CABLESNAP_FDROID === "1";
+const sentryPlugin = [
+  "@sentry/react-native/expo",
+  {
+    organization: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    url: "https://sentry.io/",
+  },
+] as [string, Record<string, unknown>];
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -85,20 +93,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "./plugins/with-release-signing",
     "./plugins/with-wearos-module",
     "./plugins/with-form-clips-backup",
-    [
-      // Sentry Expo config plugin — wires the Android Gradle plugin so that
-      // release builds upload source maps + debug-ids. The plugin falls back
-      // to SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN env vars at build
-      // time; values passed here are the canonical (non-secret) slugs. Auth
-      // token is NEVER set here — it must come from env only.
-      "@sentry/react-native/expo",
-      {
-        organization: process.env.SENTRY_ORG,
-        project: process.env.SENTRY_PROJECT,
-        url: "https://sentry.io/",
-      },
-    ],
-  ],
+    ...(!isFdroidBuild ? [sentryPlugin] : []),
+  ] as ExpoConfig["plugins"],
   owner: "alankyshum",
   extra: {
     fdroidBuild: isFdroidBuild,

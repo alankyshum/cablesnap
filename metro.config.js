@@ -1,10 +1,10 @@
 const http = require("http");
 const path = require("path");
-const {
-  getSentryExpoConfig
-} = require("@sentry/react-native/metro");
+const { getDefaultConfig } = require("expo/metro-config");
 
-const config = getSentryExpoConfig(__dirname);
+const config = process.env.CABLESNAP_FDROID === "1"
+  ? getDefaultConfig(__dirname)
+  : require("@sentry/react-native/metro").getSentryExpoConfig(__dirname);
 config.resolver.assetExts.push("wasm");
 
 // F-Droid excludes victory-native and react-native-skia to keep the APK free
@@ -14,10 +14,14 @@ if (process.env.CABLESNAP_FDROID === "1") {
   // The stub is TypeScript source for Metro; Node cannot resolve .tsx from the
   // Metro config itself, so pass its absolute source path directly.
   const chartStub = path.resolve(__dirname, "lib/fdroid-chart-stub.tsx");
+  const sentryStub = path.resolve(__dirname, "lib/fdroid-sentry-stub.tsx");
   const resolveRequest = config.resolver.resolveRequest;
   config.resolver.resolveRequest = (context, moduleName, platform) => {
     if (moduleName === "victory-native" || moduleName === "@shopify/react-native-skia") {
       return { type: "sourceFile", filePath: chartStub };
+    }
+    if (moduleName === "@sentry/react-native") {
+      return { type: "sourceFile", filePath: sentryStub };
     }
     return resolveRequest
       ? resolveRequest(context, moduleName, platform)
