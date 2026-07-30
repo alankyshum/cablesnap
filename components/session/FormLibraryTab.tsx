@@ -732,7 +732,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingTop: 4,
-    paddingBottom: 16,
+    // BLD-4800: Ensure clear spatial separation between the destructive Delete
+    // CTA (rendered in this bar) and the adjacent clip grid below, reducing the
+    // risk of accidental taps on a touch device. 24dp bottom gap creates an
+    // unambiguous buffer around the destructive action.
+    paddingBottom: 24,
     alignItems: "center",
   },
   cta: {

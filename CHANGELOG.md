@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Increased the vertical buffer below the "Delete" selected clip button**, creating a spacious 24 dp gap (at least 8 dp of separation) from the nearest video clip thumbnail to prevent accidental deletions on touch devices. ([BLD-4800](/BLD/issues/BLD-4800))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->

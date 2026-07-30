@@ -531,4 +531,61 @@ describe("PacingCard — protanopia boundary (BLD-3880)", () => {
     expect(getByTestId("pacing-divider-working-rest", { includeHiddenElements: true })).toBeTruthy();
     expect(getByTestId("pacing-divider-rest-other", { includeHiddenElements: true })).toBeTruthy();
   });
+
+  // ── 12. Narrow-viewport layout and wrapping safety (BLD-4799) ─────────────
+  describe("truncation & layout safety (BLD-4799)", () => {
+    it("applies flexShrink: 1 and numberOfLines={2} to the title to prevent ellipsis on narrow viewports", () => {
+      const { getByText } = render(<PacingCard pacing={makePacing()} />);
+      const titleText = getByText("Estimated pacing");
+      const style = Array.isArray(titleText.props.style)
+        ? Object.assign({}, ...titleText.props.style)
+        : titleText.props.style;
+
+      expect(style.flexShrink).toBe(1);
+      expect(titleText.props.numberOfLines).toBe(2);
+    });
+
+    it("applies flexShrink: 1 to labelChip styles and nested text to prevent truncation", () => {
+      const { getByText } = render(<PacingCard pacing={makePacing()} />);
+      const workingLabel = getByText("Working");
+
+      // Find the parent Text component that has flexShrink
+      let cursor = workingLabel;
+      let outerTextStyle: Record<string, unknown> | null = null;
+      let chipViewStyle: Record<string, unknown> | null = null;
+
+      // Walk up the tree to find outer text style and chip view style
+      while (cursor.parent) {
+        cursor = cursor.parent;
+        const style = Array.isArray(cursor.props.style)
+          ? Object.assign({}, ...cursor.props.style)
+          : cursor.props.style;
+
+        if (style && style.flexShrink === 1) {
+          if (!outerTextStyle) {
+            outerTextStyle = style;
+          } else {
+            chipViewStyle = style;
+            break;
+          }
+        }
+      }
+
+      expect(outerTextStyle).toBeTruthy();
+      expect(outerTextStyle.flexShrink).toBe(1);
+
+      expect(chipViewStyle).toBeTruthy();
+      expect(chipViewStyle.flexShrink).toBe(1);
+    });
+
+    it("applies flexShrink: 0 to the info button in header Row to keep its natural size", () => {
+      const { getByLabelText } = render(<PacingCard pacing={makePacing()} />);
+      const infoBtn = getByLabelText("Show how pacing is calculated");
+      const style = Array.isArray(infoBtn.props.style)
+        ? Object.assign({}, ...infoBtn.props.style)
+        : infoBtn.props.style;
+
+      expect(style.flexShrink).toBe(0);
+    });
+  });
 });

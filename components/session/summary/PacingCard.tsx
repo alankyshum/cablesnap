@@ -621,7 +621,7 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
         <CardContent>
           {/* Header row */}
           <View style={styles.headerRow}>
-            <Text variant="title" style={{ color: colors.onSurface, fontWeight: "700" }}>
+            <Text variant="title" style={{ color: colors.onSurface, fontWeight: "700", flexShrink: 1 }} numberOfLines={2}>
               {"Estimated pacing"}
             </Text>
             <Pressable
@@ -754,10 +754,8 @@ function LabelChip({
           />
         )}
       </View>
-      <Text variant="caption" style={{ color: textColor, fontWeight: "600" }}>
-        {label}
-      </Text>
-      <Text variant="caption" style={{ color: textColor }}>
+      <Text variant="caption" style={{ color: textColor, flexShrink: 1 }}>
+        <Text style={{ fontWeight: "600" }}>{label}</Text>
         {" "}{value}
       </Text>
     </View>
@@ -771,7 +769,7 @@ const BAR_HEIGHT = 18;
 const styles = StyleSheet.create({
   card: { marginBottom: 16 },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
-  infoButton: { padding: 4 },
+  infoButton: { padding: 4, flexShrink: 0 },
   disclosure: { marginBottom: 8, lineHeight: 18 },
   barContainer: { height: BAR_HEIGHT, flexDirection: "row", borderRadius: 4, overflow: "hidden", marginBottom: spacing.md },
   barSegment: { height: "100%" },
@@ -779,6 +777,6 @@ const styles = StyleSheet.create({
   // Fixed pixel width (not flex) so bar segment fractions are unaffected.
   segmentDivider: { width: SEGMENT_DIVIDER_WIDTH, height: "100%" },
   labelsRow: { flexDirection: "row", justifyContent: "space-around", flexWrap: "wrap", gap: spacing.sm },
-  labelChip: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  labelChip: { flexDirection: "row", alignItems: "center", gap: spacing.xs, flexShrink: 1 },
   legendDot: { width: LEGEND_DOT_SIZE, height: LEGEND_DOT_SIZE, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(0,0,0,0.18)", overflow: "hidden" },
 });
