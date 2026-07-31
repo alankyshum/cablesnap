@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Increased contrast of the water quick-add chips** (+250 ml, +500 ml, etc.) so labels and icons meet WCAG AA (>=4.5:1) in light theme, including under deuteranopia. ([BLD-4684](/BLD/issues/BLD-4684))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
