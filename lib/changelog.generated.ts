@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.96",
+    "date": "2026-07-31",
+    "versionCode": 164,
+    "body": "- **Set rows on the workout summary screen now have increased vertical spacing**, improving readability of exercise sets at a glance. ([BLD-4546](/BLD/issues/BLD-4546))"
+  },
+  {
     "version": "0.26.95",
     "date": "2026-07-31",
     "versionCode": 163,
