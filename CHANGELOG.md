@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.95 — 2026-07-31
+<!-- versionCode: 163 -->
+
 - Bottom sheets now expand their scrollable content at higher snap points and coordinate dragging with inner scrolling, keeping actions reachable.
 
 ## v0.26.94 — 2026-07-30

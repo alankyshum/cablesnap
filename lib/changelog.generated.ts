@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.95",
+    "date": "2026-07-31",
+    "versionCode": 163,
+    "body": "- Bottom sheets now expand their scrollable content at higher snap points and coordinate dragging with inner scrolling, keeping actions reachable."
+  },
+  {
     "version": "0.26.94",
     "date": "2026-07-30",
     "versionCode": 162,
