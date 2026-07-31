@@ -148,6 +148,10 @@ cablesnap/
 └── .eslintrc.js             # ESLint config
 ```
 
+### Sheet implementation debt
+
+CableSnap currently has three parallel slide-up sheet implementations, which is consolidation debt: the custom `components/ui/bottom-sheet.tsx` primitive (16+ consumers, including BackupCategorySheet, ExerciseFilterSheet, MacroTargetsSheet, and `nutrition.tsx`), `@gorhom/bottom-sheet` used directly by ShareSheet, QuickAddSheet, SubstitutionSheet, RpeSheet, and ExerciseDetailDrawer, and raw React Native `<Modal animationType="slide">` used by FormVideoSheet, PhotoMetaModal, and MacroCoachCard.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
