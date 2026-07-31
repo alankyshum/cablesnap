@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Tighten the empty-state spacing on the record-clip button in the form library so it aligns with surrounding cards. ([BLD-4690](/BLD/issues/BLD-4690))
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->

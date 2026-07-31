@@ -1,0 +1,45 @@
+0 verbose cli /usr/local/bin/node /usr/local/bin/npm
+1 info using npm@11.16.0
+2 info using node@v24.18.0
+3 silly config load:file:/usr/local/lib/node_modules/npm/npmrc
+4 silly config load:file:/projects/cablesnap/.paperclip/worktrees/qd-verify-pr911/.npmrc
+5 silly config load:file:/paperclip/.npmrc
+6 silly config load:file:/usr/local/etc/npmrc
+7 verbose title npm install /projects/cablesnap/.paperclip/npm-tmp
+8 verbose argv "install" "--cache" "/projects/cablesnap/.paperclip/npm-cache" "--tmp" "/projects/cablesnap/.paperclip/npm-tmp"
+9 verbose logfile logs-max:10 dir:/projects/cablesnap/.paperclip/npm-cache/_logs/2026-07-31T13_09_02_129Z-
+10 verbose logfile /projects/cablesnap/.paperclip/npm-cache/_logs/2026-07-31T13_09_02_129Z-debug-0.log
+11 warn invalid config omit="" set in /projects/cablesnap/.paperclip/worktrees/qd-verify-pr911/.npmrc
+12 warn invalid config Must be one or more of: dev, optional, peer
+13 warn "/projects/cablesnap/.paperclip/npm-tmp" is being parsed as a normal command line argument.
+14 warn Unknown cli config "--tmp". This will stop working in the next major version of npm.
+15 silly logfile done cleaning log files
+16 silly packumentCache heap:3959422976 maxSize:989855744 maxEntrySize:494927872
+17 verbose stack Error: Could not read package.json: Error: ENOENT: no such file or directory, open '/projects/cablesnap/.paperclip/npm-tmp/package.json'
+17 verbose stack     at async open (node:internal/fs/promises:640:25)
+17 verbose stack     at async readFile (node:internal/fs/promises:1290:14)
+17 verbose stack     at async read (/usr/local/lib/node_modules/npm/node_modules/@npmcli/package-json/lib/read-package.js:9:18)
+17 verbose stack     at async PackageJson.load (/usr/local/lib/node_modules/npm/node_modules/@npmcli/package-json/lib/index.js:131:31)
+17 verbose stack     at async PackageJson.normalize (/usr/local/lib/node_modules/npm/node_modules/@npmcli/package-json/lib/index.js:117:5)
+17 verbose stack     at async /usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:536:22
+17 verbose stack     at async Promise.all (index 0)
+17 verbose stack     at async #add (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:525:5)
+17 verbose stack     at async #applyUserRequestsToNode (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:496:7)
+17 verbose stack     at async #applyUserRequests (/usr/local/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:427:7)
+18 error code ENOENT
+19 error syscall open
+20 error path /projects/cablesnap/.paperclip/npm-tmp/package.json
+21 error errno -2
+22 error enoent Could not read package.json: Error: ENOENT: no such file or directory, open '/projects/cablesnap/.paperclip/npm-tmp/package.json'
+23 error enoent This is related to npm not being able to find a file.
+23 error enoent
+24 silly unfinished npm timer reify 1785503342329
+25 silly unfinished npm timer reify:loadTrees 1785503342329
+26 silly unfinished npm timer idealTree:userRequests 1785503342521
+27 verbose cwd /projects/cablesnap/.paperclip/worktrees/qd-verify-pr911
+28 verbose os Linux 7.0.12-201.fc44.aarch64
+29 verbose node v24.18.0
+30 verbose npm  v11.16.0
+31 verbose exit -2
+32 verbose code -2
+33 error A complete log of this run can be found in: /projects/cablesnap/.paperclip/npm-cache/_logs/2026-07-31T13_09_02_129Z-debug-0.log
