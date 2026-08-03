@@ -27,6 +27,7 @@ marker) at release time.
 - Re-importing a backup now clearly tells you when its contents are already imported.
 - Buttons, tabs, bottom sheets, and toasts now have smoother, more refined motion and a more physical feel.
 - Filter chips are now easier to tap.
+- Backup imports now remain responsive while restoring larger files.
 
 ## v0.26.96 — 2026-07-31
 <!-- versionCode: 164 -->
