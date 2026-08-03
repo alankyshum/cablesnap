@@ -22,7 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Importing a backup now shows clear progress, so large backups no longer appear to freeze.
+- Your settings, workouts, and custom content now restore correctly when an imported backup overlaps with built-in content.
+- Re-importing a backup now clearly tells you when its contents are already imported.
+- Buttons, tabs, bottom sheets, and toasts now have smoother, more refined motion and a more physical feel.
+- Filter chips are now easier to tap.
 
 ## v0.26.96 — 2026-07-31
 <!-- versionCode: 164 -->
@@ -33,11 +37,6 @@ _No user-facing changes yet._
 <!-- versionCode: 163 -->
 
 - Bottom sheets now expand their scrollable content at higher snap points and coordinate dragging with inner scrolling, keeping actions reachable.
-- Importing a backup now shows clear progress, so large backups no longer appear to freeze.
-- Your settings, workouts, and custom content now restore correctly when an imported backup overlaps with built-in content.
-- Re-importing a backup now clearly tells you when its contents are already imported.
-- Buttons, tabs, bottom sheets, and toasts now have smoother, more refined motion and a more physical feel.
-- Filter chips are now easier to tap.
 
 ## v0.26.94 — 2026-07-30
 <!-- versionCode: 162 -->
