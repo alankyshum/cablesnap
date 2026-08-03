@@ -3,7 +3,6 @@ import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { useColor } from '@/hooks/useColor';
-import { BORDER_RADIUS } from '@/theme/globals';
 import React, { useEffect } from 'react';
 import {
   Dimensions,
@@ -22,11 +21,13 @@ import Animated, {
   runOnJS,
   SharedValue,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { interiorDuration, interiorSpring, radii, spacing, scrim } from '@/constants/design-tokens';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
@@ -94,8 +95,8 @@ const BottomSheetContent = ({
           top: SCREEN_HEIGHT,
           overflow: 'hidden',
           backgroundColor: cardColor,
-          borderTopLeftRadius: BORDER_RADIUS,
-          borderTopRightRadius: BORDER_RADIUS,
+            borderTopLeftRadius: radii.xl,
+            borderTopRightRadius: radii.xl,
         },
         rBottomSheetStyle,
         style,
@@ -107,16 +108,16 @@ const BottomSheetContent = ({
           testID="bottom-sheet-handle"
           style={{
             width: '100%',
-            paddingVertical: 12,
+             paddingVertical: spacing.md,
             alignItems: 'center',
           }}
         >
           <View
             style={{
-              width: 64,
-              height: 6,
+             width: spacing.xxl * 2,
+             height: spacing.xs + 2,
               backgroundColor: handleColor,
-              borderRadius: 999,
+             borderRadius: radii.pill,
             }}
           />
         </View>
@@ -126,9 +127,9 @@ const BottomSheetContent = ({
       {title && (
         <View
           style={{
-            marginHorizontal: 16,
-            marginTop: 16,
-            paddingBottom: 8,
+             marginHorizontal: spacing.base,
+             marginTop: spacing.base,
+             paddingBottom: spacing.sm,
           }}
         >
           <Text variant='title' style={{ textAlign: 'center' }}>
@@ -143,7 +144,7 @@ const BottomSheetContent = ({
       <Animated.View style={[liveContentHeight, { flexShrink: 0 }]}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 + safeBottomPadding }}
+           contentContainerStyle={{ padding: spacing.base, paddingBottom: spacing.xl + spacing.base + safeBottomPadding }}
           keyboardShouldPersistTaps='handled'
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
@@ -182,6 +183,7 @@ export function BottomSheet({
   const handleColor = useColor('mutedForeground');
   const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight();
   const insets = useSafeAreaInsets();
+  const reducedMotion = typeof useReducedMotion === 'function' ? useReducedMotion() : false;
 
   const translateY = useSharedValue(0);
   const context = useSharedValue({ y: 0 });
@@ -208,27 +210,24 @@ export function BottomSheet({
   useEffect(() => {
     if (isVisible) {
       setModalVisible(true);
-      translateY.value = withSpring(defaultHeight, {
-        damping: 50,
-        stiffness: 400,
-      });
-      opacity.value = withTiming(1, { duration: 300 });
+      translateY.value = reducedMotion ? defaultHeight : withSpring(defaultHeight, interiorSpring.disclose);
+      opacity.value = reducedMotion ? 1 : withTiming(1, { duration: interiorDuration.modalBackdrop });
       currentSnapIndex.value = 0;
       scrollY.value = 0;
     } else {
-      translateY.value = withSpring(0, { damping: 50, stiffness: 400 });
-      opacity.value = withTiming(0, { duration: 300 }, (finished) => {
+      translateY.value = reducedMotion ? 0 : withSpring(0, interiorSpring.disclose);
+      opacity.value = reducedMotion ? 0 : withTiming(0, { duration: interiorDuration.exit }, (finished) => {
         if (finished) {
           runOnJS(setModalVisible)(false);
         }
       });
     }
-  }, [isVisible, defaultHeight]);
+  }, [isVisible, defaultHeight, reducedMotion]);
 
   // Function to animate the sheet to a specific destination
-  const scrollTo = (destination: number) => {
+  const scrollTo = (destination: number, velocity = 0) => {
     'worklet';
-    translateY.value = withSpring(destination, { damping: 50, stiffness: 400 });
+    translateY.value = reducedMotion ? destination : withSpring(destination, { ...interiorSpring.disclose, velocity });
   };
 
   // --- START: KEYBOARD HANDLING LOGIC ---
@@ -284,8 +283,8 @@ export function BottomSheet({
 
   const animateClose = () => {
     'worklet';
-    translateY.value = withSpring(0, { damping: 50, stiffness: 400 });
-    opacity.value = withTiming(0, { duration: 300 }, (finished) => {
+    translateY.value = reducedMotion ? 0 : withSpring(0, { ...interiorSpring.disclose, velocity: 0 });
+    opacity.value = reducedMotion ? 0 : withTiming(0, { duration: interiorDuration.exit }, (finished) => {
       if (finished) {
         runOnJS(onClose)();
       }
@@ -339,7 +338,7 @@ export function BottomSheet({
       const closestSnapPoint = findClosestSnapPoint(currentY);
       // Calculate the final destination, accounting for the keyboard height
       const finalDestination = closestSnapPoint - keyboardHeightSV.value;
-      scrollTo(finalDestination);
+      scrollTo(finalDestination, event.velocityY);
     });
 
   // Native scroll gesture for coordination with the RNGH ScrollView.

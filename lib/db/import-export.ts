@@ -202,13 +202,23 @@ export type ImportProgress = {
   table: string;
   tableIndex: number;
   totalTables: number;
+  rowIndex?: number;
+  rowCount?: number;
 };
 
 export type ImportResult = {
   inserted: number;
   skipped: number;
-  perTable: Record<string, { inserted: number; skipped: number }>;
+  perTable: Record<string, { inserted: number; skipped: number; skipped_existing?: number }>;
 };
+
+/** Honest wording for the common idempotent re-import case. */
+export function getImportCompletionMessage(inserted: number, skipped: number): string {
+  if (inserted === 0 && skipped > 0) {
+    return `This backup has already been imported — all ${skipped} records already exist`;
+  }
+  return `${inserted} records imported${skipped > 0 ? `, ${skipped} already present` : ""}`;
+}
 
 type ExportOptions = {
   selectedCategories?: BackupCategoryName[];
@@ -545,10 +555,16 @@ export async function importData(
   const tables = getSelectedTableOrder(options.selectedCategories);
   let totalInserted = 0;
   let totalSkipped = 0;
-  const perTable: Record<string, { inserted: number; skipped: number }> = {};
+  const perTable: Record<string, { inserted: number; skipped: number; skipped_existing?: number }> = {};
 
   await withTransaction(async (database) => {
     await database.execAsync("PRAGMA foreign_keys = ON");
+
+    let exerciseColumns: string[] | undefined;
+    if (tables.includes("exercises")) {
+      const colInfo = await database.getAllAsync("PRAGMA table_info(exercises)") as { name: string }[];
+      exerciseColumns = colInfo.map((c) => c.name);
+    }
 
     for (let i = 0; i < tables.length; i++) {
       const tableName = tables[i];
@@ -564,15 +580,17 @@ export async function importData(
         continue;
       }
 
-      const { inserted, skipped } = await importTable(database, tableName, rows);
+      const { inserted, skipped, skipped_existing } = await importTable(database, tableName, rows, exerciseColumns, (rowIndex, rowCount) => {
+        onProgress?.({ table: tableName, tableIndex: i, totalTables: tables.length, rowIndex, rowCount });
+      });
       totalInserted += inserted;
       totalSkipped += skipped;
-      perTable[tableName] = { inserted, skipped };
+      perTable[tableName] = { inserted, skipped, skipped_existing };
     }
   });
 
   for (const tableName of IMPORT_TABLE_ORDER) {
-    perTable[tableName] ??= { inserted: 0, skipped: 0 };
+    perTable[tableName] ??= { inserted: 0, skipped: 0, skipped_existing: 0 };
   }
 
   onProgress?.({ table: "done", tableIndex: tables.length, totalTables: tables.length });
@@ -581,35 +599,45 @@ export async function importData(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- generic row insertion
-async function importTable(database: any, tableName: BackupTableName, rows: unknown[]): Promise<{ inserted: number; skipped: number }> {
+async function importTable(database: any, tableName: BackupTableName, rows: unknown[], exerciseColumns?: string[], onRow?: (index: number, count: number) => void): Promise<{ inserted: number; skipped: number; skipped_existing: number }> {
   let inserted = 0;
   let skipped = 0;
+  let skipped_existing = 0;
 
-  for (const row of rows) {
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
     if (typeof row !== "object" || row === null) {
       skipped++;
+      onRow?.(index + 1, rows.length);
       continue;
     }
     const r = row as Record<string, unknown>;
-    const result = await insertRow(database, tableName, r);
+    const result = await insertRow(database, tableName, r, exerciseColumns);
     if (result) inserted++;
-    else skipped++;
+    else {
+      skipped++;
+      // insertRow returns false for a valid row whose unique key already
+      // exists. Malformed rows are counted as skipped, but not as existing.
+      skipped_existing++;
+    }
+    if (index === rows.length - 1 || (index + 1) % 25 === 0) {
+      onRow?.(index + 1, rows.length);
+      // Let React paint progress between native bridge batches.
+      if ((index + 1) % 25 === 0) await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
   }
 
-  return { inserted, skipped };
+  return { inserted, skipped, skipped_existing };
 }
 
 // eslint-disable-next-line complexity, @typescript-eslint/no-explicit-any -- pre-existing complexity; generic database interface
-async function insertRow(database: any, tableName: BackupTableName, row: Record<string, unknown>): Promise<boolean> {
+async function insertRow(database: any, tableName: BackupTableName, row: Record<string, unknown>, exerciseColumns?: string[]): Promise<boolean> {
   switch (tableName) {
     case "exercises": {
       // BLD-913: dynamic column enumeration via PRAGMA table_info to prevent
       // silently dropping columns on restore (fixes pre-existing bug where
       // attachment, is_voltra, start_image_uri, end_image_uri were lost).
-      const colInfo = await database.getAllAsync(
-        "PRAGMA table_info(exercises)"
-      ) as { name: string }[];
-      const tableColumns = colInfo.map((c: { name: string }) => c.name);
+      const tableColumns = exerciseColumns ?? [];
       const cols = tableColumns.filter((col: string) => col in row);
       if (cols.length === 0) return false;
 
@@ -641,22 +669,31 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
 
       const placeholders = cols.map(() => "?").join(", ");
       const values = cols.map((col: string) => sanitizedRow[col] ?? null);
+      // A custom exercise is user-owned even when its ID originated from a
+      // starter row. Restore its fields rather than letting the seed claim the
+      // ID forever. Seed/curated exercises remain untouched for safe upgrades.
+      const customExercise = Boolean(row.is_custom);
+      const conflict = customExercise && row.id
+        ? ` ON CONFLICT(id) DO UPDATE SET ${cols.filter((col) => col !== "id").map((col) => `${col} = excluded.${col}`).join(", ")}`
+        : "";
       const r = await database.runAsync(
-        `INSERT OR IGNORE INTO exercises (${cols.join(", ")}) VALUES (${placeholders})`,
+        `INSERT OR IGNORE INTO exercises (${cols.join(", ")}) VALUES (${placeholders})${conflict}`,
         values
       );
       return r.changes > 0;
     }
     case "workout_templates": {
+      const userOwned = !row.is_starter && !row.is_curated;
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at, is_starter, is_curated, source) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        `INSERT OR IGNORE INTO workout_templates (id, name, created_at, updated_at, is_starter, is_curated, source) VALUES (?, ?, ?, ?, ?, ?, ?)${userOwned ? " ON CONFLICT(id) DO UPDATE SET name = excluded.name, created_at = excluded.created_at, updated_at = excluded.updated_at, is_starter = excluded.is_starter, is_curated = excluded.is_curated, source = excluded.source" : ""}`,
         [row.id, row.name, row.created_at, row.updated_at, row.is_starter ?? 0, row.is_curated ?? 0, row.source ?? null]
       );
       return r.changes > 0;
     }
     case "programs": {
+      const userOwned = !row.is_starter && !row.is_curated;
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, deleted_at, is_starter, is_curated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        `INSERT OR IGNORE INTO programs (id, name, description, is_active, current_day_id, created_at, updated_at, deleted_at, is_starter, is_curated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)${userOwned ? " ON CONFLICT(id) DO UPDATE SET name = excluded.name, description = excluded.description, is_active = excluded.is_active, current_day_id = excluded.current_day_id, created_at = excluded.created_at, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, is_starter = excluded.is_starter, is_curated = excluded.is_curated" : ""}`,
         [row.id, row.name, row.description ?? "", row.is_active ?? 0, row.current_day_id ?? null, row.created_at, row.updated_at, row.deleted_at ?? null, row.is_starter ?? 0, row.is_curated ?? 0]
       );
       return r.changes > 0;
@@ -697,8 +734,20 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
       return r.changes > 0;
     }
     case "app_settings": {
+      // Preferences belong to the user and therefore restore over the current
+      // value. Installation identity/migration markers must remain local to
+      // this installation; replacing them can re-run seeds or split analytics.
+      const protectedKeys = new Set(["starter_version", "anon_user_id"]);
+      const key = String(row.key ?? "");
+      if (protectedKeys.has(key) || key.startsWith("migration_") || key.startsWith("migrated_")) {
+        const existing = await database.getFirstAsync("SELECT key FROM app_settings WHERE key = ?", [key]) as { key?: unknown } | null;
+        // Protected values are installation-local when present. If a legacy
+        // backup contains one missing on this install, inserting it is safer
+        // than silently losing the only copy.
+        if (existing && existing.key !== undefined) return false;
+      }
       const r = await database.runAsync(
-        "INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)",
+        "INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         [row.key, row.value]
       );
       return r.changes > 0;

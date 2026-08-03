@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { ViewStyle, StyleProp } from "react-native";
+import { ViewStyle, StyleProp, TextInput } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -16,9 +16,13 @@ import {
   easing,
   springConfig,
   spacing,
+  interiorEase,
+  interiorSpring,
 } from "../../constants/design-tokens";
+import { Colors } from "../../theme/colors";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 // ─── AnimatedCard ──────────────────────────────────────────────────
 // Fade + slide-up on mount.
@@ -82,7 +86,7 @@ export function AnimatedListItem({
     <Animated.View
       entering={FadeIn.delay(index * staggerMs)
         .duration(duration.normal)
-        .easing(easing.decelerate)}
+        .easing(interiorEase)}
       style={style}
     >
       {children}
@@ -116,14 +120,13 @@ export function AnimatedNumber({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- shared values are stable refs
   }, [value, reducedMotion]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: 1,
+  const animatedProps = useAnimatedProps(() => ({
+    text: formatFn(animatedValue.value),
+    defaultValue: formatFn(animatedValue.value),
   }));
-
   return (
-    <Animated.Text style={[style, animatedStyle]}>
-      {formatFn(value)}
-    </Animated.Text>
+    <AnimatedTextInput editable={false} animatedProps={animatedProps}
+      style={[style, { fontVariant: ["tabular-nums"], minWidth: 48 }]} />
   );
 }
 
@@ -142,8 +145,8 @@ export function AnimatedProgressRing({
   progress,
   size = 120,
   strokeWidth = 8,
-  color = "#FF6038",
-  trackColor = "#E5E7EB",
+  color = Colors.light.primary,
+  trackColor = Colors.light.muted,
 }: AnimatedProgressRingProps) {
   const animatedProgress = useSharedValue(0);
   const reducedMotion = useReducedMotion();
@@ -208,8 +211,8 @@ interface AnimatedProgressBarProps {
 export function AnimatedProgressBar({
   progress,
   height = 6,
-  color = "#FF6038",
-  trackColor = "#E5E7EB",
+  color = Colors.light.primary,
+  trackColor = Colors.light.muted,
   style,
 }: AnimatedProgressBarProps) {
   const animatedWidth = useSharedValue(0);
@@ -221,15 +224,12 @@ export function AnimatedProgressBar({
       animatedWidth.value = clamped;
       return;
     }
-    animatedWidth.value = withTiming(clamped, {
-      duration: duration.slow,
-      easing: easing.decelerate,
-    });
+    animatedWidth.value = withSpring(clamped, interiorSpring.progressFill);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- shared values are stable refs
   }, [progress, reducedMotion]);
 
   const barStyle = useAnimatedStyle(() => ({
-    width: `${animatedWidth.value * 100}%` as unknown as number,
+    transform: [{ scaleX: animatedWidth.value }],
   }));
 
   return (
