@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- table-specific import mappings are kept together for backup compatibility. */
 import type {
   WorkoutTemplate,
   TemplateExercise,
