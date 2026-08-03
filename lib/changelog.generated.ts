@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.97",
+    "date": "2026-08-03",
+    "versionCode": 165,
+    "body": "- Importing a backup now shows clear progress, so large backups no longer appear to freeze.\n- Your settings, workouts, and custom content now restore correctly when an imported backup overlaps with built-in content.\n- Re-importing a backup now clearly tells you when its contents are already imported.\n- Buttons, tabs, bottom sheets, and toasts now have smoother, more refined motion and a more physical feel.\n- Filter chips are now easier to tap.\n- Backup imports now remain responsive while restoring larger files."
+  },
+  {
     "version": "0.26.96",
     "date": "2026-07-31",
     "versionCode": 164,

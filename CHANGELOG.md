@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.97 — 2026-08-03
+<!-- versionCode: 165 -->
+
 - Importing a backup now shows clear progress, so large backups no longer appear to freeze.
 - Your settings, workouts, and custom content now restore correctly when an imported backup overlaps with built-in content.
 - Re-importing a backup now clearly tells you when its contents are already imported.
