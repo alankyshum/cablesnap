@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  nameCell: { flex: 2, paddingRight: spacing.xs },
+  nameCell: { flex: 1.5, paddingRight: spacing.xs },
   valueCell: { flex: 1, textAlign: "right" },
   // Inline flex row for label + sort icon — right-aligned within valueCell.
   headerCellContent: {
