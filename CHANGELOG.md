@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
