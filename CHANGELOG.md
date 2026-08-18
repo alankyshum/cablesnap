@@ -24,6 +24,7 @@ marker) at release time.
 
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
+ - **Fix changelog gate SIGPIPE failures** — Keeps the user-facing changelog check from failing because a pipeline consumer exits early.
 
 ## v0.26.99 — 2026-08-18
 <!-- versionCode: 167 -->
