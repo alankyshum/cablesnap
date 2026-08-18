@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- Form library card spacing is now aligned consistently by removing the extra top margin.
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
