@@ -35,8 +35,10 @@ import {
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
+  withSpring,
+  useReducedMotion,
 } from "react-native-reanimated";
+import { interiorSpring } from "@/constants/design-tokens";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 export interface ScrollableTabsButton {
@@ -71,8 +73,6 @@ const TAB_GAP = 4;
  * design-language underline, not a heavy bar. (BLD-2729)
  */
 const UNDERLINE_HEIGHT = 3;
-/** Animation duration for the underline indicator (ms). */
-const INDICATOR_DURATION_MS = 220;
 
 interface TabLayout {
   /** x position of the tab Pressable inside the inner content row. */
@@ -91,6 +91,10 @@ export function ScrollableTabs({
   const activeColor = useColor("primary");
   const inactiveColor = useColor("mutedForeground");
   const bgColor = useColor("background");
+  // Older Reanimated Jest mocks omit this hook; production Reanimated always
+  // provides it. The fallback keeps non-native test rendering deterministic.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const reducedMotion = typeof useReducedMotion === "function" ? useReducedMotion() : false;
 
   const tabs: readonly ScrollableTabsButton[] = buttons;
   const layoutsRef = useRef<Record<string, TabLayout>>({});
@@ -115,19 +119,15 @@ export function ScrollableTabs({
       const underlineX = layout.x + TAB_PADDING_H;
       const underlineW = Math.max(0, layout.width - TAB_PADDING_H * 2);
       if (animate) {
-        indicatorX.value = withTiming(underlineX, {
-          duration: INDICATOR_DURATION_MS,
-        });
-        indicatorW.value = withTiming(underlineW, {
-          duration: INDICATOR_DURATION_MS,
-        });
+        indicatorX.value = reducedMotion ? underlineX : withSpring(underlineX, interiorSpring.tabIndicator);
+        indicatorW.value = reducedMotion ? underlineW : withSpring(underlineW, interiorSpring.tabIndicator);
       } else {
         indicatorX.value = underlineX;
         indicatorW.value = underlineW;
       }
       indicatorReady.value = true;
     },
-    [indicatorReady, indicatorW, indicatorX]
+    [indicatorReady, indicatorW, indicatorX, reducedMotion]
   );
 
   // Re-position the indicator whenever the active value changes (after

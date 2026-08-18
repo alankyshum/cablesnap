@@ -124,12 +124,6 @@ jest.mock('expo-keep-awake', () => ({
 }))
 // BLD-753a: use centralized manual mock at lib/__mocks__/audio.ts
 jest.mock('../../lib/audio')
-jest.mock('victory-native', () => ({
-  CartesianChart: 'CartesianChart',
-  Line: 'Line',
-  Bar: 'Bar',
-}))
-
 import React from 'react'
 import { waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../helpers/render'
@@ -393,4 +387,3 @@ jest.mock('../../lib/db/settings', () => ({
   getAppSetting: jest.fn().mockResolvedValue(null),
   setAppSetting: jest.fn().mockResolvedValue(undefined),
 }));
-
