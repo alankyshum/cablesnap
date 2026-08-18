@@ -23,6 +23,93 @@ marker) at release time.
 ## Unreleased
 
 - **Interactive inline plate calculator** — Tap the plate hint in active set-logging rows to open an interactive plate calculator and barbell diagram, now fully respecting and threading unit settings ('kg' vs 'lb') consistently. ([BLD-3821](/BLD/issues/BLD-3821), [BLD-4166](/BLD/issues/BLD-4166))
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
+
+ - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
+ - Fixed exercise selection scrolling on compact screens.
+
+## v0.26.99 — 2026-08-18
+<!-- versionCode: 167 -->
+
+- Migrated self-hosted F-Droid Play-flavor releases to the persistent production signing certificate; users on the boundary release must reinstall CableSnap once.
+
+
+## v0.26.98 — 2026-08-18
+<!-- versionCode: 166 -->
+
+- Charts now work in the F-Droid build.
+- Progress, workout, nutrition, body, and muscle-volume charts now render consistently across supported platforms.
+
+## v0.26.97 — 2026-08-03
+<!-- versionCode: 165 -->
+
+- Importing a backup now shows clear progress, so large backups no longer appear to freeze.
+- Your settings, workouts, and custom content now restore correctly when an imported backup overlaps with built-in content.
+- Re-importing a backup now clearly tells you when its contents are already imported.
+- Buttons, tabs, bottom sheets, and toasts now have smoother, more refined motion and a more physical feel.
+- Filter chips are now easier to tap.
+- Backup imports now remain responsive while restoring larger files.
+
+## v0.26.96 — 2026-07-31
+<!-- versionCode: 164 -->
+
+- **Set rows on the workout summary screen now have increased vertical spacing**, improving readability of exercise sets at a glance. ([BLD-4546](/BLD/issues/BLD-4546))
+
+## v0.26.95 — 2026-07-31
+<!-- versionCode: 163 -->
+
+- Bottom sheets now expand their scrollable content at higher snap points and coordinate dragging with inner scrolling, keeping actions reachable.
+
+## v0.26.94 — 2026-07-30
+<!-- versionCode: 162 -->
+
+- F-Droid builds no longer include the Sentry crash-reporting dependency; crash reporting remains enabled in Play builds.
+
+## v0.26.93 — 2026-07-30
+<!-- versionCode: 161 -->
+
+- F-Droid builds now show an explicit “Charts unavailable in this build” message
+  instead of blank chart areas while keeping full chart rendering in Play and
+  development builds.
+
+## v0.26.92 — 2026-07-28
+<!-- versionCode: 160 -->
+
+- **Ellipsis (overflow) menu button on form library cards is now inset 6 dp from the top-right corner**, matching the check-overlay affordance for consistent touch target placement. ([BLD-4548](/BLD/issues/BLD-4548))
+- Left-align the "Set a goal" button in Weekly Training Goal settings so it
+  matches the padding of surrounding rows. ([BLD-4537](/BLD/issues/BLD-4537))
+
+## v0.26.91 — 2026-07-28
+<!-- versionCode: 159 -->
+
+- F-Droid now uses the standard Android `release` variant, avoiding creation of
+  an app-only build type that cannot be consumed by React Native libraries.
+
+## v0.26.90 — 2026-07-28
+<!-- versionCode: 158 -->
+
+- **F-Droid Camera source stubs now retain the image-plane conversion helper and typed empty barcode results**, keeping preview/capture compilation intact after ML Kit removal.
+- **F-Droid Camera scanner rewriting now preserves the complete Kotlin module**, removing only the proprietary scanner block so camera capture functions continue to compile.
+- **F-Droid cleanup now leaves Gradle-generated Expo build directories untouched**, preventing repeated prebuild cleanup from breaking Camera compilation inputs.
+- **F-Droid prebuild now removes Expo publisher artifacts only once per config evaluation**, avoiding repeated cleanup races with Gradle-generated Camera BuildConfig inputs.
+- **F-Droid Wear OS build step now exports CABLESNAP_FDROID=1**, ensuring Gradle configurations and dependencies remain fully consistent across all compilation steps and preventing incremental build failures. ([BLD-4482](/BLD/issues/BLD-4482))
+- **F-Droid’s post-prebuild sanitization now preserves generated Expo module inputs**, avoiding Gradle fingerprint failures while keeping the source-level proprietary-class removal intact.
+- **F-Droid proprietary-dependency excludes are now scoped to `:app` only**, unblocking the Scheduled Release build after a global-scope regression broke `:expo-camera` in both F-Droid and Play variants.
+- **F-Droid source sanitization no longer deletes freshly generated Expo BuildConfig outputs**, allowing the sanitized Camera module to compile cleanly during prebuild.
+- **F-Droid Camera autolinking now compiles sanitized source instead of the publisher AAR**, eliminating the remaining ML Kit and Google Play Services barcode classes.
+- **F-Droid CI now sanitizes Expo modules before prebuild autolinking**, preventing clean native generation from selecting proprietary publisher AARs.
+- **F-Droid sanitization now runs before Expo autolinking**, so the generated Android graph cannot retain a dependency on a deleted proprietary Expo AAR.
+- **F-Droid prebuild now removes Expo publisher AAR repositories**, ensuring sanitized source is compiled instead of prebuilt Camera bytecode containing proprietary classes.
+- **F-Droid dependency metadata is now scrubbed before Gradle resolution**, preventing Expo local Maven POM/module files from restoring proprietary Camera artifacts.
+- **F-Droid prebuild now removes stale Expo Android build artifacts**, preventing publisher AARs from restoring proprietary Camera classes after source sanitization.
+- **F-Droid prebuild now copies its R8 rules into the generated app**, preserving the missing-optional-class handling on every clean native regeneration.
+- **F-Droid barcode scanning now neutralizes every expo-camera ML Kit/GMS call path**, including newly added scanner entry points, while the open-source ZXing scanner remains enabled.
+- **F-Droid Expo modules now compile sanitized source instead of publisher AARs**, preventing prebuilt Camera and notification bytecode from restoring ML Kit, Firebase, or Play Services classes.
+- **F-Droid autolinking now omits unused expo-application**, preventing Install Referrer classes from entering the native module graph.
+- **F-Droid sanitization now covers every installed Expo Android module**, including debug-only ML Kit declarations that could otherwise re-enter the release dependency graph.
+- **F-Droid builds now remove proprietary Expo manifest references**, keeping the APK free of Firebase, ML Kit, Google Play Services, and Install Referrer class descriptors while retaining ZXing barcode scanning.
 - **Form library Select button spacing now matches the Record pill**, giving the session header controls consistent horizontal padding.
 - **Record and Done button spacing** — Increases the margin above the Record and Done buttons on the Form clips tab for more consistent spacing. ([BLD-4033](/BLD/issues/BLD-4033))
 - **Consistent padding for "Set a goal" button** — Adjusts the vertical padding around the "Set a goal" button in frequency settings for consistency with other cards. ([BLD-4044](/BLD/issues/BLD-4044))
@@ -87,6 +174,13 @@ marker) at release time.
 - **F-Droid R8 now ignores missing optional integration warnings after stripping those dependencies**, allowing the release shrinker to finish and remove the unreachable code paths.
 
 - **F-Droid build setup now removes stale project and transformed-AAR intermediates before dependency resolution**, keeping the isolated build reproducible after failed attempts.
+
+- **F-Droid prebuild now replaces Expo Camera, Application, and Notifications proprietary source paths with FOSS-safe stubs**, preventing proprietary class descriptors from being emitted into DEX.
+
+- **F-Droid source sanitization now removes Firebase-backed notification serializers and trigger models as well**, keeping the complete Expo Notifications source graph free of proprietary references.
+
+- **F-Droid CI now invokes source sanitization explicitly after prebuild**, ensuring the generated native project uses the same clean source graph as the config plugin.
+- **Improved Progress empty-state text contrast** — Increases the contrast of the description text on the Progress tab empty-state screen to meet WCAG AA guidelines. ([BLD-3657](/BLD/issues/BLD-3657))
 
 
 ## v0.26.89 — 2026-07-26
@@ -155,10 +249,8 @@ marker) at release time.
 - **Consistent spacing for Workout History Import button** — Aligns the vertical spacing and gaps around the "Choose CSV File..." button inside the settings card to match standard design patterns and other buttons. (BLD-3499)
 - **Added customizable weight-step increments (micro-loading)** — you can now configure the weight step (0.5 kg, 1.25 kg, 2.5 kg, 5 kg or 1 lb, 2.5 lb, 5 lb, 10 lb) in Units settings, which applies across all steppers in your workout sessions and quick-adds. ([BLD-3517](/BLD/issues/BLD-3517))
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
-=======
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
->>>>>>> 4c987e2d (feat(release-notes): strip internal refs and support code/link markdown)
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->

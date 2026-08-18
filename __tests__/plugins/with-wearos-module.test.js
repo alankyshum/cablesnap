@@ -9,6 +9,7 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidR8Rules,
   patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
@@ -150,6 +151,13 @@ describe("patchAppBuildGradle", () => {
     expect(out).toContain("// cablesnap:wearos:build-types");
   });
 
+  it("declares proguardFiles explicitly on the releaseFdroid block", () => {
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?proguardFiles\s+['"]fdroid-r8-rules\.pro['"]/,
+    );
+  });
+
   it("uses debug signing for releaseFdroid without making it debuggable", () => {
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toMatch(
@@ -215,6 +223,59 @@ describe("patchAppBuildGradle", () => {
     // Only the specific `camera-mlkit-vision` module is safe to exclude.
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).not.toMatch(/exclude group:\s*"androidx\.camera"/);
+  });
+
+  it("with CABLESNAP_FDROID=1 emits variant-scoped :app excludes (BLD-4473)", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    try {
+      process.env.CABLESNAP_FDROID = "1";
+      const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+      // App-scoped marker present.
+      expect(out).toContain("// cablesnap:wearos:fdroid-excludes:app");
+      // Variant-scoped match block present.
+      expect(out).toMatch(
+        /configurations\.matching\s*\{\s*it\.name\.toLowerCase\(\)\.contains\("releasefdroid"\)\s*\}\.configureEach/,
+      );
+      // All required exclusions inside the variant-scoped block.
+      for (const group of [
+        "com.google.android.gms",
+        "com.google.firebase",
+        "com.google.mlkit",
+        "com.android.installreferrer",
+      ]) {
+        expect(out).toContain(`exclude group: "${group}"`);
+      }
+      expect(out).toContain('exclude module: "camera-mlkit-vision"');
+      expect(out).toContain('exclude module: "expo-wearos-bridge"');
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
+  });
+
+  it("does NOT emit a naked configurations.configureEach exclude block (BLD-4473 regression guard)", () => {
+    // The BLD-4473 fix removed a broad
+    // `configurations.configureEach { exclude group: "com.google.…" }` block
+    // from FDROID_APP_EXCLUDES_BLOCK. That block applied to ALL of :app's
+    // configurations, including Play's `release{Compile,Runtime}Classpath`
+    // — a Play build regression waiting to happen the moment
+    // CABLESNAP_FDROID=1 leaks into the Play Gradle invocation (which it
+    // already does in .github/workflows/scheduled-release.yml). Excludes
+    // must be bound to F-Droid variant configurations only.
+    const previous = process.env.CABLESNAP_FDROID;
+    try {
+      process.env.CABLESNAP_FDROID = "1";
+      const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+      // No naked `configurations.configureEach { … exclude group: "com.google.…" }`.
+      // The only allowed configureEach is the variant-scoped one on
+      // `configurations.matching { … "releasefdroid" … }.configureEach`.
+      expect(out).not.toMatch(
+        /^\s*configurations\.configureEach\s*\{[\s\S]*?exclude group: "com\.google\./m,
+      );
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
   });
 
   it("is idempotent across multiple prebuilds", () => {
@@ -318,51 +379,49 @@ describe("patchProjectBuildGradle", () => {
     );
   });
 
-  it("emits gated all-project F-Droid exclusions for every SUSS group", () => {
+  it("does NOT inject an allprojects / configurations.all F-Droid exclude block (BLD-4473 regression guard)", () => {
+    // Commit 8072156b appended
+    // `allprojects { configurations.all { exclude … } }` here, gated on
+    // `CABLESNAP_FDROID=1`. That scope applied excludes to every Expo
+    // library subproject (:expo-camera etc.), corrupting their own R.jar
+    // / BuildConfig generation and breaking BOTH F-Droid and Play
+    // Scheduled Release variants (workflow exports CABLESNAP_FDROID=1
+    // across the whole Build APK step). The exclude block belongs on
+    // `:app` only — see patchAppBuildGradle + FDROID_APP_EXCLUDES_BLOCK.
+    // This test locks that scope in.
     const previous = process.env.CABLESNAP_FDROID;
-    process.env.CABLESNAP_FDROID = "1";
-    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
-    expect(out).toMatch(
-      /if \(System\.getenv\("CABLESNAP_FDROID"\) == "1"\)\s*\{[\s\S]*allprojects\s*\{[\s\S]*configurations\.all\s*\{/,
-    );
-    for (const group of [
-      "com.google.android.gms",
-      "com.google.firebase",
-      "com.google.mlkit",
-      "com.android.installreferrer",
-    ]) {
-      expect(out).toContain(`exclude group: "${group}"`);
+    try {
+      for (const envValue of ["1", undefined]) {
+        if (envValue === undefined) delete process.env.CABLESNAP_FDROID;
+        else process.env.CABLESNAP_FDROID = envValue;
+        const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+        // No project-level FDROID_EXCLUDES_MARKER at all.
+        expect(out).not.toContain("// cablesnap:wearos:fdroid-excludes");
+        // No allprojects { configurations.all { … } } block.
+        expect(out).not.toMatch(
+          /allprojects\s*\{[\s\S]*?configurations\.all\s*\{/,
+        );
+        // No configurations.all in the appended output whatsoever.
+        expect(out).not.toContain("configurations.all {");
+      }
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
     }
-    expect(out).toContain("resolutionStrategy.eachDependency");
-    expect(out).toContain("F-Droid build rejected proprietary dependency");
-    expect(out).toContain('exclude module: "camera-mlkit-vision"');
-    expect(out).toContain('exclude module: "expo-wearos-bridge"');
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
   });
 
-  it("places every exclusion inside the CABLESNAP_FDROID gate", () => {
+  it("output is identical regardless of CABLESNAP_FDROID env (BLD-4473 regression guard)", () => {
     const previous = process.env.CABLESNAP_FDROID;
-    process.env.CABLESNAP_FDROID = "1";
-    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
-    const gateStart = out.indexOf('if (System.getenv("CABLESNAP_FDROID") == "1")');
-    const gateEnd = out.indexOf("\n}\n", gateStart);
-    const exclusions = out.indexOf('exclude group: "com.google.firebase"');
-    expect(gateStart).toBeGreaterThan(-1);
-    expect(gateEnd).toBeGreaterThan(gateStart);
-    expect(exclusions).toBeGreaterThan(gateStart);
-    expect(exclusions).toBeLessThan(gateEnd);
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
-  });
-
-  it("omits F-Droid exclusions from Play prebuild output", () => {
-    const previous = process.env.CABLESNAP_FDROID;
-    delete process.env.CABLESNAP_FDROID;
-    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
-    expect(out).not.toContain("cablesnap:wearos:fdroid-excludes");
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
+    try {
+      delete process.env.CABLESNAP_FDROID;
+      const withoutEnv = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+      process.env.CABLESNAP_FDROID = "1";
+      const withEnv = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+      expect(withEnv).toBe(withoutEnv);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
   });
 
   it("emits an androidComponents.beforeVariants selector for releaseFdroid", () => {
@@ -648,6 +707,58 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
       ).toBe(true);
     } finally {
       rmDirRecursive(tmp);
+    }
+  });
+});
+
+// writeFdroidR8Rules
+describe("writeFdroidR8Rules", () => {
+  const REAL_PROJECT_ROOT = path.join(__dirname, "..", "..");
+
+  it("copies fdroid/fdroid-r8-rules.pro to android/app/fdroid-r8-rules.pro", () => {
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-"));
+    try {
+      fs.mkdirSync(path.join(tmpPlatformRoot, "app"), { recursive: true });
+      writeFdroidR8Rules(REAL_PROJECT_ROOT, tmpPlatformRoot);
+      const dst = path.join(tmpPlatformRoot, "app", "fdroid-r8-rules.pro");
+      expect(fs.existsSync(dst)).toBe(true);
+      const contents = fs.readFileSync(dst, "utf8");
+      expect(contents).toContain("-dontwarn com.android.installreferrer.**");
+      expect(contents).toContain("-dontwarn com.google.android.gms.tasks.**");
+      expect(contents).toContain("-dontwarn com.google.mlkit.**");
+      expect(contents).toContain("-dontwarn com.google.firebase.**");
+      expect(contents).toContain("-dontwarn com.google.android.gms.**");
+    } finally {
+      rmDirRecursive(tmpPlatformRoot);
+    }
+  });
+
+  it("writeFdroidR8Rules is idempotent (overwrites existing file)", () => {
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-"));
+    try {
+      fs.mkdirSync(path.join(tmpPlatformRoot, "app"), { recursive: true });
+      const dst = path.join(tmpPlatformRoot, "app", "fdroid-r8-rules.pro");
+      fs.writeFileSync(dst, "# stale content", "utf8");
+      writeFdroidR8Rules(REAL_PROJECT_ROOT, tmpPlatformRoot);
+      const contents = fs.readFileSync(dst, "utf8");
+      expect(contents).toContain("-dontwarn com.android.installreferrer.**");
+      expect(contents).not.toContain("# stale content");
+    } finally {
+      rmDirRecursive(tmpPlatformRoot);
+    }
+  });
+
+  it("writeFdroidR8Rules throws if fdroid/fdroid-r8-rules.pro is missing", () => {
+    const tmpProjectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-proj-"));
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-plat-"));
+    try {
+      fs.mkdirSync(path.join(tmpPlatformRoot, "app"), { recursive: true });
+      expect(() => writeFdroidR8Rules(tmpProjectRoot, tmpPlatformRoot)).toThrow(
+        /fdroid-r8-rules\.pro not found/,
+      );
+    } finally {
+      rmDirRecursive(tmpProjectRoot);
+      rmDirRecursive(tmpPlatformRoot);
     }
   });
 });
