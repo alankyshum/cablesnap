@@ -6,7 +6,7 @@
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Colors } from "@/theme/colors";
 
-export function useThemeColors() {
+function useThemeColorsInner() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const t = isDark ? Colors.dark : Colors.light;
@@ -70,6 +70,7 @@ export function useThemeColors() {
     onErrorContainer: isDark ? "#FEE2E2" : "#7F1D1D",
 
     // Borders
+    border: t.border,
     outline: t.border,
     outlineVariant: isDark ? "#21262D" : "#E5E7EB",
 
@@ -119,4 +120,8 @@ export function useThemeColors() {
   };
 }
 
-export type ThemeColors = ReturnType<typeof useThemeColors>;
+export type ThemeColors = Omit<ReturnType<typeof useThemeColorsInner>, 'border'> & { border?: string };
+
+export function useThemeColors(): ThemeColors {
+  return useThemeColorsInner() as ThemeColors;
+}

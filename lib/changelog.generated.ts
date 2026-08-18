@@ -10,6 +10,48 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.99",
+    "date": "2026-08-18",
+    "versionCode": 167,
+    "body": "- Migrated self-hosted F-Droid Play-flavor releases to the persistent production signing certificate; users on the boundary release must reinstall CableSnap once."
+  },
+  {
+    "version": "0.26.98",
+    "date": "2026-08-18",
+    "versionCode": 166,
+    "body": "- Charts now work in the F-Droid build.\n- Progress, workout, nutrition, body, and muscle-volume charts now render consistently across supported platforms."
+  },
+  {
+    "version": "0.26.97",
+    "date": "2026-08-03",
+    "versionCode": 165,
+    "body": "- Importing a backup now shows clear progress, so large backups no longer appear to freeze.\n- Your settings, workouts, and custom content now restore correctly when an imported backup overlaps with built-in content.\n- Re-importing a backup now clearly tells you when its contents are already imported.\n- Buttons, tabs, bottom sheets, and toasts now have smoother, more refined motion and a more physical feel.\n- Filter chips are now easier to tap.\n- Backup imports now remain responsive while restoring larger files."
+  },
+  {
+    "version": "0.26.96",
+    "date": "2026-07-31",
+    "versionCode": 164,
+    "body": "- **Set rows on the workout summary screen now have increased vertical spacing**, improving readability of exercise sets at a glance. ([BLD-4546](/BLD/issues/BLD-4546))"
+  },
+  {
+    "version": "0.26.95",
+    "date": "2026-07-31",
+    "versionCode": 163,
+    "body": "- Bottom sheets now expand their scrollable content at higher snap points and coordinate dragging with inner scrolling, keeping actions reachable."
+  },
+  {
+    "version": "0.26.94",
+    "date": "2026-07-30",
+    "versionCode": 162,
+    "body": "- F-Droid builds no longer include the Sentry crash-reporting dependency; crash reporting remains enabled in Play builds."
+  },
+  {
+    "version": "0.26.93",
+    "date": "2026-07-30",
+    "versionCode": 161,
+    "body": "- F-Droid builds now show an explicit “Charts unavailable in this build” message\n  instead of blank chart areas while keeping full chart rendering in Play and\n  development builds."
+  },
+  {
     "version": "0.26.92",
     "date": "2026-07-28",
     "versionCode": 160,
