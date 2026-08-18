@@ -1,6 +1,9 @@
 import { defineConfig } from "@playwright/test";
 import * as path from "path";
 
+const PORT = process.env.PLAYWRIGHT_PORT || "8088";
+const BASE_URL = `http://localhost:${PORT}`;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -13,7 +16,7 @@ export default defineConfig({
     "{testDir}/__screenshots__/{projectName}/{testFilePath}/{arg}{ext}",
 
   use: {
-    baseURL: "http://localhost:8081",
+    baseURL: BASE_URL,
     browserName: "chromium",
     trace: "on-first-retry",
   },
@@ -67,9 +70,9 @@ export default defineConfig({
     // config sets COOP/COEP/CORP headers; the absolute path is required
     // because `serve --config` resolves relative to the served folder.
     command: process.env.E2E_USE_STATIC
-      ? `npx serve -s dist -l 8081 -c '${path.resolve(__dirname, "e2e/serve-coop-coep.json")}'`
-      : "npx expo start --web --port 8081",
-    url: "http://localhost:8081",
+      ? `npx serve -s dist -l ${PORT} -c '${path.resolve(__dirname, "e2e/serve-coop-coep.json")}'`
+      : `npx expo start --web --port ${PORT}`,
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },

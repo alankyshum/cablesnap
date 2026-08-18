@@ -52,12 +52,6 @@ jest.mock('expo-file-system', () => ({
   Paths: { cache: '/cache' },
 }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
-jest.mock('victory-native', () => ({
-  CartesianChart: 'CartesianChart',
-  Line: 'Line',
-  Bar: 'Bar',
-}))
-
 import MuscleVolumeSegment from '../../components/MuscleVolumeSegment'
 
 type VolumeRow = { muscle: MuscleGroup; sets: number; exercises: number }
