@@ -1,0 +1,77 @@
+{
+  "settings.gymProfiles.editHint": {
+    "message": "鼠标向左滑动以删除•点击以编辑",
+    "srcHash": "122a5605a5fc",
+    "origin": "human"
+  },
+  "components.exercise.plateau.body-form-drift": {
+    "message": "一段快速的动作视频可以帮助您发现哪些部分有偏差。",
+    "srcHash": "25d932591150",
+    "origin": "human"
+  },
+  "home.programs.filterOptionA11y": {
+    "message": "{label} 程序筛选{0}",
+    "srcHash": "eb6426699c10",
+    "origin": "human"
+  },
+  "app.program.create.new-title": {
+    "message": "新程序",
+    "srcHash": "49da6a3f9ae8",
+    "origin": "human"
+  },
+  "history.gtg.summary": {
+    "message": "快速添加组数 — {0} 程序{1}, {totalSets} 组{2}",
+    "srcHash": "ef76087c5248",
+    "origin": "human"
+  },
+  "app.exercise.id.history-error": {
+    "message": "历史数据载入失败",
+    "srcHash": "1cc4d2325185",
+    "origin": "human"
+  },
+  "components.progress.calendar.loadError": {
+    "message": "无法载入日历数据",
+    "srcHash": "aa418861b69d",
+    "origin": "human"
+  },
+  "history.templateFilter.sessions": {
+    "message": "训练场次",
+    "srcHash": "1fd5fe35c2a2",
+    "origin": "human"
+  },
+  "components.exercise.records.sessions": {
+    "message": "训练场次",
+    "srcHash": "1537b7682bf3",
+    "origin": "human"
+  },
+  "components.progress.bodySegment.recentEntries": {
+    "message": "最近的记录",
+    "srcHash": "3600edd3783b",
+    "origin": "human"
+  },
+  "common.save": {
+    "message": "保存",
+    "srcHash": "459df7e771f0",
+    "origin": "human"
+  },
+  "settings.importBackup.data": {
+    "message": "备份数据",
+    "srcHash": "e7a2b3f3e2d0",
+    "origin": "human"
+  },
+  "settings.data.exportA11y": {
+    "message": "将所有数据汇出为 JSON",
+    "srcHash": "2636b57e4185",
+    "origin": "human"
+  },
+  "session.compareview.dynamic2": {
+    "message": "变更视频 {label}",
+    "srcHash": "b78ae1a9b791",
+    "origin": "human"
+  },
+  "session.formvideosheet.str12": {
+    "message": "视频准备好",
+    "srcHash": "fea8895eda85",
+    "origin": "human"
+  }
+}
