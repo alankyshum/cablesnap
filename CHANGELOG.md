@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
 - **Improved workout heatmap legend readability** — The “Less” and “More” labels now use explicit line spacing so they align cleanly with the heatmap legend cells. ([BLD-3990](/BLD/issues/BLD-3990))
 
 ## v0.26.88 — 2026-07-26
