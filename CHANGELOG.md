@@ -23,6 +23,14 @@ marker) at release time.
 ## Unreleased
 
 - Form Library / Compare grid: increased the overflow (⋮) menu button inset from 4dp to 8dp so it no longer looks cramped against the card corner; touch target unchanged. (BLD-4550)
+ - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
+ - Fixed exercise selection scrolling on compact screens.
+
+## v0.26.99 — 2026-08-18
+<!-- versionCode: 167 -->
+
+- Migrated self-hosted F-Droid Play-flavor releases to the persistent production signing certificate; users on the boundary release must reinstall CableSnap once.
+
 
 ## v0.26.98 — 2026-08-18
 <!-- versionCode: 166 -->

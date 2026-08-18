@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.99",
+    "date": "2026-08-18",
+    "versionCode": 167,
+    "body": "- Migrated self-hosted F-Droid Play-flavor releases to the persistent production signing certificate; users on the boundary release must reinstall CableSnap once."
+  },
+  {
     "version": "0.26.98",
     "date": "2026-08-18",
     "versionCode": 166,

@@ -10,7 +10,7 @@
 > For the GMS-free build, use the [official F-Droid listing](https://f-droid.org/packages/com.persoack.cablesnap/) or download the `cablesnap-fdroid.apk` release asset.
 >
 <!-- SIGNING_MIGRATION_NOTICE_START -->
-> **One-time reinstall warning for self-hosted-repo users (boundary release pending — see release notes):** The first release using the production-signed Play-flavor APK changes the self-hosted F-Droid repo signing key from the debug certificate to the production certificate. Users of that repo on that release must export a backup first, then uninstall and reinstall CableSnap once; uninstalling can delete local data. If you installed the app after the boundary release, no action is needed.
+> **One-time reinstall warning for self-hosted-repo users (v0.26.99):** The first release using the production-signed Play-flavor APK changes the self-hosted F-Droid repo signing key from the debug certificate to the production certificate. Users of that repo on that release must export a backup first, then uninstall and reinstall CableSnap once; uninstalling can delete local data. If you installed the app after the boundary release, no action is needed.
 <!-- SIGNING_MIGRATION_NOTICE_END -->
 
 ## Demo
