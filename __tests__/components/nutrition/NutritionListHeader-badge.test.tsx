@@ -274,4 +274,22 @@ describe("NutritionListHeader — Training-Day Macro Adjustment badge", () => {
     );
     expect(byLabel("Edit macro targets")).toBeTruthy();
   });
+
+  it("BLD-4043: links have touch-target minHeight >= 44px, marginHorizontal = -8, and paddingHorizontal = 16", () => {
+    const { getByLabelText } = render(<NutritionListHeader {...BASE_PROPS} />);
+    const { StyleSheet } = require("react-native");
+    const editTargets = getByLabelText("Edit macro targets");
+    const mealTemplates = getByLabelText("View meal templates");
+
+    const editStyle = StyleSheet.flatten(editTargets.props.style);
+    const mealStyle = StyleSheet.flatten(mealTemplates.props.style);
+
+    expect(editStyle.minHeight).toBeGreaterThanOrEqual(44);
+    expect(editStyle.marginHorizontal).toBe(-8);
+    expect(editStyle.paddingHorizontal).toBe(16);
+
+    expect(mealStyle.minHeight).toBeGreaterThanOrEqual(44);
+    expect(mealStyle.marginHorizontal).toBe(-8);
+    expect(mealStyle.paddingHorizontal).toBe(16);
+  });
 });

@@ -65,12 +65,6 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        # Postinstall scripts MUST run: @shopify/react-native-skia's postinstall
-        # (`node scripts/install-libs.js`) downloads the prebuilt `libskia.a`
-        # archives into node_modules/@shopify/react-native-skia/libs/android/<abi>/.
-        # Without that, every CMake configure for any consumer of skia (incl.
-        # :app:assembleReleaseFdroid via matchingFallbacks) fails with
-        # "Could not find libskia.a … Run `npx install-skia` to fix this."
         # Use --legacy-peer-deps to match the other CI workflows on this repo.
         run: npm ci --legacy-peer-deps
 
@@ -81,6 +75,13 @@ jobs:
 
       - name: Generate native project
         env:
+          # CABLESNAP_FDROID=1 activates the fdroid-specific prebuild patches
+          # in plugins/with-wearos-module.js — including the FDROID_EXCLUDES
+          # gradle block that strips com.google.android.gms (the source of
+          # 446 GMS Wearable classes previously leaking into the F-Droid APK
+          # per AC10b). Must match the flag set on the assembleReleaseFdroid
+          # step below and mirrors scheduled-release.yml:313.
+          CABLESNAP_FDROID: "1"
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -123,6 +124,7 @@ jobs:
         # correctness only — Sentry source-map upload is environmentally
         # optional and intentionally not configured for wear-tests.yml.
         env:
+          CABLESNAP_FDROID: "1"
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           cd android
@@ -142,6 +144,14 @@ jobs:
         # map upload. Escape hatch documented at
         # node_modules/@sentry/react-native/sentry.gradle:11.
         env:
+          # CABLESNAP_FDROID=1 activates the fdroid exclude block in
+          # plugins/with-wearos-module.js (FDROID_EXCLUDES_BLOCK, gated on
+          # System.getenv("CABLESNAP_FDROID") == "1") which excludes
+          # com.google.android.gms — the source of the 446 GMS Wearable
+          # classes previously landing in app-releaseFdroid.apk (AC10b
+          # regression, Actions run #30216904911). Mirrors
+          # scheduled-release.yml:366.
+          CABLESNAP_FDROID: "1"
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           set -euo pipefail
@@ -274,4 +284,3 @@ jobs:
             echo "a runner image that exposes /dev/kvm (default standard"
             echo "ubuntu-latest runners do as of 2023-04)."
           } >> "$GITHUB_STEP_SUMMARY"
-

@@ -1,0 +1,3 @@
+- F-Droid builds now show an explicit “Charts unavailable in this build” message
+  instead of blank chart areas while keeping full chart rendering in Play and
+  development builds.

@@ -2,9 +2,9 @@ import React, { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useLayout } from "../lib/layout";
-import { withOpacity } from "../lib/format";
 import { radii } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 import { fontSizes } from "@/constants/design-tokens";
 
 type HeatmapProps = {
@@ -50,55 +50,53 @@ function formatDateKey(date: Date): string {
 /**
  * Background color for a heatmap cell.
  *
- * BLD-732 a11y fix: use a clear opacity ramp on the primary color so the
- * 1-workout, 2-workout, and 3+-workout steps are perceptually distinct.
- * Previously 1 and 2 used different theme tokens that rendered as nearly
- * identical light-orange tints; deuteranopia/protanopia simulation could
- * not distinguish them.
+ * BLD-3877 (BLD-3876): Replaced the single-hue opacity ramp with a solid 4-color
+ * luminance ramp. Under tritanopia (blue-yellow CVD, S-cone), the previous opacity
+ * ramp steps became indistinguishable due to a low contrast ratio (1.19:1) at the
+ * empty-to-1 step boundary.
  *
- * Step 0 stays on `surfaceVariant` (background tone) so an empty week is
- * visually distinct from a 1-workout week even with the increased opacity
- * floor on step 1.
+ * Any single-hue opacity ramp fails for some CVD type. A solid luminance ramp
+ * ensures that steps step monotonically in perceived lightness, which all CVD types
+ * (and achromatopsia) can successfully distinguish.
  *
- * BLD-870: Widened opacity ramp (0.15 / 0.55 / 1.0) so luminance alone
- * differentiates the three filled steps. The previous 0.3 / 0.6 / 1.0 ramp
- * collapsed to near-identical golden-brown tones under deuteranopia (red-green
- * CVD), affecting ~6 % of males. Adjacent steps now maintain ≥ 1.5:1 luminance
- * contrast ratio. Numeric labels (BLD-732) remain the primary non-color cue.
- *
- * BLD-2719: Switched from `primary` (Electric Coral, #FF6038) to
- * `heatmapFrequency` (blue, #007AFF). The coral hue is carried by the
- * red-green channel and collapses to near-uniform grey-olive under
- * deuteranopia emulation, making steps 1 and 2 indistinguishable from
- * empty cells. Blue is perceived by the blue (S-cone) channel which is
- * unaffected by red-green CVD, retaining distinct luminance steps.
+ * Step 0 stays on `surfaceVariant` (background tone).
+ * Light mode step colors: 1=#90CAF9, 2=#1E88E5, 3+=#0A2540 (min pairwise CR 1.41:1 normal, 1.93:1 deuteranopia)
+ * Dark mode step colors: 1=#2196F3, 2=#90CAF9, 3+=#E3F2FD (min pairwise CR 1.53:1 normal, 1.97:1 deuteranopia)
  */
 function heatmapColor(
   count: number,
-  colors: { surfaceVariant: string; heatmapFrequency: string }
+  colors: { surfaceVariant: string; heatmapFreq1: string; heatmapFreq2: string; heatmapFreq3: string }
 ): string {
   if (count === 0) return colors.surfaceVariant;
-  if (count === 1) return withOpacity(colors.heatmapFrequency, 0.15);
-  if (count === 2) return withOpacity(colors.heatmapFrequency, 0.55);
-  return colors.heatmapFrequency;
+  if (count === 1) return colors.heatmapFreq1;
+  if (count === 2) return colors.heatmapFreq2;
+  return colors.heatmapFreq3;
 }
 
 /**
  * Foreground color for the numeric label inside a filled heatmap cell.
  *
- * BLD-2719: Updated for the blue heatmapFrequency token.
- * - Step 1 (15% opacity blue): very light tint, needs dark text → onSurface
- * - Step 2+ (55–100% blue): saturated blue, needs white text → onSecondary
- *
- * Step 1 uses onSurface (dark foreground) rather than onPrimaryContainer
- * because onPrimaryContainer was tuned for the coral accent palette and
- * renders a dark-brown on light mode that clashes with blue tints.
+ * BLD-3877: Updated text colors for the new solid luminance ramp to guarantee at least
+ * 3:1 WCAG contrast on all cells across both light and dark themes:
+ * - Light mode:
+ *   - Step 1 (light blue bg #90CAF9): dark text -> onSurface (#1A2138) [contrast 9.10:1]
+ *   - Step 2 (medium blue bg #1E88E5): white text -> onSecondary (#FFFFFF) [contrast 3.68:1]
+ *   - Step 3+ (dark blue bg #0A2540): white text -> onSecondary (#FFFFFF) [contrast 15.54:1]
+ * - Dark mode:
+ *   - Step 1 (medium-dark blue bg #2196F3): white text -> onSecondary (#FFFFFF) [contrast 3.12:1]
+ *   - Step 2 (light blue bg #90CAF9): dark text -> onPrimary (#1A2138) [contrast 9.10:1]
+ *   - Step 3+ (very light blue bg #E3F2FD): dark text -> onPrimary (#1A2138) [contrast 13.94:1]
  */
 function heatmapTextColor(
   count: number,
-  colors: { onSecondary: string; onSurface: string }
+  isDark: boolean,
+  colors: { onSecondary: string; onSurface: string; onPrimary: string }
 ): string {
-  return count <= 1 ? colors.onSurface : colors.onSecondary;
+  if (isDark) {
+    return count === 1 ? colors.onSecondary : colors.onPrimary;
+  } else {
+    return count === 1 ? colors.onSurface : colors.onSecondary;
+  }
 }
 
 type CellData = {
@@ -135,6 +133,8 @@ function buildGrid(weeks: number): CellData[][] {
 
 export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllTime = 0 }: HeatmapProps) {
   const colors = useThemeColors();
+  const scheme = useColorScheme();
+  const isDark = scheme === "dark";
   const layout = useLayout();
 
   const grid = useMemo(() => {
@@ -184,7 +184,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
           styles.cellText,
           {
             fontSize: Math.max(fontSizes.sm, size * 0.55),
-            color: heatmapTextColor(count, colors),
+            color: heatmapTextColor(count, isDark, colors),
           },
         ]}
         accessibilityElementsHidden
@@ -204,7 +204,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
         <View key={rowIdx} style={styles.row}>
           <Text
             variant="caption"
-            style={[styles.dayLabel, { width: labelWidth, fontSize: fontSizes.xs, color: colors.onSurfaceVariant }]}
+            style={[styles.dayLabel, { width: labelWidth, fontSize: fontSizes.xs, color: colors.onSurfaceVariant, marginRight: gap / 2 }]}
           >
             {DAY_LABELS[rowIdx]}
           </Text>
@@ -242,8 +242,8 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
       ))}
 
       {/* Color Legend
-       * BLD-732: shows all 4 steps (0/1/2/3+) using the same encoding as
-       * the heatmap body — opacity ramp + numeric label as the non-color
+       * BLD-732 (BLD-3877): shows all 4 steps (0/1/2/3+) using the same encoding as
+       * the heatmap body — solid luminance ramp + numeric label as the non-color
        * cue. The 0-step gets an explicit border so it remains distinct
        * from the surrounding card surface even when surfaceVariant blends
        * with the panel background.
@@ -321,8 +321,9 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   legendCell: {
-    width: 18,
+    minWidth: 18,
     height: 18,
+    paddingHorizontal: 3,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 
 jest.mock('expo-router', () => {
   const push = jest.fn()
@@ -60,6 +61,14 @@ describe('WorkoutEmptyState', () => {
   it('has an accessibility label on the container for screen readers', () => {
     const { getByLabelText } = render(<WorkoutEmptyState />)
     expect(getByLabelText('No workouts logged yet')).toBeTruthy()
+  })
+
+  it('renders the description with high-contrast styles (BLD-3657)', () => {
+    const { getByText } = render(<WorkoutEmptyState />)
+    const descriptionText = getByText(/Complete your first workout to see sessions, PRs, and weekly trends here\./i)
+    const flattenedStyle = StyleSheet.flatten(descriptionText.props.style)
+    expect(flattenedStyle.color).toBe('#000')
+    expect(flattenedStyle.opacity).toBe(0.8)
   })
 
   it('navigates home when the CTA is tapped with no onStart handler', () => {

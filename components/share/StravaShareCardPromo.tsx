@@ -3,6 +3,7 @@ import { StyleSheet, View, TextInput, Pressable } from "react-native";
 import { Text } from "@/components/ui/text";
 import { spacing, fontSizes } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { GITHUB_REPO_URL } from "@/constants/github";
 
 type Props = {
   caption: string;
@@ -32,10 +33,10 @@ export function StravaShareCardPromo({
           numberOfLines={1}
           ellipsizeMode="tail"
         >
-          {caption || "Tracked with CableSnap · https://github.com/alankyshum/cablesnap"}
+          {caption || `Tracked with CableSnap · ${GITHUB_REPO_URL}`}
         </Text>
         <Text style={[styles.url, { color: colors.onSurfaceVariant }]}>
-          https://github.com/alankyshum/cablesnap
+          {GITHUB_REPO_URL}
         </Text>
       </View>
     );
@@ -88,7 +89,7 @@ export function StravaShareCardPromo({
         </Pressable>
       </View>
       <Text style={[styles.url, { color: colors.onSurfaceVariant }]}>
-        https://github.com/alankyshum/cablesnap
+        {GITHUB_REPO_URL}
       </Text>
     </View>
   );

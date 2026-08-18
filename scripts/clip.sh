@@ -164,6 +164,7 @@ case "$cmd" in
         --status)            body=$(echo "$body" | jq --arg v "$2" '. + {status: $v}'); shift 2;;
         --priority)          body=$(echo "$body" | jq --arg v "$2" '. + {priority: $v}'); shift 2;;
         --assignee-agent-id) body=$(echo "$body" | jq --arg v "$2" '. + {assigneeAgentId: $v}'); shift 2;;
+        --assignee-user-id)  body=$(echo "$body" | jq --arg v "$2" '. + {assigneeUserId: $v}'); shift 2;;
         --project-id)        body=$(echo "$body" | jq --arg v "$2" '. + {projectId: $v}'); shift 2;;
         --goal-id)           body=$(echo "$body" | jq --arg v "$2" '. + {goalId: $v}'); shift 2;;
         --comment)           body=$(echo "$body" | jq --arg v "$2" '. + {comment: $v}'); shift 2;;

@@ -19,10 +19,13 @@ import * as fs from "fs";
 import * as path from "path";
 
 const LAYOUT_PATH = path.resolve(__dirname, "../../../app/_layout.tsx");
+const CONFIG_PATH = path.resolve(__dirname, "../../../app.config.ts");
 
 let source: string;
+let configSource: string;
 beforeAll(() => {
   source = fs.readFileSync(LAYOUT_PATH, "utf8");
+  configSource = fs.readFileSync(CONFIG_PATH, "utf8");
 });
 
 describe("Sentry init — AC12 privacy gate (source snapshot)", () => {
@@ -56,5 +59,16 @@ describe("Sentry init — BLD-2446 localhost/CI event filter (source snapshot)",
 
   it("wires beforeSend to filterLocalhostEvents", () => {
     expect(source).toContain("beforeSend: filterLocalhostEvents");
+  });
+
+  it("disables Sentry only for F-Droid builds", () => {
+    expect(source).toContain("const sentryEnabled = isSentryEnabled(Constants.expoConfig?.extra);");
+    expect(source).toContain("enabled: sentryEnabled");
+    expect(configSource).toContain('const isFdroidBuild = process.env.CABLESNAP_FDROID === "1";');
+    expect(configSource).toContain("fdroidBuild: isFdroidBuild");
+    expect(configSource).toContain('distributionChannel: isFdroidBuild ? "fdroid" : "github"');
+    expect(configSource).toContain("sentryDsn:");
+    expect(source).not.toContain("https://c61278ad2a774c2e586454f017d4b86f@");
+    expect(source).toContain("...(sentryEnabled && sentryDsn ? { dsn: sentryDsn } : {})");
   });
 });
