@@ -40,6 +40,7 @@ import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
 import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
 import { filterLocalhostEvents } from '@/lib/sentry-localhost-filter';
+import { redactSentryBreadcrumb } from '@/lib/ai/redact';
 import { isSentryEnabled, resolveSentryDsn } from '@/lib/sentry-enabled';
 
 const sentryEnabled = isSentryEnabled(Constants.expoConfig?.extra);
@@ -56,6 +57,7 @@ Sentry.init({
   enableLogs: true,
   // BLD-2446: Drop CI/dev events (localhost/127.0.0.1/0.0.0.0). Fail-open on missing/unparseable url tag.
   beforeSend: filterLocalhostEvents,
+  beforeBreadcrumb: redactSentryBreadcrumb,
   // AC12 (BLD-1092): no session-sampled replay; error replays remain. See PLAN-BLD-1092.md §Privacy.
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1,

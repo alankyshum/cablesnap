@@ -102,6 +102,7 @@ module.exports = {
   ],
   moduleNameMapper: {
     'react-native-reanimated': '<rootDir>/__mocks__/react-native-reanimated.js',
+    '^expo/fetch$': '<rootDir>/__mocks__/expo-fetch.js',
   },
   // BLD-2161: Exclude paperclip agent worktrees so jest does not RUN test
   // files from isolated run-specific git worktrees.
