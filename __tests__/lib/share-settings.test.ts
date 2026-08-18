@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { GITHUB_REPO_URL } from "@/constants/github";
+import { DEFAULT_STRAVA_ATTRIBUTION } from "@/lib/strava";
+
 let mockDbInstance: ReturnType<typeof createMockDb>;
 
 function createMockDb() {
@@ -189,7 +192,7 @@ describe("Share Settings — Structural", () => {
 
   it("strava.ts attribution uses the canonical GitHub repo URL (not the dead cablesnap.app placeholder)", () => {
     expect(stravaSrc).toContain("DEFAULT_STRAVA_ATTRIBUTION");
-    expect(stravaSrc).toContain("https://github.com/alankyshum/cablesnap");
+    expect(DEFAULT_STRAVA_ATTRIBUTION).toContain(GITHUB_REPO_URL);
     expect(stravaSrc).not.toContain("cablesnap.app");
   });
 

@@ -251,6 +251,7 @@ export type { ScheduleEntry } from "./settings";
 export {
   exportAllData,
   importData,
+  getImportCompletionMessage,
   estimateExportSize,
   validateBackupFileSize,
   validateBackupData,
@@ -261,6 +262,7 @@ export {
   IMPORT_TABLE_ORDER,
   BACKUP_CATEGORY_LABELS,
   BACKUP_CATEGORY_ORDER,
+  BACKUP_CATEGORY_TABLES,
 } from "./import-export";
 export { validateCoachTemplateImportData } from "../schemas";
 export type {

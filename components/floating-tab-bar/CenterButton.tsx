@@ -2,6 +2,8 @@ import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { HandleIcon } from './HandleIcon';
+import { useAnimatedPress } from '@/lib/animations/hooks';
+import * as Haptics from 'expo-haptics';
 
 const CENTER_BUTTON_SIZE = 70;
 const BAR_HEIGHT = 56;
@@ -22,6 +24,7 @@ export function CenterButton({
   backgroundColor,
 }: CenterButtonProps) {
   const colors = useThemeColors();
+  const { animatedStyle, onPressIn, onPressOut } = useAnimatedPress({ haptic: false });
 
   return (
     <View style={centerStyles.wrapper}>
@@ -31,8 +34,11 @@ export function CenterButton({
         accessibilityLabel="Workouts"
         accessibilityHint="Navigate to workout screen"
         accessibilityState={{ selected: focused }}
+        onPressIn={() => { onPressIn(); Haptics.selectionAsync(); }}
+        onPressOut={onPressOut}
         style={[
           centerStyles.button,
+          animatedStyle as unknown as import('react-native').ViewStyle,
           {
             backgroundColor: focused ? activeColor : backgroundColor,
           },
