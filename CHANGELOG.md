@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Graceful Strava 403 Application Inactive handling** — Gracefully handles Strava API 403 Forbidden 'Application Inactive' errors, preventing misleading retry toasts and infinite loops. ([BLD-3513](/BLD/issues/BLD-3513))
 
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->
