@@ -1,11 +1,17 @@
 # CableSnap 💪
 
-**Free, open-source workout & macro tracker.** A lightweight, responsive alternative to commercial fitness apps — no subscriptions, no ads, no paywalls.
+**Free, open-source (AGPL-3.0) workout & macro tracker.** A lightweight, responsive alternative to commercial fitness apps — no subscriptions, no ads, no paywalls.
 
 [<img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://alankyshum.github.io/cablesnap/repo)
 
-> **Custom F-Droid repo** — open the link above on your Android device to add the repo, or add it manually in F-Droid:\
+> **Custom F-Droid repo (Play-flavor build)** — this self-hosted repo serves the production Play-flavor APK, which includes Google Play Services, Firebase, and ML Kit. Open the link above on your Android device to add the repo, or add it manually in F-Droid:\
 > `https://alankyshum.github.io/cablesnap/repo`
+>
+> For the GMS-free build, use the [official F-Droid listing](https://f-droid.org/packages/com.persoack.cablesnap/) or download the `cablesnap-fdroid.apk` release asset.
+>
+<!-- SIGNING_MIGRATION_NOTICE_START -->
+> **One-time reinstall warning for self-hosted-repo users (v0.26.99):** The first release using the production-signed Play-flavor APK changes the self-hosted F-Droid repo signing key from the debug certificate to the production certificate. Users of that repo on that release must export a backup first, then uninstall and reinstall CableSnap once; uninstalling can delete local data. If you installed the app after the boundary release, no action is needed.
+<!-- SIGNING_MIGRATION_NOTICE_END -->
 
 ## Demo
 
@@ -147,6 +153,10 @@ cablesnap/
 ├── tsconfig.json            # TypeScript config
 └── .eslintrc.js             # ESLint config
 ```
+
+### Sheet implementation debt
+
+CableSnap currently has three parallel slide-up sheet implementations, which is consolidation debt: the custom `components/ui/bottom-sheet.tsx` primitive (16+ consumers, including BackupCategorySheet, ExerciseFilterSheet, MacroTargetsSheet, and `nutrition.tsx`), `@gorhom/bottom-sheet` used directly by ShareSheet, QuickAddSheet, SubstitutionSheet, RpeSheet, and ExerciseDetailDrawer, and raw React Native `<Modal animationType="slide">` used by FormVideoSheet, PhotoMetaModal, and MacroCoachCard.
 
 ## Contributing
 

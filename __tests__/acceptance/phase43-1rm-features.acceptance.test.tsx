@@ -44,15 +44,6 @@ jest.mock('../../lib/interactions', () => ({ log: jest.fn(), recent: jest.fn().m
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
 jest.mock('../../lib/useProfileGender', () => ({ useProfileGender: () => 'neutral' }))
-jest.mock('victory-native', () => {
-  const RealReact = require('react')
-  return {
-    CartesianChart: (props: Record<string, unknown>) => RealReact.createElement('CartesianChart', props),
-    Line: () => null,
-    Bar: () => null,
-  }
-})
-
 jest.mock('../../lib/db', () => ({
   getExerciseById: jest.fn(),
   getBodySettings: jest.fn().mockResolvedValue({ weight_unit: 'kg', measurement_unit: 'cm', weight_goal: null, body_fat_goal: null }),
