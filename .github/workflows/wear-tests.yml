@@ -65,12 +65,6 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        # Postinstall scripts MUST run: @shopify/react-native-skia's postinstall
-        # (`node scripts/install-libs.js`) downloads the prebuilt `libskia.a`
-        # archives into node_modules/@shopify/react-native-skia/libs/android/<abi>/.
-        # Without that, every CMake configure for any consumer of skia (incl.
-        # :app:assembleReleaseFdroid via matchingFallbacks) fails with
-        # "Could not find libskia.a … Run `npx install-skia` to fix this."
         # Use --legacy-peer-deps to match the other CI workflows on this repo.
         run: npm ci --legacy-peer-deps
 
@@ -290,4 +284,3 @@ jobs:
             echo "a runner image that exposes /dev/kvm (default standard"
             echo "ubuntu-latest runners do as of 2023-04)."
           } >> "$GITHUB_STEP_SUMMARY"
-
