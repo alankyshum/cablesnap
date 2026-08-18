@@ -6,6 +6,19 @@ import { renderScreen } from "../helpers/render";
 describe("WorkoutHeatmap", () => {
   const emptyData = new Map<string, number>();
 
+  // Keep the 16-week grid deterministic across local time zones and CI.
+  // 2026-04-14 is intentionally exercised throughout this suite; at the real
+  // 2026-08-03 UTC boundary it falls just outside a grid anchored to Aug 3,
+  // while it is still inside a grid anchored to Aug 2 in American time zones.
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-08-02T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("renders without crashing with empty data", () => {
     const { getByText } = renderScreen(
       <WorkoutHeatmap data={emptyData} />

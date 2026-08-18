@@ -9,7 +9,7 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ToastData, ToastVariant } from './toast-types';
 import { useToastGesture } from '@/hooks/useToastGesture';
-import { fontSizes } from "@/constants/design-tokens";
+import { elevation, fontSizes, radii, spacing } from "@/constants/design-tokens";
 
 interface ToastProps extends ToastData { onDismiss: (id: string) => void; index: number; }
 
@@ -72,12 +72,12 @@ export function Toast({ id, title, description, variant = 'default', onDismiss, 
 }
 
 const styles = StyleSheet.create({
-  container: { position: 'absolute', left: 16, right: 16, alignItems: 'center', shadowColor: Colors.light.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
-  island: { width: '100%', maxWidth: TOAST_MAX_WIDTH, borderRadius: 14, backgroundColor: Colors.dark.card, paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
+  container: { position: 'absolute', left: spacing.base, right: spacing.base, alignItems: 'center', ...elevation.high },
+  island: { width: '100%', maxWidth: TOAST_MAX_WIDTH, borderRadius: radii.xl, backgroundColor: Colors.dark.card, paddingHorizontal: spacing.base, paddingVertical: spacing.md, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' },
   // BLD-513: Support CTA renders as a subdued underlined link below the
   // description (per design brief: colors.primary, fontSizes.xs, 4px above).
   // Intentionally no backgroundColor/padding/borderRadius — it's a link, not a pill.
-  actionLink: { marginTop: 4, alignSelf: 'flex-start' },
+  actionLink: { marginTop: spacing.xs, alignSelf: 'flex-start' },
   actionLinkText: { color: Colors.dark.primary, fontSize: fontSizes.xs, fontWeight: '600', textDecorationLine: 'underline' },
-  dismissBtn: { marginLeft: 8, padding: 4, borderRadius: 8 },
+  dismissBtn: { marginLeft: spacing.sm, padding: spacing.xs, borderRadius: radii.md, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 });

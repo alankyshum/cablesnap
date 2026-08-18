@@ -315,6 +315,47 @@ jobs:
           fi
           echo "Wrote $SIDECAR ($(wc -c < "$SIDECAR") bytes)"
 
+      - name: Resolve signing migration boundary and README
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.next_version.outputs.version }}"
+          python3 - "$VERSION" <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          marker_path = Path("fdroid/signing-migration.json")
+          readme_path = Path("README.md")
+          try:
+              marker = json.loads(marker_path.read_text())
+              boundary = marker["boundaryTag"]
+          except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+              raise SystemExit(f"signing migration marker is missing or unparseable: {exc}")
+          if boundary is not None and (not isinstance(boundary, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", boundary)):
+              raise SystemExit("signing migration marker boundaryTag must be null or a release tag like v0.27.0")
+
+          pending = "boundary release pending — see release notes"
+          start = "<!-- SIGNING_MIGRATION_NOTICE_START -->"
+          end = "<!-- SIGNING_MIGRATION_NOTICE_END -->"
+          readme = readme_path.read_text()
+          if readme.count(start) != 1 or readme.count(end) != 1:
+              raise SystemExit("README signing migration notice markers are missing or duplicated")
+          if boundary is None:
+              if "${{ inputs.republish_current }}" == "true":
+                  raise SystemExit("signing migration boundary is unset; republish mode cannot establish the boundary release")
+              if readme.count(pending) != 1:
+                  raise SystemExit("README signing migration pending notice is missing or duplicated")
+              boundary = f"v{sys.argv[1]}"
+              marker_path.write_text(json.dumps({"boundaryTag": boundary}) + "\n")
+              readme_path.write_text(readme.replace(pending, boundary))
+          else:
+              if pending in readme or readme.count(boundary) != 1:
+                  raise SystemExit("README signing migration notice is out of sync with fdroid/signing-migration.json")
+          print(f"Signing migration boundary: {boundary}")
+          PY
+
       # --- Build APK BEFORE creating release (immutable releases block later uploads) ---
 
       - name: Set up JDK 17
@@ -794,7 +835,8 @@ jobs:
             git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
               CHANGELOG.md \
               lib/changelog.generated.ts \
-              fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
+              fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/ \
+              fdroid/signing-migration.json README.md
           }
 
           stage_paths
@@ -829,6 +871,38 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             bash scripts/release-apply-bump.sh "$VERSION" "$VCODE"
+            python3 - "$VERSION" <<'PY'
+            import json
+            import re
+            import sys
+            from pathlib import Path
+
+            marker_path = Path("fdroid/signing-migration.json")
+            readme_path = Path("README.md")
+            try:
+                marker = json.loads(marker_path.read_text())
+                boundary = marker["boundaryTag"]
+            except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+                raise SystemExit(f"signing migration marker is missing or unparseable: {exc}")
+            if boundary is not None and (not isinstance(boundary, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", boundary)):
+                raise SystemExit("signing migration marker boundaryTag must be null or a release tag like v0.27.0")
+
+            pending = "boundary release pending — see release notes"
+            start = "<!-- SIGNING_MIGRATION_NOTICE_START -->"
+            end = "<!-- SIGNING_MIGRATION_NOTICE_END -->"
+            readme = readme_path.read_text()
+            if readme.count(start) != 1 or readme.count(end) != 1:
+                raise SystemExit("README signing migration notice markers are missing or duplicated")
+            if boundary is None:
+                boundary = f"v{sys.argv[1]}"
+                if readme.count(pending) != 1:
+                    raise SystemExit("README signing migration pending notice is missing or duplicated")
+                marker_path.write_text(json.dumps({"boundaryTag": boundary}) + "\n")
+                readme_path.write_text(readme.replace(pending, boundary))
+            elif pending in readme or readme.count(boundary) != 1:
+                raise SystemExit("README signing migration notice is out of sync with fdroid/signing-migration.json")
+            print(f"Signing migration boundary: {boundary}")
+          PY
             stage_paths
             if git diff --cached --quiet; then
               echo "::notice::No staged delta after regenerate — concurrent merge already shipped v$VERSION? exiting."
@@ -873,6 +947,21 @@ jobs:
             echo "::error::CHANGELOG.md has an empty body for v$VERSION — refusing to ship."
             exit 1
           fi
+          MARKER=$(python3 - <<'PY'
+          import json
+          import re
+          import sys
+          try:
+              value = json.load(open("fdroid/signing-migration.json"))["boundaryTag"]
+          except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+              print(f"signing migration marker is missing or unparseable: {exc}", file=sys.stderr)
+              raise SystemExit(1)
+          if not isinstance(value, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", value):
+              print("signing migration marker boundaryTag must be a release tag like v0.27.0", file=sys.stderr)
+              raise SystemExit(1)
+          print(value)
+          PY
+          )
           {
             echo 'notes<<NOTES_EOF'
             echo "## What's New"
@@ -886,9 +975,17 @@ jobs:
             echo "https://alankyshum.github.io/cablesnap/repo"
             echo '```'
             echo ""
+             echo "The self-hosted F-Droid repo serves the production Play-flavor APK, which includes Google Play Services, Firebase, and ML Kit. For the GMS-free build, use the official F-Droid listing (https://f-droid.org/packages/com.persoack.cablesnap/) or the \`cablesnap-fdroid.apk\` release asset."
+             echo ""
+             if [ "v$VERSION" = "$MARKER" ]; then
+               echo "### One-time self-hosted-repo reinstall warning"
+               echo ""
+               echo "This boundary release changes the self-hosted F-Droid repo signing key from the debug certificate to the production certificate. Users of that repo on this release must export a backup first, then uninstall and reinstall CableSnap once; Android will not update the app in place across this signing change, and uninstalling can delete local data."
+               echo ""
+             fi
             echo "## Wear OS companion (Play Store only)"
             echo ""
-            echo "The Wear OS companion APK (\`cablesnap-wear.apk\`) is distributed via the Play Store only — F-Droid's Inclusion Criteria reject the GMS Wearable dependency the watch app needs. The F-Droid build of CableSnap (\`cablesnap-fdroid.apk\`) is fully functional on its own; the watch APK is an optional companion."
+            echo "The Wear OS companion APK (\`cablesnap-wear.apk\`) is distributed via the Play Store only — F-Droid's Inclusion Criteria reject the GMS Wearable dependency the watch app needs. The GMS-free \`cablesnap-fdroid.apk\` build is fully functional on its own; the watch APK is an optional companion."
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
 
@@ -921,12 +1018,11 @@ jobs:
         run: |
           # All three artifacts are attached to the same GitHub Release:
           #   cablesnap.apk          — Play-flavor phone APK (canonical)
-          #   cablesnap-fdroid.apk   — F-Droid-flavor phone APK (GMS-free)
+          #   cablesnap-fdroid.apk   — GMS-free phone APK for official F-Droid
           #   cablesnap-wear.apk     — Wear OS 4+ companion APK (Play-only)
-          # The auto-fdroid workflow keys off cablesnap.apk presence to
-          # decide whether to refresh the F-Droid repo; the actual F-Droid
-          # repo build pulls cablesnap-fdroid.apk per
-          # `.github/workflows/fdroid-release.yml`.
+          # The self-hosted F-Droid repo refresh keys off cablesnap.apk and
+          # publishes that Play-flavor APK; the GMS-free build remains
+          # available as cablesnap-fdroid.apk for official F-Droid users.
           VERSION="${{ steps.next_version.outputs.version }}"
 
           # BLD-2316 (IDEMPOTENT CREATE): a concurrent Scheduled Release run can
