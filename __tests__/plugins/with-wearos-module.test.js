@@ -9,6 +9,8 @@ const {
   copyDirRecursive,
   rmDirRecursive,
   writeFdroidManifest,
+  writeFdroidR8Rules,
+  patchFdroidExpoDependencies,
   FDROID_MANIFEST_CONTENTS,
 } = require("../../plugins/with-wearos-module");
 
@@ -89,6 +91,28 @@ describe("patchSettingsGradle", () => {
     expect(out).toContain("// cablesnap:wearos:settings-include");
   });
 
+  it("emits an env-gated early dependency rewrite in settings.gradle", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    process.env.CABLESNAP_FDROID = "1";
+    const out = patchSettingsGradle(SETTINGS_FIXTURE);
+    expect(out).toContain('if (System.getenv("CABLESNAP_FDROID") == "1")');
+    expect(out).toContain("gradle.beforeProject { project ->");
+    expect(out).toContain("com\\.google\\.firebase:");
+    expect(out).toContain("com\\.android\\.installreferrer:");
+    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+    else process.env.CABLESNAP_FDROID = previous;
+  });
+
+  it("omits the F-Droid settings rewrite for Play prebuild", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    delete process.env.CABLESNAP_FDROID;
+    const out = patchSettingsGradle(SETTINGS_FIXTURE);
+    expect(out).not.toContain("fdroid-settings-filter");
+    expect(out).not.toContain("beforeProject");
+    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+    else process.env.CABLESNAP_FDROID = previous;
+  });
+
   it("does not duplicate the include block on re-run", () => {
     const once = patchSettingsGradle(SETTINGS_FIXTURE);
     const twice = patchSettingsGradle(once);
@@ -125,6 +149,13 @@ describe("patchAppBuildGradle", () => {
     expect(out).toMatch(/releaseFdroid\s*\{[\s\S]*?matchingFallbacks\s*=\s*\["release"\]/);
     // Sentinel marker for idempotency.
     expect(out).toContain("// cablesnap:wearos:build-types");
+  });
+
+  it("declares proguardFiles explicitly on the releaseFdroid block", () => {
+    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+    expect(out).toMatch(
+      /releaseFdroid\s*\{[\s\S]*?proguardFiles\s+['"]fdroid-r8-rules\.pro['"]/,
+    );
   });
 
   it("uses debug signing for releaseFdroid without making it debuggable", () => {
@@ -178,75 +209,10 @@ describe("patchAppBuildGradle", () => {
     expect(releaseFdroidIdx).toBeGreaterThan(releaseInnerIdx);
   });
 
-  it("emits releaseFdroid excludes for com.google.android.gms and the bridge module", () => {
-    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    expect(out).toContain("// cablesnap:wearos:fdroid-excludes");
-    // Each of the three configurations names must carry both excludes —
-    // this is the core AC10b safeguard. Belt-and-suspenders across
-    // Implementation + RuntimeClasspath + CompileClasspath.
-    for (const cfg of [
-      "releaseFdroidImplementation",
-      "releaseFdroidRuntimeClasspath",
-      "releaseFdroidCompileClasspath",
-    ]) {
-      const blockRegex = new RegExp(
-        `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.android\\.gms"[\\s\\S]*?exclude module: "expo-wearos-bridge"[\\s\\S]*?\\}`,
-      );
-      expect(out).toMatch(blockRegex);
-    }
-  });
-
-  it("emits releaseFdroid excludes for com.google.firebase across all three configurations", () => {
-    // Firebase exclusion was added 2026-05-01 after run 25243409233 surfaced
-    // a NoClassDefFoundError on F-Droid launch: expo-notifications transitively
-    // pulls com.google.firebase:firebase-messaging, whose firebase-common AAR
-    // auto-registers `<provider FirebaseInitProvider>` that calls into
-    // com.google.android.gms.common.internal.Preconditions — already excluded
-    // above. Without this Firebase exclusion the F-Droid APK ships with
-    // Firebase classes referencing missing GMS classes → crash before
-    // MainActivity. CableSnap only uses local notifications (lib/notifications.ts)
-    // so dropping FCM has no functional impact in the F-Droid build.
-    // See plugin's FDROID_EXCLUDES_BLOCK comment for full root-cause writeup.
-    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    for (const cfg of [
-      "releaseFdroidImplementation",
-      "releaseFdroidRuntimeClasspath",
-      "releaseFdroidCompileClasspath",
-    ]) {
-      const blockRegex = new RegExp(
-        `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.firebase"[\\s\\S]*?\\}`,
-      );
-      expect(out).toMatch(blockRegex);
-    }
-  });
-
-  it("emits releaseFdroid excludes for com.google.mlkit + camera-mlkit-vision across all three configurations", () => {
-    // MLKit exclusion was added 2026-05-02 after run 25244727127 surfaced a
-    // SECOND NoClassDefFoundError on F-Droid launch (after the Firebase fix
-    // landed and was confirmed working): expo-camera unconditionally pulls
-    // `com.google.mlkit:barcode-scanning` for its built-in barcode scanner,
-    // which drags `com.google.mlkit:common` whose <provider MlKitInitProvider>
-    // exhibits the same auto-init-then-call-GMS-Preconditions crash pattern
-    // as FirebaseInitProvider. Functional impact: barcode scanning in food
-    // search (components/BarcodeScanner.tsx) is non-functional in F-Droid;
-    // manual entry remains. The companion `androidx.camera:camera-mlkit-vision`
-    // wrapper is also excluded as a `module` (NOT the whole `androidx.camera`
-    // group, which provides the core camera APIs we still need).
-    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    for (const cfg of [
-      "releaseFdroidImplementation",
-      "releaseFdroidRuntimeClasspath",
-      "releaseFdroidCompileClasspath",
-    ]) {
-      const mlkitRegex = new RegExp(
-        `${cfg}\\s*\\{[\\s\\S]*?exclude group: "com\\.google\\.mlkit"[\\s\\S]*?\\}`,
-      );
-      const cameraMlkitRegex = new RegExp(
-        `${cfg}\\s*\\{[\\s\\S]*?exclude module: "camera-mlkit-vision"[\\s\\S]*?\\}`,
-      );
-      expect(out).toMatch(mlkitRegex);
-      expect(out).toMatch(cameraMlkitRegex);
-    }
+  it("leaves dependency exclusions to the project-level patch", () => {
+    expect(patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE)).not.toContain(
+      "cablesnap:wearos:fdroid-excludes",
+    );
   });
 
   it("does NOT exclude the entire androidx.camera group (regression guard)", () => {
@@ -259,15 +225,57 @@ describe("patchAppBuildGradle", () => {
     expect(out).not.toMatch(/exclude group:\s*"androidx\.camera"/);
   });
 
-  it("places the configurations excludes block at top level, before dependencies", () => {
-    const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
-    const excludesIdx = out.indexOf("// cablesnap:wearos:fdroid-excludes");
-    const depsIdx = out.indexOf("\ndependencies {");
-    expect(excludesIdx).toBeGreaterThan(-1);
-    expect(depsIdx).toBeGreaterThan(excludesIdx);
-    // It must NOT be nested inside the android { ... } block.
-    const androidClose = out.indexOf("\n}\n", out.indexOf("android {"));
-    expect(excludesIdx).toBeGreaterThan(androidClose);
+  it("with CABLESNAP_FDROID=1 emits variant-scoped :app excludes (BLD-4473)", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    try {
+      process.env.CABLESNAP_FDROID = "1";
+      const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+      // App-scoped marker present.
+      expect(out).toContain("// cablesnap:wearos:fdroid-excludes:app");
+      // Variant-scoped match block present.
+      expect(out).toMatch(
+        /configurations\.matching\s*\{\s*it\.name\.toLowerCase\(\)\.contains\("releasefdroid"\)\s*\}\.configureEach/,
+      );
+      // All required exclusions inside the variant-scoped block.
+      for (const group of [
+        "com.google.android.gms",
+        "com.google.firebase",
+        "com.google.mlkit",
+        "com.android.installreferrer",
+      ]) {
+        expect(out).toContain(`exclude group: "${group}"`);
+      }
+      expect(out).toContain('exclude module: "camera-mlkit-vision"');
+      expect(out).toContain('exclude module: "expo-wearos-bridge"');
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
+  });
+
+  it("does NOT emit a naked configurations.configureEach exclude block (BLD-4473 regression guard)", () => {
+    // The BLD-4473 fix removed a broad
+    // `configurations.configureEach { exclude group: "com.google.…" }` block
+    // from FDROID_APP_EXCLUDES_BLOCK. That block applied to ALL of :app's
+    // configurations, including Play's `release{Compile,Runtime}Classpath`
+    // — a Play build regression waiting to happen the moment
+    // CABLESNAP_FDROID=1 leaks into the Play Gradle invocation (which it
+    // already does in .github/workflows/scheduled-release.yml). Excludes
+    // must be bound to F-Droid variant configurations only.
+    const previous = process.env.CABLESNAP_FDROID;
+    try {
+      process.env.CABLESNAP_FDROID = "1";
+      const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+      // No naked `configurations.configureEach { … exclude group: "com.google.…" }`.
+      // The only allowed configureEach is the variant-scoped one on
+      // `configurations.matching { … "releasefdroid" … }.configureEach`.
+      expect(out).not.toMatch(
+        /^\s*configurations\.configureEach\s*\{[\s\S]*?exclude group: "com\.google\./m,
+      );
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
   });
 
   it("is idempotent across multiple prebuilds", () => {
@@ -281,24 +289,6 @@ describe("patchAppBuildGradle", () => {
   it("throws a clear error when the buildTypes/release anchor is missing", () => {
     expect(() => patchAppBuildGradle("// empty gradle\n")).toThrow(
       /with-wearos-module.*buildTypes.*release/,
-    );
-  });
-
-  it("throws a clear error when the dependencies anchor is missing", () => {
-    // Fixture has buildTypes/release but no top-level `dependencies {`.
-    const noDeps = `apply plugin: "com.android.application"
-android {
-    buildTypes {
-        debug { signingConfig signingConfigs.debug }
-        release {
-            signingConfig signingConfigs.debug
-            minifyEnabled true
-        }
-    }
-}
-`;
-    expect(() => patchAppBuildGradle(noDeps)).toThrow(
-      /with-wearos-module.*dependencies/,
     );
   });
 
@@ -387,6 +377,51 @@ describe("patchProjectBuildGradle", () => {
     expect(out).toMatch(
       /subprojects\s*\{[\s\S]*subproject\.plugins\.withId\("com\.android\.library"\)/,
     );
+  });
+
+  it("does NOT inject an allprojects / configurations.all F-Droid exclude block (BLD-4473 regression guard)", () => {
+    // Commit 8072156b appended
+    // `allprojects { configurations.all { exclude … } }` here, gated on
+    // `CABLESNAP_FDROID=1`. That scope applied excludes to every Expo
+    // library subproject (:expo-camera etc.), corrupting their own R.jar
+    // / BuildConfig generation and breaking BOTH F-Droid and Play
+    // Scheduled Release variants (workflow exports CABLESNAP_FDROID=1
+    // across the whole Build APK step). The exclude block belongs on
+    // `:app` only — see patchAppBuildGradle + FDROID_APP_EXCLUDES_BLOCK.
+    // This test locks that scope in.
+    const previous = process.env.CABLESNAP_FDROID;
+    try {
+      for (const envValue of ["1", undefined]) {
+        if (envValue === undefined) delete process.env.CABLESNAP_FDROID;
+        else process.env.CABLESNAP_FDROID = envValue;
+        const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+        // No project-level FDROID_EXCLUDES_MARKER at all.
+        expect(out).not.toContain("// cablesnap:wearos:fdroid-excludes");
+        // No allprojects { configurations.all { … } } block.
+        expect(out).not.toMatch(
+          /allprojects\s*\{[\s\S]*?configurations\.all\s*\{/,
+        );
+        // No configurations.all in the appended output whatsoever.
+        expect(out).not.toContain("configurations.all {");
+      }
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
+  });
+
+  it("output is identical regardless of CABLESNAP_FDROID env (BLD-4473 regression guard)", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    try {
+      delete process.env.CABLESNAP_FDROID;
+      const withoutEnv = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+      process.env.CABLESNAP_FDROID = "1";
+      const withEnv = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+      expect(withEnv).toBe(withoutEnv);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
   });
 
   it("emits an androidComponents.beforeVariants selector for releaseFdroid", () => {
@@ -483,6 +518,59 @@ describe("copyDirRecursive + rmDirRecursive", () => {
     expect(() => copyDirRecursive(missing, dst)).toThrow(
       /with-wearos-module.*wear-template/,
     );
+  });
+});
+
+describe("patchFdroidExpoDependencies", () => {
+  it("removes direct proprietary Expo dependency sources only for F-Droid", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-deps-"));
+    try {
+      for (const [pkg, contents] of [
+        ["expo-notifications", "implementation 'com.google.firebase:firebase-messaging:25.0.1'"],
+        ["expo-application", "implementation 'com.android.installreferrer:installreferrer:2.2'"],
+      ]) {
+        const dir = path.join(tmp, "node_modules", pkg, "android");
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "build.gradle"), contents, "utf8");
+      }
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidExpoDependencies(tmp);
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-notifications", "android", "build.gradle"), "utf8")).not.toMatch(/com\.google\.firebase:/);
+      expect(fs.readFileSync(path.join(tmp, "node_modules", "expo-application", "android", "build.gradle"), "utf8")).not.toMatch(/com\.android\.installreferrer:/);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
+  });
+
+  it("removes expo-camera barcode artifacts declared through add()", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-camera-"));
+    try {
+      const dir = path.join(tmp, "node_modules", "expo-camera", "android");
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dir, "build.gradle"),
+        [
+          'add(barcodeDependencyConfiguration, "com.google.android.gms:play-services-code-scanner:16.1.0")',
+          'add(barcodeDependencyConfiguration, "com.google.mlkit:barcode-scanning:17.3.0")',
+          'add(barcodeDependencyConfiguration, "androidx.camera:camera-mlkit-vision:1.5.1")',
+        ].join("\n"),
+        "utf8",
+      );
+      process.env.CABLESNAP_FDROID = "1";
+      patchFdroidExpoDependencies(tmp);
+      const out = fs.readFileSync(path.join(dir, "build.gradle"), "utf8");
+      expect(out).not.toContain("play-services-code-scanner");
+      expect(out).not.toContain("com.google.mlkit:barcode-scanning");
+      expect(out).not.toContain("camera-mlkit-vision");
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+      rmDirRecursive(tmp);
+    }
   });
 });
 
@@ -619,6 +707,58 @@ describe("writeFdroidManifest + FDROID_MANIFEST_CONTENTS", () => {
       ).toBe(true);
     } finally {
       rmDirRecursive(tmp);
+    }
+  });
+});
+
+// writeFdroidR8Rules
+describe("writeFdroidR8Rules", () => {
+  const REAL_PROJECT_ROOT = path.join(__dirname, "..", "..");
+
+  it("copies fdroid/fdroid-r8-rules.pro to android/app/fdroid-r8-rules.pro", () => {
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-"));
+    try {
+      fs.mkdirSync(path.join(tmpPlatformRoot, "app"), { recursive: true });
+      writeFdroidR8Rules(REAL_PROJECT_ROOT, tmpPlatformRoot);
+      const dst = path.join(tmpPlatformRoot, "app", "fdroid-r8-rules.pro");
+      expect(fs.existsSync(dst)).toBe(true);
+      const contents = fs.readFileSync(dst, "utf8");
+      expect(contents).toContain("-dontwarn com.android.installreferrer.**");
+      expect(contents).toContain("-dontwarn com.google.android.gms.tasks.**");
+      expect(contents).toContain("-dontwarn com.google.mlkit.**");
+      expect(contents).toContain("-dontwarn com.google.firebase.**");
+      expect(contents).toContain("-dontwarn com.google.android.gms.**");
+    } finally {
+      rmDirRecursive(tmpPlatformRoot);
+    }
+  });
+
+  it("writeFdroidR8Rules is idempotent (overwrites existing file)", () => {
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-"));
+    try {
+      fs.mkdirSync(path.join(tmpPlatformRoot, "app"), { recursive: true });
+      const dst = path.join(tmpPlatformRoot, "app", "fdroid-r8-rules.pro");
+      fs.writeFileSync(dst, "# stale content", "utf8");
+      writeFdroidR8Rules(REAL_PROJECT_ROOT, tmpPlatformRoot);
+      const contents = fs.readFileSync(dst, "utf8");
+      expect(contents).toContain("-dontwarn com.android.installreferrer.**");
+      expect(contents).not.toContain("# stale content");
+    } finally {
+      rmDirRecursive(tmpPlatformRoot);
+    }
+  });
+
+  it("writeFdroidR8Rules throws if fdroid/fdroid-r8-rules.pro is missing", () => {
+    const tmpProjectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-proj-"));
+    const tmpPlatformRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fdroid-r8-plat-"));
+    try {
+      fs.mkdirSync(path.join(tmpPlatformRoot, "app"), { recursive: true });
+      expect(() => writeFdroidR8Rules(tmpProjectRoot, tmpPlatformRoot)).toThrow(
+        /fdroid-r8-rules\.pro not found/,
+      );
+    } finally {
+      rmDirRecursive(tmpProjectRoot);
+      rmDirRecursive(tmpPlatformRoot);
     }
   });
 });

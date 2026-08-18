@@ -321,8 +321,9 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   legendCell: {
-    width: 18,
+    minWidth: 18,
     height: 18,
+    paddingHorizontal: 3,
     alignItems: "center",
     justifyContent: "center",
   },

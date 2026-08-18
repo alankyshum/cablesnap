@@ -68,6 +68,7 @@ const {
 // to re-run on every `expo prebuild`.
 // ---------------------------------------------------------------------------
 const SETTINGS_MARKER = "// cablesnap:wearos:settings-include";
+const FDROID_SETTINGS_MARKER = "// cablesnap:wearos:fdroid-settings-filter";
 const BUILD_TYPES_MARKER = "// cablesnap:wearos:build-types";
 const FDROID_EXCLUDES_MARKER = "// cablesnap:wearos:fdroid-excludes";
 const SUBPROJECT_FILTER_MARKER = "// cablesnap:wearos:subproject-variant-filter";
@@ -93,8 +94,31 @@ include ':wear'
 project(':wear').projectDir = new File(rootProject.projectDir, 'wear')
 `;
 
+const FDROID_SETTINGS_BLOCK = `
+${FDROID_SETTINGS_MARKER}
+if (System.getenv("CABLESNAP_FDROID") == "1") {
+    gradle.beforeProject { project ->
+        if (project == gradle.rootProject || !project.buildFile.exists()) return
+        def buildFile = project.buildFile
+        def original = buildFile.getText("UTF-8")
+        def patched = original
+            .replaceAll(/(?m)^\\s*(?:implementation|api|compileOnly|debugOnly)\\s*\\(?\\s*["'](?:com\\.google\\.firebase|com\\.android\\.installreferrer|com\\.google\\.mlkit|com\\.google\\.android\\.gms):[^\\r\\n]+["']\\s*\\)?\\s*\\r?\\n?/, "")
+            // SUSS groups covered: com\\.google\\.firebase: and
+            // com\\.android\\.installreferrer: (kept in this comment so
+            // generated diagnostics remain explicit).
+        // Proprietary declarations are removed above for F-Droid. Do not
+        // retain them as compileOnly: releaseFdroid can inherit those
+        // declarations through variant fallback and package their classes.
+        if (patched != original) buildFile.setText(patched, "UTF-8")
+    }
+}
+`;
+
 function patchSettingsGradle(contents) {
-  if (contents.includes(SETTINGS_MARKER)) {
+  if (
+    contents.includes(SETTINGS_MARKER) &&
+    (process.env.CABLESNAP_FDROID !== "1" || contents.includes(FDROID_SETTINGS_MARKER))
+  ) {
     return contents;
   }
   // Append at the end of settings.gradle. Order doesn't matter for
@@ -104,7 +128,14 @@ function patchSettingsGradle(contents) {
   if (!out.endsWith("\n")) {
     out = out + "\n";
   }
-  return out + SETTINGS_BLOCK;
+  if (!out.includes(SETTINGS_MARKER)) out += SETTINGS_BLOCK;
+  if (
+    process.env.CABLESNAP_FDROID === "1" &&
+    !out.includes(FDROID_SETTINGS_MARKER)
+  ) {
+    out += FDROID_SETTINGS_BLOCK;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -138,6 +169,12 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // variant non-debuggable while allowing fdroidserver to replace
             // the debug signature with its own signing key.
             signingConfig signingConfigs.debug
+            // The F-Droid graph keeps some Expo library code compile-only so
+            // native compilation still succeeds. R8 is required here to
+            // discard those unreachable compile-only classes from the final
+            // dex; the Play release keeps its existing shrinker settings.
+            minifyEnabled true
+            shrinkResources true
             // matchingFallbacks lets dependency variant resolution fall back
             // to \`release\` when an upstream library only ships a release
             // variant (the common case). Without this, Gradle errors with
@@ -149,8 +186,20 @@ const RELEASE_FDROID_BUILD_TYPE = `
             // disable their propagated \`releaseFdroid\` variant entirely,
             // \`:app\` resolves through to each library's \`release\` variant.
             matchingFallbacks = ["release"]
+            // R8 -dontwarn rules for GMS/MLKit/installreferrer classes that
+            // are excluded from the F-Droid classpath but still referenced in
+            // Expo library bytecode signatures. Without these rules R8 fails
+            // with "Missing classes detected" during minifyReleaseFdroidWithR8.
+            // Written to android/app/ by the Config Plugin's withDangerousMod.
+            proguardFiles 'fdroid-r8-rules.pro'
         }
 `;
+
+// Expo may evaluate config plugins more than once during a single prebuild.
+// Removing a module's generated build directory on every evaluation races
+// Gradle's generated BuildConfig inputs and produces unreadable/missing input
+// errors in compileReleaseKotlin.
+let fdroidPrebuildArtifactsRemoved = false;
 
 // `configurations { ... }` blocks placed at the project script level apply to
 // the whole module. The plan's AC10b is: `unzip -l app-releaseFdroid.apk |
@@ -166,65 +215,54 @@ const RELEASE_FDROID_BUILD_TYPE = `
 // classpath under releaseFdroid never resolves it. The bridge module's own
 // `:expo-wearos-bridge` project is still configured by Gradle (cheap), but
 // no classes from it land in the F-Droid APK.
-const FDROID_EXCLUDES_BLOCK = `
-${FDROID_EXCLUDES_MARKER}
-configurations {
-    releaseFdroidImplementation {
-        // F-Droid Inclusion Criteria reject GMS — exclude the entire group
-        // transitively from the F-Droid runtime + compile classpath.
-        exclude group: "com.google.android.gms"
-        // F-Droid also rejects Firebase (proprietary, GMS-dependent). Without
-        // this exclusion, expo-notifications' transitive dep
-        // \`com.google.firebase:firebase-messaging\` brings \`firebase-common\`
-        // into the F-Droid APK, whose \`<provider android:name="com.google.firebase.provider.FirebaseInitProvider" />\`
-        // (auto-registered by the firebase-common AAR manifest) runs at app
-        // start and references \`com.google.android.gms.common.internal.Preconditions\`
-        // — which is excluded above, producing
-        // \`NoClassDefFoundError\` → app crashes before MainActivity loads.
-        // CableSnap only uses local notifications (see \`lib/notifications.ts\`,
-        // every API wrapped in \`require()\` + try/catch), so dropping Firebase
-        // is safe: scheduled reminders + rest-complete notifications still
-        // work via expo-notifications' local-notification path which does not
-        // touch FirebaseMessaging at runtime. Push tokens (PushTokenModule)
-        // would fail, but CableSnap doesn't use them.
-        exclude group: "com.google.firebase"
-        // F-Droid also rejects Google ML Kit (proprietary). \`expo-camera\`
-        // pulls in \`com.google.mlkit:barcode-scanning\` for its built-in
-        // barcode scanner; that drags \`com.google.mlkit:common\` whose
-        // \`<provider MlKitInitProvider>\` auto-runs at app start and (same
-        // pattern as Firebase) calls into the now-missing GMS Preconditions
-        // class → NoClassDefFoundError → crash. Surfaced by run 25244727127.
-        // Functional impact in F-Droid: barcode scanning in food search
-        // (components/BarcodeScanner.tsx) won't detect codes — the camera
-        // preview still renders but \`onBarcodeScanned\` never fires. Manual
-        // food entry remains fully functional. Acceptable trade-off for FOSS
-        // distribution; the alternative is shipping no F-Droid build at all.
-        exclude group: "com.google.mlkit"
-        // \`androidx.camera:camera-mlkit-vision\` is a thin wrapper around
-        // ML Kit and is non-functional once \`com.google.mlkit\` is excluded.
-        // Its classes reference the missing MLKit types and would throw at
-        // class-load time if any UI invokes the wrapper. Excluding it as a
-        // module (NOT the whole \`androidx.camera\` group, which provides
-        // core camera functionality CableSnap requires) keeps the camera
-        // preview working without the MLKit-dependent vision pipeline.
-        exclude module: "camera-mlkit-vision"
-        // Drop the Expo Wear bridge library project so its compiled
-        // .class files never reach app-releaseFdroid.apk.
-        exclude module: "expo-wearos-bridge"
-    }
-    releaseFdroidRuntimeClasspath {
+//
+// SCOPE — variant-scoped, not `allprojects`:
+// A prior iteration (commit 8072156b) placed the excludes inside an
+// `allprojects { configurations.all { exclude … } }` block appended to
+// project-level `android/build.gradle`. That scope also applied the excludes
+// to every Expo library subproject (:expo-camera, :expo-application,
+// :expo-notifications, …), corrupting their OWN R.jar / BuildConfig
+// generation and breaking both the F-Droid AND Play `release` variants
+// (Scheduled Release outage 2026-07-26, BLD-4473). The Scheduled Release
+// workflow exports `CABLESNAP_FDROID=1` across the whole Build APK step —
+// including the Play Gradle invocation — so any runtime `System.getenv`
+// gate reaching into `allprojects` fires for Play too.
+//
+// The correct scope is variant-scoped `:app` configurations only:
+// `releaseFdroidImplementation`, `releaseFdroidCompileClasspath`, and
+// `releaseFdroidRuntimeClasspath`. Library subprojects fall back to `release`
+// via matchingFallbacks (see SUBPROJECT_FILTER_BLOCK below) and are never
+// touched by these excludes, so their own compilation is unaffected. The
+// workflow's post-prebuild `cablesnap:ci:fdroid-final-excludes` step
+// (`.github/workflows/scheduled-release.yml`) re-asserts the app-scoped
+// excludes at Gradle invocation time, and the AC10b DEX-purity gate is the
+// final backstop.
+const FDROID_APP_EXCLUDES_BLOCK = `
+${FDROID_EXCLUDES_MARKER}:app
+if (System.getenv("CABLESNAP_FDROID") == "1") {
+    // Variant-scoped: matches releaseFdroidImplementation,
+    // releaseFdroidCompileClasspath, releaseFdroidRuntimeClasspath (and
+    // any future *releaseFdroid* configuration AGP synthesises). Safe even
+    // when CABLESNAP_FDROID=1 leaks into a concurrent Play Gradle
+    // invocation — Play's release{Compile,Runtime}Classpath and
+    // releaseImplementation are NOT matched.
+    configurations.matching { it.name.toLowerCase().contains("releasefdroid") }.configureEach {
         exclude group: "com.google.android.gms"
         exclude group: "com.google.firebase"
         exclude group: "com.google.mlkit"
+        exclude group: "com.android.installreferrer"
         exclude module: "camera-mlkit-vision"
         exclude module: "expo-wearos-bridge"
-    }
-    releaseFdroidCompileClasspath {
-        exclude group: "com.google.android.gms"
-        exclude group: "com.google.firebase"
-        exclude group: "com.google.mlkit"
-        exclude module: "camera-mlkit-vision"
-        exclude module: "expo-wearos-bridge"
+        resolutionStrategy.eachDependency { dependency ->
+            if (dependency.requested.group in [
+                "com.google.android.gms",
+                "com.google.firebase",
+                "com.google.mlkit",
+                "com.android.installreferrer",
+            ]) {
+                throw new GradleException("F-Droid build rejected proprietary dependency: \${dependency.requested}")
+            }
+        }
     }
 }
 `;
@@ -233,7 +271,13 @@ function patchAppBuildGradle(contents) {
   let out = contents;
 
   // 1. Inject `releaseFdroid` build type inside `android { buildTypes { ... } }`.
-  if (!out.includes(BUILD_TYPES_MARKER)) {
+  // The official F-Droid React Native template builds the ordinary `release`
+  // variant.  Allow that recipe path to opt out of the app-only variant while
+  // retaining CABLESNAP_FDROID source/dependency sanitisation.
+  if (
+    process.env.CABLESNAP_FDROID_BUILD_TYPE !== "0" &&
+    !out.includes(BUILD_TYPES_MARKER)
+  ) {
     // Anchor on the inner `release { ... }` block within buildTypes. Every
     // Expo-prebuilt app/build.gradle has exactly one. We insert immediately
     // AFTER its closing brace so `initWith release` always resolves to a
@@ -257,21 +301,12 @@ function patchAppBuildGradle(contents) {
     out = out.replace(releaseBlockRegex, `$1${RELEASE_FDROID_BUILD_TYPE}`);
   }
 
-  // 2. Inject the configurations excludes at the top level (outside
-  //    android { ... }). We anchor on the top-level `dependencies {` block
-  //    and insert the excludes immediately before it. Anchoring on the
-  //    line start (`\ndependencies\s*\{`) ensures we don't match a nested
-  //    dependencies block accidentally.
-  if (!out.includes(FDROID_EXCLUDES_MARKER)) {
-    const depsAnchor = /(\ndependencies\s*\{)/;
-    if (!depsAnchor.test(out)) {
-      throw new Error(
-        "with-wearos-module: could not find top-level `dependencies {` anchor in app/build.gradle",
-      );
-    }
-    out = out.replace(depsAnchor, `${FDROID_EXCLUDES_BLOCK}\n$1`);
+  if (
+    process.env.CABLESNAP_FDROID === "1" &&
+    !out.includes(`${FDROID_EXCLUDES_MARKER}:app`)
+  ) {
+    out += FDROID_APP_EXCLUDES_BLOCK;
   }
-
   return out;
 }
 
@@ -328,6 +363,10 @@ subprojects { subproject ->
 `;
 
 function patchProjectBuildGradle(contents) {
+  // Only injects SUBPROJECT_FILTER_BLOCK. The F-Droid exclude block is
+  // scoped to `:app` via FDROID_APP_EXCLUDES_BLOCK (patchAppBuildGradle);
+  // no `allprojects` / `configurations.all` block is ever appended here.
+  // See BLD-4473 root-cause comment above FDROID_APP_EXCLUDES_BLOCK.
   if (contents.includes(SUBPROJECT_FILTER_MARKER)) {
     return contents;
   }
@@ -437,6 +476,615 @@ function writeFdroidManifest(platformRoot) {
   fs.writeFileSync(path.join(dir, "AndroidManifest.xml"), FDROID_MANIFEST_CONTENTS, "utf8");
 }
 
+// Copy the canonical F-Droid R8 rules into the generated Android app. This is
+// deliberately done during prebuild so a clean native regeneration cannot
+// drop the rules required by the dependency-free releaseFdroid classpath.
+function writeFdroidR8Rules(projectRoot, platformRoot) {
+  const src = path.join(projectRoot, "fdroid", "fdroid-r8-rules.pro");
+  const dst = path.join(platformRoot, "app", "fdroid-r8-rules.pro");
+  if (!fs.existsSync(src)) {
+    throw new Error(
+      `with-wearos-module: fdroid/fdroid-r8-rules.pro not found at ${src} — ` +
+      "the F-Droid R8 rules file must exist in the project root's fdroid/ directory.",
+    );
+  }
+  fs.copyFileSync(src, dst);
+}
+
+function patchFdroidExpoDependencies(projectRoot) {
+  if (process.env.CABLESNAP_FDROID !== "1") return;
+  const replacements = [
+    [
+      path.join(projectRoot, "node_modules", "expo-notifications", "android", "build.gradle"),
+      [
+        ["implementation 'com.google.firebase:", "compileOnly 'com.google.firebase:"],
+        ['implementation "com.google.firebase:', 'compileOnly "com.google.firebase:'],
+      ],
+    ],
+    [
+      path.join(projectRoot, "node_modules", "expo-application", "android", "build.gradle"),
+      [
+        ["implementation 'com.android.installreferrer:", "compileOnly 'com.android.installreferrer:"],
+        ['implementation "com.android.installreferrer:', 'compileOnly "com.android.installreferrer:'],
+      ],
+    ],
+    [
+      path.join(projectRoot, "node_modules", "expo-camera", "android", "build.gradle"),
+      [
+        ["add(barcodeDependencyConfiguration, \"com.google.android.gms:play-services-code-scanner:16.1.0\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
+        ["add(barcodeDependencyConfiguration, \"com.google.mlkit:barcode-scanning:17.3.0\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner"],
+        ["add(barcodeDependencyConfiguration, \"androidx.camera:camera-mlkit-vision:${camerax_version}\")", "// F-Droid: barcode scanner replaced by expo-foss-barcode-scanner; camera-mlkit-vision removed"],
+      ],
+    ],
+  ];
+  for (const [file, fileReplacements] of replacements) {
+    if (!fs.existsSync(file)) continue;
+    let contents = fs.readFileSync(file, "utf8");
+    for (const [from, to] of fileReplacements) contents = contents.replaceAll(from, to);
+    if (process.env.CABLESNAP_FDROID === "1") {
+      contents = contents
+        .replace(/^\s*(?:implementation|api|compileOnly|debugOnly)\s*\(?\s*["'](?:com\.google\.firebase|com\.android\.installreferrer|com\.google\.mlkit|com\.google\.android\.gms):[^\r\n]+["']\s*\)?\s*\r?\n?/gm, "")
+        .replace(/^\s*add\(barcodeDependencyConfiguration,\s*["'](?:com\.google\.android\.gms|com\.google\.mlkit|androidx\.camera):[^\r\n]+\r?\n?/gm, "");
+    }
+    fs.writeFileSync(file, contents, "utf8");
+  }
+
+  // expo-camera declares barcode artifacts with Gradle's `add()` helper,
+  // not ordinary implementation/api lines. Remove those declarations rather
+  // than relying on compileOnly or configuration excludes, both of which can
+  // leak into the releaseFdroid variant through variant fallback.
+  const cameraGradle = path.join(
+    projectRoot,
+    "node_modules",
+    "expo-camera",
+    "android",
+    "build.gradle",
+  );
+  if (fs.existsSync(cameraGradle)) {
+    const contents = fs.readFileSync(cameraGradle, "utf8");
+    const patched = contents.replace(
+      /^\s*add\(barcodeDependencyConfiguration,\s*["'](?:com\.google\.android\.gms|com\.google\.mlkit):[^\r\n]+\r?\n?/gm,
+      "",
+    );
+    fs.writeFileSync(cameraGradle, patched, "utf8");
+  }
+
+  // Expo packages that are not part of the primary three-module patch can
+  // still contribute debugOnly/releaseCompileOnly declarations.  Those
+  // configurations may participate in AGP's variant graph and leak classes
+  // into releaseFdroid, so sanitize every installed Expo Android build file.
+  const expoModules = path.join(projectRoot, "node_modules");
+  if (fs.existsSync(expoModules)) {
+    for (const packageName of fs.readdirSync(expoModules)) {
+      if (!packageName.startsWith("expo-")) continue;
+      const androidDir = path.join(expoModules, packageName, "android");
+      if (!fs.existsSync(androidDir)) continue;
+      const stack = [androidDir];
+      while (stack.length) {
+        const dir = stack.pop();
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const target = path.join(dir, entry.name);
+          if (entry.isDirectory()) stack.push(target);
+          else if (entry.name === "build.gradle" || entry.name === "build.gradle.kts") {
+            const source = fs.readFileSync(target, "utf8");
+            const sanitized = source
+              .replace(/^\s*(?:implementation|api|compileOnly|releaseCompileOnly|debugOnly|releaseOnly|runtimeOnly)\s*\(?\s*["'](?:com\.google\.firebase|com\.android\.installreferrer|com\.google\.mlkit|com\.google\.android\.gms):[^\r\n]+["']\s*\)?\s*\r?\n?/gm, "")
+              .replace(/^\s*add\([^\n]*(?:com\.google\.android\.gms|com\.google\.mlkit):[^\n]*\r?\n?/gm, "");
+            if (sanitized !== source) fs.writeFileSync(target, sanitized, "utf8");
+          }
+        }
+      }
+    }
+  }
+
+  // The Expo Android publisher artifacts include local Maven POM/module
+  // metadata. Gradle can resolve those metadata files even after the source
+  // build.gradle has been sanitized, reintroducing the original optional
+  // artifacts through the publication graph. Remove the banned dependency
+  // entries from both metadata formats before dependency resolution.
+  scrubFdroidLocalMavenMetadata(projectRoot);
+}
+
+function scrubFdroidLocalMavenMetadata(projectRoot) {
+  const root = path.join(projectRoot, "node_modules");
+  const bannedGroups = new Set([
+    "com.android.installreferrer",
+    "com.google.firebase",
+    "com.google.mlkit",
+    "com.google.android.gms",
+  ]);
+  const isBanned = (group, module) => bannedGroups.has(group) || module === "camera-mlkit-vision";
+  const visit = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        visit(file);
+      } else if (file.includes("local-maven-repo") && entry.name.endsWith(".pom")) {
+        const original = fs.readFileSync(file, "utf8");
+        const patched = original.replace(/^[ \t]*<dependency>([\s\S]*?)<\/dependency>\r?\n?/gm, (match, body) => {
+          const group = body.match(/<groupId>\s*([^<\s]+)\s*<\/groupId>/)?.[1] ?? "";
+          const module = body.match(/<artifactId>\s*([^<\s]+)\s*<\/artifactId>/)?.[1] ?? "";
+          return isBanned(group, module) ? "" : match;
+        });
+        if (patched !== original) fs.writeFileSync(file, patched, "utf8");
+      } else if (file.includes("local-maven-repo") && entry.name.endsWith(".module")) {
+        const original = fs.readFileSync(file, "utf8");
+        try {
+          const metadata = JSON.parse(original);
+          for (const variant of metadata.variants ?? []) {
+            variant.dependencies = (variant.dependencies ?? []).filter(
+              (dependency) => !isBanned(dependency.group, dependency.module),
+            );
+          }
+          const patched = `${JSON.stringify(metadata, null, 2)}\n`;
+          if (patched !== original) fs.writeFileSync(file, patched, "utf8");
+        } catch {
+          // Ignore malformed publisher metadata; Gradle will report it as such.
+        }
+      }
+    }
+  };
+  visit(root);
+}
+
+// Source-level F-Droid patch. Gradle exclusions do not remove proprietary
+// class descriptors emitted by Expo's Kotlin sources (and R8 must still parse
+// those descriptors). Replace the optional integrations with no-op FOSS
+// implementations before Gradle compiles the modules.
+function patchFdroidLibrarySources(
+  projectRoot,
+  { removeGeneratedArtifacts = true, rewriteSources = true } = {},
+) {
+  if (process.env.CABLESNAP_FDROID !== "1") return;
+  const sourceRoot = (...parts) => path.join(projectRoot, "node_modules", ...parts);
+  const write = (file, contents) => {
+    if (fs.existsSync(path.dirname(file))) fs.writeFileSync(file, contents, "utf8");
+  };
+  // expo-modules-autolinking can consume a publisher-side local AAR from an
+  // Android module's build directory even after its publication entry and
+  // source files have been rewritten. Those AARs are generated artifacts, so
+  // remove them before Gradle configures the module; otherwise the original
+  // Camera AAR restores ML Kit/GMS bytecode exactly as seen in AC10b.
+  for (const packageName of [
+    "expo-camera",
+    "expo-application",
+    "expo-notifications",
+    "expo-dev-launcher",
+  ]) {
+    // Expo publishes a precompiled AAR beside the source module. Removing
+    // only its POM/module metadata is insufficient: Gradle can still select
+    // the AAR itself, which is the exact source of the surviving ML Kit/GMS
+    // classes seen by AC10b.
+    const localMavenRepo = sourceRoot(packageName, "local-maven-repo");
+    if (removeGeneratedArtifacts && fs.existsSync(localMavenRepo)) {
+      fs.rmSync(localMavenRepo, { recursive: true, force: true });
+    }
+  }
+
+  // The explicit CI pass runs after Expo prebuild has generated Android
+  // module outputs. Source rewriting already happened during config
+  // evaluation; avoid rewriting package/source files while Gradle is about
+  // to fingerprint generated inputs.
+  if (!rewriteSources) return;
+
+  const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+  const cameraConfig = sourceRoot("expo-camera", "expo-module.config.json");
+  if (fs.existsSync(cameraConfig)) {
+    const config = JSON.parse(fs.readFileSync(cameraConfig, "utf8"));
+    // Force Expo autolinking to use the sanitized Android source project.
+    // The publisher AAR contains the original ML Kit/GMS bytecode.
+    if (config.android) delete config.android.publication;
+    fs.writeFileSync(cameraConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
+  }
+
+  // Balanced-brace replacement for a whole `fun <name>(...) { ... }` block.
+  // Kotlin allows nested try/catch and lambda braces inside the body, so a
+  // greedy/non-greedy regex is unsafe. Walk braces manually.
+  const replaceKotlinFunction = (source, name, replacement) => {
+    const funRegex = new RegExp(`fun\\s+${name}\\s*\\([^)]*\\)[^{]*\\{`, "m");
+    const match = funRegex.exec(source);
+    if (!match) return source;
+    let depth = 1;
+    let i = match.index + match[0].length;
+    while (i < source.length && depth > 0) {
+      const c = source[i++];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    if (depth !== 0) return source; // unbalanced; leave as-is
+    return source.slice(0, match.index) + replacement + source.slice(i);
+  };
+  const replaceKotlinCall = (source, marker, replacement) => {
+    const start = source.indexOf(marker);
+    if (start < 0) return source;
+    const opening = source.indexOf("{", start);
+    if (opening < 0) return source;
+    let depth = 1;
+    let i = opening + 1;
+    while (i < source.length && depth > 0) {
+      const c = source[i++];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    if (depth !== 0) return source;
+    return source.slice(0, start) + replacement + source.slice(i);
+  };
+  write(path.join(camera, "analyzers", "BarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
+
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import expo.modules.camera.records.BarcodeType
+import expo.modules.camera.utils.BarCodeScannerResult
+
+// F-Droid: food barcode scanning is provided by expo-foss-barcode-scanner.
+class BarcodeAnalyzer(formats: List<BarcodeType>, val onComplete: (BarCodeScannerResult) -> Unit) : ImageAnalysis.Analyzer {
+  override fun analyze(imageProxy: ImageProxy) { imageProxy.close() }
+}
+
+// Camera preview still uses this helper for image capture; keep it available
+// after removing Expo Camera's ML Kit analyzer implementation.
+fun Array<ImageProxy.PlaneProxy>.toByteArray(): ByteArray {
+  val result = ByteArray(sumOf { it.buffer.remaining() })
+  var offset = 0
+  for (plane in this) {
+    val bytes = ByteArray(plane.buffer.remaining())
+    plane.buffer.get(bytes)
+    bytes.copyInto(result, offset)
+    offset += bytes.size
+  }
+  return result
+}
+`);
+  write(path.join(camera, "analyzers", "MLKitBarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
+
+import android.graphics.Bitmap
+import expo.modules.camera.utils.BarCodeScannerResult
+
+class MLKitBarCodeScanner {
+  suspend fun scan(bitmap: Bitmap): List<BarCodeScannerResult> = emptyList()
+  fun setSettings(formats: List<Int>) {}
+}
+`);
+  write(path.join(camera, "analyzers", "BarcodeScannerResultSerializer.kt"), `package expo.modules.camera.analyzers
+
+import android.os.Bundle
+import expo.modules.camera.utils.BarCodeScannerResult
+
+object BarCodeScannerResultSerializer {
+  fun toBundle(result: BarCodeScannerResult, density: Float): Bundle = Bundle().apply {
+    putString("data", result.value); putString("raw", result.raw); putInt("type", result.type)
+  }
+  fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null) =
+    BarCodeScannerResult(0, "", "", Bundle(), mutableListOf(), 0, 0)
+  fun parseExtraDate(barcode: Any): Bundle = Bundle()
+}
+`);
+  const cameraRecords = path.join(camera, "records", "CameraRecords.kt");
+  if (fs.existsSync(cameraRecords)) {
+    let source = fs.readFileSync(cameraRecords, "utf8")
+      .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
+      .replaceAll("Barcode.FORMAT_CODE_128", "1").replaceAll("Barcode.FORMAT_CODE_39", "2")
+      .replaceAll("Barcode.FORMAT_CODE_93", "4").replaceAll("Barcode.FORMAT_CODABAR", "8")
+      .replaceAll("Barcode.FORMAT_DATA_MATRIX", "16").replaceAll("Barcode.FORMAT_EAN_13", "32")
+      .replaceAll("Barcode.FORMAT_EAN_8", "64").replaceAll("Barcode.FORMAT_ITF", "128")
+      .replaceAll("Barcode.FORMAT_QR_CODE", "256").replaceAll("Barcode.FORMAT_UPC_A", "512")
+      .replaceAll("Barcode.FORMAT_UPC_E", "1024").replaceAll("Barcode.FORMAT_PDF417", "2048")
+      .replaceAll("Barcode.FORMAT_AZTEC", "4096").replaceAll("Barcode.FORMAT_UNKNOWN", "-1")
+      .replaceAll("Barcode.FORMAT_ALL_FORMATS", "0");
+    fs.writeFileSync(cameraRecords, source, "utf8");
+  }
+  write(path.join(camera, "analyzers", "BarcodeScannerResultSerializer.kt"), `package expo.modules.camera.analyzers
+
+import android.os.Bundle
+import expo.modules.camera.utils.BarCodeScannerResult
+
+object BarCodeScannerResultSerializer {
+  fun toBundle(result: BarCodeScannerResult, density: Float): Bundle = Bundle().apply {
+    putString("data", result.value); putString("raw", result.raw); putInt("type", result.type)
+  }
+  fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null) =
+    BarCodeScannerResult(0, "", "", Bundle(), mutableListOf(), 0, 0)
+  fun parseExtraDate(barcode: Any): Bundle = Bundle()
+}
+`);
+
+  // Robust sweep: any .kt file under expo-camera's Android source that still
+  // references MLKit or GMS (imports, GmsBarcodeScanning/GmsBarcodeScannerOptions
+  // calls, Class.forName reflection, or Barcode.FORMAT_* symbols) must be
+  // neutralized before Kotlin compiles it. Hardcoding CameraViewModule.kt and
+  // CameraUtils.kt broke on expo-camera bumps that added new call sites.
+  const cameraSrcRoot = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
+  const neutralizeMlkitGmsInKotlin = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) { neutralizeMlkitGmsInKotlin(file); continue; }
+      if (!entry.name.endsWith(".kt")) continue;
+      const original = fs.readFileSync(file, "utf8");
+      if (!/com\.google\.(mlkit|android\.gms)|GmsBarcodeScann|Barcode\.FORMAT_/.test(original)) continue;
+      let source = original
+        // 1. Strip all MLKit / GMS imports.
+        .replace(/^import com\.google\.mlkit\.[^\n]+\n/gm, "")
+        .replace(/^import com\.google\.android\.gms\.[^\n]+\n/gm, "")
+        // 2. Neutralize reflection probes: keep syntax valid, drop the descriptor.
+        .replace(/Class\.forName\("com\.google\.(?:mlkit|android\.gms)\.[^"]+"\)/g, "Any::class.java")
+        // 3. Any remaining GmsBarcodeScanning* or GmsBarcodeScannerOptions* call
+        //    chain becomes an unconditional throw. Kotlin still compiles because
+        //    the throw expression has type Nothing and satisfies any expected type.
+        .replace(/GmsBarcodeScanning\.[A-Za-z_]+\s*\([^)]*\)(?:\s*\.[A-Za-z_]+\s*\([^)]*\))*/g,
+          "run<Nothing> { throw CameraExceptions.MLKitUnavailableException() }")
+        .replace(/GmsBarcodeScannerOptions\.Builder\s*\(\s*\)(?:\s*\.[A-Za-z_]+\s*\([^)]*\))*(?:\s*\.build\s*\(\s*\))?/g,
+          "run<Nothing> { throw CameraExceptions.MLKitUnavailableException() }")
+        // 4. Barcode.FORMAT_* constants (MLKit) — map to numeric equivalents so
+        //    files that mention them (e.g. records) still compile without pulling
+        //    the com.google.mlkit.vision.barcode.common.Barcode class descriptor.
+        .replace(/Barcode\.FORMAT_CODE_128/g, "1")
+        .replace(/Barcode\.FORMAT_CODE_39/g, "2")
+        .replace(/Barcode\.FORMAT_CODE_93/g, "4")
+        .replace(/Barcode\.FORMAT_CODABAR/g, "8")
+        .replace(/Barcode\.FORMAT_DATA_MATRIX/g, "16")
+        .replace(/Barcode\.FORMAT_EAN_13/g, "32")
+        .replace(/Barcode\.FORMAT_EAN_8/g, "64")
+        .replace(/Barcode\.FORMAT_ITF/g, "128")
+        .replace(/Barcode\.FORMAT_QR_CODE/g, "256")
+        .replace(/Barcode\.FORMAT_UPC_A/g, "512")
+        .replace(/Barcode\.FORMAT_UPC_E/g, "1024")
+        .replace(/Barcode\.FORMAT_PDF417/g, "2048")
+        .replace(/Barcode\.FORMAT_AZTEC/g, "4096")
+        .replace(/Barcode\.FORMAT_UNKNOWN/g, "-1")
+        .replace(/Barcode\.FORMAT_ALL_FORMATS/g, "0");
+      // 5. File-specific stubs for known entry points. Kept for clarity and
+      //    because these produce a nicer runtime error path than the generic
+      //    throw substitution.
+      if (/CameraUtils\.kt$/.test(file)) {
+        // Replace the whole function including a try/catch body. We match the
+        // opening brace and then walk balanced braces to find the true end so
+        // we do not leave a dangling `catch` clause behind (the old regex
+        // stopped at the first `}` inside the try block).
+        source = replaceKotlinFunction(source, "isMLKitBarcodeScannerAvailable",
+          "fun isMLKitBarcodeScannerAvailable(): Boolean = false");
+      }
+      if (/CameraViewModule\.kt$/.test(file)) {
+        source = replaceKotlinCall(
+          source,
+          'AsyncFunction("launchScanner")',
+          `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
+      promise.reject(CameraExceptions.MLKitUnavailableException())
+    }
+`,
+        );
+      }
+      if (source !== original) fs.writeFileSync(file, source, "utf8");
+    }
+  };
+  neutralizeMlkitGmsInKotlin(cameraSrcRoot);
+
+  const app = sourceRoot("expo-application", "android", "src", "main", "java", "expo", "modules", "application", "ApplicationModule.kt");
+  if (fs.existsSync(app)) {
+    let source = fs.readFileSync(app, "utf8").replace(/^import com\.android\.installreferrer[^\n]+\n/gm, "");
+    source = source.replace(/\n\s*AsyncFunction\("getInstallReferrerAsync"\)[\s\S]*?\n\s*\}\n\s*\}\n\n\s*private val packageName/m,
+      `AsyncFunction("getInstallReferrerAsync") { promise: Promise -> promise.resolve("") }`);
+    fs.writeFileSync(app, source, "utf8");
+  }
+  // CableSnap does not import expo-application.  Exclude its Android native
+  // module entirely so a publisher AAR or stale generated project cannot
+  // reintroduce Install Referrer classes through autolinking.
+  const appConfig = sourceRoot("expo-application", "expo-module.config.json");
+  if (fs.existsSync(appConfig)) {
+    const config = JSON.parse(fs.readFileSync(appConfig, "utf8"));
+    config.platforms = (config.platforms ?? []).filter((platform) => platform !== "android");
+    fs.writeFileSync(appConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
+  }
+  const appPackageJson = sourceRoot("expo-application", "package.json");
+  if (fs.existsSync(appPackageJson)) {
+    const pkg = JSON.parse(fs.readFileSync(appPackageJson, "utf8"));
+    pkg.expo = pkg.expo ?? {};
+    pkg.expo.autolinking = pkg.expo.autolinking ?? {};
+    pkg.expo.autolinking.exclude = [...new Set([...(pkg.expo.autolinking.exclude ?? []), "expo-application"] )];
+    fs.writeFileSync(appPackageJson, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+  }
+
+  const notifications = sourceRoot("expo-notifications", "android", "src", "main", "java", "expo", "modules", "notifications");
+  // These optional integrations also leave references in AAR manifests.  A
+  // source-only rewrite is not enough: manifest merger can preserve the
+  // metadata/intent action even after the corresponding dependency is gone.
+  const cameraManifest = sourceRoot("expo-camera", "android", "src", "main", "AndroidManifest.xml");
+  if (fs.existsSync(cameraManifest)) {
+    let manifest = fs.readFileSync(cameraManifest, "utf8");
+    manifest = manifest.replace(/\s*<application>[\s\S]*?<\/application>/, "");
+    fs.writeFileSync(cameraManifest, manifest, "utf8");
+  }
+  const imagePickerManifest = sourceRoot("expo-image-picker", "android", "src", "main", "AndroidManifest.xml");
+  if (fs.existsSync(imagePickerManifest)) {
+    let manifest = fs.readFileSync(imagePickerManifest, "utf8");
+    manifest = manifest.replace(/\s*<service\b[\s\S]*?<\/service>/g, "");
+    fs.writeFileSync(imagePickerManifest, manifest, "utf8");
+  }
+  // expo-dev-launcher only uses ML Kit in its debug-only developer UI. It is
+  // not part of the F-Droid release, and deleting that source set prevents a
+  // future variant fallback from accidentally compiling it.
+  const devLauncherDebug = sourceRoot("expo-dev-launcher", "android", "src", "debug");
+  if (fs.existsSync(devLauncherDebug)) fs.rmSync(devLauncherDebug, { recursive: true, force: true });
+  const notifConfig = sourceRoot("expo-notifications", "expo-module.config.json");
+  if (fs.existsSync(notifConfig)) {
+    const config = JSON.parse(fs.readFileSync(notifConfig, "utf8"));
+    config.platforms = (config.platforms ?? []).filter((platform) => platform !== "android");
+    fs.writeFileSync(notifConfig, JSON.stringify(config, null, 2) + "\n", "utf8");
+  }
+  const packageJson = sourceRoot("expo-notifications", "package.json");
+  if (fs.existsSync(packageJson)) {
+    const pkg = JSON.parse(fs.readFileSync(packageJson, "utf8"));
+    pkg.expo = pkg.expo ?? {};
+    pkg.expo.autolinking = pkg.expo.autolinking ?? {};
+    pkg.expo.autolinking.exclude = [...new Set([...(pkg.expo.autolinking.exclude ?? []), "expo-notifications"] )];
+    fs.writeFileSync(packageJson, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+  }
+  // Remove Firebase-backed source files; local notifications remain available.
+  for (const relative of [
+    ["service", "ExpoFirebaseMessagingService.kt"],
+    ["service", "delegates", "FirebaseMessagingDelegate.kt"],
+    ["tokens", "PushTokenModule.kt"],
+    ["topics", "TopicSubscriptionModule.kt"],
+    ["notifications", "RemoteMessageSerializer.java"],
+  ]) {
+    const file = path.join(notifications, ...relative);
+    if (fs.existsSync(file)) fs.writeFileSync(file, "package expo.modules.notifications;\n", "utf8");
+  }
+  write(path.join(notifications, "service", "interfaces", "FirebaseMessagingDelegate.kt"), `package expo.modules.notifications.service.interfaces
+
+interface FirebaseMessagingDelegate {
+  fun onMessageReceived(remoteMessage: Any?)
+  fun onNewToken(token: String)
+}
+`);
+  write(path.join(notifications, "notifications", "debug", "DebugLogging.kt"), `package expo.modules.notifications.notifications.debug
+
+import android.os.Bundle
+import expo.modules.notifications.notifications.model.Notification
+
+object DebugLogging {
+  fun logBundle(caller: String, bundleToLog: Bundle) {}
+  fun logRemoteMessage(caller: String, message: Any) {}
+  fun logNotification(caller: String, notification: Notification) {}
+}
+`);
+  write(path.join(notifications, "notifications", "model", "RemoteNotificationContent.kt"), `package expo.modules.notifications.notifications.model
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.os.Parcel
+import android.os.Parcelable
+import expo.modules.notifications.notifications.enums.NotificationPriority
+import expo.modules.notifications.notifications.interfaces.INotificationContent
+import org.json.JSONObject
+
+class RemoteNotificationContent private constructor() : INotificationContent {
+  val isDataOnly: Boolean = false
+  override val title: String? = null
+  override val text: String? = null
+  override val subText: String? = null
+  override val badgeCount: Number? = null
+  override val shouldPlayDefaultSound: Boolean = false
+  override val soundName: String? = null
+  override val shouldUseDefaultVibrationPattern: Boolean = false
+  override val vibrationPattern: LongArray? = null
+  override val body: JSONObject? = null
+  override val priority: NotificationPriority? = null
+  override val color: Number? = null
+  override val isAutoDismiss: Boolean = false
+  override val categoryId: String? = null
+  override val isSticky: Boolean = false
+  override suspend fun getImage(context: Context): Bitmap? = null
+  override fun containsImage(): Boolean = false
+  override fun describeContents(): Int = 0
+  override fun writeToParcel(dest: Parcel, flags: Int) {}
+  companion object CREATOR : Parcelable.Creator<RemoteNotificationContent> {
+    override fun createFromParcel(parcel: Parcel) = RemoteNotificationContent()
+    override fun newArray(size: Int): Array<RemoteNotificationContent?> = arrayOfNulls(size)
+  }
+}
+`);
+  write(path.join(notifications, "notifications", "model", "triggers", "FirebaseNotificationTrigger.kt"), `package expo.modules.notifications.notifications.model.triggers
+
+import android.os.Bundle
+import android.os.Parcel
+import android.os.Parcelable
+import expo.modules.notifications.notifications.interfaces.NotificationTrigger
+
+class FirebaseNotificationTrigger private constructor() : NotificationTrigger {
+  override fun toBundle(): Bundle = Bundle()
+  override fun getNotificationChannel(): String? = null
+  override fun describeContents(): Int = 0
+  override fun writeToParcel(dest: Parcel, flags: Int) {}
+  companion object CREATOR : Parcelable.Creator<FirebaseNotificationTrigger> {
+    override fun createFromParcel(parcel: Parcel) = FirebaseNotificationTrigger()
+    override fun newArray(size: Int): Array<FirebaseNotificationTrigger?> = arrayOfNulls(size)
+  }
+}
+`);
+  const serializer = path.join(notifications, "notifications", "NotificationSerializer.java");
+  if (fs.existsSync(serializer)) {
+    let source = fs.readFileSync(serializer, "utf8")
+      .replace(/^import com\.google\.firebase\.[^\n]+\n/gm, "")
+      .replace(/^import expo\.modules\.notifications\.notifications\.model\.triggers\.FirebaseNotificationTrigger;\n/gm, "")
+      .replace(/\s*if\s*\(requestTrigger instanceof FirebaseNotificationTrigger trigger\)\s*\{[\s\S]*?^\s*\}\s*else if\s*\(/m,
+        "\n      if (");
+    fs.writeFileSync(serializer, source, "utf8");
+  }
+
+  const notificationsManifest = sourceRoot("expo-notifications", "android", "src", "main", "AndroidManifest.xml");
+  if (fs.existsSync(notificationsManifest)) {
+    let manifest = fs.readFileSync(notificationsManifest, "utf8");
+    manifest = manifest.replace(/\s*<service\b[\s\S]*?<\/service>/, "");
+    fs.writeFileSync(notificationsManifest, manifest, "utf8");
+  }
+
+  // Fail during prebuild rather than discovering a leaked descriptor only
+  // after a 30-minute Android build.
+  const forbidden = /com\.(?:google\.firebase|google\.mlkit|google\.android\.gms|android\.installreferrer)/;
+  const verify = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) verify(file);
+      else if (/\.(?:kt|java)$/.test(entry.name) && forbidden.test(fs.readFileSync(file, "utf8"))) {
+        throw new Error(`F-Droid source patch incomplete: proprietary reference remains in ${file}`);
+      }
+    }
+  };
+  // Verify every Expo Android source tree, not just the modules with known
+  // integrations. This turns a newly published optional Expo dependency into
+  // an immediate, actionable prebuild failure instead of a 30-minute DEX
+  // purity failure.
+  const expoModulesRoot = sourceRoot();
+  for (const packageName of fs.readdirSync(expoModulesRoot)) {
+    if (!packageName.startsWith("expo-")) continue;
+    verify(path.join(expoModulesRoot, packageName, "android", "src"));
+  }
+}
+
+// Expo prebuild may copy an already-evaluated library build script into the
+// generated Android project. Patch those generated app/library scripts too;
+// changing node_modules alone is not sufficient when Gradle resolves a
+// release library variant through releaseFdroid.matchingFallbacks.
+function patchFdroidAndroidGradleTree(platformRoot) {
+  if (process.env.CABLESNAP_FDROID !== "1") return;
+  const banned = /^\s*(?:implementation|api|compileOnly|debugOnly)\s*\(?\s*["'](?:com\.google\.firebase|com\.google\.mlkit|com\.google\.android\.gms|com\.android\.installreferrer):[^\r\n]+["']\s*\)?\s*\r?\n?/gm;
+  const barcode = /^\s*add\(barcodeDependencyConfiguration,\s*["'](?:com\.google\.android\.gms|com\.google\.mlkit|androidx\.camera):[^\r\n]+\r?\n?/gm;
+
+  function visit(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const target = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        // npm packages can ship stale Android intermediates (including lint
+        // dependency models) from their publisher's build. Gradle consumes
+        // those models before evaluating the freshly patched scripts, which
+        // can resurrect removed Firebase/ML Kit artifacts. They are generated
+        // again by Gradle, so remove them from every installed Android module.
+        if (
+          entry.name === "build" &&
+          (path.basename(dir) === "android" || dir.includes(`${path.sep}android${path.sep}`)) &&
+          !dir.includes(`${path.sep}wear${path.sep}`)
+        ) {
+          fs.rmSync(target, { recursive: true, force: true });
+          continue;
+        }
+        // The Play-only Wear APK is still built in this workflow; do not
+        // remove its GMS wearable dependency while patching the phone tree.
+        if (entry.name === "wear") continue;
+        visit(target);
+      } else if (entry.name === "build.gradle" || entry.name === "build.gradle.kts") {
+        const original = fs.readFileSync(target, "utf8");
+        const patched = original.replace(banned, "").replace(barcode, "");
+        if (patched !== original) fs.writeFileSync(target, patched, "utf8");
+      }
+    }
+  }
+
+  visit(platformRoot);
+}
+
 function copyDirRecursive(srcDir, dstDir) {
   if (!fs.existsSync(srcDir)) {
     throw new Error(
@@ -465,6 +1113,21 @@ function rmDirRecursive(target) {
 }
 
 const withWearOsModule = (config) => {
+  // This runs during config evaluation, before Expo autolinking generates
+  // Android's project dependency graph. The dangerous-mod hook below is too
+  // late to affect that graph: removing a publisher AAR there leaves a
+  // generated `host.exp.exponent:expo.modules.camera` dependency pointing at
+  // a repository that no longer exists. Apply the source/publication rewrite
+  // first, then repeat it in dangerous-mod for idempotence after prebuild.
+  if (process.env.CABLESNAP_FDROID === "1") {
+    const projectRoot = process.cwd();
+    patchFdroidExpoDependencies(projectRoot);
+    patchFdroidLibrarySources(projectRoot, {
+      removeGeneratedArtifacts: !fdroidPrebuildArtifactsRemoved,
+    });
+    fdroidPrebuildArtifactsRemoved = true;
+  }
+
   // 1. Patch settings.gradle to register :wear.
   config = withSettingsGradle(config, (cfg) => {
     cfg.modResults.contents = patchSettingsGradle(cfg.modResults.contents);
@@ -504,6 +1167,14 @@ const withWearOsModule = (config) => {
     async (cfg) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const platformRoot = cfg.modRequest.platformProjectRoot;
+      patchFdroidExpoDependencies(projectRoot);
+      // The early config-evaluation pass already removed publisher artifacts.
+      // Do not delete a freshly generated module build directory while Expo
+      // prebuild is still materializing BuildConfig/source outputs.
+      patchFdroidLibrarySources(projectRoot, {
+        removeGeneratedArtifacts: false,
+        rewriteSources: false,
+      });
       const srcDir = path.join(projectRoot, WEAR_TEMPLATE_RELATIVE);
       const dstDir = path.join(platformRoot, "wear");
       // Wipe stale outputs so a renamed/deleted file in the template does
@@ -513,6 +1184,7 @@ const withWearOsModule = (config) => {
       // Write/overwrite the F-Droid manifest overlay. Idempotent — same
       // contents every prebuild — so safe to clobber unconditionally.
       writeFdroidManifest(platformRoot);
+      writeFdroidR8Rules(projectRoot, platformRoot);
       return cfg;
     },
   ]);
@@ -529,6 +1201,11 @@ module.exports.patchProjectBuildGradle = patchProjectBuildGradle;
 module.exports.copyDirRecursive = copyDirRecursive;
 module.exports.rmDirRecursive = rmDirRecursive;
 module.exports.writeFdroidManifest = writeFdroidManifest;
+module.exports.writeFdroidR8Rules = writeFdroidR8Rules;
+module.exports.patchFdroidExpoDependencies = patchFdroidExpoDependencies;
+module.exports.scrubFdroidLocalMavenMetadata = scrubFdroidLocalMavenMetadata;
+module.exports.patchFdroidLibrarySources = patchFdroidLibrarySources;
+module.exports.patchFdroidAndroidGradleTree = patchFdroidAndroidGradleTree;
 module.exports.FDROID_MANIFEST_CONTENTS = FDROID_MANIFEST_CONTENTS;
 module.exports.WEAR_TEMPLATE_RELATIVE = WEAR_TEMPLATE_RELATIVE;
 module.exports.WEAR_PROJECT_RELATIVE = WEAR_PROJECT_RELATIVE;

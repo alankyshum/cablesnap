@@ -22,7 +22,173 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
+
+ - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
+ - Fixed exercise selection scrolling on compact screens.
+
+## v0.26.99 — 2026-08-18
+<!-- versionCode: 167 -->
+
+- Migrated self-hosted F-Droid Play-flavor releases to the persistent production signing certificate; users on the boundary release must reinstall CableSnap once.
+
+
+## v0.26.98 — 2026-08-18
+<!-- versionCode: 166 -->
+
+- Charts now work in the F-Droid build.
+- Progress, workout, nutrition, body, and muscle-volume charts now render consistently across supported platforms.
+
+## v0.26.97 — 2026-08-03
+<!-- versionCode: 165 -->
+
+- Importing a backup now shows clear progress, so large backups no longer appear to freeze.
+- Your settings, workouts, and custom content now restore correctly when an imported backup overlaps with built-in content.
+- Re-importing a backup now clearly tells you when its contents are already imported.
+- Buttons, tabs, bottom sheets, and toasts now have smoother, more refined motion and a more physical feel.
+- Filter chips are now easier to tap.
+- Backup imports now remain responsive while restoring larger files.
+
+## v0.26.96 — 2026-07-31
+<!-- versionCode: 164 -->
+
+- **Set rows on the workout summary screen now have increased vertical spacing**, improving readability of exercise sets at a glance. ([BLD-4546](/BLD/issues/BLD-4546))
+
+## v0.26.95 — 2026-07-31
+<!-- versionCode: 163 -->
+
+- Bottom sheets now expand their scrollable content at higher snap points and coordinate dragging with inner scrolling, keeping actions reachable.
+
+## v0.26.94 — 2026-07-30
+<!-- versionCode: 162 -->
+
+- F-Droid builds no longer include the Sentry crash-reporting dependency; crash reporting remains enabled in Play builds.
+
+## v0.26.93 — 2026-07-30
+<!-- versionCode: 161 -->
+
+- F-Droid builds now show an explicit “Charts unavailable in this build” message
+  instead of blank chart areas while keeping full chart rendering in Play and
+  development builds.
+
+## v0.26.92 — 2026-07-28
+<!-- versionCode: 160 -->
+
+- **Ellipsis (overflow) menu button on form library cards is now inset 6 dp from the top-right corner**, matching the check-overlay affordance for consistent touch target placement. ([BLD-4548](/BLD/issues/BLD-4548))
+- Left-align the "Set a goal" button in Weekly Training Goal settings so it
+  matches the padding of surrounding rows. ([BLD-4537](/BLD/issues/BLD-4537))
+
+## v0.26.91 — 2026-07-28
+<!-- versionCode: 159 -->
+
+- F-Droid now uses the standard Android `release` variant, avoiding creation of
+  an app-only build type that cannot be consumed by React Native libraries.
+
+## v0.26.90 — 2026-07-28
+<!-- versionCode: 158 -->
+
+- **F-Droid Camera source stubs now retain the image-plane conversion helper and typed empty barcode results**, keeping preview/capture compilation intact after ML Kit removal.
+- **F-Droid Camera scanner rewriting now preserves the complete Kotlin module**, removing only the proprietary scanner block so camera capture functions continue to compile.
+- **F-Droid cleanup now leaves Gradle-generated Expo build directories untouched**, preventing repeated prebuild cleanup from breaking Camera compilation inputs.
+- **F-Droid prebuild now removes Expo publisher artifacts only once per config evaluation**, avoiding repeated cleanup races with Gradle-generated Camera BuildConfig inputs.
+- **F-Droid Wear OS build step now exports CABLESNAP_FDROID=1**, ensuring Gradle configurations and dependencies remain fully consistent across all compilation steps and preventing incremental build failures. ([BLD-4482](/BLD/issues/BLD-4482))
+- **F-Droid’s post-prebuild sanitization now preserves generated Expo module inputs**, avoiding Gradle fingerprint failures while keeping the source-level proprietary-class removal intact.
+- **F-Droid proprietary-dependency excludes are now scoped to `:app` only**, unblocking the Scheduled Release build after a global-scope regression broke `:expo-camera` in both F-Droid and Play variants.
+- **F-Droid source sanitization no longer deletes freshly generated Expo BuildConfig outputs**, allowing the sanitized Camera module to compile cleanly during prebuild.
+- **F-Droid Camera autolinking now compiles sanitized source instead of the publisher AAR**, eliminating the remaining ML Kit and Google Play Services barcode classes.
+- **F-Droid CI now sanitizes Expo modules before prebuild autolinking**, preventing clean native generation from selecting proprietary publisher AARs.
+- **F-Droid sanitization now runs before Expo autolinking**, so the generated Android graph cannot retain a dependency on a deleted proprietary Expo AAR.
+- **F-Droid prebuild now removes Expo publisher AAR repositories**, ensuring sanitized source is compiled instead of prebuilt Camera bytecode containing proprietary classes.
+- **F-Droid dependency metadata is now scrubbed before Gradle resolution**, preventing Expo local Maven POM/module files from restoring proprietary Camera artifacts.
+- **F-Droid prebuild now removes stale Expo Android build artifacts**, preventing publisher AARs from restoring proprietary Camera classes after source sanitization.
+- **F-Droid prebuild now copies its R8 rules into the generated app**, preserving the missing-optional-class handling on every clean native regeneration.
+- **F-Droid barcode scanning now neutralizes every expo-camera ML Kit/GMS call path**, including newly added scanner entry points, while the open-source ZXing scanner remains enabled.
+- **F-Droid Expo modules now compile sanitized source instead of publisher AARs**, preventing prebuilt Camera and notification bytecode from restoring ML Kit, Firebase, or Play Services classes.
+- **F-Droid autolinking now omits unused expo-application**, preventing Install Referrer classes from entering the native module graph.
+- **F-Droid sanitization now covers every installed Expo Android module**, including debug-only ML Kit declarations that could otherwise re-enter the release dependency graph.
+- **F-Droid builds now remove proprietary Expo manifest references**, keeping the APK free of Firebase, ML Kit, Google Play Services, and Install Referrer class descriptors while retaining ZXing barcode scanning.
+- **Form library Select button spacing now matches the Record pill**, giving the session header controls consistent horizontal padding.
+- **Record and Done button spacing** — Increases the margin above the Record and Done buttons on the Form clips tab for more consistent spacing. ([BLD-4033](/BLD/issues/BLD-4033))
+- **Consistent padding for "Set a goal" button** — Adjusts the vertical padding around the "Set a goal" button in frequency settings for consistency with other cards. ([BLD-4044](/BLD/issues/BLD-4044))
+- **Word-order-independent exercise search** — Allows finding exercises by typing words in any order (e.g. "press bench" matches "Bench Press"). ([BLD-4157](/BLD/issues/BLD-4157))
+- **Food barcode scanning now uses a fully open-source ZXing scanner**, with the same camera overlay and supported food-barcode formats.
+- **F-Droid store metadata is now maintained in this repository**, including the app description, screenshots, icon, and release notes.
+- **Progress calendar toggle is easier to tap**, increasing the list/calendar switch touch target to meet the 44dp accessibility minimum. ([BLD-4077](/BLD/issues/BLD-4077))
+- **F-Droid builds now exclude Firebase, ML Kit, Google Play Services, and Install Referrer dependencies**, keeping proprietary classes out of the APK.
+- **F-Droid runtime resolution now removes direct proprietary Expo dependencies**, preventing those classes from entering the APK.
+- **F-Droid builds keep proprietary Expo dependencies compile-only**, preserving native compilation while excluding their classes from runtime packaging.
+- **F-Droid dependency stripping now applies before Android library dependencies resolve**, covering direct Expo module declarations as well as transitive dependencies.
+- **F-Droid library dependency filtering now runs after each Expo library evaluates**, ensuring direct proprietary declarations are removed before APK packaging.
+- **F-Droid prebuild rewrites direct proprietary Expo library dependencies to compile-only**, preventing them from being packaged while retaining native compilation.
+- **F-Droid Gradle setup rewrites direct proprietary dependencies before subprojects evaluate**, preventing runtime packaging across Expo modules.
+- **F-Droid prebuild disables Expo Camera barcode dependencies**, keeping camera preview available without ML Kit or Google Play Services classes.
+- **F-Droid library resolution moves proprietary direct dependencies to compile-only**, removing them from release runtime packaging.
+- **F-Droid prebuild rewrites Firebase and Install Referrer declarations before Gradle evaluation**, while disabling Camera barcode dependency resolution.
+- **F-Droid dependency filtering now runs from Gradle settings before project evaluation**, so Expo subproject declarations cannot reintroduce proprietary runtime artifacts.
+- **F-Droid Expo Camera barcode artifacts are compile-only**, removing direct Play Services, ML Kit, and Camera ML Kit runtime dependencies.
+- **F-Droid prebuild patches Expo dependency declarations at source**, ensuring direct proprietary artifacts cannot re-enter the generated Android graph.
+- **F-Droid settings filtering also rewrites Expo Camera’s barcode declarations**, covering direct Play Services, ML Kit, and Camera ML Kit dependencies before subproject evaluation.
+- **F-Droid release CI explicitly reapplies dependency stripping after prebuild**, preventing native project generation order from restoring proprietary Expo artifacts.
+- **F-Droid barcode scanning now strips the unused proprietary Expo Camera scanner dependencies**, while the open-source ZXing scanner remains available.
+- **F-Droid Gradle resolution now rejects proprietary dependency groups outright**, preventing transitive Firebase, ML Kit, Play Services, or Install Referrer classes from entering the APK.
+- **F-Droid dependency patching removes proprietary declarations instead of retaining compile-only artifacts**, ensuring Firebase and Install Referrer classes cannot be packaged.
+- **F-Droid prebuild now removes Expo Camera barcode artifacts declared through Gradle’s `add()` helper**, closing the remaining ML Kit and Play Services packaging path.
+
+- **F-Droid builds now remove proprietary Firebase and Install Referrer declarations before variant resolution**, preventing those classes from leaking into the release APK.
+
+- **F-Droid dependency filtering now removes proprietary declarations from every Gradle configuration**, including compile-only and debug-only paths inherited during variant fallback.
+
+- **F-Droid prebuild now sanitizes all generated and installed Expo Gradle scripts**, preventing dormant scanner or launcher dependencies from re-entering the APK.
+
+- **F-Droid prebuild now removes all Expo Camera barcode configurations**, including the CameraX ML Kit vision artifact, while retaining the embedded ZXing scanner.
+
+- **F-Droid Gradle sanitization now handles parenthesized dependency declarations**, covering Expo modules that declare proprietary artifacts with `implementation("...")` syntax.
+
+- **Release CI builds the F-Droid variant before the Play variant**, preventing Play-only Expo intermediates from being reused in the F-Droid APK.
+
+- **F-Droid dependency cleanup runs after native project generation**, ensuring all generated Expo scripts are sanitized before Gradle resolves the APK dependency graph.
+
+- **F-Droid CI disables Expo Camera’s optional barcode dependency graph**, while CableSnap continues using the embedded open-source ZXing scanner on Android.
+
+- **F-Droid prebuild now clears generated Android build intermediates before dependency resolution**, preventing stale proprietary AAR models from being reused after the Gradle scripts are sanitized.
+
+- **F-Droid release CI now clears generated APK intermediates and reapplies app-level dependency exclusions after prebuild**, preventing stale or fallback Expo artifacts from entering the F-Droid dex merge.
+
+- **F-Droid and Play Android builds now run in separate Gradle invocations**, preventing their variant graphs from sharing proprietary release artifacts.
+
+- **The isolated F-Droid build now refreshes dependency resolution and checks DEX purity before Play is built**, making any dependency-graph regression fail at its source.
+
+- **F-Droid Gradle cleanup now removes proprietary dependencies after every Expo project has evaluated**, covering fallback release configurations that are declared too late for settings-time filtering.
+
+- **F-Droid CI now clears Gradle’s transformed-AAR cache before the isolated build**, preventing stale proprietary artifacts from surviving project cleanup and entering the DEX merge.
+
+- **The F-Droid release variant now enables R8 shrinking**, removing unreachable compile-only proprietary classes while retaining the open-source ZXing scanner.
+
+- **F-Droid R8 configuration now treats absent optional Expo integration types as intentional**, allowing unreachable Firebase, ML Kit, Play Services, and Install Referrer code to be removed cleanly.
+
+- **F-Droid R8 now ignores missing optional integration warnings after stripping those dependencies**, allowing the release shrinker to finish and remove the unreachable code paths.
+
+- **F-Droid R8 now ignores missing optional integration warnings after stripping those dependencies**, allowing the release shrinker to finish and remove the unreachable code paths.
+
+- **F-Droid build setup now removes stale project and transformed-AAR intermediates before dependency resolution**, keeping the isolated build reproducible after failed attempts.
+
+- **F-Droid prebuild now replaces Expo Camera, Application, and Notifications proprietary source paths with FOSS-safe stubs**, preventing proprietary class descriptors from being emitted into DEX.
+
+- **F-Droid source sanitization now removes Firebase-backed notification serializers and trigger models as well**, keeping the complete Expo Notifications source graph free of proprietary references.
+
+- **F-Droid CI now invokes source sanitization explicitly after prebuild**, ensuring the generated native project uses the same clean source graph as the config plugin.
+- **Improved Progress empty-state text contrast** — Increases the contrast of the description text on the Progress tab empty-state screen to meet WCAG AA guidelines. ([BLD-3657](/BLD/issues/BLD-3657))
+
+
+## v0.26.89 — 2026-07-26
+<!-- versionCode: 157 -->
+
 - **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
+- **Nutrition card link padding** — Adds consistent edge padding to the Edit Targets and Meal Templates link rows in the nutrition card for better touch targets and visual alignment. ([BLD-4043](/BLD/issues/BLD-4043))
+- **Aligned water quick-add buttons** — Water quick-add chips now stay vertically centered on each row, fixing a slight misalignment visible on mobile. ([BLD-4042](/BLD/issues/BLD-4042))
 - **Consistent section spacing on History** — Standardises the vertical gap between section headers and their content across the workout-history screen for a more even visual rhythm. ([BLD-4051](/BLD/issues/BLD-4051))
 
 ## v0.26.88 — 2026-07-26
