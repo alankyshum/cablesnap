@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Migrated self-hosted F-Droid Play-flavor releases to the persistent production signing certificate; users on the boundary release must reinstall CableSnap once.
+
 
 ## v0.26.98 — 2026-08-18
 <!-- versionCode: 166 -->
