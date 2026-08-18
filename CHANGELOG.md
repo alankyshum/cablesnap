@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Changelog gate checks no longer fail spuriously from SIGPIPE (exit 141)** when matching changed files or labels.
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
