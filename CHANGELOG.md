@@ -22,6 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
+- **Pacing breakdown headers no longer truncate on mobile** — The exercise column now gives the Working, Rest, and Other headers enough room to remain readable.
+
 - **Estimated pacing bar now distinguishable under tritanopia** — the Working and Rest segments on the post-workout Estimated pacing card previously used two colours (coral and blue) that collapsed to near-identical luminance under blue-yellow colour vision deficiency, making the segments hard to tell apart. The Rest segment now uses a dedicated CVD-hardened colour (deep petrol blue in light theme, pale cyan in dark theme) that stays visually distinct from the Working coral under tritanopia while remaining distinguishable under deuteranopia, protanopia, and grayscale. Segment labels, overlays, and the RecoveryHeatmap surface are unchanged. ([BLD-3872](/BLD/issues/BLD-3872))
 - **Protanopia-safe pacing bar dividers** — Adds high-contrast, theme-aware vertical hairline dividers between the adjacent Working, Rest, and Other segments on the post-workout Estimated pacing bar, ensuring clear boundaries under protanopia and other color vision deficiencies. ([BLD-3871](/BLD/issues/BLD-3871))
 - **Inline Plate Calculator** — A plate calculator is now accessible directly from the active set row while logging. Tap the weight hint to open a bottom-sheet calculator without leaving the workout. ([BLD-3820](/BLD/issues/BLD-3820))
