@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Form library card spacing is now aligned consistently by removing the extra top margin.
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
