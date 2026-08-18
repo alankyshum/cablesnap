@@ -66,6 +66,7 @@ describe("Sentry init — BLD-2446 localhost/CI event filter (source snapshot)",
     expect(source).toContain("enabled: sentryEnabled");
     expect(configSource).toContain('const isFdroidBuild = process.env.CABLESNAP_FDROID === "1";');
     expect(configSource).toContain("fdroidBuild: isFdroidBuild");
+    expect(configSource).toContain('distributionChannel: isFdroidBuild ? "fdroid" : "github"');
     expect(configSource).toContain("sentryDsn:");
     expect(source).not.toContain("https://c61278ad2a774c2e586454f017d4b86f@");
     expect(source).toContain("...(sentryEnabled && sentryDsn ? { dsn: sentryDsn } : {})");

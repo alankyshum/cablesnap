@@ -26,6 +26,7 @@ test.describe("Chip vertical alignment", () => {
         if (!text || text.length > 30 || text.length === 1) continue;
 
         const outerHeight = el.getBoundingClientRect().height;
+        if (outerHeight > 60) continue; // Skip large cards/dialogs
         const inner = el.querySelector("div");
         if (!inner) continue;
         const innerHeight = inner.getBoundingClientRect().height;
@@ -61,6 +62,7 @@ test.describe("Chip vertical alignment", () => {
         if (!text || text.length > 30 || text.length === 1) continue;
 
         const outerRect = el.getBoundingClientRect();
+        if (outerRect.height > 60) continue; // Skip large cards/dialogs
         const textNodes = el.querySelectorAll('[dir="auto"]');
         for (const tn of textNodes) {
           const textRect = tn.getBoundingClientRect();
