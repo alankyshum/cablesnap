@@ -23,6 +23,9 @@ marker) at release time.
 ## Unreleased
 
 - Settings: uniform vertical rhythm between Units and Appearance toggle rows (uses `spacing.sm` token; no more compounding `marginBottom`+`marginTop`).
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
