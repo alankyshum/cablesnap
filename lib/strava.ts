@@ -18,6 +18,7 @@ import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
+import { GITHUB_REPO_URL } from "@/constants/github";
 import {
   getStravaConnection,
   deleteStravaConnection,
@@ -307,7 +308,7 @@ export async function isStravaConnected(): Promise<boolean> {
 
 // ---- Activity Upload ----
 
-export const DEFAULT_STRAVA_ATTRIBUTION = "Powered by CableSnap — plan & track your workouts\nhttps://github.com/alankyshum/cablesnap";
+export const DEFAULT_STRAVA_ATTRIBUTION = `Powered by CableSnap — plan & track your workouts\n${GITHUB_REPO_URL}`;
 
 function formatSetDesc(s: { weight: number | null; reps: number | null }, weightUnit: string): string {
   if (s.weight && s.reps) return `${s.weight}${weightUnit} × ${s.reps}`;

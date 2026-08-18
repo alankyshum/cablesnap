@@ -2,8 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
-import { CartesianChart, Bar } from "victory-native";
-import { ChartGate } from "@/components/ui/ChartGate";
+import { BarChart } from "@/components/charts";
 import { formatDuration, formatDateShort } from "../../lib/format";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
@@ -33,25 +32,16 @@ export function WorkoutChartCard({ title, data, chartWidth, style }: ChartCardPr
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
         {title}
       </Text>
-      <View style={{ width: chartWidth, height: 180 }}>
-        <ChartGate>
-          <CartesianChart
-            data={data}
-            xKey="x"
-            yKeys={["y"]}
-            domainPadding={{ left: 20, right: 20 }}
-          >
-            {({ points, chartBounds }) => (
-              <Bar
-                points={points.y}
-                chartBounds={chartBounds}
-                color={colors.primary}
-                roundedCorners={{ topLeft: 4, topRight: 4 }}
-              />
-            )}
-          </CartesianChart>
-        </ChartGate>
-      </View>
+      <BarChart
+        values={data.map((d) => d.y)}
+        labels={data.map((d) => d.x)}
+        color={colors.primary}
+        labelColor={colors.onSurfaceVariant}
+        cornerRadius={4}
+        padding={{ left: 20, right: 20 }}
+        height={180}
+        width={chartWidth}
+      />
     </Card>
   );
 }

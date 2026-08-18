@@ -1,11 +1,13 @@
-import React, { memo, useEffect, useMemo, useState } from "react";
-import { StyleSheet } from "react-native";
+import React, { memo, useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { StyleSheet, Pressable } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getAppSetting } from "../../lib/db";
 import { solve, perSide, KG_PLATES, LB_PLATES } from "../../lib/plates";
 import type { Equipment } from "../../lib/types";
 import { fontSizes } from "@/constants/design-tokens";
+import { BottomSheetModal } from "@gorhom/bottom-sheet";
+import { InlinePlateSheet } from "./InlinePlateSheet";
 
 type Props = {
   weight: number | null;
@@ -22,6 +24,7 @@ export const PlateHint = memo(function PlateHint({ weight, unit, equipment }: Pr
   const defaultBarWeight = unit === "lb" ? 45 : 20;
   const [storedBarWeights, setStoredBarWeights] = useState<Partial<Record<"kg" | "lb", number>>>({});
   const barWeight = storedBarWeights[unit] ?? defaultBarWeight;
+  const sheetRef = useRef<BottomSheetModal>(null);
 
   useEffect(() => {
     let active = true;
@@ -56,19 +59,48 @@ export const PlateHint = memo(function PlateHint({ weight, unit, equipment }: Pr
     return { plateText, approx, accessibilityLabel };
   }, [barWeight, weight, unit, equipment]);
 
+  const handlePress = useCallback(() => {
+    sheetRef.current?.present();
+  }, []);
+
+  const handleBarChanged = useCallback((newBar: number) => {
+    setStoredBarWeights((prev) => ({ ...prev, [unit]: newBar }));
+  }, [unit]);
+
   if (!hint) return null;
 
   return (
-    <Text
-      style={[styles.hint, { color: colors.onSurfaceVariant }]}
-      accessibilityLabel={hint.accessibilityLabel}
-    >
-      {hint.approx ? "≈ " : ""}Per side: {hint.plateText}
-    </Text>
+    <>
+      <Pressable
+        style={styles.pressable}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={hint.accessibilityLabel}
+        accessibilityHint="Opens the plate calculator"
+      >
+        <Text
+          style={[styles.hint, { color: colors.onSurfaceVariant }]}
+          accessible={false}
+        >
+          {hint.approx ? "≈ " : ""}Per side: {hint.plateText} ▸
+        </Text>
+      </Pressable>
+      <InlinePlateSheet
+        sheetRef={sheetRef}
+        initialWeight={weight != null ? String(weight) : ""}
+        unit={unit}
+        onBarChanged={handleBarChanged}
+      />
+    </>
   );
 });
 
 const styles = StyleSheet.create({
+  pressable: {
+    paddingVertical: 2,
+    alignSelf: "center",
+  },
   hint: {
     fontSize: fontSizes.xs,
     textAlign: "center",

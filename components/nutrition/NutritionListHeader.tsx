@@ -338,5 +338,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
+    minHeight: 44,
+    paddingVertical: 8,
+    marginHorizontal: -8,
+    paddingHorizontal: 16,
   },
 });
