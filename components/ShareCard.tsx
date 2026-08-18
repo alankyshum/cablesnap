@@ -8,6 +8,7 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 import { ShareCardStats } from "./share/ShareCardStats";
 import { ShareCardExercises } from "./share/ShareCardExercises";
 import { fontSizes } from "@/constants/design-tokens";
+import { GITHUB_REPO_URL } from "@/constants/github";
 
 export type ShareCardExercise = {
   name: string;
@@ -125,7 +126,7 @@ export default function ShareCard(props: ShareCardProps) {
         <Text
           style={[cardStyles.footerText, { color: colors.onSurfaceVariant }]}
         >
-          https://github.com/alankyshum/cablesnap
+          {GITHUB_REPO_URL}
         </Text>
       </View>
     </View>

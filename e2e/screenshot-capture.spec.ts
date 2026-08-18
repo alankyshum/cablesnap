@@ -69,7 +69,11 @@ test.beforeAll(() => {
 });
 
 test.describe("Screenshot Capture -- All Screens", () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(
+      testInfo.project.name.startsWith("store-"),
+      "Store viewports captured with seed data in Screenshot Capture -- Store",
+    );
     await skipOnboarding(page);
   });
 
@@ -83,6 +87,13 @@ test.describe("Screenshot Capture -- All Screens", () => {
 });
 
 test.describe("Screenshot Capture -- Onboarding", () => {
+  test.beforeEach(async (_, testInfo) => {
+    test.skip(
+      testInfo.project.name.startsWith("store-"),
+      "Onboarding screens not used for store screenshots",
+    );
+  });
+
   for (const screen of ONBOARDING_SCREENS) {
     test(`capture ${screen.name}`, async ({ page }, testInfo) => {
       const viewport = testInfo.project.name;
@@ -136,33 +147,21 @@ test.describe("Screenshot Capture -- Store", () => {
         timeout: 15_000,
       });
 
-      // BLD-2078: wait for react-native-skia's CanvasKit WASM to finish loading
-      // so victory-native charts render their real content rather than the
-      // `ChartGate` loading placeholder. On the static `npx serve` host the WASM
-      // streaming-compile is rejected and CanvasKit falls back to a slower
-      // ArrayBuffer instantiation, so this can take a few seconds.
-      await page.waitForFunction(
-        () => typeof (globalThis as { CanvasKit?: unknown }).CanvasKit !== "undefined",
-        undefined,
-        { timeout: 20_000 },
-      );
-
       // Crash gates — the capture MUST FAIL if the Progress tab (or any store
       // screen) renders a crash surface instead of real UI. Two distinct
       // surfaces can appear (BLD-2078 review):
       //   1. the raw Expo/React dev overlay ("Uncaught Error"), and
       //   2. the app ErrorBoundary fallback ("Something went wrong"), which
       //      SWALLOWS the throw — so asserting only (1) gives a false green.
-      // We also assert the specific CanvasKit symptom so a regression is
-      // self-describing in CI output.
       await expect(page.getByText("Uncaught Error")).toHaveCount(0);
       await expect(page.getByText("Something went wrong")).toHaveCount(0);
-      await expect(
-        page.getByText(/Cannot read properties of undefined/),
-      ).toHaveCount(0);
 
-      // Let charts paint after CanvasKit is ready.
-      await page.waitForTimeout(1_000);
+      if (screen.path === "/nutrition" || screen.path === "/progress") {
+        await page.locator("svg").first().waitFor({
+          state: "visible",
+          timeout: 20_000,
+        });
+      }
 
       await page.screenshot({ path: filepath, fullPage: false });
     });
