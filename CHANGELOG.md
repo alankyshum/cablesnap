@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Left-align the filter chips on the History screen** to align perfectly with the search input icon. ([BLD-4520](/BLD/issues/BLD-4520))
+- **CI Playwright scenario assertions now skip visual/CVD screenshot work in assert-only mode**, preserving DOM and crash-guard coverage while avoiding unnecessary PR-gate overhead.
 
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->
