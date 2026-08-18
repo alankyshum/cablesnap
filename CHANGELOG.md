@@ -23,6 +23,9 @@ marker) at release time.
 ## Unreleased
 
 - **Settings "Choose CSV File" button now meets 44dp touch-target guidance** by using the default button size (was `sm`/38px). (BLD-4534)
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
