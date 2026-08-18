@@ -59,8 +59,9 @@ android {
 }
 
 dependencies {
-  // GMS Wearable is a transitive dep of this library, NOT a root phone-app
-  // dep. The Config Plugin emits `releaseFdroid{Impl,Runtime,Compile}` excludes
+  // Keep GMS Wearable on the Play phone APK classpath. It is transitive from
+  // this library, NOT a root phone-app dep; the Config Plugin emits
+  // `releaseFdroid{Impl,Runtime,Compile}` excludes
   // in :app for both `com.google.android.gms` (group) and `expo-wearos-bridge`
   // (module), so neither this library's classes nor GMS Wearable land in
   // app-releaseFdroid.apk. AC10b: zero gms.wearable classes in the F-Droid APK.

@@ -3,6 +3,7 @@ import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
 import { useColor } from '@/hooks/useColor';
 import { BORDER_RADIUS, CORNERS, FONT_SIZE, HEIGHT } from '@/theme/globals';
+import { radii, spacing, interiorSpring } from '@/constants/design-tokens';
 import React, {
   createContext,
   useCallback,
@@ -25,6 +26,8 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  withSpring,
+  useReducedMotion,
 } from 'react-native-reanimated';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -368,20 +371,44 @@ function CarouselContainer({
 }
 
 export function TabsList({ children, style }: TabsListProps) {
-  const { orientation } = useTabsContext();
+  const { orientation, activeTab, tabValues } = useTabsContext();
   const backgroundColor = useColor('muted');
+  const activeBackgroundColor = useColor('background');
+  const activeIndex = Math.max(0, tabValues.indexOf(activeTab));
+  const reducedMotion = typeof useReducedMotion === 'function' ? useReducedMotion() : false;
+  const indicatorIndex = useSharedValue(activeIndex);
+  indicatorIndex.value = reducedMotion
+    ? activeIndex
+    : withSpring(activeIndex, interiorSpring.tabIndicator);
+  const indicatorStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: `${indicatorIndex.value * 100}%` as unknown as number }],
+  }));
 
   return (
     <View
       style={[
         {
-          padding: 6,
+          padding: spacing.xs,
           backgroundColor,
-          borderRadius: orientation === 'horizontal' ? CORNERS : BORDER_RADIUS,
+          borderRadius: orientation === 'horizontal' ? radii.pill : radii.lg,
         },
         style,
       ]}
     >
+      {orientation === 'horizontal' && tabValues.length > 0 && (
+        <Animated.View
+          pointerEvents="none"
+          style={[{
+            position: 'absolute',
+            left: spacing.xs,
+            top: spacing.xs,
+            bottom: spacing.xs,
+            width: `${100 / tabValues.length}%`,
+            backgroundColor: activeBackgroundColor,
+            borderRadius: radii.pill,
+          }, indicatorStyle]}
+        />
+      )}
       <ScrollView
         horizontal={orientation === 'horizontal'}
         showsHorizontalScrollIndicator={false}
@@ -416,7 +443,6 @@ export function TabsTrigger({
 
   const primaryColor = useColor('primary');
   const mutedForegroundColor = useColor('mutedForeground');
-  const backgroundColor = useColor('background');
 
   const handlePress = () => {
     if (!disabled) {
@@ -425,16 +451,17 @@ export function TabsTrigger({
   };
 
   const triggerStyle: ViewStyle = {
-    paddingHorizontal: 12,
-    paddingVertical: orientation === 'vertical' ? 8 : undefined,
+    paddingHorizontal: spacing.md,
+    paddingVertical: orientation === 'vertical' ? spacing.sm : spacing.xs,
     borderRadius: CORNERS,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: HEIGHT - 8,
-    backgroundColor: isActive ? backgroundColor : 'transparent',
+    minHeight: 44,
+    backgroundColor: 'transparent',
     opacity: disabled ? 0.5 : 1,
-    flex: orientation === 'horizontal' ? 1 : undefined,
-    marginBottom: orientation === 'vertical' ? 4 : 0,
+    // Horizontal tabs size to their labels; the surrounding ScrollView owns
+    // overflow on narrow screens.
+    marginBottom: orientation === 'vertical' ? spacing.xs : 0,
     ...style,
   };
 

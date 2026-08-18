@@ -32,8 +32,8 @@ Description: |
   - CSV export and sharing
   - Dark mode support
 
-CurrentVersion: 0.26.92
-CurrentVersionCode: 160
+CurrentVersion: 0.26.99
+CurrentVersionCode: 167
 
 # Official F-Droid build server recipe. This block is retained for metadata
 # compatibility and describes the GMS-free APK for the official listing; the

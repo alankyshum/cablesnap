@@ -116,9 +116,7 @@ describe("FTA decomposition structural tests", () => {
     // Batch 6 — _layout.tsx decomposition
     ["constants/screen-config.ts", "export const SCREEN_CONFIGS", "exports SCREEN_CONFIGS"],
     ["hooks/useAppInit.ts", "export function useAppInit", "exports useAppInit"],
-    ["hooks/useSkiaWebInit.ts", "export function useSkiaWebInit", "exports useSkiaWebInit"],
     ["app/_layout.tsx", "useAppInit", "imports useAppInit"],
-    ["app/_layout.tsx", "useSkiaWebInit", "imports useSkiaWebInit"],
     ["app/_layout.tsx", "SCREEN_CONFIGS", "imports SCREEN_CONFIGS"],
 
     // Batch 6 — screen-config has all original screens
