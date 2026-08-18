@@ -6,6 +6,7 @@ import { recent as recentInteractions } from "./interactions";
 import { getRecentConsoleLogs, formatConsoleLogs } from "./console-log-buffer";
 import { uuid } from "./uuid";
 import type { ConsoleLogEntry, ErrorEntry, Interaction, ReportType } from "./types";
+import { GITHUB_REPO_URL } from "@/constants/github";
 
 declare const ErrorUtils: {
   setGlobalHandler: (callback: (error: Error, isFatal?: boolean) => void) => void;
@@ -210,7 +211,7 @@ const MAX_URL = 8000;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- consoleLogs param kept for API consistency with generateGitHubURL
 export function truncateBody(body: string, errors: ErrorEntry[], interactions: Interaction[], desc: string, type: ReportType, includeDiag: boolean, consoleLogs?: ConsoleLogEntry[]): string {
   const check = (b: string) =>
-    `https://github.com/alankyshum/cablesnap/issues/new?title=x&body=${encodeURIComponent(b)}`.length;
+    `${GITHUB_REPO_URL}/issues/new?title=x&body=${encodeURIComponent(b)}`.length;
 
   if (check(body) <= MAX_URL) return body;
 
@@ -314,7 +315,7 @@ export function generateGitHubURL(opts: {
   const final = truncateBody(body, opts.errors, opts.interactions, opts.description, opts.type, opts.includeDiag, opts.consoleLogs);
   const encoded = encodeURIComponent(final);
   const title = encodeURIComponent(opts.title.slice(0, 150));
-  return `https://github.com/alankyshum/cablesnap/issues/new?title=${title}&body=${encoded}&labels=${labels}`;
+  return `${GITHUB_REPO_URL}/issues/new?title=${title}&body=${encoded}&labels=${labels}`;
 }
 
 export function generateShareText(opts: {

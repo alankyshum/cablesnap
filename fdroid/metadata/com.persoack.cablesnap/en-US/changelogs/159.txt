@@ -1,0 +1,2 @@
+- F-Droid now uses the standard Android `release` variant, avoiding creation of
+  an app-only build type that cannot be consumed by React Native libraries.

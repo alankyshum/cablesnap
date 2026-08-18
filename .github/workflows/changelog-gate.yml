@@ -137,12 +137,19 @@ jobs:
           # bullet lines, and require head > base (i.e. the PR added at least
           # one bullet — replacing a bullet still counts as +0, but in
           # practice user-facing PRs append).
+          # NOTE: awk uses a flag (not `exit`) to stop counting after the
+          # `## Unreleased` block. Using `exit` closes the pipe early, which
+          # sends SIGPIPE to the upstream `git show`; under `pipefail` that
+          # surfaces as exit 141 and fails the gate even on valid input.
           extract_unreleased_bullets () {
-            git show "$1:CHANGELOG.md" 2>/dev/null | awk '
+            local content
+            content=$(git show "$1:CHANGELOG.md" 2>/dev/null || true)
+            printf '%s\n' "$content" | awk '
               /^##[[:space:]]+Unreleased[[:space:]]*$/ { in_u = 1; next }
-              in_u && /^## / { exit }
-              in_u && /^[[:space:]]*-[[:space:]]/ { print }
-            ' | wc -l | tr -d '[:space:]'
+              in_u && /^## / { in_u = 0 }
+              in_u && /^[[:space:]]*-[[:space:]]/ { count++ }
+              END { print count + 0 }
+            '
           }
 
           BASE_BULLETS=$(extract_unreleased_bullets "$BASE_SHA")

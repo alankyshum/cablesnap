@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Text } from "@/components/ui/text";
-import { CartesianChart, Line } from "victory-native";
-import { ChartGate } from "@/components/ui/ChartGate";
+import { LineChart } from "@/components/charts";
 import { toDisplay } from "@/lib/units";
 import { useLayout } from "@/lib/layout";
 import type { ThemeColors } from "@/hooks/useThemeColors";
@@ -78,13 +77,20 @@ export default function ExerciseChartCard({
         ) : (
           <View accessibilityLabel={chartSummary ?? undefined}>
             <View style={{ width: chartWidth, height: 200 }}>
-              <ChartGate>
-                <CartesianChart
-                  data={activeChart.map((d) => ({ date: formatDate(d.date), value: bw ? d.value : toDisplay(d.value, unit) }))}
-                  xKey="date" yKeys={["value"]} domainPadding={{ left: 10, right: 10 }}>
-                  {({ points }) => <Line points={points.value} color={colors.primary} strokeWidth={2} curveType="natural" />}
-                </CartesianChart>
-              </ChartGate>
+              <LineChart
+                labels={activeChart.map((d) => formatDate(d.date))}
+                series={[{
+                  key: "value",
+                  values: activeChart.map((d) => (bw ? d.value : toDisplay(d.value, unit))),
+                  color: colors.primary,
+                  strokeWidth: 2,
+                  curve: "natural",
+                  showPoints: false,
+                }]}
+                padding={{ left: 10, right: 10 }}
+                height={200}
+                width={chartWidth}
+              />
             </View>
             {chartSummary && <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>{chartSummary}</Text>}
           </View>

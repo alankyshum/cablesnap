@@ -11,6 +11,7 @@ import {
 } from '@/lib/db';
 import type { BackupCategoryName, BackupTableName, ExportProgress } from '@/lib/db';
 import type { useToast } from '@/components/ui/bna-toast';
+import { createImportSession } from '@/lib/import-session';
 
 function dateStamp(): string {
   return new Date().toISOString().slice(0, 10);
@@ -142,7 +143,7 @@ export async function pickImportBackup({ toast, setLoading }: Pick<Deps, 'toast'
 export async function handleImport({ toast, setLoading, router }: Deps) {
   const picked = await pickImportBackup({ toast, setLoading });
   if (!picked) return;
-  router.push({ pathname: '/settings/import-backup', params: { backupJson: picked.raw } });
+  router.push({ pathname: '/settings/import-backup', params: { importToken: createImportSession(picked.raw) } });
 }
 
 // ---- E2E deterministic CSV import fixture (BLD-2463) ----
