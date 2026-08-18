@@ -1,0 +1,4 @@
+# Ignore machine-local OpenChamber state, keep scheduled jobs tracked.
+*
+!scheduled-jobs/
+!scheduled-jobs/**

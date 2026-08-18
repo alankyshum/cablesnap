@@ -125,7 +125,6 @@ jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), notificationAsync: je
 jest.mock('expo-keep-awake', () => ({ useKeepAwake: jest.fn(), activateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined), deactivateKeepAwake: jest.fn(), deactivateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined) }))
 // BLD-753a: use centralized manual mock at lib/__mocks__/audio.ts
 jest.mock('../../lib/audio')
-jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
 jest.mock('react-native-reanimated', () => {
   const { View } = require('react-native')
   const makeAnim = (): Record<string, () => unknown> => {
@@ -766,4 +765,3 @@ jest.mock('../../lib/db/settings', () => ({
   setAppSetting: jest.fn().mockResolvedValue(undefined),
   deleteAppSetting: jest.fn().mockResolvedValue(undefined),
 }));
-

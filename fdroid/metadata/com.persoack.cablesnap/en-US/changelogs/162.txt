@@ -1,0 +1,1 @@
+- F-Droid builds no longer include the Sentry crash-reporting dependency; crash reporting remains enabled in Play builds.
