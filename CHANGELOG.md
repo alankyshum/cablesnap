@@ -24,8 +24,12 @@ marker) at release time.
 
 - **Workout empty state vertical spacing** — Ensures consistent vertical rhythm throughout the progress empty state by removing ad-hoc overrides on the icon and CTA wrapper in favor of the base container gap. ([BLD-4569](/BLD/issues/BLD-4569))
 - **Fix CI Changelog Gate SIGPIPE failures** — Prevents the Changelog Gate workflow from failing with exit code 141 (SIGPIPE) when CHANGELOG.md is the first file returned by git diff. ([BLD-4566](/BLD/issues/BLD-4566))
-- Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
-- Fixed exercise selection scrolling on compact screens.
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
+
+ - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
+ - Fixed exercise selection scrolling on compact screens.
 
 ## v0.26.99 — 2026-08-18
 <!-- versionCode: 167 -->
@@ -246,10 +250,8 @@ marker) at release time.
 - **Consistent spacing for Workout History Import button** — Aligns the vertical spacing and gaps around the "Choose CSV File..." button inside the settings card to match standard design patterns and other buttons. (BLD-3499)
 - **Added customizable weight-step increments (micro-loading)** — you can now configure the weight step (0.5 kg, 1.25 kg, 2.5 kg, 5 kg or 1 lb, 2.5 lb, 5 lb, 10 lb) in Units settings, which applies across all steppers in your workout sessions and quick-adds. ([BLD-3517](/BLD/issues/BLD-3517))
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
-=======
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
->>>>>>> 4c987e2d (feat(release-notes): strip internal refs and support code/link markdown)
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->
