@@ -23,6 +23,9 @@ marker) at release time.
 ## Unreleased
 
 - **Bottom navigation tab labels now shrink-to-fit** instead of truncating on 390px-wide screens, ensuring labels like "Progress" and "Exercises" are fully legible. ([BLD-4527](/BLD/issues/BLD-4527))
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
