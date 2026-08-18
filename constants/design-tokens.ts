@@ -138,6 +138,41 @@ export const easing = {
   accelerate: Easing.bezier(0.4, 0.0, 1, 1),
 } as const;
 
+// Interior-style motion tokens. Keep these separate from the legacy tokens
+// above: existing screens intentionally depend on their current timings.
+export const interiorEase = Easing.bezier(0.23, 1, 0.32, 1);
+export const interiorLeave = Easing.bezier(0.4, 0, 1, 1);
+
+export const interiorSpring = {
+  cell: { stiffness: 520, damping: 34, mass: 0.45 },
+  crossfade: { stiffness: 260, damping: 34, mass: 0.8 },
+  small: { stiffness: 700, damping: 46, mass: 0.5 },
+  disclose: { stiffness: 150, damping: 27, mass: 1 },
+  surface: { stiffness: 420, damping: 36, mass: 0.9 },
+  toastSurface: { stiffness: 400, damping: 44, mass: 0.85 },
+  progressFill: { stiffness: 210, damping: 34, mass: 0.9 },
+  tabIndicator: { stiffness: 620, damping: 42, mass: 0.35 },
+} as const;
+
+export const interiorDuration = {
+  press: 120,
+  tint: 150,
+  enter: 220,
+  pageEnter: 340,
+  exit: 150,
+  list: 340,
+  disclosure: 280,
+  disclosureOpacity: 180,
+  select: 200,
+  modalBackdrop: 200,
+  modalOpacity: 160,
+  toastOpacity: 110,
+  ripple: 500,
+  spinner: 850,
+} as const;
+
+export const pressDepth = 2;
+
 export const springConfig = {
   gentle: { damping: 15, stiffness: 150, mass: 1 },
   snappy: { damping: 20, stiffness: 300, mass: 1 },
