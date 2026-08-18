@@ -73,11 +73,6 @@ jest.mock('../../lib/units', () => ({
   KG_TO_LB: 2.20462,
   LB_TO_KG: 0.453592,
 }))
-jest.mock('victory-native', () => ({
-  CartesianChart: 'CartesianChart',
-  Line: 'Line',
-  Bar: 'Bar',
-}))
 jest.mock('../../lib/useProfileGender', () => ({
   useProfileGender: () => 'male',
 }))

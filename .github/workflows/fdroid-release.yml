@@ -23,29 +23,112 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Verify signing migration marker and README
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          try:
+              boundary = json.loads(Path("fdroid/signing-migration.json").read_text())["boundaryTag"]
+          except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+              print(f"::error::Signing migration marker is missing or unparseable: {exc}", file=sys.stderr)
+              raise SystemExit(1)
+          readme = Path("README.md").read_text()
+          start = "<!-- SIGNING_MIGRATION_NOTICE_START -->"
+          end = "<!-- SIGNING_MIGRATION_NOTICE_END -->"
+          pending = "boundary release pending — see release notes"
+          valid_boundary = boundary is None or (isinstance(boundary, str) and re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", boundary))
+          if not valid_boundary:
+              print("::error::Signing migration marker boundaryTag is invalid; expected null or a release tag like v0.27.0.", file=sys.stderr)
+              raise SystemExit(1)
+          boundary_in_readme = pending if boundary is None else boundary
+          if readme.count(start) != 1 or readme.count(end) != 1 or readme.count(boundary_in_readme) != 1:
+              print("::error::README signing migration notice is out of sync with fdroid/signing-migration.json.", file=sys.stderr)
+              raise SystemExit(1)
+          print(f"Signing migration boundary verified: {boundary or 'pending'}")
+          PY
 
       - name: Download F-Droid APK from GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Per BLD-736 the GitHub Release attaches three APKs:
-          #   cablesnap.apk          (Play-flavor)
-          #   cablesnap-fdroid.apk   (F-Droid-flavor, GMS-free)
-          #   cablesnap-wear.apk     (Wear OS, Play-only)
-          # The F-Droid repo MUST publish the GMS-free build. We try the
-          # F-Droid asset first, fall back to the legacy single-asset name
-          # for pre-M0 releases.
           set -euo pipefail
           TAG="${{ inputs.tag }}"
-          echo "Downloading F-Droid APK from release $TAG..."
-          if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -qx 'cablesnap-fdroid.apk'; then
-            gh release download "$TAG" --pattern "cablesnap-fdroid.apk" --output cablesnap.apk
-            echo "Pulled cablesnap-fdroid.apk and renamed to cablesnap.apk for the F-Droid repo."
-          else
-            echo "::warning::cablesnap-fdroid.apk missing — falling back to cablesnap.apk (pre-BLD-736 release)."
-            gh release download "$TAG" --pattern "cablesnap.apk" --output cablesnap.apk
-          fi
+          echo "Downloading production-signed cablesnap.apk from release $TAG..."
+          gh release download "$TAG" --pattern "cablesnap.apk" --output cablesnap.apk
           ls -la cablesnap.apk
+
+      - name: Verify APK signature matches committed fingerprint
+        run: |
+          set -euo pipefail
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            echo "::error::ANDROID_HOME is not set; the runner must provide the Android SDK for signature verification."
+            exit 1
+          fi
+          if [ ! -d "$ANDROID_HOME/build-tools" ]; then
+            echo "::error::Android SDK build-tools directory is missing under $ANDROID_HOME; cannot verify the APK signature."
+            exit 1
+          fi
+          BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME"/build-tools/*/ 2>/dev/null | sort -V | tail -1)
+          if [ -z "$BUILD_TOOLS_DIR" ]; then
+            echo "::error::No Android build-tools found under $ANDROID_HOME/build-tools."
+            exit 1
+          fi
+          APKSIGNER="${BUILD_TOOLS_DIR}apksigner"
+          if [ ! -x "$APKSIGNER" ]; then
+            echo "::error::apksigner is unavailable at $APKSIGNER; the runner must provide Android build-tools."
+            exit 1
+          fi
+          echo "Using apksigner: $APKSIGNER"
+
+          if ! "$APKSIGNER" verify cablesnap.apk; then
+            echo "::error::apksigner verify reports the APK signature is INVALID."
+            exit 1
+          fi
+
+          "$APKSIGNER" verify --print-certs cablesnap.apk | tee apksigner.log
+          ACTUAL_LIST=$(grep -oE 'certificate SHA-256 digest:[[:space:]]+[0-9a-fA-F:]+' apksigner.log \
+              | sed -E 's/^certificate SHA-256 digest:[[:space:]]+//' \
+              | tr -d ':[:blank:]' \
+              | tr '[:lower:]' '[:upper:]' || true)
+          if [ -z "$ACTUAL_LIST" ]; then
+            echo "::error::Could not parse any SHA-256 certificate digest from apksigner output."
+            exit 1
+          fi
+          UNIQUE_COUNT=$(echo "$ACTUAL_LIST" | sort -u | wc -l)
+          if [ "$UNIQUE_COUNT" -ne 1 ]; then
+            echo "::error::APK reports more than one distinct signer fingerprint — refusing to publish."
+            echo "::error::Distinct SHA-256 values seen:"
+            echo "$ACTUAL_LIST" | sort -u | sed 's/^/  /'
+            exit 1
+          fi
+          ACTUAL_NORM=$(echo "$ACTUAL_LIST" | head -1)
+          EXPECTED_NORM=$(head -1 fdroid/release-cert.sha256 | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+
+          if ! echo "$EXPECTED_NORM" | grep -qE '^[0-9A-F]{64}$'; then
+            echo "::error::Expected fingerprint in fdroid/release-cert.sha256 is not a valid 64-char hex SHA-256."
+            exit 1
+          fi
+          if ! echo "$ACTUAL_NORM" | grep -qE '^[0-9A-F]{64}$'; then
+            echo "::error::Parsed signer fingerprint is not a valid 64-char hex SHA-256."
+            exit 1
+          fi
+
+          echo "Expected SHA-256: $EXPECTED_NORM"
+          echo "Actual   SHA-256: $ACTUAL_NORM"
+          if [ "$ACTUAL_NORM" != "$EXPECTED_NORM" ]; then
+            echo "::error::APK cert fingerprint does not match fdroid/release-cert.sha256."
+            echo "::error::Either the wrong release asset was downloaded, or the signing key was rotated (requires a deliberate fingerprint update)."
+            exit 1
+          fi
+          echo "Cert fingerprint verified: $ACTUAL_NORM"
 
       - name: Restore F-Droid keystore
         run: |

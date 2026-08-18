@@ -49,6 +49,7 @@ import {
 import { getEnabled as getMacroCoachEnabled } from '@/lib/db/macro-coach-settings';
 import { getEnabled as getTrainingDayMacrosEnabled } from '@/lib/db/training-day-settings';
 import { useQueryClient } from '@tanstack/react-query';
+import { clearImportSession, createImportSession } from '@/lib/import-session';
 
 /**
  * Extra bottom clearance below the floating tab bar zone, derived from spacing
@@ -75,7 +76,8 @@ export default function Settings() {
   const [releaseNotesVisible, setReleaseNotesVisible] = useState(false);
   const [exportSheetVisible, setExportSheetVisible] = useState(false);
   const [importSheetVisible, setImportSheetVisible] = useState(false);
-  const [pendingImportJson, setPendingImportJson] = useState<string | null>(null);
+  const [pendingImportToken, setPendingImportToken] = useState<string | null>(null);
+  const [navigatingToImport, setNavigatingToImport] = useState(false);
   const [importCategories, setImportCategories] = useState<BackupCategoryName[]>([]);
   const [importCategoryCounts, setImportCategoryCounts] = useState<Partial<Record<BackupCategoryName, number>>>({});
   const [macroCoachEnabled, setMacroCoachEnabled] = useState<boolean | null>(null);
@@ -137,7 +139,7 @@ export default function Settings() {
       return;
     }
 
-    setPendingImportJson(picked.raw);
+    setPendingImportToken(createImportSession(picked.raw));
     setImportCategories(presentCategories);
     setImportCategoryCounts(getBackupCategoryCounts(picked.data));
     setImportSheetVisible(true);
@@ -145,9 +147,11 @@ export default function Settings() {
 
   const closeImportSheet = () => {
     setImportSheetVisible(false);
-    setPendingImportJson(null);
+    clearImportSession(pendingImportToken ?? undefined);
+    setPendingImportToken(null);
     setImportCategories([]);
     setImportCategoryCounts({});
+    setNavigatingToImport(false);
   };
 
   const openImportWorkoutsSheet = async () => {
@@ -157,15 +161,21 @@ export default function Settings() {
   };
 
   const confirmImportCategories = (selectedCategories: BackupCategoryName[]) => {
-    const backupJson = pendingImportJson;
-    closeImportSheet();
-    if (!backupJson) return;
-    router.push({
-      pathname: '/settings/import-backup',
-      params: {
-        backupJson,
-        selectedCategories: selectedCategories.join(','),
-      },
+    const importToken = pendingImportToken;
+    if (!importToken) return;
+    // Paint the confirmation spinner before starting router work. In particular,
+    // do not close the sheet before the user has feedback.
+    setNavigatingToImport(true);
+    requestAnimationFrame(() => {
+      setImportSheetVisible(false);
+      setPendingImportToken(null);
+      setImportCategories([]);
+      setImportCategoryCounts({});
+      router.push({
+        pathname: '/settings/import-backup',
+        params: { importToken, selectedCategories: selectedCategories.join(',') },
+      });
+      setNavigatingToImport(false);
     });
   };
 
@@ -431,17 +441,28 @@ export default function Settings() {
                 Buy me a coffee
               </Text>
             </Pressable>
-            <Pressable
-              onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
-              accessibilityRole="link"
-              accessibilityLabel="Sponsor on thanks.dev"
-              style={{ marginTop: spacing.md, minHeight: 48, justifyContent: 'center' }}
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 8,
+                padding: spacing.xs,
+                marginTop: spacing.sm,
+                alignSelf: 'flex-start',
+              }}
             >
-              <Image
-                source={require('../../assets/badges/thanks-dev-button.png')}
-                style={{ width: 180, height: 24, resizeMode: 'contain' }}
-              />
-            </Pressable>
+              <Pressable
+                onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
+                accessibilityRole="link"
+                accessibilityLabel="Sponsor on thanks.dev"
+                style={{ minHeight: 48, justifyContent: 'center' }}
+              >
+                <Image
+                  source={require('../../assets/badges/thanks-dev-button.png')}
+                  style={{ width: 180, height: 24, resizeMode: 'contain' }}
+                />
+              </Pressable>
+            </View>
           </View>
         </SettingsTile>
 
@@ -468,7 +489,7 @@ export default function Settings() {
         categories={importCategories}
         initialSelected={importCategories}
         counts={importCategoryCounts}
-        loading={loading}
+        loading={navigatingToImport}
         onClose={closeImportSheet}
         onConfirm={confirmImportCategories}
       />
