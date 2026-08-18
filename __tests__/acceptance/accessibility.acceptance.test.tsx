@@ -77,7 +77,6 @@ jest.mock('react-native-reanimated', () => {
 
 jest.mock('expo-haptics', () => ({ impactAsync: jest.fn(), notificationAsync: jest.fn(), ImpactFeedbackStyle: { Light: 'light', Heavy: 'heavy' }, NotificationFeedbackType: { Success: 'success', Warning: 'warning' } }))
 jest.mock('expo-keep-awake', () => ({ useKeepAwake: jest.fn(), activateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined), deactivateKeepAwake: jest.fn(), deactivateKeepAwakeAsync: jest.fn().mockResolvedValue(undefined) }))
-jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
 jest.mock('../../components/MuscleVolumeSegment', () => 'MuscleVolumeSegment')
 jest.mock('../../components/WeeklySummary', () => 'WeeklySummary')
 jest.mock('../../lib/rpe', () => ({ rpeColor: jest.fn().mockReturnValue('#888'), rpeText: jest.fn().mockReturnValue('#fff') }))
@@ -525,4 +524,3 @@ jest.mock('../../lib/db/settings', () => ({
   getAppSetting: jest.fn().mockResolvedValue(null),
   setAppSetting: jest.fn().mockResolvedValue(undefined),
 }));
-

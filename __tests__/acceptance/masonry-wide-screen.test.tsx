@@ -122,13 +122,6 @@ jest.mock('react-native-body-highlighter', () => {
   return { __esModule: true, default: () => <View /> }
 })
 
-// ── charting ─────────────────────────────────────────────────────────────────
-jest.mock('victory-native', () => ({
-  CartesianChart: 'CartesianChart',
-  Line: 'Line',
-  Bar: 'Bar',
-}))
-
 // ── app infra ─────────────────────────────────────────────────────────────────
 jest.mock('../../lib/errors', () => ({
   logError: jest.fn(),
