@@ -17,17 +17,6 @@ jest.mock('@/components/ui/card', () => {
   return { Card: ({ children, style }: { children: React.ReactNode; style?: object }) => <View style={style}>{children}</View> }
 })
 
-jest.mock('victory-native', () => {
-  const { View } = require('react-native')
-  return {
-    CartesianChart: ({ children }: { children: (args: { points: { y: [] } }) => React.ReactNode }) => (
-      <View>{typeof children === 'function' ? children({ points: { y: [] } }) : children}</View>
-    ),
-    Line: () => null,
-    Scatter: () => null,
-  }
-})
-
 jest.mock('expo-router', () => ({
   useFocusEffect: (cb: () => void) => cb(),
 }))

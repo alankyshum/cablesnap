@@ -33,3 +33,11 @@
 **Learning**: When the same automated reviewer findings recur across 3+ PRs, create a dedicated one-shot sweep task to fix or document all recurring findings at once. Three suppression techniques emerged: (1) inline comments documenting intentional patterns (`// bounded list — ScrollView is intentional`), (2) defense-in-depth code changes for legitimate concerns (DDL table name allowlist), (3) genuine fixes for real issues (fontSize 10→12 for accessibility). This complements the per-PR override strategy — override unblocks immediately, a sweep task stops the noise permanently.
 **Action**: After overriding the same automated reviewer finding on 3+ PRs, file a dedicated cleanup issue to address all recurring findings. Categorize each finding as: genuine bug (fix it), intentional pattern (add explanatory comment), or defense-in-depth opportunity (add validation). Prioritize the sweep before the next feature batch to reduce reviewer noise.
 **Tags**: automated-review, noise-reduction, code-sweep, reviewer-suppression, inline-comments, defense-in-depth, pr-workflow
+
+### Future feat/fix PRs must include the `## Unreleased` bullet at creation time to pass Changelog Gate
+**Source**: BLD-3885 — UNBLOCK: Add '## Unreleased' CHANGELOG bullet to 13 stuck in_review PRs
+**Date**: 2026-07-25
+**Context**: 13 stuck in_review PRs were blocked on a single failing check: **'Require `## Unreleased` bullet for user-facing PRs'**. Every user-facing (feat/fix) PR is required to have a bullet under the `## Unreleased` section of `CHANGELOG.md` at creation time.
+**Learning**: The Changelog Gate requires a change bullet under `## Unreleased` for any user-facing PR. Failing to add one blocks CI, stalling the entire review pipeline. To prevent this, every future feat/fix PR must include the `## Unreleased` bullet at the time of creation.
+**Action**: Whenever creating a feat/fix branch, always edit `CHANGELOG.md` to add an Unreleased bullet describing your user-facing change under `## Unreleased` before pushing and opening the PR.
+**Tags**: changelog-gate, unreleased-bullet, pr-creation, ci-checks, pipeline-unblock, pr-workflow

@@ -68,6 +68,15 @@ describe("with-release-signing plugin", () => {
     );
   });
 
+  it("does not require keystore.properties and explicitly preserves the debug fallback", () => {
+    expect(() => patchBuildGradle(FIXTURE)).not.toThrow(/keystore/);
+    const out = patchBuildGradle(FIXTURE);
+    expect(out).toContain(
+      "keystoreProperties['storeFile'] ? signingConfigs.release : signingConfigs.debug",
+    );
+    expect(out).not.toContain("throw new Error");
+  });
+
   it("is idempotent across multiple prebuilds", () => {
     const once = patchBuildGradle(FIXTURE);
     const twice = patchBuildGradle(once);

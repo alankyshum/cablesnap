@@ -12,9 +12,7 @@ dist/
 web-build/
 expo-env.d.ts
 
-# BLD-2078 — CanvasKit WASM staged into public/ by scripts/skia-setup.js
-# (postinstall). It is a build artifact reproduced from node_modules on every
-# install; do not commit the 8 MB binary.
+# Generated build artifact; do not commit the 8 MB binary.
 public/canvaskit.wasm
 
 # Native
@@ -88,3 +86,6 @@ modules/expo-wearos-bridge/android/build/
 
 # Jest coverage output
 coverage/
+
+# F-Droid official submission working directory (for fdroiddata fork, not this repo)
+fdroid/official/
