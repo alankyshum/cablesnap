@@ -792,7 +792,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   thumbDate: { color: "white", fontSize: 10 },
-  thumbDuration: { color: "rgba(255,255,255,0.8)", fontSize: 10 },
+  // BLD-4536: 10→13 + weight 600 for readable '5s' duration on card overlay.
+  thumbDuration: { color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: "600" },
   // BLD-2724: 22→24px; dark fill for unselected state on light card bg.
   checkOverlay: {
     position: "absolute",
