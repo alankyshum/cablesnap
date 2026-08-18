@@ -9,46 +9,46 @@ import {
   SlideInRight,
   SlideOutLeft,
 } from "react-native-reanimated";
-import { duration, easing } from "../../constants/design-tokens";
+import { interiorDuration, interiorEase, interiorLeave } from "../../constants/design-tokens";
 
 // Entrance animations — use as `entering` prop on Animated.View
 
 export const enteringFadeUp = FadeInUp
-  .duration(duration.normal)
-  .easing(easing.decelerate);
+  .duration(interiorDuration.enter)
+  .easing(interiorEase);
 
 export const enteringFadeDown = FadeInDown
-  .duration(duration.normal)
-  .easing(easing.decelerate);
+  .duration(interiorDuration.enter)
+  .easing(interiorEase);
 
 export const enteringFade = FadeIn
-  .duration(duration.fast)
-  .easing(easing.decelerate);
+  .duration(interiorDuration.enter)
+  .easing(interiorEase);
 
 export const enteringSlideRight = SlideInRight
-  .duration(duration.normal)
-  .easing(easing.decelerate);
+  .duration(interiorDuration.pageEnter)
+  .easing(interiorEase);
 
 // Exit animations — use as `exiting` prop on Animated.View
 
 export const exitingFadeDown = FadeOutDown
-  .duration(duration.fast)
-  .easing(easing.accelerate);
+  .duration(interiorDuration.exit)
+  .easing(interiorLeave);
 
 export const exitingFadeUp = FadeOutUp
-  .duration(duration.fast)
-  .easing(easing.accelerate);
+  .duration(interiorDuration.exit)
+  .easing(interiorLeave);
 
 export const exitingFade = FadeOut
-  .duration(duration.fast)
-  .easing(easing.accelerate);
+  .duration(interiorDuration.exit)
+  .easing(interiorLeave);
 
 export const exitingSlideLeft = SlideOutLeft
-  .duration(duration.fast)
-  .easing(easing.accelerate);
+  .duration(interiorDuration.exit)
+  .easing(interiorLeave);
 
 // Layout animation — use as `layout` prop on Animated.View for reflows
 
 export const layoutSpring = Layout.springify().damping(15).stiffness(150);
 
-export const layoutTiming = Layout.duration(duration.normal).easing(easing.standard);
+export const layoutTiming = Layout.duration(interiorDuration.enter).easing(interiorEase);

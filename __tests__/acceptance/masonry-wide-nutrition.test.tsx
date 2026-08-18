@@ -50,12 +50,6 @@ jest.mock('react-native-reanimated', () => {
     createAnimatedComponent: (c: unknown) => c,
   }
 })
-jest.mock('victory-native', () => ({
-  CartesianChart: () => null,
-  Line: () => null,
-  Bar: () => null,
-}))
-
 // Force medium (wide) layout — atLeastMedium: true
 jest.mock('../../lib/layout', () => ({
   useLayout: () => ({

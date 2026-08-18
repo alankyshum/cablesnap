@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { useReducedMotion } from "react-native-reanimated";
 import {
   getDailyNutritionTotals,
   getWeeklyNutritionAverages,
@@ -25,7 +24,6 @@ export type NutritionProgressData = {
   loading: boolean;
   error: Error | null;
   refetch: () => void;
-  reducedMotion: boolean;
 };
 
 function dateKey(d: Date): string {
@@ -43,7 +41,6 @@ export function useNutritionProgress(): NutritionProgressData {
   const [targets, setTargets] = useState<MacroTargets | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const reducedMotion = useReducedMotion() ?? false;
 
   const fetchData = useCallback(async (weeks: NutritionPeriod) => {
     try {
@@ -99,6 +96,5 @@ export function useNutritionProgress(): NutritionProgressData {
     loading,
     error,
     refetch: load,
-    reducedMotion,
   };
 }
