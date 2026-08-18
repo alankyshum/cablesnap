@@ -114,6 +114,15 @@ describe("Button primary label visibility contract (BLD-2585)", () => {
       const flat = flattenAnimatedContainer(screen, "cta");
       expect(flat.backgroundColor).toBe(Colors.light.primary);
     });
+
+    it("carries a border on the same animated container for color contrast under deuteranopia emulation", () => {
+      const screen = render(
+        <Button variant="default" label="Start a workout" testID="cta" />,
+      );
+      const flat = flattenAnimatedContainer(screen, "cta");
+      expect(flat.borderWidth).toBe(1);
+      expect(flat.borderColor).toBe(Colors.light.border);
+    });
   });
 
   describe("edge cases from the ticket", () => {
