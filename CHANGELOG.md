@@ -23,6 +23,10 @@ marker) at release time.
 ## Unreleased
 
 - **Clip duration label (e.g., "5s") on form library cards is now larger and bolder**, making it easier to read at a glance on mobile. ([BLD-4536](/BLD/issues/BLD-4536))
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
+
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
