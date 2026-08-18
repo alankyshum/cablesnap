@@ -37,7 +37,7 @@ import { useThemeColors } from '@/hooks/useThemeColors';
 import { spacing } from '@/constants/design-tokens';
 import { useSettingsData } from '@/hooks/useSettingsData';
 import BackupCategorySheet from '@/components/settings/BackupCategorySheet';
-import { handleExport, pickImportBackup, pickImportWorkoutsCsv } from './_settings-handlers';
+import { handleExport, pickImportBackup, pickImportWorkoutsCsv } from '@/lib/settings-handlers';
 import {
   BACKUP_CATEGORY_ORDER,
   deleteAppSetting,
@@ -283,6 +283,14 @@ export default function Settings() {
 
         {/* ── 5. Coaching ── */}
         <SettingsTile colors={colors} title="Coaching" testID="settings-tile-coaching" index={4}>
+          <SettingsLinkRow
+            colors={colors}
+            title="AI Provider"
+            caption="Connect your OpenRouter key"
+            accessibilityLabel="Open AI Provider settings"
+            onPress={() => router.push('/settings/ai-key')}
+          />
+          <Separator style={styles.tileDivider} />
           <SettingsLinkRow
             colors={colors}
             title="Adaptive Macro Coach"

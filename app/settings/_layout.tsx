@@ -31,6 +31,7 @@ export default function SettingsLayout() {
       <Stack.Screen name="import-workouts" options={{ title: "Import Workout History" }} />
       <Stack.Screen name="backups" options={{ title: "Backups" }} />
       <Stack.Screen name="import-backup" options={{ title: "Import Backup" }} />
+      <Stack.Screen name="ai-key" options={{ title: "AI Provider" }} />
     </Stack>
   );
 }
