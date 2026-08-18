@@ -23,6 +23,9 @@ marker) at release time.
 ## Unreleased
 
 - Form Library / Compare grid: increased the overflow (⋮) menu button inset from 4dp to 8dp so it no longer looks cramped against the card corner; touch target unchanged. (BLD-4550)
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
