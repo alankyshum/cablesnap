@@ -12,6 +12,8 @@ import {
 
 import { Text } from "@/components/ui/text";
 import { Colors } from "@/theme/colors";
+import { useAnimatedPress } from "@/lib/animations/hooks";
+import { elevation, radii, spacing } from "@/constants/design-tokens";
 
 interface FABAction {
   icon: string;
@@ -48,6 +50,7 @@ export function FAB({
   accessibilityLabel,
   visible = true,
 }: FABProps) {
+  const { animatedStyle, onPressIn, onPressOut } = useAnimatedPress();
   if (!visible) return null;
 
   return (
@@ -56,7 +59,9 @@ export function FAB({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       activeOpacity={0.8}
-      style={[styles.fab, style]}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[styles.fab, animatedStyle as unknown as ViewStyle, style]}
     >
       <MaterialCommunityIcons name={icon as any} size={24} color={color} />
     </TouchableOpacity>
@@ -134,47 +139,39 @@ const styles = StyleSheet.create({
   fab: {
     width: 56,
     height: 56,
-    borderRadius: 16,
+    borderRadius: radii.xl,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 4,
-    shadowColor: Colors.light.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    ...elevation.medium,
   },
   groupContainer: {
     position: "absolute",
-    bottom: 16,
-    right: 16,
+    bottom: spacing.base,
+    right: spacing.base,
     alignItems: "center",
   },
   actionsContainer: {
-    marginBottom: 16,
+    marginBottom: spacing.base,
     alignItems: "flex-end",
   },
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   actionLabel: {
     backgroundColor: "rgba(0,0,0,0.7)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginRight: 12,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.sm,
+    marginRight: spacing.md,
   },
   miniFab: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: radii.lg,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 3,
-    shadowColor: Colors.light.shadow,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    ...elevation.low,
   },
 });

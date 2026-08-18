@@ -58,12 +58,6 @@ jest.mock('react-native-reanimated', () => {
     createAnimatedComponent: (c: unknown) => c,
   }
 })
-jest.mock('victory-native', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  CartesianChart: (props: Record<string, unknown>) => null,
-  Line: () => null,
-  Bar: () => null,
-}))
 jest.mock('../../components/FloatingTabBar', () => ({
   useFloatingTabBarHeight: () => 80,
 }))

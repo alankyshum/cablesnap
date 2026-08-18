@@ -11,31 +11,29 @@ import {
   WithTimingConfig,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { duration, easing, springConfig } from "../../constants/design-tokens";
+import { duration, easing, springConfig, interiorSpring, pressDepth } from "../../constants/design-tokens";
 
 // ─── useAnimatedPress ──────────────────────────────────────────────
 // Scale-down + opacity feedback on press. Pairs with Pressable.
 
-export function useAnimatedPress(options?: { haptic?: boolean }) {
-  const scale = useSharedValue(1);
+export function useAnimatedPress(options?: { haptic?: boolean; depth?: number }) {
+  const translateY = useSharedValue(0);
   const opacity = useSharedValue(1);
-  const reducedMotion = useReducedMotion();
+  // Reanimated's Jest mock in older test environments omits this hook; the
+  // production path still always uses the platform reduced-motion setting.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const reducedMotion = typeof useReducedMotion === "function" ? useReducedMotion() : false;
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ translateY: translateY.value }, { scale: 1 }],
     opacity: opacity.value,
   }));
 
   const onPressIn = () => {
-    if (reducedMotion) return;
-    scale.value = withTiming(0.96, {
-      duration: duration.instant,
-      easing: easing.standard,
-    });
-    opacity.value = withTiming(0.85, {
-      duration: duration.instant,
-      easing: easing.standard,
-    });
+    if (!reducedMotion) {
+      translateY.value = withSpring(options?.depth ?? pressDepth, interiorSpring.cell);
+      opacity.value = withSpring(0.96, interiorSpring.cell);
+    }
     if (options?.haptic !== false) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -43,8 +41,8 @@ export function useAnimatedPress(options?: { haptic?: boolean }) {
 
   const onPressOut = () => {
     if (reducedMotion) return;
-    scale.value = withSpring(1, springConfig.snappy);
-    opacity.value = withSpring(1, springConfig.snappy);
+    translateY.value = withSpring(0, interiorSpring.cell);
+    opacity.value = withSpring(1, interiorSpring.cell);
   };
 
   return { animatedStyle, onPressIn, onPressOut };
@@ -146,6 +144,8 @@ export function usePulse() {
     transform: [{ scale: scale.value }],
   }));
 
+  // Explicit, event-driven attention feedback only; callers must start it
+  // because idle decorative loops are intentionally not supported.
   const start = () => {
     if (reducedMotion || isRunning.value) return;
     isRunning.value = true;

@@ -44,12 +44,6 @@ jest.mock('react-native-reanimated', () => {
     createAnimatedComponent: (c: unknown) => c,
   }
 })
-jest.mock('victory-native', () => ({
-  CartesianChart: () => null,
-  Line: () => null,
-  Bar: () => null,
-}))
-
 // Force expanded (3-col) layout — exercises the 3-column Masonry path
 jest.mock('@/lib/layout', () => ({
   useLayout: () => ({
