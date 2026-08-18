@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Primary buttons now render with a high-contrast border on the animated container**, ensuring sufficient visibility and WCAG compliance under deuteranopia CVD emulation. ([BLD-4518](/BLD/issues/BLD-4518))
+- Extended the Backup XML validation CI timeout to 15 minutes to accommodate dependency installation and Expo prebuild variability.
 
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->

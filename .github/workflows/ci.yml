@@ -151,7 +151,9 @@ jobs:
   android-lint:
     name: Backup XML validation
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    # npm ci, apt package installation, and Expo prebuild can vary beyond the old 10-minute cap.
+
     # BLD-1114: Verify backup XML rules (set-media/ include/exclude) are valid
     # and contain the expected entries. Runs expo prebuild to exercise the
     # with-form-clips-backup.js plugin, then validates the generated XML files
