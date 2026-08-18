@@ -102,6 +102,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   owner: "alankyshum",
   extra: {
     fdroidBuild: isFdroidBuild,
+    distributionChannel: isFdroidBuild ? "fdroid" : "github",
     ...(isFdroidBuild
       ? {}
       : {
