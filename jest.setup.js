@@ -27,17 +27,9 @@ jest.mock(
   }
 );
 
-// Mock @shopify/react-native-skia — its ESM entry imports native modules that
-// Jest cannot transform. Tests don't render via Skia anyway; charts/fonts are
-// stubbed at the victory-native level.
 if (typeof window !== 'undefined' && !window.dispatchEvent) {
   window.dispatchEvent = () => {};
 }
-
-jest.mock('@shopify/react-native-skia', () => ({
-  matchFont: () => null,
-  useFont: () => null,
-}));
 
 // Mock react-native-safe-area-context for tests (was previously provided by PaperProvider)
 jest.mock('react-native-safe-area-context', () => {
@@ -54,5 +46,4 @@ jest.mock('react-native-safe-area-context', () => {
     initialWindowMetrics: { insets, frame },
   };
 });
-
 
