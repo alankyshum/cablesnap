@@ -151,12 +151,14 @@ jobs:
   android-lint:
     name: Backup XML validation
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     # BLD-1114: Verify backup XML rules (set-media/ include/exclude) are valid
     # and contain the expected entries. Runs expo prebuild to exercise the
     # with-form-clips-backup.js plugin, then validates the generated XML files
     # directly — no Gradle build required, avoiding the React Native JS bundle
     # dependency that would pull in Sentry (fails without auth in CI).
+    # GitHub-hosted runner variance during npm/apt setup and Expo prebuild can
+    # exceed the observed 10m17s runtime; retain headroom without weakening checks.
     steps:
       - name: Checkout
         uses: actions/checkout@v4
