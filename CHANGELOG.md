@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Fixed exercise selection scrolling on compact screens.
 
 ## v0.26.99 — 2026-08-18
 <!-- versionCode: 167 -->
