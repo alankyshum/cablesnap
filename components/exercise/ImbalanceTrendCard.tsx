@@ -1,8 +1,7 @@
 import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { CartesianChart, Line } from "victory-native";
-import { ChartGate } from "@/components/ui/ChartGate";
+import { LineChart } from "@/components/charts";
 import { useLayout } from "@/lib/layout";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { ImbalanceTrendPoint } from "@/lib/db/session-sets";
@@ -140,23 +139,21 @@ export default function ImbalanceTrendCard({
             aria-hidden={true}
             style={{ width: chartWidth, height: 200 }}
           >
-            <ChartGate>
-              <CartesianChart
-                data={trend.map((d) => ({ date: formatDate(d.startedAt), value: Math.round(d.diffPct) }))}
-                xKey="date"
-                yKeys={["value"]}
-                domainPadding={{ left: 10, right: 10 }}
-              >
-                {({ points }) => (
-                  <Line
-                    points={points.value}
-                    color={colors.secondary}
-                    strokeWidth={2}
-                    curveType="natural"
-                  />
-                )}
-              </CartesianChart>
-            </ChartGate>
+            <LineChart
+              labels={trend.map((d) => formatDate(d.startedAt))}
+              series={[
+                {
+                  key: "value",
+                  values: trend.map((d) => Math.round(d.diffPct)),
+                  color: colors.secondary,
+                  strokeWidth: 2,
+                  curve: "natural",
+                },
+              ]}
+              width={chartWidth}
+              height={200}
+              testID="imbalance-trend-chart"
+            />
           </View>
           <Text variant="body" style={{ color: colors.onSurface, marginTop: 8 }}>
             {summaryText}

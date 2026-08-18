@@ -13,26 +13,11 @@ jest.mock("@/hooks/useThemeColors", () => ({
   }),
 }));
 
-// Mock victory-native because it's graphical and has native code dependencies
-jest.mock("victory-native", () => {
+jest.mock("@/components/charts", () => {
   const React = require("react");
   const { View } = require("react-native");
   return {
-    CartesianChart: ({ children, data }: { children: (args: { points: { value: { x: number; y: number }[] } }) => React.ReactNode; data: { value: number }[] }) => {
-      // Mock points to pass to CartesianChart's children function
-      const points = { value: data.map((d: { value: number }, idx: number) => ({ x: idx, y: d.value })) };
-      return <View testID="mock-cartesian-chart">{children({ points })}</View>;
-    },
-    Line: () => <View testID="mock-line" />,
-  };
-});
-
-// Mock ChartGate
-jest.mock("@/components/ui/ChartGate", () => {
-  const React = require("react");
-  const { View } = require("react-native");
-  return {
-    ChartGate: ({ children }: { children: React.ReactNode }) => <View testID="mock-chart-gate">{children}</View>,
+    LineChart: () => <View testID="mock-line-chart" />,
   };
 });
 
