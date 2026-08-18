@@ -23,6 +23,9 @@ marker) at release time.
 ## Unreleased
 
 - **Consistent vertical spacing in the progress-tab empty state**, aligning gaps between the icon, headline, description, and CTA with standard design-token spacing. ([BLD-4569](/BLD/issues/BLD-4569))
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
