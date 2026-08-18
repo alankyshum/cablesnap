@@ -766,11 +766,11 @@ describe("FloatingTabBar component (BLD-212)", () => {
     expect(floatingTabBarSrc).toContain("withTiming");
   });
 
-  it("defines correct tab order (exercises, nutrition, index, progress, settings)", () => {
+  it("defines correct tab order (ai-coach, nutrition, index, progress, settings)", () => {
     const orderMatch = floatingTabBarSrc.match(/TAB_ORDER\s*=\s*\[([^\]]+)\]/);
     expect(orderMatch).not.toBeNull();
     const order = orderMatch![1].replace(/["'\s]/g, "").split(",");
-    expect(order).toEqual(["exercises", "nutrition", "index", "progress", "settings"]);
+    expect(order).toEqual(["ai-coach", "nutrition", "index", "progress", "settings"]);
   });
 });
 

@@ -4,8 +4,9 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { TouchableOpacity } from "react-native";
 import FloatingTabBar from "../../components/FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { fontSizes } from "@/constants/design-tokens";
+import { fontSizes, spacing } from "@/constants/design-tokens";
 import { HandleIcon } from "@/components/floating-tab-bar/HandleIcon";
+import BreadcrumbTitle from "@/components/ui/BreadcrumbTitle";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -16,7 +17,7 @@ export default function TabLayout() {
   const renderHeaderTitle = (icon: IconName, title: string) =>
     function HeaderTitle() {
       return (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
           <MaterialCommunityIcons name={icon} size={20} color={colors.onSurface} />
           <Text style={{ fontSize: fontSizes.sm, fontWeight: "600", color: colors.onSurface }}>{title}</Text>
         </View>
@@ -39,7 +40,7 @@ export default function TabLayout() {
         name="exercises"
         options={{
           title: "Exercises",
-          headerTitle: renderHeaderTitle("format-list-bulleted", "Exercises"),
+          headerTitle: () => <BreadcrumbTitle segments={[{ label: "workouts", href: "/" }, { label: "exercise" }]} />,
           headerRight: () => (
             <TouchableOpacity
               onPress={() => router.push("/exercise/create")}
@@ -75,22 +76,39 @@ export default function TabLayout() {
           title: "Workouts",
           headerTitle: function WorkoutsHeaderTitle() {
             return (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
                 <HandleIcon size={20} color={colors.onSurface} />
                 <Text style={{ fontSize: fontSizes.sm, fontWeight: "600", color: colors.onSurface }}>Workouts</Text>
               </View>
             );
           },
           headerRight: () => (
-            <TouchableOpacity
-              onPress={() => router.push("/tools")}
-              accessibilityLabel="Workout tools"
-              accessibilityRole="button"
-              style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
-            >
-              <MaterialCommunityIcons name="wrench" size={24} color={colors.onSurface} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <TouchableOpacity
+                onPress={() => router.push("/exercises")}
+                accessibilityLabel="Exercises"
+                accessibilityRole="button"
+                style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+              >
+                <MaterialCommunityIcons name="format-list-bulleted" size={24} color={colors.onSurface} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push("/tools")}
+                accessibilityLabel="Workout tools"
+                accessibilityRole="button"
+                style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
+              >
+                <MaterialCommunityIcons name="wrench" size={24} color={colors.onSurface} />
+              </TouchableOpacity>
+            </View>
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="ai-coach"
+        options={{
+          title: "AI Coach",
+          headerTitle: renderHeaderTitle("robot", "AI Coach"),
         }}
       />
       <Tabs.Screen
