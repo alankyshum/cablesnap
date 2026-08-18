@@ -4,11 +4,13 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import {
   importData,
+  getImportCompletionMessage,
   getBackupCategoryCounts,
   BACKUP_CATEGORY_LABELS,
   BACKUP_CATEGORY_ORDER,
   BACKUP_TABLE_LABELS,
   IMPORT_TABLE_ORDER,
+  BACKUP_CATEGORY_TABLES,
 } from "../../lib/db";
 import type { BackupCategoryName, BackupTableName, ImportProgress } from "../../lib/db";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -17,11 +19,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/bna-toast";
+import { clearImportSession, getImportSession } from "@/lib/import-session";
 
 type ImportResult = {
   inserted: number;
   skipped: number;
-  perTable: Record<string, { inserted: number; skipped: number }>;
+  perTable: Record<string, { inserted: number; skipped: number; skipped_existing?: number }>;
 };
 
 function PreviewList({
@@ -97,7 +100,7 @@ function PreviewList({
             Only the selected categories will be imported. Unchecked categories in your current app data will be left untouched.
           </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
-            Existing records with the same ID will be skipped — your current data will not be overwritten.
+                   Existing history and seeded content remain idempotent. User preferences from the backup are restored.
           </Text>
           {importProgress && (
             <Text variant="caption" style={{ color: colors.primary, marginBottom: 8 }} accessibilityLiveRegion="polite" accessibilityLabel={importProgress}>
@@ -125,6 +128,16 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
     () => IMPORT_TABLE_ORDER.filter((t) => (result.perTable[t]?.inserted ?? 0) > 0 || (result.perTable[t]?.skipped ?? 0) > 0),
     [result],
   );
+  const categoryResults = useMemo(() => BACKUP_CATEGORY_ORDER.map((category) => {
+    const totals = BACKUP_CATEGORY_TABLES[category].reduce(
+      (sum, table) => ({
+        inserted: sum.inserted + (result.perTable[table]?.inserted ?? 0),
+        skipped: sum.skipped + (result.perTable[table]?.skipped ?? 0),
+      }),
+      { inserted: 0, skipped: 0 },
+    );
+    return { category, ...totals };
+  }).filter(({ inserted, skipped }) => inserted > 0 || skipped > 0), [result]);
   return (
     <FlatList
       data={resultTables}
@@ -142,7 +155,7 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
               </Text>
               {result.skipped > 0 && (
                 <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
-                  {result.skipped} records skipped (already existed)
+                {getImportCompletionMessage(result.inserted, result.skipped)}
                 </Text>
               )}
               <View style={{ flexDirection: "row", paddingVertical: 8 }}>
@@ -151,6 +164,13 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
                 <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>Skipped</Text>
               </View>
               <Separator />
+              {categoryResults.map(({ category, inserted, skipped }) => (
+                <View key={category} style={{ flexDirection: "row", paddingVertical: 8 }}>
+                  <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>{BACKUP_CATEGORY_LABELS[category]}</Text>
+                  <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>{inserted}</Text>
+                  <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>{skipped}</Text>
+                </View>
+              ))}
             </CardContent>
           </Card>
         </>
@@ -177,35 +197,34 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
   );
 }
 
-/** Hook to load backup data from either a file path or JSON string route param. */
-function useBackupData(filePath?: string, backupJson?: string) {
+/** Hook to load and parse a backup asynchronously, never during render. */
+function useBackupData(filePath?: string, importToken?: string) {
   const [fileData, setFileData] = useState<Record<string, unknown> | null>(null);
-  const [fileLoading, setFileLoading] = useState(!!filePath);
+  const [fileLoading, setFileLoading] = useState(!!filePath || !!importToken);
   const [fileError, setFileError] = useState(false);
 
   useEffect(() => {
-    if (!filePath) return;
+    if (!filePath && !importToken) return;
     let mounted = true;
     (async () => {
       try {
-        const { File } = await import("expo-file-system");
-        const file = new File(filePath);
-        const raw = await file.text();
+        let raw: string | null = importToken ? getImportSession(importToken) : null;
+        if (filePath) {
+          const { File } = await import("expo-file-system");
+          raw = await new File(filePath).text();
+        }
+        if (raw === null) throw new Error("Import session expired");
         const data = JSON.parse(raw) as Record<string, unknown>;
         if (mounted) { setFileData(data); setFileLoading(false); }
       } catch {
         if (mounted) { setFileError(true); setFileLoading(false); }
       }
+      if (importToken) clearImportSession(importToken);
     })();
     return () => { mounted = false; };
-  }, [filePath]);
+  }, [filePath, importToken]);
 
-  const parsed = useMemo(() => {
-    if (fileData) return fileData;
-    if (!backupJson) return null;
-    try { return JSON.parse(backupJson) as Record<string, unknown>; }
-    catch { return null; }
-  }, [backupJson, fileData]);
+  const parsed = fileData;
 
   return { parsed, fileLoading, fileError };
 }
@@ -215,15 +234,15 @@ export default function ImportBackup() {
   const colors = useThemeColors();
   const router = useRouter();
   const toast = useToast();
-  const { backupJson, filePath, selectedCategories: selectedCategoriesParam } = useLocalSearchParams<{
-    backupJson?: string;
+  const { importToken, filePath, selectedCategories: selectedCategoriesParam } = useLocalSearchParams<{
+    importToken?: string;
     filePath?: string;
     selectedCategories?: string;
   }>();
   const [loading, setLoading] = useState(false);
   const [importProgress, setImportProgress] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
-  const { parsed, fileLoading, fileError } = useBackupData(filePath, backupJson);
+  const { parsed, fileLoading, fileError } = useBackupData(filePath, importToken);
 
   const version = parsed ? Number(parsed.version ?? 0) : 0;
   const exportedAt = parsed ? ((parsed.exported_at as string) ?? null) : null;
@@ -271,11 +290,11 @@ export default function ImportBackup() {
     );
   }
 
-  if ((!backupJson && !filePath) || !parsed) {
+  if ((!importToken && !filePath) || !parsed) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
-        <Text variant="body" style={{ color: !backupJson && !filePath ? colors.onBackground : colors.error }}>
-          {!backupJson && !filePath ? "No backup data provided." : "Invalid backup data."}
+        <Text variant="body" style={{ color: !importToken && !filePath ? colors.onBackground : colors.error }}>
+          {!importToken && !filePath ? "No backup data provided." : "Invalid backup data."}
         </Text>
         <Button variant="default" onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityLabel="Go back" accessibilityRole="button">
           Go Back
@@ -295,13 +314,16 @@ export default function ImportBackup() {
             setImportProgress(null);
           } else {
             const label = BACKUP_TABLE_LABELS[progress.table as BackupTableName] ?? progress.table;
-            setImportProgress(`Importing ${label}... (${progress.tableIndex + 1}/${progress.totalTables})`);
+            const rowProgress = progress.rowCount
+              ? ` ${progress.rowIndex ?? 0}/${progress.rowCount}`
+              : "";
+            setImportProgress(`Importing ${label}... (${progress.tableIndex + 1}/${progress.totalTables})${rowProgress}`);
           }
         },
         selectedCategories.length > 0 ? { selectedCategories } : undefined,
       );
       setResult(importResult);
-      toast.success(`Import complete — ${importResult.inserted} records added, ${importResult.skipped} skipped`);
+       toast.success(`Import complete — ${getImportCompletionMessage(importResult.inserted, importResult.skipped)}`);
     } catch {
       toast.error("Import failed — all changes have been rolled back");
     } finally {

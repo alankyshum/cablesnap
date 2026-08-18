@@ -45,6 +45,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useColorScheme } from "@/hooks/useColorScheme";
 import { formatPacingTime, formatPacingTimeSpoken, type PacingBreakdown } from "@/lib/session-pacing";
 import PacingBreakdownSheet from "./PacingBreakdownSheet";
 import { spacing } from "@/constants/design-tokens";
@@ -116,8 +117,79 @@ const DASH_PATTERN_ID = "pacing-working-dash";
 const DASH_TILE_W = 8;    // tile width — wider than dot tile for distinct horizontal rhythm
 const DASH_TILE_H = 6;    // tile height — same as dot tile height
 const DASH_W = 4;         // dash width: noticeably longer than the 2.2px dot diameter
-const DASH_H = 1.5;       // dash height: thin horizontal bar, not a block
-const DASH_COLOR = OVERLAY_COLOR;
+// BLD-3880: dash height raised 1.5 → 2.0 and dash alpha raised 0.55 → 0.85 so the
+// Working texture is clearly distinct from solid Rest under protanopia emulation.
+// Under protanopia the coral (#FF6038) desaturates toward dark yellow and its
+// luminance separation from blue collapses; the strengthened dash restores a
+// crisp hue-independent structural cue on the Working segment alone (the Other
+// dot pattern is intentionally left at the softer OVERLAY_COLOR / smaller
+// footprint so the two textures stay visually distinct from each other).
+export const DASH_H = 2.0;
+export const DASH_COLOR = "rgba(255,255,255,0.85)";
+
+// ─── Vertical-dash overlay — "Rest" segment (BLD-3879 CVD fix) ───────────────
+const REST_DASH_PATTERN_ID = "pacing-rest-vertical-dash";
+const REST_DASH_TILE_W = 6;
+const REST_DASH_TILE_H = 8;
+const REST_DASH_W = 1.5;
+const REST_DASH_H = 4;
+const REST_DASH_COLOR = OVERLAY_COLOR;
+
+// ─── Inter-segment divider — protanopia safety net (BLD-3880) ────────────────
+//
+// A thin high-contrast gap rendered BETWEEN adjacent non-zero segments in the
+// pacing bar. Reads visually as a "gutter" and gives a crisp boundary that
+// does not depend on hue perception, so the Working|Rest and Rest|Other
+// transitions stay visible under protanopia (and every other CVD mode +
+// grayscale).
+//
+// Colour choice: pure white on light theme, pure black on dark theme.
+//   Rationale: the divider must clear WCAG ≥ 3:1 contrast against BOTH
+//   neighbouring fills. Coral #FF6038 (L≈0.30) and petrol blue #08415C
+//   (L≈0.045) sit on OPPOSITE sides of the luminance range — a mid-grey or
+//   card-surface (#F3F4F6, L≈0.90) fails the 3:1 gate against coral
+//   (~2.7:1). Only a pure extreme (L=1.0 white on light theme, L=0 black on
+//   dark theme) beats 3:1 against BOTH fills on the correct theme.
+//   Verified in `bar divider contrast` tests below.
+//
+// Width = 2px fixed (audit spec). Wider than a hairline (which visually
+// disappears on mobile Retina under protanopia) and thin enough to remain
+// unobtrusive against the full-colour sighted design.
+//
+// Placement: only between two visible (non-zero) segments — a divider next
+// to a zero-width segment would appear orphaned at the bar edge.
+//
+// Decorative: pointerEvents="none" + a11y-hidden. The parent barContainer
+// is already accessibilityElementsHidden on native; web a11y uses aria-hidden.
+export const SEGMENT_DIVIDER_WIDTH = 2;
+export const SEGMENT_DIVIDER_COLOR_LIGHT = "#FFFFFF";
+export const SEGMENT_DIVIDER_COLOR_DARK = "#000000";
+
+/**
+ * SegmentDivider — decorative inter-segment gap (BLD-3880).
+ * Extracted to keep PacingCard's render complexity manageable and to centralise
+ * the a11y/pointer-events wiring so each of the three possible divider slots
+ * (Working|Rest, Rest|Other, Working|Other-when-Rest-zero) is identical.
+ */
+function SegmentDivider({ color, testID }: { color: string; testID: string }) {
+  return (
+    <View
+      testID={testID}
+      style={[styles.segmentDivider, { backgroundColor: color }]}
+      pointerEvents="none"
+      aria-hidden
+      {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
+      {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' as const } : {})}
+    >
+      <View
+        testID="pacing-bar-divider"
+        style={[StyleSheet.absoluteFillObject, { backgroundColor: color }]}
+      />
+    </View>
+  );
+}
+
+
 
 type HatchOverlayProps =
   | {
@@ -276,6 +348,74 @@ export function WorkingDashOverlay({ fill, width, height, testID }: WorkingDashO
   );
 }
 
+type RestDashOverlayProps =
+  | {
+      /** Fill mode: SVG canvas is "100%×100%" to cover the flex-sized bar segment. */
+      fill: true;
+      width?: never;
+      height?: never;
+      testID?: string;
+    }
+  | {
+      /** Explicit-size mode: pass exact pixel dimensions (e.g. legend dot 8×8). */
+      fill?: false;
+      width: number;
+      height: number;
+      testID?: string;
+    };
+
+/**
+ * RestDashOverlay — decorative vertical-dash fill for the "Rest" segment.
+ * Resolves BLD-3879 (deuteranopia audit).
+ */
+export function RestDashOverlay({ fill, width, height, testID }: RestDashOverlayProps) {
+  // In explicit-size mode, guard against non-positive dimensions.
+  if (!fill && (width <= 0 || height <= 0)) return null;
+
+  const svgWidth = fill ? "100%" : width;
+  const svgHeight = fill ? "100%" : height;
+
+  return (
+    <Svg
+      width={svgWidth}
+      height={svgHeight}
+      style={StyleSheet.absoluteFillObject}
+      {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
+      {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
+      aria-hidden
+      pointerEvents="none"
+      testID={testID}
+    >
+      <Defs>
+        <Pattern
+          id={REST_DASH_PATTERN_ID}
+          x="0"
+          y="0"
+          width={REST_DASH_TILE_W}
+          height={REST_DASH_TILE_H}
+          patternUnits="userSpaceOnUse"
+        >
+          {/* Centered vertical dash within the tile */}
+          <Rect
+            x={(REST_DASH_TILE_W - REST_DASH_W) / 2}
+            y={(REST_DASH_TILE_H - REST_DASH_H) / 2}
+            width={REST_DASH_W}
+            height={REST_DASH_H}
+            fill={REST_DASH_COLOR}
+          />
+        </Pattern>
+      </Defs>
+      <Rect
+        x="0"
+        y="0"
+        width={svgWidth}
+        height={svgHeight}
+        fill={`url(#${REST_DASH_PATTERN_ID})`}
+      />
+    </Svg>
+  );
+}
+
 // ─── Min-segment fraction helper (BLD-2712) ──────────────────────────────────
 //
 // Ensures every non-zero segment is wide enough to be perceptible at mobile
@@ -414,16 +554,8 @@ export function getOtherSegmentStyle(
 
 // ─── BarDivider (BLD-4214) ────────────────────────────────────────────────────
 
-function BarDivider({ surfaceColor }: { surfaceColor: string }) {
-  return (
-    <View
-      testID="pacing-bar-divider"
-      style={[styles.divider, { backgroundColor: surfaceColor }]}
-      {...(Platform.OS !== 'web' ? { accessibilityElementsHidden: true } : {})}
-      {...(Platform.OS !== 'web' ? { importantForAccessibility: 'no-hide-descendants' } : {})}
-      aria-hidden
-    />
-  );
+function BarDivider({ surfaceColor, testID }: { surfaceColor: string; testID: string }) {
+  return <SegmentDivider color={surfaceColor} testID={testID} />;
 }
 
 // ─── PacingStackedBar (BLD-4214) ──────────────────────────────────────────────
@@ -432,7 +564,7 @@ interface PacingStackedBarProps {
   workingFrac: number;
   restFrac: number;
   otherFrac: number;
-  surfaceColor: string;
+  dividerColor: string;
   segColors: {
     working: string;
     rest: string;
@@ -440,11 +572,12 @@ interface PacingStackedBarProps {
   };
 }
 
+
 export function PacingStackedBar({
   workingFrac,
   restFrac,
   otherFrac,
-  surfaceColor,
+  dividerColor,
   segColors,
 }: PacingStackedBarProps) {
   const workingStyle = getWorkingSegmentStyle(workingFrac, restFrac, otherFrac, segColors.working);
@@ -472,16 +605,24 @@ export function PacingStackedBar({
       </View>
 
       {/* Divider between Working and Rest */}
-      {showWorkingRestDivider && <BarDivider surfaceColor={surfaceColor} />}
+      {showWorkingRestDivider && (
+        <BarDivider surfaceColor={dividerColor} testID="pacing-divider-working-rest" />
+      )}
 
-      {/* Rest segment */}
-      <View testID="pacing-seg-rest" style={[styles.barSegment, restStyle]} />
+      {/* Rest segment: vertical-dash overlay for CVD (BLD-3879) */}
+      <View testID="pacing-seg-rest" style={[styles.barSegment, restStyle]}>
+        {hasRest && <RestDashOverlay fill testID="pacing-seg-rest-pattern" />}
+      </View>
 
       {/* Divider between Rest and Other */}
-      {showRestOtherDivider && <BarDivider surfaceColor={surfaceColor} />}
+      {showRestOtherDivider && (
+        <BarDivider surfaceColor={dividerColor} testID="pacing-divider-rest-other" />
+      )}
 
       {/* Divider between Working and Other if Rest is 0 */}
-      {showWorkingOtherDivider && <BarDivider surfaceColor={surfaceColor} />}
+      {showWorkingOtherDivider && (
+        <BarDivider surfaceColor={dividerColor} testID="pacing-divider-working-other" />
+      )}
 
       {/* Other segment: dot/stipple overlay for CVD */}
       <View testID="pacing-seg-other" style={[styles.barSegment, otherStyle]}>
@@ -505,6 +646,13 @@ type Props = {
 export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
   const colors = useThemeColors();
   const segColors = useSegmentColors();
+  const scheme = useColorScheme();
+  // BLD-3880: high-luminance-contrast divider colour, theme-derived. White on
+  // light theme, black on dark theme — the ONLY choice that clears WCAG 3:1
+  // against BOTH the coral Working fill and the petrol-blue/pale-cyan Rest fill
+  // on the correct theme. See SEGMENT_DIVIDER_COLOR_* declarations above.
+  const dividerColor =
+    scheme === "dark" ? SEGMENT_DIVIDER_COLOR_DARK : SEGMENT_DIVIDER_COLOR_LIGHT;
   const [sheetOpen, setSheetOpen] = useState(false);
   const [disclosureOpen, setDisclosureOpen] = useState(false);
 
@@ -578,19 +726,21 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
               accessibilityLabel={a11yLabel}
               accessibilityHint="Double tap to open per-exercise breakdown"
             >
-              {/* Stacked bar */}
+              {/* Stacked bar — extracted to PacingStackedBar to keep PacingCard's
+                  cyclomatic complexity under the ESLint ceiling. CVD overlays
+                  and protanopia-safe dividers remain inside the extracted bar. */}
               <PacingStackedBar
                 workingFrac={workingFrac}
                 restFrac={restFrac}
                 otherFrac={otherFrac}
-                surfaceColor={colors.surface}
+                dividerColor={dividerColor}
                 segColors={segColors}
               />
 
               {/* Labels */}
               <View style={styles.labelsRow}>
                 <LabelChip label="Working" value={workingLabel} color={segColors.working} textColor={colors.onSurface} showHatch={false} showDash />
-                <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} showDash={false} />
+                <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} showDash={false} showVerticalDash />
                 <LabelChip label="Other" value={otherLabel} color={segColors.other} textColor={colors.onSurface} showHatch showDash={false} />
               </View>
 
@@ -627,6 +777,7 @@ function LabelChip({
   textColor,
   showHatch,
   showDash,
+  showVerticalDash,
 }: {
   label: string;
   value: string;
@@ -634,6 +785,7 @@ function LabelChip({
   textColor: string;
   showHatch: boolean;
   showDash: boolean;
+  showVerticalDash?: boolean;
 }) {
   return (
     <View style={styles.labelChip}>
@@ -651,6 +803,13 @@ function LabelChip({
         )}
         {showDash && (
           <WorkingDashOverlay
+            width={LEGEND_DOT_SIZE}
+            height={LEGEND_DOT_SIZE}
+            testID={`pacing-dot-${label.toLowerCase()}-pattern`}
+          />
+        )}
+        {showVerticalDash && (
+          <RestDashOverlay
             width={LEGEND_DOT_SIZE}
             height={LEGEND_DOT_SIZE}
             testID={`pacing-dot-${label.toLowerCase()}-pattern`}
@@ -678,7 +837,9 @@ const styles = StyleSheet.create({
   disclosure: { marginBottom: 8, lineHeight: 18 },
   barContainer: { height: BAR_HEIGHT, flexDirection: "row", borderRadius: 4, overflow: "hidden", marginBottom: spacing.md },
   barSegment: { height: "100%" },
-  divider: { width: 2, height: "100%" },
+  // BLD-3880: fixed-width surface-coloured gap between adjacent pacing segments.
+  // Fixed pixel width (not flex) so bar segment fractions are unaffected.
+  segmentDivider: { width: SEGMENT_DIVIDER_WIDTH, height: "100%" },
   labelsRow: { flexDirection: "row", justifyContent: "space-around", flexWrap: "wrap", gap: spacing.sm },
   labelChip: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   legendDot: { width: LEGEND_DOT_SIZE, height: LEGEND_DOT_SIZE, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(0,0,0,0.18)", overflow: "hidden" },

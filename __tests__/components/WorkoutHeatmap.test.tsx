@@ -6,6 +6,19 @@ import { renderScreen } from "../helpers/render";
 describe("WorkoutHeatmap", () => {
   const emptyData = new Map<string, number>();
 
+  // Keep the 16-week grid deterministic across local time zones and CI.
+  // 2026-04-14 is intentionally exercised throughout this suite; at the real
+  // 2026-08-03 UTC boundary it falls just outside a grid anchored to Aug 3,
+  // while it is still inside a grid anchored to Aug 2 in American time zones.
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-08-02T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("renders without crashing with empty data", () => {
     const { getByText } = renderScreen(
       <WorkoutHeatmap data={emptyData} />
@@ -245,7 +258,6 @@ describe("WorkoutHeatmap", () => {
     // withOpacity('#FF7A55', ...) -> 'rgba(255, 122, 85, ...)'
     expect(json).not.toMatch(/rgba\(255,\s*122,\s*85/);
   });
-
   // BLD-3656: assert that computed cell label font size is bumped to fontSizes.sm floor.
   it("uses fontSizes.sm as the floor for cell labels and applies size * 0.55 multiplier", () => {
     const data = new Map([["2026-04-14", 3]]);
@@ -273,5 +285,130 @@ describe("WorkoutHeatmap", () => {
     const flat = collectStyles(label);
     const { fontSizes } = require("../../constants/design-tokens");
     expect(flat.fontSize).toBe(fontSizes.sm); // Floor bumped from fontSizes.xs to fontSizes.sm (14)
+  });
+
+  // BLD-3877: Assert that the three filled steps map to three DISTINCT color values
+  // (not opacity variants of one).
+  it("renders three filled steps with three DISTINCT solid color values from the theme (BLD-3877)", () => {
+    const today = new Date();
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const d1 = new Date(today); d1.setDate(today.getDate() - 7);
+    const d2 = new Date(today); d2.setDate(today.getDate() - 14);
+    const d3 = new Date(today); d3.setDate(today.getDate() - 21);
+    const data = new Map([
+      [fmt(d1), 1],
+      [fmt(d2), 2],
+      [fmt(d3), 3],
+    ]);
+
+    const { getByLabelText } = renderScreen(<WorkoutHeatmap data={data} />);
+
+    // Find the cell pressables
+    const cell1 = getByLabelText(new RegExp(`${d1.toLocaleDateString(undefined, { month: "long" })}.*1 workout$`));
+    const cell2 = getByLabelText(new RegExp(`${d2.toLocaleDateString(undefined, { month: "long" })}.*2 workouts`));
+    const cell3 = getByLabelText(new RegExp(`${d3.toLocaleDateString(undefined, { month: "long" })}.*3 workouts`));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getBgColor = (node: any) => {
+      const s = node.props?.style;
+      const arr = Array.isArray(s) ? s : [s];
+      let bgColor = undefined;
+      for (const entry of arr) {
+        if (entry && typeof entry === "object" && entry.backgroundColor) {
+          bgColor = entry.backgroundColor;
+        }
+      }
+      return bgColor;
+    };
+
+    const color1 = getBgColor(cell1);
+    const color2 = getBgColor(cell2);
+    const color3 = getBgColor(cell3);
+
+    // Verify all colors are distinct and not opacity variants
+    expect(color1).not.toBeUndefined();
+    expect(color2).not.toBeUndefined();
+    expect(color3).not.toBeUndefined();
+    expect(color1).not.toBe(color2);
+    expect(color2).not.toBe(color3);
+    expect(color1).not.toBe(color3);
+
+    // Assert they match the mock colors from makeMockThemeColors / Colors.light (since useColorScheme defaults to 'light')
+    // Light mock theme colors: heatmapFreq1 = '#90CAF9', heatmapFreq2 = '#1E88E5', heatmapFreq3 = '#0A2540'
+    expect(color1).toBe("#90CAF9");
+    expect(color2).toBe("#1E88E5");
+    expect(color3).toBe("#0A2540");
+  });
+
+  // BLD-4061: The legend '3+' cell must not clip its 2-char label.
+  // legendCell must use minWidth (not a fixed width) and paddingHorizontal > 0
+  // so the cell can expand to show the full "3+" text without truncation.
+  it("legend '3+' cell has paddingHorizontal so label is not clipped (BLD-4061)", () => {
+    const { StyleSheet } = require("react-native");
+    const { getAllByText } = renderScreen(<WorkoutHeatmap data={new Map()} />);
+    // The legend always renders all 4 levels; level 3 shows "3+".
+    const labels = getAllByText("3+", { includeHiddenElements: true });
+    expect(labels.length).toBeGreaterThanOrEqual(1);
+
+    // Walk up from the "3+" Text node to find the legendCell View that holds it.
+    // getAllByText returns the innermost host RNText element; its immediate parent
+    // in the React fiber tree is the custom Text (forwardRef) wrapper, so we
+    // walk up two levels to reach the legendCell View.
+    const textNode = labels[0];
+    // Walk up until we find a node whose style has `height` — that is the legendCell View.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let legendCellView: any = textNode.parent;
+    while (legendCellView) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const s = StyleSheet.flatten((legendCellView as any)?.props?.style) as Record<string, unknown>;
+      if (s && typeof s.height === "number") break;
+      legendCellView = legendCellView.parent;
+    }
+    expect(legendCellView).toBeTruthy();
+
+    // Use StyleSheet.flatten to resolve registered stylesheet IDs into a plain object.
+    // Plain object spreading alone misses properties registered via StyleSheet.create.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const flatStyle = StyleSheet.flatten((legendCellView as any)?.props?.style) as Record<string, unknown>;
+
+    // Must NOT have a fixed `width` of 18 (the clipping value before BLD-4061 fix).
+    expect(flatStyle.width).toBeUndefined();
+
+    // Must have minWidth >= 18 so the cell doesn't shrink below the normal square.
+    expect(typeof flatStyle.minWidth).toBe("number");
+    expect(flatStyle.minWidth as number).toBeGreaterThanOrEqual(18);
+
+    // Must have paddingHorizontal > 0 to give the "3+" label breathing room.
+    expect(typeof flatStyle.paddingHorizontal).toBe("number");
+    expect(flatStyle.paddingHorizontal as number).toBeGreaterThan(0);
+  });
+
+  it("applies a right margin to the day labels for consistent spacing (BLD-3642)", () => {
+    const { getByText } = renderScreen(
+      <WorkoutHeatmap data={emptyData} />
+    );
+    const wed = getByText("Wed");
+    const collectStyles = (node: typeof wed | null): Record<string, unknown> => {
+      let acc: Record<string, unknown> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const flatten = (style: any) => {
+        if (Array.isArray(style)) {
+          for (const s of style) {
+            flatten(s);
+          }
+        } else if (style && typeof style === "object") {
+          acc = { ...acc, ...style };
+        }
+      };
+      let cur: typeof wed | null = node;
+      while (cur) {
+        flatten(cur.props?.style);
+        cur = cur.parent as typeof wed | null;
+      }
+      return acc;
+    };
+    const flat = collectStyles(wed);
+    expect(flat.marginRight).toBe(1); // gap / 2 = 2 / 2 = 1
   });
 });
