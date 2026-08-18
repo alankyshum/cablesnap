@@ -8,12 +8,21 @@ import { ExpoConfig, ConfigContext } from "expo/config";
 // app, which is what Maestro flows expect. Local dev builds (CI unset) keep
 // the dev client for the normal Expo Go / dev-client workflow.
 const isCI = process.env.CI === "true";
+const isFdroidBuild = process.env.CABLESNAP_FDROID === "1";
+const sentryPlugin = [
+  "@sentry/react-native/expo",
+  {
+    organization: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+    url: "https://sentry.io/",
+  },
+] as [string, Record<string, unknown>];
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "CableSnap",
   slug: "cablesnap",
-  version: "0.26.83",
+  version: "0.26.100",
   orientation: "default",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
@@ -32,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#FF6038", // eslint-disable-line no-restricted-syntax
     },
     package: "com.persoack.cablesnap",
-    versionCode: 151,
+    versionCode: 168,
   },
   web: {
     favicon: "./assets/favicon.png",
@@ -84,22 +93,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "./plugins/with-release-signing",
     "./plugins/with-wearos-module",
     "./plugins/with-form-clips-backup",
-    [
-      // Sentry Expo config plugin — wires the Android Gradle plugin so that
-      // release builds upload source maps + debug-ids. The plugin falls back
-      // to SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN env vars at build
-      // time; values passed here are the canonical (non-secret) slugs. Auth
-      // token is NEVER set here — it must come from env only.
-      "@sentry/react-native/expo",
-      {
-        organization: process.env.SENTRY_ORG,
-        project: process.env.SENTRY_PROJECT,
-        url: "https://sentry.io/",
-      },
-    ],
-  ],
+    ...(!isFdroidBuild ? [sentryPlugin] : []),
+  ] as ExpoConfig["plugins"],
   owner: "alankyshum",
   extra: {
+    fdroidBuild: isFdroidBuild,
+    distributionChannel: isFdroidBuild ? "fdroid" : "github",
+    ...(isFdroidBuild
+      ? {}
+      : {
+          sentryDsn:
+            process.env.SENTRY_DSN ??
+            "https://c61278ad2a774c2e586454f017d4b86f@o4511267124215808.ingest.us.sentry.io/4511267125133312",
+        }),
     eas: {
       projectId: "24dc5f10-9a21-4336-bac0-6334a5f6b82b",
     },

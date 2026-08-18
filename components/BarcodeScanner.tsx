@@ -1,17 +1,13 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { Linking, StyleSheet, View, Pressable } from "react-native";
+import { Linking, Platform, StyleSheet, View, Pressable } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { FossBarcodeScannerView } from "@/modules/expo-foss-barcode-scanner/src";
 import * as Haptics from "expo-haptics";
 import { CAMERA_OVERLAY } from "../constants/theme";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
-
-type BarcodeScanResult = {
-  type: string;
-  data: string;
-};
 
 type Props = {
   visible: boolean;
@@ -45,7 +41,10 @@ export default function BarcodeScanner({ visible, onClose, onBarcodeScanned }: P
   }, [visible, permission, requestPermission]);
 
   const handleBarCodeScanned = useCallback(
-    (result: BarcodeScanResult) => {
+    (event: { nativeEvent?: { data: string }; data?: string }) => {
+      const data = event.nativeEvent?.data ?? event.data;
+      if (!data) return;
+      const result = { data };
       if (scannedRef.current) return;
 
       const now = Date.now();
@@ -135,14 +134,19 @@ export default function BarcodeScanner({ visible, onClose, onBarcodeScanned }: P
       accessibilityLabel="Barcode scanner. Point camera at a food barcode."
       accessibilityViewIsModal
     >
-      <CameraView
-        style={StyleSheet.absoluteFillObject}
-        facing="back"
-        barcodeScannerSettings={{
-          barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"],
-        }}
-        onBarcodeScanned={handleBarCodeScanned}
-      />
+      {Platform.OS === "android" ? (
+        <FossBarcodeScannerView
+          style={StyleSheet.absoluteFillObject}
+          onBarcodeScanned={handleBarCodeScanned}
+        />
+      ) : (
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
+          facing="back"
+          barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }}
+          onBarcodeScanned={handleBarCodeScanned}
+        />
+      )}
 
       {/* Semi-transparent overlay around scanning region */}
       <View style={styles.overlayContent}>
