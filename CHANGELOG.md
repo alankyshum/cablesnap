@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Consistent vertical spacing around the Estimated Pacing card** — Normalizes vertical spacing and margins on the workout summary screen. ([BLD-3640](/BLD/issues/BLD-3640))
 
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->
