@@ -22,6 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
+- **Pacing breakdown headers no longer truncate on mobile** — The exercise column now gives the Working, Rest, and Other headers enough room to remain readable.
+
 - **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
 
 ## v0.26.88 — 2026-07-26

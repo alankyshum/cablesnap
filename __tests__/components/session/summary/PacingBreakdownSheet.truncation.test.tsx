@@ -7,6 +7,8 @@
 
 import React from "react";
 import { render } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
+import type { TextProps, TextStyle } from "react-native";
 import PacingBreakdownSheet from "../../../../components/session/summary/PacingBreakdownSheet";
 import type { PacingBreakdown } from "@/lib/session-pacing";
 
@@ -19,7 +21,15 @@ jest.mock("@/components/ui/bottom-sheet", () => {
   const React = require("react");
   const { View } = require("react-native");
   return {
-    BottomSheet: ({ isVisible, children, title }: any) =>
+    BottomSheet: ({
+      isVisible,
+      children,
+      title,
+    }: {
+      isVisible: boolean;
+      children?: React.ReactNode;
+      title?: React.ReactNode;
+    }) =>
       isVisible ? (
         <View testID="mock-bottom-sheet">
           <View testID="bottom-sheet-title">{title}</View>
@@ -35,8 +45,14 @@ jest.mock("@/components/ui/bottom-sheet", () => {
 });
 
 jest.mock("@/components/ui/text", () => {
+  const ReactLib = require("react");
   const { Text: RNText } = require("react-native");
-  return { Text: ({ children, ...props }: any) => <RNText {...props}>{children}</RNText> };
+  return {
+    Text: (props: Record<string, unknown>) => {
+      const { children, ...rest } = props;
+      return ReactLib.createElement(RNText, rest, children);
+    },
+  };
 });
 
 jest.mock("@/hooks/useThemeColors", () => {
@@ -67,11 +83,8 @@ function makePacing(overrides: Partial<PacingBreakdown> = {}): PacingBreakdown {
   };
 }
 
-function flatStyle(style: any) {
-  if (Array.isArray(style)) {
-    return Object.assign({}, ...style);
-  }
-  return style || {};
+function flatStyle(style: TextProps["style"]): TextStyle {
+  return StyleSheet.flatten(style) ?? {};
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
