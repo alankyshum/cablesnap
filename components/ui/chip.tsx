@@ -2,6 +2,7 @@
 import { Text } from "@/components/ui/text";
 import { useColor } from "@/hooks/useColor";
 import { BORDER_RADIUS } from "@/theme/globals";
+import { radii, spacing } from "@/constants/design-tokens";
 import React from "react";
 import { Pressable, ViewStyle, type Role } from "react-native";
 import { fontSizes } from "@/constants/design-tokens";
@@ -52,10 +53,11 @@ export function Chip({
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
-          gap: 4,
-          paddingHorizontal: compact ? 10 : 14,
-          paddingVertical: compact ? 4 : 6,
-          borderRadius: BORDER_RADIUS,
+           gap: spacing.xs,
+           paddingHorizontal: compact ? spacing.md - spacing.xs / 2 : spacing.md + spacing.xs / 2,
+           paddingVertical: compact ? spacing.xs : spacing.xs + spacing.xs / 2,
+           minHeight: 44,
+           borderRadius: radii.lg,
           backgroundColor: selected ? primaryColor : mutedColor,
         },
         style,
