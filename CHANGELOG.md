@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Pacing bar labels are now spaced evenly across the row for improved alignment.
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
