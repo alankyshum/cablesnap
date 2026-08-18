@@ -143,8 +143,11 @@ export {
   updateExercisePositions,
   exerciseHasHistoricalRpe,
   getLatestUnilateralInsight,
+  getImbalanceTrend,
+  IMBALANCE_TREND_MAX_SESSIONS,
+  volumeDiffPct,
 } from "./sessions";
-export type { RestContext } from "./sessions";
+export type { RestContext, ImbalanceTrendPoint } from "./sessions";
 export type { SessionEditPayload, SessionEditSetPatch } from "./sessions";
 export type { TemplateOption, DatePreset, HistoryFilters } from "./sessions";
 export type { ExerciseCategory, RestInputs, RestFactor, RestBreakdown } from "../rest";

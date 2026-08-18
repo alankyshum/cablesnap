@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **L/R Imbalance Trend Over Time** — Adds a per-session L/R volume imbalance trend over time chart and descriptive neutral summary to the exercise detail screen. The trend aggregates weighted unilateral sets per session to track correction progress, with built-in a11y labels and CVD-neutral styling. ([BLD-3932](/BLD/issues/BLD-3932))
 
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->
@@ -76,7 +76,6 @@ _No user-facing changes yet._
 
 ## v0.26.92 — 2026-07-28
 <!-- versionCode: 160 -->
-
 - **Ellipsis (overflow) menu button on form library cards is now inset 6 dp from the top-right corner**, matching the check-overlay affordance for consistent touch target placement. ([BLD-4548](/BLD/issues/BLD-4548))
 - Left-align the "Set a goal" button in Weekly Training Goal settings so it
   matches the padding of surrounding rows. ([BLD-4537](/BLD/issues/BLD-4537))
@@ -186,19 +185,19 @@ _No user-facing changes yet._
 ## v0.26.89 — 2026-07-26
 <!-- versionCode: 157 -->
 
-- **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
-- **Nutrition card link padding** — Adds consistent edge padding to the Edit Targets and Meal Templates link rows in the nutrition card for better touch targets and visual alignment. ([BLD-4043](/BLD/issues/BLD-4043))
-- **Aligned water quick-add buttons** — Water quick-add chips now stay vertically centered on each row, fixing a slight misalignment visible on mobile. ([BLD-4042](/BLD/issues/BLD-4042))
+- Aligned heatmap spacing — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
+- Nutrition card link padding — Adds consistent edge padding to the Edit Targets and Meal Templates link rows in the nutrition card for better touch targets and visual alignment. ([BLD-4043](/BLD/issues/BLD-4043))
+- Aligned water quick-add buttons — Water quick-add chips now stay vertically centered on each row, fixing a slight misalignment visible on mobile. ([BLD-4042](/BLD/issues/BLD-4042))
 
 ## v0.26.88 — 2026-07-26
 <!-- versionCode: 156 -->
 
-- **F-Droid builds no longer embed the Sentry DSN**, allowing the Tracking AntiFeature to be removed from the official listing.
+- F-Droid builds no longer embed the Sentry DSN, allowing the Tracking AntiFeature to be removed from the official listing.
 
 ## v0.26.87 — 2026-07-26
 <!-- versionCode: 155 -->
 
-- **F-Droid builds now fully disable crash reporting and telemetry** — F-Droid builds ship without a Sentry DSN, and the native Sentry SDK is not initialized. The published license is corrected to AGPL-3.0-or-later.
+- F-Droid builds now fully disable crash reporting and telemetry — F-Droid builds ship without a Sentry DSN, and the native Sentry SDK is not initialized. The published license is corrected to AGPL-3.0-or-later.
  
 ## v0.26.86 — 2026-07-25
 <!-- versionCode: 154 -->
@@ -249,10 +248,8 @@ _No user-facing changes yet._
 - **Consistent spacing for Workout History Import button** — Aligns the vertical spacing and gaps around the "Choose CSV File..." button inside the settings card to match standard design patterns and other buttons. (BLD-3499)
 - **Added customizable weight-step increments (micro-loading)** — you can now configure the weight step (0.5 kg, 1.25 kg, 2.5 kg, 5 kg or 1 lb, 2.5 lb, 5 lb, 10 lb) in Units settings, which applies across all steppers in your workout sessions and quick-adds. ([BLD-3517](/BLD/issues/BLD-3517))
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
-=======
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
->>>>>>> 4c987e2d (feat(release-notes): strip internal refs and support code/link markdown)
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->

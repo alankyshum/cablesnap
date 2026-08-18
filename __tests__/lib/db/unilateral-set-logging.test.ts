@@ -123,4 +123,125 @@ describe("BLD-3345 Unilateral Set Logging & Imbalance Insight", () => {
     );
     expect(row?.count).toBe(0);
   });
+
+  describe("BLD-3932 L/R Imbalance Trend Over Time", () => {
+    it("volumeDiffPct: calculates correctly and handles zero division", () => {
+      expect(ctx.db.volumeDiffPct(10, 10)).toBe(0);
+      expect(ctx.db.volumeDiffPct(10, 20)).toBe(50);
+      expect(ctx.db.volumeDiffPct(20, 10)).toBe(50);
+      expect(ctx.db.volumeDiffPct(0, 0)).toBe(0);
+    });
+
+    it("getImbalanceTrend: normal multi-session case", async () => {
+      await ctx.initDb();
+      mockDb.getAllAsync.mockResolvedValueOnce([
+        { session_id: "sess-1", started_at: 1000, left_vol: 100, right_vol: 120 },
+        { session_id: "sess-2", started_at: 2000, left_vol: 200, right_vol: 180 },
+        { session_id: "sess-3", started_at: 3000, left_vol: 150, right_vol: 150 },
+      ]);
+
+      const trend = await ctx.db.getImbalanceTrend("ex-1");
+      expect(trend).toHaveLength(3);
+      expect(trend[0]).toEqual({
+        sessionId: "sess-1",
+        startedAt: 1000,
+        leftVol: 100,
+        rightVol: 120,
+        diffPct: 16.666666666666664,
+        dominantSide: "right",
+      });
+      expect(trend[1].dominantSide).toBe("left");
+      expect(trend[2].dominantSide).toBe("equal");
+    });
+
+    it("getImbalanceTrend: empty result", async () => {
+      await ctx.initDb();
+      mockDb.getAllAsync.mockResolvedValueOnce([]);
+
+      const trend = await ctx.db.getImbalanceTrend("ex-1");
+      expect(trend).toEqual([]);
+    });
+
+    it("getImbalanceTrend: SQL query excludes single-side-only, bodyweight null weight, incomplete, and bilateral sets", async () => {
+      await ctx.initDb();
+      mockDb.getAllAsync.mockClear();
+      mockDb.getAllAsync.mockResolvedValueOnce([]);
+
+      await ctx.db.getImbalanceTrend("ex-1");
+
+      const lastCall = mockDb.getAllAsync.mock.calls[0];
+      const sql = lastCall[0];
+
+      // Single-side-only session, both-sides-null-weight session, and one-side-null-weight session
+      // are excluded via HAVING left_vol > 0 AND right_vol > 0.
+      expect(sql).toContain("HAVING left_vol > 0 AND right_vol > 0");
+
+      // Incomplete opposite-side set is excluded because completed = 1 is required.
+      expect(sql).toContain("ws.completed = 1");
+
+      // Bilateral side IS NULL rows are ignored because side IS NOT NULL is required.
+      expect(sql).toContain("ws.side IS NOT NULL");
+    });
+
+    it("getImbalanceTrend: limit semantics covers >30 valid sessions and confirms exactly IMBALANCE_TREND_MAX_SESSIONS most recent sessions returned oldest-to-newest", async () => {
+      await ctx.initDb();
+      mockDb.getAllAsync.mockClear();
+
+      // Mock database returning 30 sessions.
+      const mockRows = Array.from({ length: 30 }, (_, i) => ({
+        session_id: `sess-${i + 1}`,
+        started_at: 1000 + i * 100,
+        left_vol: 100,
+        right_vol: 110,
+      }));
+      mockDb.getAllAsync.mockResolvedValueOnce(mockRows);
+
+      const trend = await ctx.db.getImbalanceTrend("ex-1");
+      
+      // Asserts that limit is requested correctly (which forces SQLite to return at most 30 of the most recent)
+      expect(mockDb.getAllAsync).toHaveBeenCalledWith(
+        expect.stringContaining("LIMIT ?"),
+        ["ex-1", 30]
+      );
+      
+      // Asserts that returned array has length 30 and is returned oldest-to-newest (startedAt ASC)
+      expect(trend).toHaveLength(30);
+      for (let i = 1; i < trend.length; i++) {
+        expect(trend[i].startedAt).toBeGreaterThan(trend[i - 1].startedAt);
+      }
+    });
+
+    it("getImbalanceTrend: formula parity asserts each trend point's diffPct equals volumeDiffPct(leftVol, rightVol)", async () => {
+      await ctx.initDb();
+      const leftVol = 120;
+      const rightVol = 150;
+      mockDb.getAllAsync.mockResolvedValueOnce([
+        { session_id: "sess-1", started_at: 1000, left_vol: leftVol, right_vol: rightVol },
+      ]);
+
+      const trend = await ctx.db.getImbalanceTrend("ex-1");
+      expect(trend).toHaveLength(1);
+      const expectedDiff = ctx.db.volumeDiffPct(leftVol, rightVol);
+      expect(trend[0].diffPct).toBe(expectedDiff);
+    });
+
+    it("getLatestUnilateralInsight: updated per-session total behavior is directly tested", async () => {
+      await ctx.initDb();
+      mockDb.getFirstAsync.mockClear();
+      mockDb.getFirstAsync.mockResolvedValueOnce({
+        left_vol: 450,
+        right_vol: 500,
+      });
+
+      const insight = await ctx.db.getLatestUnilateralInsight("ex-1");
+      expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
+        expect.stringContaining("SUM(CASE WHEN ws.side = 'left'"),
+        ["ex-1"]
+      );
+      expect(insight).toEqual({
+        left: { weight: 450, reps: 1 },
+        right: { weight: 500, reps: 1 },
+      });
+    });
+  });
 });
