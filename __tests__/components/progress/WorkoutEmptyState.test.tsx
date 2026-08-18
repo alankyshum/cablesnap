@@ -30,6 +30,7 @@ jest.mock('lucide-react-native', () => ({
 }))
 
 import WorkoutEmptyState from '@/components/progress/WorkoutEmptyState'
+import { spacing } from '@/constants/design-tokens'
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { __pushMock: pushMock } = require('expo-router') as { __pushMock: jest.Mock }
 
@@ -112,5 +113,35 @@ describe('WorkoutEmptyState', () => {
     // The Pressable at ctaNode.parent level carries our style array with borderWidth.
     const pressable = ctaNode
     expect(hasBorder(pressable.props.style)).toBe(true)
+  })
+
+  // Spacing and layout (BLD-4528): vertical gaps between icon→headline,
+  // headline→description, and description→CTA follow a single consistent spacing token
+  // and do not use ad-hoc margins that break the rhythm.
+  it('follows a consistent vertical spacing rhythm (BLD-4528)', () => {
+    const { getByTestId } = render(<WorkoutEmptyState />)
+    
+    const container = getByTestId('progress-workouts-empty')
+    const containerStyle = StyleSheet.flatten(container.props.style)
+    expect(containerStyle.gap).toBe(spacing.md)
+    expect(containerStyle.paddingHorizontal).toBe(spacing.xxl)
+    expect(containerStyle.paddingVertical).toBe(spacing.xl)
+
+    const iconCircle = getByTestId('progress-empty-icon-circle')
+    const iconStyle = StyleSheet.flatten(iconCircle.props.style)
+    expect(iconStyle.marginBottom).toBeUndefined()
+
+    const cta = getByTestId('progress-empty-cta')
+    const ctaStyle = StyleSheet.flatten(cta.props.style)
+    expect(ctaStyle.marginTop).toBeUndefined()
+  })
+
+  // Spacing and layout (BLD-4573): the headline and paragraph form a cohesive text pair,
+  // so the vertical spacing between them is reduced by setting a negative marginTop on description.
+  it('tightens the gap between the headline and description paragraph to form a cohesive text pair (BLD-4573)', () => {
+    const { getByText } = render(<WorkoutEmptyState />)
+    const descriptionText = getByText(/Complete your first workout/i)
+    const flattenedStyle = StyleSheet.flatten(descriptionText.props.style)
+    expect(flattenedStyle.marginTop).toBe(-spacing.sm)
   })
 })

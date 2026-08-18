@@ -150,7 +150,3 @@ test.describe("Chart SVG DOM Verification across routes", () => {
     console.log("=== ROOT PAGE SVGS ===", JSON.stringify(chartMetrics, null, 2));
   });
 });
-
-
-
-
