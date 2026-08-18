@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.98",
+    "date": "2026-08-18",
+    "versionCode": 166,
+    "body": "- Charts now work in the F-Droid build.\n- Progress, workout, nutrition, body, and muscle-volume charts now render consistently across supported platforms."
+  },
+  {
     "version": "0.26.97",
     "date": "2026-08-03",
     "versionCode": 165,

@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.98 — 2026-08-18
+<!-- versionCode: 166 -->
+
 - Charts now work in the F-Droid build.
 - Progress, workout, nutrition, body, and muscle-volume charts now render consistently across supported platforms.
 
