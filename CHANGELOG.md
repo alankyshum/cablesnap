@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-- Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
+ - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
+ - Fixed exercise selection scrolling on compact screens.
 
 ## v0.26.99 — 2026-08-18
 <!-- versionCode: 167 -->
