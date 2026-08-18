@@ -23,6 +23,9 @@ marker) at release time.
 ## Unreleased
 
 - **Increased contrast of the water quick-add chips** (+250 ml, +500 ml, etc.) so labels and icons meet WCAG AA (>=4.5:1) in light theme, including under deuteranopia. ([BLD-4684](/BLD/issues/BLD-4684))
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
