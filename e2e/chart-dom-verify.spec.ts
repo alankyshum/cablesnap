@@ -151,6 +151,3 @@ test.describe("Chart SVG DOM Verification across routes", () => {
   });
 });
 
-
-
-
