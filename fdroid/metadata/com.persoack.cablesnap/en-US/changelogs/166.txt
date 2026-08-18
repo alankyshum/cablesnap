@@ -1,0 +1,2 @@
+- Charts now work in the F-Droid build.
+- Progress, workout, nutrition, body, and muscle-volume charts now render consistently across supported platforms.

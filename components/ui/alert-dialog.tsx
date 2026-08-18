@@ -32,11 +32,14 @@ export type AlertDialogProps = {
   children?: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
-  onConfirm?: () => void;
+  onConfirm?: () => void | boolean | Promise<void | boolean>;
   onCancel?: () => void;
   dismissible?: boolean;
   showCancelButton?: boolean;
   style?: ViewStyle;
+  testID?: string;
+  confirmTestID?: string;
+  cancelTestID?: string;
 };
 
 // A simple card-like dialog overlay with fade-in animation similar to BottomSheet's backdrop
@@ -53,6 +56,9 @@ export function AlertDialog({
   dismissible = true,
   showCancelButton = true,
   style,
+  testID,
+  confirmTestID,
+  cancelTestID,
 }: AlertDialogProps) {
   const cardColor = useColor('card');
 
@@ -106,9 +112,9 @@ export function AlertDialog({
     animateClose();
   };
 
-  const handleConfirm = () => {
-    if (onConfirm) onConfirm();
-    animateClose();
+  const handleConfirm = async () => {
+    const result = onConfirm ? await onConfirm() : undefined;
+    if (result !== false) animateClose();
   };
 
   return (
@@ -117,6 +123,7 @@ export function AlertDialog({
       transparent
       statusBarTranslucent
       animationType='none'
+      testID={testID}
     >
       <Animated.View style={[styles.backdrop, rBackdropStyle]}>
         <TouchableWithoutFeedback onPress={handleBackdropPress}>
@@ -144,11 +151,11 @@ export function AlertDialog({
               {children ? <CardContent>{children}</CardContent> : null}
               <CardFooter>
                 {showCancelButton && (
-                  <Button variant='outline' onPress={handleCancel}>
+                  <Button testID={cancelTestID} variant='outline' onPress={handleCancel}>
                     {cancelText}
                   </Button>
                 )}
-                <Button style={{ flex: 1 }} onPress={handleConfirm}>
+                <Button testID={confirmTestID} style={{ flex: 1 }} onPress={handleConfirm}>
                   {confirmText}
                 </Button>
               </CardFooter>
