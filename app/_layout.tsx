@@ -32,6 +32,7 @@ import { useAppInit } from "../hooks/useAppInit";
 import { useSkiaWebInit } from "../hooks/useSkiaWebInit";
 import { SCREEN_CONFIGS } from "../constants/screen-config";
 import { LayoutToastBridge } from "../components/LayoutToastBridge";
+import { UpdatePromptBridge } from "../components/UpdatePromptBridge";
 import { LayoutBanners } from "../components/LayoutBanners";
 import { WebUnsupportedScreen } from "../components/WebUnsupportedScreen";
 import { DatabaseUnavailableScreen } from "../components/DatabaseUnavailableScreen";
@@ -159,6 +160,7 @@ export default Sentry.wrap(function RootLayout() {
         <ToastProvider>
           <BottomSheetModalProvider>
           <LayoutToastBridge />
+          <UpdatePromptBridge />
           {!onboarded && !pathname.startsWith("/onboarding") && (
             <Redirect href="/onboarding/welcome" />
           )}
