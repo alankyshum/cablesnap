@@ -5,6 +5,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { spacing, fontSizes } from "@/constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { GITHUB_REPO_URL } from "@/constants/github";
 
 export type MonthlyShareCardProps = {
   monthLabel: string;
@@ -95,7 +96,7 @@ export default function MonthlyShareCard({
         <Text
           style={[shareStyles.footerText, { color: colors.onSurfaceVariant }]}
         >
-          https://github.com/alankyshum/cablesnap
+          {GITHUB_REPO_URL}
         </Text>
       </View>
     </View>

@@ -3,7 +3,8 @@ import { useLayout } from "../lib/layout";
 /**
  * Responsive chart width for muscle-volume cards.
  *
- * - Phone (single column): explicit pixel width so victory-native has stable
+ * - Phone (single column): explicit pixel width so the shared react-native-svg
+ *   renderer in components/charts/ has stable
  *   bounds during the initial layout pass. Width math:
  *     layout.width
  *     − 32 (card marginHorizontal: 16 × 2)

@@ -4,8 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Progress as ProgressBar } from "@/components/ui/progress";
 import { Text } from "@/components/ui/text";
 import { useRouter } from "expo-router";
-import { CartesianChart, Line } from "victory-native";
-import { ChartGate } from "@/components/ui/ChartGate";
+import { LineChart } from "@/components/charts";
 import type { BodyWeight, BodySettings, BodyMeasurements } from "../../lib/types";
 import { useLayout } from "../../lib/layout";
 import { toDisplay } from "../../lib/units";
@@ -185,37 +184,34 @@ export function ChartCard({ chart, unit }: ChartCardProps) {
         Weight Trend
       </Text>
       <View style={{ width: chartWidth, height: 200 }}>
-        <ChartGate>
-          <CartesianChart
-            data={chart.map((d, i) => ({
-              date: paddedLabels[i] || "",
-              weight: toDisplay(d.weight, unit),
-              avg: avg[i]
-                ? toDisplay(avg[i].avg, unit)
-                : toDisplay(d.weight, unit),
-            }))}
-            xKey="date"
-            yKeys={["weight", "avg"]}
-            domainPadding={{ left: 10, right: 10 }}
-          >
-            {({ points }) => (
-              <>
-                <Line
-                  points={points.weight}
-                  color={colors.primary}
-                  strokeWidth={2}
-                  curveType="natural"
-                />
-                <Line
-                  points={points.avg}
-                  color={colors.tertiary}
-                  strokeWidth={2}
-                  curveType="natural"
-                />
-              </>
-            )}
-          </CartesianChart>
-        </ChartGate>
+        <LineChart
+          labels={paddedLabels}
+          series={[
+            {
+              key: "weight",
+              values: chart.map((d) => toDisplay(d.weight, unit)),
+              color: colors.primary,
+              strokeWidth: 2,
+              curve: "natural",
+              showPoints: false,
+            },
+            {
+              key: "avg",
+              values: chart.map((d, i) =>
+                avg[i]
+                  ? toDisplay(avg[i].avg, unit)
+                  : toDisplay(d.weight, unit),
+              ),
+              color: colors.tertiary,
+              strokeWidth: 2,
+              curve: "natural",
+              showPoints: false,
+            },
+          ]}
+          padding={{ left: 10, right: 10 }}
+          height={200}
+          width={chartWidth}
+        />
       </View>
       <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
         <Text variant="caption" style={{ color: colors.primary }}>

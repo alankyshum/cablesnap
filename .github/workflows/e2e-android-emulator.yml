@@ -132,9 +132,8 @@ jobs:
 
       - name: Install dependencies
         # --legacy-peer-deps matches every other CI workflow on this repo
-        # (known Expo / React Native peer-dep conflicts). Postinstall scripts
-        # MUST run (e.g. @shopify/react-native-skia downloads libskia.a), so we
-        # do NOT pass --ignore-scripts.
+        # (known Expo / React Native peer-dep conflicts). Keep lifecycle scripts
+        # enabled because patch-package runs from postinstall.
         if: steps.kvm.outputs.kvm_present == 'true'
         run: npm ci --legacy-peer-deps
 
@@ -196,7 +195,7 @@ jobs:
           # ONLY the x86_64 ABI, the single architecture this emulator runs
           # (arch: x86_64 in the Run-Maestro step). Without this, assembleRelease
           # cross-compiles every C++ native module — react-native (Hermes),
-          # react-native-screens, react-native-worklets and @shopify/react-native-skia —
+          # react-native-screens and react-native-worklets —
           # for ALL FOUR ABIs (arm64-v8a, armeabi-v7a, x86, x86_64) via
           # buildCMakeRelWithDebInfo. That CMake/NDK step is the real cost of the
           # release build: it dragged "Build release APK" to ~29 min on

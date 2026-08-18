@@ -6,6 +6,19 @@ import { renderScreen } from "../helpers/render";
 describe("WorkoutHeatmap", () => {
   const emptyData = new Map<string, number>();
 
+  // Keep the 16-week grid deterministic across local time zones and CI.
+  // 2026-04-14 is intentionally exercised throughout this suite; at the real
+  // 2026-08-03 UTC boundary it falls just outside a grid anchored to Aug 3,
+  // while it is still inside a grid anchored to Aug 2 in American time zones.
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date("2026-08-02T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("renders without crashing with empty data", () => {
     const { getByText } = renderScreen(
       <WorkoutHeatmap data={emptyData} />
@@ -326,6 +339,49 @@ describe("WorkoutHeatmap", () => {
     expect(color1).toBe("#90CAF9");
     expect(color2).toBe("#1E88E5");
     expect(color3).toBe("#0A2540");
+  });
+
+  // BLD-4061: The legend '3+' cell must not clip its 2-char label.
+  // legendCell must use minWidth (not a fixed width) and paddingHorizontal > 0
+  // so the cell can expand to show the full "3+" text without truncation.
+  it("legend '3+' cell has paddingHorizontal so label is not clipped (BLD-4061)", () => {
+    const { StyleSheet } = require("react-native");
+    const { getAllByText } = renderScreen(<WorkoutHeatmap data={new Map()} />);
+    // The legend always renders all 4 levels; level 3 shows "3+".
+    const labels = getAllByText("3+", { includeHiddenElements: true });
+    expect(labels.length).toBeGreaterThanOrEqual(1);
+
+    // Walk up from the "3+" Text node to find the legendCell View that holds it.
+    // getAllByText returns the innermost host RNText element; its immediate parent
+    // in the React fiber tree is the custom Text (forwardRef) wrapper, so we
+    // walk up two levels to reach the legendCell View.
+    const textNode = labels[0];
+    // Walk up until we find a node whose style has `height` — that is the legendCell View.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let legendCellView: any = textNode.parent;
+    while (legendCellView) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const s = StyleSheet.flatten((legendCellView as any)?.props?.style) as Record<string, unknown>;
+      if (s && typeof s.height === "number") break;
+      legendCellView = legendCellView.parent;
+    }
+    expect(legendCellView).toBeTruthy();
+
+    // Use StyleSheet.flatten to resolve registered stylesheet IDs into a plain object.
+    // Plain object spreading alone misses properties registered via StyleSheet.create.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const flatStyle = StyleSheet.flatten((legendCellView as any)?.props?.style) as Record<string, unknown>;
+
+    // Must NOT have a fixed `width` of 18 (the clipping value before BLD-4061 fix).
+    expect(flatStyle.width).toBeUndefined();
+
+    // Must have minWidth >= 18 so the cell doesn't shrink below the normal square.
+    expect(typeof flatStyle.minWidth).toBe("number");
+    expect(flatStyle.minWidth as number).toBeGreaterThanOrEqual(18);
+
+    // Must have paddingHorizontal > 0 to give the "3+" label breathing room.
+    expect(typeof flatStyle.paddingHorizontal).toBe("number");
+    expect(flatStyle.paddingHorizontal as number).toBeGreaterThan(0);
   });
 
   it("applies a right margin to the day labels for consistent spacing (BLD-3642)", () => {

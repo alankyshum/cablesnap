@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
     // each swatch; height stays 18 so the ramp looks visually consistent.
     minWidth: 18,
     height: 18,
-    paddingHorizontal: 2,
+    paddingHorizontal: 3,
     alignItems: "center",
     justifyContent: "center",
   },
