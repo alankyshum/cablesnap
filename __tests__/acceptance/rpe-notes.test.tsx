@@ -114,11 +114,6 @@ jest.mock('expo-keep-awake', () => ({
 }))
 // BLD-753a: use centralized manual mock at lib/__mocks__/audio.ts
 jest.mock('../../lib/audio')
-jest.mock('victory-native', () => ({
-  CartesianChart: 'CartesianChart',
-  Line: 'Line',
-  Bar: 'Bar',
-}))
 jest.mock('../../lib/format', () => ({
   formatDuration: jest.fn().mockReturnValue('30:00'),
   formatDateShort: jest.fn().mockReturnValue('Apr 15'),
@@ -447,4 +442,3 @@ jest.mock('../../lib/db/settings', () => ({
   getAppSetting: jest.fn().mockResolvedValue(null),
   setAppSetting: jest.fn().mockResolvedValue(undefined),
 }));
-
