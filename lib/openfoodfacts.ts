@@ -5,13 +5,14 @@
  */
 
 import { isValidProduct, parseProduct, type ParsedFood } from "./openfoodfacts-parse";
+import { GITHUB_REPO_URL } from "@/constants/github";
 export { isValidProduct, parseProduct, formatProductName } from "./openfoodfacts-parse";
 export type { ParsedFood } from "./openfoodfacts-parse";
 
 const BASE = "https://world.openfoodfacts.net";
 const SEARCH_URL = `${BASE}/cgi/search.pl`;
 const BARCODE_URL = `${BASE}/api/v2/product`;
-const UA = "CableSnap/0.6.0 (https://github.com/alankyshum/cablesnap)";
+const UA = `CableSnap/0.6.0 (${GITHUB_REPO_URL})`;
 const TIMEOUT = 10000;
 const FIELDS = "product_name,brands,nutriments,serving_size,serving_quantity";
 
