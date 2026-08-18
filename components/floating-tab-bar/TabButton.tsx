@@ -4,6 +4,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Animated from "react-native-reanimated";
 import { fontSizes } from "@/constants/design-tokens";
 import { HandleIcon } from "./HandleIcon";
+import { useAnimatedPress } from "@/lib/animations/hooks";
+import * as Haptics from "expo-haptics";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -42,14 +44,17 @@ export function TabButton({
   const label = TAB_LABELS[routeName] ?? routeName;
   const color = focused ? activeColor : inactiveColor;
   const isWorkouts = routeName === "index";
+  const { animatedStyle, onPressIn, onPressOut } = useAnimatedPress({ haptic: false });
 
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={() => { onPressIn(); Haptics.selectionAsync(); }}
+      onPressOut={onPressOut}
       accessibilityRole="tab"
       accessibilityLabel={label}
       accessibilityState={{ selected: focused }}
-      style={tabStyles.button}
+      style={[tabStyles.button, animatedStyle as unknown as import('react-native').ViewStyle]}
     >
       {isWorkouts ? (
         <HandleIcon size={28} color={color} />

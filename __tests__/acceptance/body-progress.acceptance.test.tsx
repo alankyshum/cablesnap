@@ -28,15 +28,6 @@ jest.mock('../../lib/errors', () => ({ logError: jest.fn() }))
 jest.mock('../../lib/interactions', () => ({ log: jest.fn() }))
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
-jest.mock('victory-native', () => {
-  const React = require('react')
-  return {
-    CartesianChart: (props: Record<string, unknown>) =>
-      React.createElement('CartesianChart', props),
-    Line: 'Line',
-    Bar: 'Bar',
-  }
-})
 jest.mock('../../components/MuscleVolumeSegment', () => 'MuscleVolumeSegment')
 jest.mock('../../components/WeeklySummary', () => 'WeeklySummary')
 

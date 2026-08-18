@@ -6,7 +6,7 @@
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { Colors } from "@/theme/colors";
 
-export function useThemeColors() {
+function useThemeColorsInner() {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const t = isDark ? Colors.dark : Colors.light;
@@ -69,6 +69,7 @@ export function useThemeColors() {
     onErrorContainer: isDark ? "#FEE2E2" : "#7F1D1D",
 
     // Borders
+    border: t.border,
     outline: t.border,
     outlineVariant: isDark ? "#21262D" : "#E5E7EB",
 
@@ -101,12 +102,25 @@ export function useThemeColors() {
     heatmapHigh: t.heatmapHigh,
     heatmapBorder: t.heatmapBorder,
 
-    // Workout-frequency heatmap accent (BLD-2719).
-    // Must be a blue/purple hue so the opacity ramp remains distinguishable
-    // under red-green CVD (deuteranopia / protanopia). Do NOT use the primary
-    // coral here — it collapses to grey-olive under deuteranopia simulation.
+    // Pacing "Rest" segment — dedicated CVD-safe token (BLD-3872).
+    // Distinct from heatmapLow so the shared recovery-heatmap surface is
+    // unaffected. See theme/colors.ts for CVD rationale and verified contrast.
+    pacingRest: t.pacingRest,
+
+    // Workout-frequency heatmap solid luminance ramp (BLD-3877).
+    // Replacing the single-hue opacity ramp (BLD-2719) with a 4-color luminance ramp
+    // to resolve tritanopia CVD issues (BLD-3876). Step-wise perceived lightness
+    // increases monotonically, ensuring contrast is preserved across all CVD types
+    // (normal, tritanopia, deuteranopia, protanopia) and achromatopsia.
+    heatmapFreq1: t.heatmapFreq1,
+    heatmapFreq2: t.heatmapFreq2,
+    heatmapFreq3: t.heatmapFreq3,
     heatmapFrequency: t.blue,
   };
 }
 
-export type ThemeColors = ReturnType<typeof useThemeColors>;
+export type ThemeColors = Omit<ReturnType<typeof useThemeColorsInner>, 'border'> & { border?: string };
+
+export function useThemeColors(): ThemeColors {
+  return useThemeColorsInner() as ThemeColors;
+}
