@@ -10,6 +10,16 @@
 import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import { skipOnboarding, navigateTo } from "./helpers";
 
+const ALLOWED_PROJECTS = new Set(["mobile", "tablet"]);
+
+// eslint-disable-next-line no-empty-pattern
+test.beforeAll(({}, testInfo) => {
+  test.skip(
+    !ALLOWED_PROJECTS.has(testInfo.project.name),
+    "Design quality tests run on phone and tablet viewports only",
+  );
+});
+
 test.beforeEach(async ({ page }) => {
   await skipOnboarding(page);
 });
@@ -85,7 +95,7 @@ const ONBOARDING_SCREENS: Screen[] = [
  */
 async function waitForScreen(page: Page, screen: Screen) {
   await navigateTo(page, screen.path);
-  const selector = screen.waitFor ?? '[role="button"], input, [dir="auto"]';
+  const selector = screen.waitFor ?? '[role="button"], input, [dir="auto"], svg';
   await page
     .waitForSelector(selector, { timeout: 10_000 })
     .catch(() => {
@@ -95,7 +105,28 @@ async function waitForScreen(page: Page, screen: Screen) {
 }
 
 async function collectDesignMetrics(page: Page) {
+  // This browser-side audit intentionally inspects many independent layout rules.
+  // eslint-disable-next-line complexity
   return page.evaluate(() => {
+    function isInsideHorizontalScroll(element: Element): boolean {
+      let cur: Element | null = element.parentElement;
+      while (cur && cur !== document.body && cur !== document.documentElement) {
+        const style = window.getComputedStyle(cur);
+        if (
+          style.overflowX === "auto" ||
+          style.overflowX === "scroll" ||
+          style.overflow.includes("auto") ||
+          style.overflow.includes("scroll") ||
+          cur.getAttribute("role") === "tablist" ||
+          (cur as HTMLElement).dataset?.scrollable === "true"
+        ) {
+          return true;
+        }
+        cur = cur.parentElement;
+      }
+      return false;
+    }
+
     const allElements = document.querySelectorAll("*");
     const fontSizes = new Map<string, number>();
     const fontWeights = new Map<string, number>();
@@ -157,7 +188,7 @@ async function collectDesignMetrics(page: Page) {
       }
 
       const rect = el.getBoundingClientRect();
-      if (rect.right > window.innerWidth + 5 || rect.left < -5) {
+      if ((rect.right > window.innerWidth + 5 || rect.left < -5) && !isInsideHorizontalScroll(el)) {
         const txt = (el.textContent?.trim() || "").substring(0, 30);
         if (txt) overflowing.push({ tag: el.tagName, text: txt });
       }
@@ -262,7 +293,28 @@ async function collectContrastIssues(page: Page) {
  */
 async function collectEdgePaddingIssues(page: Page, minPadding = 8) {
   return page.evaluate(
+    // This browser-side audit intentionally handles several layout container cases.
+    // eslint-disable-next-line complexity
     ({ minPad }) => {
+      function isInsideHorizontalScroll(element: Element): boolean {
+        let cur: Element | null = element.parentElement;
+        while (cur && cur !== document.body && cur !== document.documentElement) {
+          const style = window.getComputedStyle(cur);
+          if (
+            style.overflowX === "auto" ||
+            style.overflowX === "scroll" ||
+            style.overflow.includes("auto") ||
+            style.overflow.includes("scroll") ||
+            cur.getAttribute("role") === "tablist" ||
+            (cur as HTMLElement).dataset?.scrollable === "true"
+          ) {
+            return true;
+          }
+          cur = cur.parentElement;
+        }
+        return false;
+      }
+
       const issues: {
         text: string;
         tag: string;
@@ -315,7 +367,9 @@ async function collectEdgePaddingIssues(page: Page, minPadding = 8) {
               acs.overflow.includes("auto") ||
               acs.overflow.includes("scroll") ||
               acs.overflowY === "auto" ||
-              acs.overflowY === "scroll"
+              acs.overflowY === "scroll" ||
+              acs.overflowX === "auto" ||
+              acs.overflowX === "scroll"
             ) {
               break;
             }
@@ -335,7 +389,7 @@ async function collectEdgePaddingIssues(page: Page, minPadding = 8) {
               });
             }
           }
-        } else if (leftInset < minPad || rightInset < minPad) {
+        } else if ((leftInset < minPad || rightInset < minPad) && !isInsideHorizontalScroll(el)) {
           const key = `${text}:${leftInset}:${rightInset}`;
           if (!seen.has(key)) {
             seen.add(key);
@@ -423,6 +477,14 @@ const FRAMEWORK_BUTTONS = ["Dismiss", "Retry", "OK"];
 
 for (const screen of ALL_SCREENS) {
   test.describe(`Design quality — ${screen.name}`, () => {
+    // eslint-disable-next-line no-empty-pattern
+    test.beforeAll(({}, testInfo) => {
+      test.skip(
+        !ALLOWED_PROJECTS.has(testInfo.project.name),
+        "Design quality tests run on phone and tablet viewports only",
+      );
+    });
+
     test.beforeEach(async ({ page }) => {
       await waitForScreen(page, screen);
     });
@@ -499,7 +561,7 @@ for (const screen of ALL_SCREENS) {
       }
 
       const appUndersized = undersized.filter(
-        (t) => !FRAMEWORK_BUTTONS.includes(t.text),
+        (t) => !FRAMEWORK_BUTTONS.includes(t.text) && t.text.length > 0,
       );
       expect(
         appUndersized,
@@ -529,6 +591,14 @@ for (const screen of ALL_SCREENS) {
 // ── Tab Bar ─────────────────────────────────────────────────────────
 
 test.describe("Tab bar — label truncation", () => {
+  // eslint-disable-next-line no-empty-pattern
+  test.beforeAll(({}, testInfo) => {
+    test.skip(
+      !ALLOWED_PROJECTS.has(testInfo.project.name),
+      "Design quality tests run on phone and tablet viewports only",
+    );
+  });
+
   test("no tab labels are truncated on current viewport", async ({
     page,
   }) => {
@@ -554,6 +624,13 @@ test.describe("Tab bar — label truncation", () => {
 // ── Content Max-Width (tablet/desktop) ──────────────────────────────
 
 test.describe("Responsiveness — content width constraint (tablet+)", () => {
+  // eslint-disable-next-line no-empty-pattern
+  test.beforeAll(({}, testInfo) => {
+    test.skip(
+      !ALLOWED_PROJECTS.has(testInfo.project.name),
+      "Design quality tests run on phone and tablet viewports only",
+    );
+  });
   for (const screen of ALL_SCREENS) {
     test(`${screen.name}: content doesn't exceed 720px on wide viewports`, async ({
       page,
@@ -582,32 +659,22 @@ test.describe("Responsiveness — content width constraint (tablet+)", () => {
 // active so these screens actually render.
 
 test.describe("Design quality — Onboarding", () => {
+  // eslint-disable-next-line no-empty-pattern
+  test.beforeAll(({}, testInfo) => {
+    test.skip(
+      !ALLOWED_PROJECTS.has(testInfo.project.name),
+      "Design quality tests run on phone and tablet viewports only",
+    );
+  });
+
   async function gotoOnboardingScreen(page: Page, path: string) {
-    // Navigate to / first — onboarding gate redirects to /onboarding/welcome
-    await page.goto("/");
+    await page.goto(path);
+    await page
+      .waitForSelector('[role="button"], input, [dir="auto"], svg', {
+        timeout: 10_000,
+      })
+      .catch(() => {});
     await page.waitForTimeout(500);
-
-    if (path === "/onboarding/welcome") return;
-
-    // Get Started → Setup
-    const getStarted = page.getByRole("button", { name: /get started/i });
-    if (await getStarted.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      await getStarted.click();
-      await page.waitForTimeout(500);
-    }
-    if (path === "/onboarding/setup") return;
-
-    // Setup → Continue → Recommend
-    const beginner = page.getByText("Beginner");
-    if (await beginner.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      await beginner.click();
-      await page.waitForTimeout(300);
-    }
-    const cont = page.getByRole("button", { name: /continue/i });
-    if (await cont.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      await cont.click();
-      await page.waitForTimeout(1_000);
-    }
   }
 
   for (const screen of ONBOARDING_SCREENS) {

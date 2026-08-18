@@ -14,6 +14,7 @@
 
 import React from "react";
 import { render, waitFor } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 
 // ── mock heavy deps before importing WorkoutSegment ──────────────────────────
 
@@ -94,6 +95,18 @@ jest.mock("@/lib/db", () => ({
 import WorkoutSegment from "@/components/progress/WorkoutSegment";
 
 describe("WorkoutSegment — gym filter pill 390px width-chain regression (BLD-1060)", () => {
+  it("calendar/list toggle button meets the 44dp minimum touch target", async () => {
+    const { getByLabelText } = render(<WorkoutSegment />);
+
+    await waitFor(() => {
+      const toggle = getByLabelText("Switch to calendar view");
+      const style = StyleSheet.flatten(toggle.props.style);
+
+      expect(style.width).toBeGreaterThanOrEqual(44);
+      expect(style.height).toBeGreaterThanOrEqual(44);
+    });
+  });
+
   it("renders gym filter row when activeGymCount >= 2", async () => {
     const { getByTestId } = render(<WorkoutSegment />);
 

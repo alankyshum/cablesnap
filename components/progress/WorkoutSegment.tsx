@@ -400,8 +400,8 @@ const styles = StyleSheet.create({
   toggleButton: {
     borderWidth: 1,
     borderRadius: 8,
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },

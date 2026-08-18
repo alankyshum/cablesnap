@@ -239,9 +239,34 @@ jobs:
           node-version-file: .nvmrc
           cache: 'npm'
 
+      # BLD-4268: `expo prebuild` fails at `withAndroidDangerousBaseMod` with
+      # `Cannot find module './utils/history'` when the setup-node `cache: 'npm'`
+      # step restores a corrupted/partial `@expo/config-plugins` tarball, so
+      # `npm ci` extracts an incomplete tree missing internal build/utils/*.js.
+      # Guard: after `npm ci`, assert the lazy-required internal file exists;
+      # if not, purge the offending tarball from the npm cache and reinstall
+      # (`npm rebuild` is insufficient — it does not re-extract the tarball).
+      # Fail loudly if a second install still cannot produce the file.
       - name: Install dependencies
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
-        run: npm ci
+        run: |
+          set -euo pipefail
+          npm ci
+          GUARD_FILE="node_modules/@expo/config-plugins/build/utils/history.js"
+          if [ ! -f "$GUARD_FILE" ]; then
+            echo "::warning::Corrupt npm cache detected — $GUARD_FILE missing after npm ci. Purging @expo/config-plugins from npm cache and reinstalling."
+            npm cache ls @expo/config-plugins 2>/dev/null || true
+            # Nuke the whole npm download cache — safer than trying to
+            # surgically remove a single tarball across cacache layouts.
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci
+            if [ ! -f "$GUARD_FILE" ]; then
+              echo "::error::$GUARD_FILE still missing after cache purge + reinstall. Upstream tarball may be broken."
+              exit 1
+            fi
+            echo "Recovered: $GUARD_FILE present after cache purge + reinstall."
+          fi
 
       # Lint + unit test gate — mirrors ci.yml exactly so a red suite can never
       # ship via the scheduled cron. Runs AFTER npm ci (node_modules ready) and
@@ -290,6 +315,47 @@ jobs:
           fi
           echo "Wrote $SIDECAR ($(wc -c < "$SIDECAR") bytes)"
 
+      - name: Resolve signing migration boundary and README
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.next_version.outputs.version }}"
+          python3 - "$VERSION" <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          marker_path = Path("fdroid/signing-migration.json")
+          readme_path = Path("README.md")
+          try:
+              marker = json.loads(marker_path.read_text())
+              boundary = marker["boundaryTag"]
+          except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+              raise SystemExit(f"signing migration marker is missing or unparseable: {exc}")
+          if boundary is not None and (not isinstance(boundary, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", boundary)):
+              raise SystemExit("signing migration marker boundaryTag must be null or a release tag like v0.27.0")
+
+          pending = "boundary release pending — see release notes"
+          start = "<!-- SIGNING_MIGRATION_NOTICE_START -->"
+          end = "<!-- SIGNING_MIGRATION_NOTICE_END -->"
+          readme = readme_path.read_text()
+          if readme.count(start) != 1 or readme.count(end) != 1:
+              raise SystemExit("README signing migration notice markers are missing or duplicated")
+          if boundary is None:
+              if "${{ inputs.republish_current }}" == "true":
+                  raise SystemExit("signing migration boundary is unset; republish mode cannot establish the boundary release")
+              if readme.count(pending) != 1:
+                  raise SystemExit("README signing migration pending notice is missing or duplicated")
+              boundary = f"v{sys.argv[1]}"
+              marker_path.write_text(json.dumps({"boundaryTag": boundary}) + "\n")
+              readme_path.write_text(readme.replace(pending, boundary))
+          else:
+              if pending in readme or readme.count(boundary) != 1:
+                  raise SystemExit("README signing migration notice is out of sync with fdroid/signing-migration.json")
+          print(f"Signing migration boundary: {boundary}")
+          PY
+
       # --- Build APK BEFORE creating release (immutable releases block later uploads) ---
 
       - name: Set up JDK 17
@@ -307,6 +373,26 @@ jobs:
       # promotion + regen). The cached node_modules are reused here for
       # `expo prebuild` and the Android build.
 
+      - name: Sanitize Expo sources before autolinking
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          CABLESNAP_FDROID: "1"
+        run: |
+          # expo-modules-autolinking runs while prebuild evaluates the native
+          # project. Calling this only after prebuild is too late: it has
+          # already emitted dependencies on publisher local AARs. Remove
+          # those artifacts and rewrite sources before autolinking scans them.
+          node - <<'NODE'
+          const {
+            patchFdroidExpoDependencies,
+            patchFdroidLibrarySources,
+          } = require('./plugins/with-wearos-module');
+          patchFdroidExpoDependencies(process.cwd());
+          // Prebuild has already generated module BuildConfig/source outputs;
+          // sanitize their sources without deleting those outputs.
+          patchFdroidLibrarySources(process.cwd(), { removeGeneratedArtifacts: false });
+          NODE
+
       - name: Generate native project
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
@@ -319,6 +405,82 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: npx expo prebuild --clean --platform android
+
+      - name: Strip direct proprietary Expo dependencies
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          CABLESNAP_FDROID: "1"
+        run: |
+          node - <<'NODE'
+          const {
+            patchFdroidExpoDependencies,
+            patchFdroidLibrarySources,
+            patchFdroidAndroidGradleTree,
+          } = require('./plugins/with-wearos-module');
+          patchFdroidExpoDependencies(process.cwd());
+          patchFdroidLibrarySources(process.cwd(), {
+            removeGeneratedArtifacts: false,
+            rewriteSources: false,
+          });
+          // Run after prebuild has materialised every generated Android
+          // library script. The config plugin's dangerous-mod hook can run
+          // before some Expo scripts are copied into the native project.
+          patchFdroidAndroidGradleTree(process.cwd());
+          NODE
+          grep -nE 'compileOnly.*(firebase|installreferrer)|barcodeDependencyConfiguration' \
+            node_modules/expo-notifications/android/build.gradle \
+            node_modules/expo-application/android/build.gradle \
+            node_modules/expo-camera/android/build.gradle
+
+      - name: Disable Expo Camera barcode dependency graph for F-Droid
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          CABLESNAP_FDROID: "1"
+        run: |
+          # CableSnap renders the open-source expo-foss-barcode-scanner view
+          # for Android. Disable Expo Camera's optional scanner graph as a
+          # second, property-level guard; this prevents AGP from resolving
+          # the ML Kit graph while retaining CameraX preview functionality.
+          printf '\nexpo.camera.barcode-scanner-enabled=false\n' >> android/gradle.properties
+          grep 'expo.camera.barcode-scanner-enabled=false' android/gradle.properties
+          # Prebuild and Expo autolinking can leave publisher-side Android
+          # intermediates under the generated project. They are disposable and
+          # must not be allowed to seed the F-Droid variant's dex merge.
+          rm -rf android/app/build android/build android/wear/build
+          # Gradle's transformed-AAR cache is outside the project and can
+          # survive clean/prebuild cycles. Remove only transform metadata so
+          # a stale proprietary AAR cannot be selected as a release fallback;
+          # Gradle will recreate the needed open-source transforms.
+          rm -rf "$HOME/.gradle/caches/9.0.0/transforms" \
+            "$HOME/.gradle/caches/9.0.0/fileContent" \
+            "$HOME/.gradle/caches/9.0.0/fileHashes"
+          # Keep the F-Droid exclusions in the app project as a final
+          # post-prebuild guard, independent of config-plugin ordering.
+          cat >> android/app/build.gradle <<'GRADLE'
+
+          // cablesnap:ci:fdroid-final-excludes
+          if (System.getenv("CABLESNAP_FDROID") == "1") {
+              configurations.configureEach {
+                  exclude group: "com.google.android.gms"
+                  exclude group: "com.google.firebase"
+                  exclude group: "com.google.mlkit"
+                  exclude group: "com.android.installreferrer"
+                  exclude module: "camera-mlkit-vision"
+              }
+          }
+          GRADLE
+          cat >> android/app/proguard-rules.pro <<'PROGUARD'
+
+          # F-Droid deliberately removes these optional Expo integrations.
+          # Their native methods remain in compile-time Expo library classes,
+          # so R8 must be told that the absent optional types are intentional;
+          # unreachable methods are then removed from the releaseFdroid dex.
+          -dontwarn com.android.installreferrer.**
+          -dontwarn com.google.android.gms.**
+          -dontwarn com.google.firebase.**
+          -dontwarn com.google.mlkit.**
+          -ignorewarnings
+          PROGUARD
 
       - name: Boost Gradle JVM heap
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
@@ -382,53 +544,55 @@ jobs:
           # distribution".
           set -euo pipefail
           cd android
-          ./gradlew \
-            :app:assembleRelease \
-            :app:assembleReleaseFdroid \
-            :wear:assembleRelease
+           # Build each variant in a separate Gradle invocation. A single
+           # invocation creates a combined task graph, allowing Play release
+           # library artifacts to satisfy releaseFdroid matchingFallbacks.
+           # Keeping the F-Droid graph isolated is required for DEX purity.
+           ./gradlew --refresh-dependencies --no-build-cache :app:assembleReleaseFdroid
+           # Preserve the clean F-Droid APK before the Play invocation can
+           # reuse or overwrite app/build outputs.
+           cp app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk ../cablesnap-fdroid.apk
+           FROID_HITS=$(unzip -p ../cablesnap-fdroid.apk 'classes*.dex' 2>/dev/null | strings \
+             | grep -oE 'com/google/firebase[A-Za-z0-9_$./-]*|com/google/mlkit[A-Za-z0-9_$./-]*|com/google/android/gms[A-Za-z0-9_$./-]*|com/android/installreferrer[A-Za-z0-9_$./-]*' \
+             | sort -u || true)
+           if [ -n "$FROID_HITS" ]; then
+             echo "::error::F-Droid APK was impure immediately after its isolated build:"
+             printf '%s\n' "$FROID_HITS"
+             ./gradlew :app:dependencies --configuration releaseFdroidRuntimeClasspath || true
+             exit 1
+           fi
+           rm -rf app/build
+           ./gradlew :app:assembleRelease :wear:assembleRelease
           cd ..
           # Phone APK (Play / `release` build type) — the canonical
           # `cablesnap.apk` retained for the existing Play Store /
           # GitHub-Release pipeline.
           cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
-          # Phone APK (`releaseFdroid` build type) — what the F-Droid build
-          # server's `Builds:` recipe also produces locally; we attach it as
-          # a separate release asset so external mirrors can verify the
-          # GMS-free build matches.
-          cp android/app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk cablesnap-fdroid.apk
+           # Phone APK (`releaseFdroid` build type) was copied immediately
+           # after its isolated Gradle invocation above.
           # Watch APK — Wear OS 4 standalone artifact; Play-only (F-Droid
           # rejects GMS).
           cp android/wear/build/outputs/apk/release/wear-release.apk cablesnap-wear.apk
           echo "Built artifacts:"
           ls -lh cablesnap.apk cablesnap-fdroid.apk cablesnap-wear.apk
 
-      - name: AC10b — verify F-Droid APK contains zero GMS Wearable classes
+      - name: AC10b — verify F-Droid APK contains no proprietary SUSS classes
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
-          # Plan AC10b: the F-Droid flavor APK MUST NOT carry any
-          # com/google/android/gms/wearable/* classes. We verify by listing
-          # the APK's classes.dex entries and grepping. If even one shows up,
-          # fail the release — that means the with-wearos-module plugin's
-          # configurations { releaseFdroidImplementation { exclude ... } }
-          # block stopped working as expected.
           set -euo pipefail
-          # Extract DEX files and search for GMS Wearable class descriptors.
-          # `unzip -l` only lists zip entries (classes.dex, classes2.dex, etc.)
-          # — individual Java class paths are compiled INTO the binary DEX
-          # format and invisible to zip-level listing. We must inspect DEX
-          # contents directly via `strings` on the extracted dex files.
           TMPDIR_DEX=$(mktemp -d)
+          trap 'rm -rf "$TMPDIR_DEX"' EXIT
           unzip -q -o cablesnap-fdroid.apk 'classes*.dex' -d "$TMPDIR_DEX"
-          GMS_COUNT=$(strings "$TMPDIR_DEX"/classes*.dex \
-            | grep -c 'com/google/android/gms/wearable' \
-            || true)
-          rm -rf "$TMPDIR_DEX"
-          echo "GMS Wearable class hits in cablesnap-fdroid.apk (via dex strings): $GMS_COUNT"
-          if [ "$GMS_COUNT" -ne 0 ]; then
-            echo "::error::AC10b violated — cablesnap-fdroid.apk contains $GMS_COUNT GMS Wearable class entries."
+          HITS=$(strings "$TMPDIR_DEX"/classes*.dex \
+            | grep -oE 'com/google/firebase[A-Za-z0-9_$./-]*|com/google/mlkit[A-Za-z0-9_$./-]*|com/google/android/gms[A-Za-z0-9_$./-]*|com/android/installreferrer[A-Za-z0-9_$./-]*' \
+            | sort -u || true)
+          printf '%s\n' "$HITS"
+          if [ -n "$HITS" ]; then
+            echo "::error::AC10b violated — proprietary SUSS classes found in cablesnap-fdroid.apk:"
+            printf '%s\n' "$HITS"
             exit 1
           fi
-          echo "AC10b OK — F-Droid APK is GMS-Wearable-free."
+          echo "AC10b OK — F-Droid APK contains none of the four SUSS prefixes."
 
       - name: Verify APK signature matches committed fingerprint
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
@@ -671,7 +835,8 @@ jobs:
             git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
               CHANGELOG.md \
               lib/changelog.generated.ts \
-              fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
+              fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/ \
+              fdroid/signing-migration.json README.md
           }
 
           stage_paths
@@ -706,6 +871,38 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             bash scripts/release-apply-bump.sh "$VERSION" "$VCODE"
+            python3 - "$VERSION" <<'PY'
+            import json
+            import re
+            import sys
+            from pathlib import Path
+
+            marker_path = Path("fdroid/signing-migration.json")
+            readme_path = Path("README.md")
+            try:
+                marker = json.loads(marker_path.read_text())
+                boundary = marker["boundaryTag"]
+            except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+                raise SystemExit(f"signing migration marker is missing or unparseable: {exc}")
+            if boundary is not None and (not isinstance(boundary, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", boundary)):
+                raise SystemExit("signing migration marker boundaryTag must be null or a release tag like v0.27.0")
+
+            pending = "boundary release pending — see release notes"
+            start = "<!-- SIGNING_MIGRATION_NOTICE_START -->"
+            end = "<!-- SIGNING_MIGRATION_NOTICE_END -->"
+            readme = readme_path.read_text()
+            if readme.count(start) != 1 or readme.count(end) != 1:
+                raise SystemExit("README signing migration notice markers are missing or duplicated")
+            if boundary is None:
+                boundary = f"v{sys.argv[1]}"
+                if readme.count(pending) != 1:
+                    raise SystemExit("README signing migration pending notice is missing or duplicated")
+                marker_path.write_text(json.dumps({"boundaryTag": boundary}) + "\n")
+                readme_path.write_text(readme.replace(pending, boundary))
+            elif pending in readme or readme.count(boundary) != 1:
+                raise SystemExit("README signing migration notice is out of sync with fdroid/signing-migration.json")
+            print(f"Signing migration boundary: {boundary}")
+          PY
             stage_paths
             if git diff --cached --quiet; then
               echo "::notice::No staged delta after regenerate — concurrent merge already shipped v$VERSION? exiting."
@@ -750,6 +947,21 @@ jobs:
             echo "::error::CHANGELOG.md has an empty body for v$VERSION — refusing to ship."
             exit 1
           fi
+          MARKER=$(python3 - <<'PY'
+          import json
+          import re
+          import sys
+          try:
+              value = json.load(open("fdroid/signing-migration.json"))["boundaryTag"]
+          except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+              print(f"signing migration marker is missing or unparseable: {exc}", file=sys.stderr)
+              raise SystemExit(1)
+          if not isinstance(value, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", value):
+              print("signing migration marker boundaryTag must be a release tag like v0.27.0", file=sys.stderr)
+              raise SystemExit(1)
+          print(value)
+          PY
+          )
           {
             echo 'notes<<NOTES_EOF'
             echo "## What's New"
@@ -763,9 +975,17 @@ jobs:
             echo "https://alankyshum.github.io/cablesnap/repo"
             echo '```'
             echo ""
+             echo "The self-hosted F-Droid repo serves the production Play-flavor APK, which includes Google Play Services, Firebase, and ML Kit. For the GMS-free build, use the official F-Droid listing (https://f-droid.org/packages/com.persoack.cablesnap/) or the \`cablesnap-fdroid.apk\` release asset."
+             echo ""
+             if [ "v$VERSION" = "$MARKER" ]; then
+               echo "### One-time self-hosted-repo reinstall warning"
+               echo ""
+               echo "This boundary release changes the self-hosted F-Droid repo signing key from the debug certificate to the production certificate. Users of that repo on this release must export a backup first, then uninstall and reinstall CableSnap once; Android will not update the app in place across this signing change, and uninstalling can delete local data."
+               echo ""
+             fi
             echo "## Wear OS companion (Play Store only)"
             echo ""
-            echo "The Wear OS companion APK (\`cablesnap-wear.apk\`) is distributed via the Play Store only — F-Droid's Inclusion Criteria reject the GMS Wearable dependency the watch app needs. The F-Droid build of CableSnap (\`cablesnap-fdroid.apk\`) is fully functional on its own; the watch APK is an optional companion."
+            echo "The Wear OS companion APK (\`cablesnap-wear.apk\`) is distributed via the Play Store only — F-Droid's Inclusion Criteria reject the GMS Wearable dependency the watch app needs. The GMS-free \`cablesnap-fdroid.apk\` build is fully functional on its own; the watch APK is an optional companion."
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
 
@@ -798,12 +1018,11 @@ jobs:
         run: |
           # All three artifacts are attached to the same GitHub Release:
           #   cablesnap.apk          — Play-flavor phone APK (canonical)
-          #   cablesnap-fdroid.apk   — F-Droid-flavor phone APK (GMS-free)
+          #   cablesnap-fdroid.apk   — GMS-free phone APK for official F-Droid
           #   cablesnap-wear.apk     — Wear OS 4+ companion APK (Play-only)
-          # The auto-fdroid workflow keys off cablesnap.apk presence to
-          # decide whether to refresh the F-Droid repo; the actual F-Droid
-          # repo build pulls cablesnap-fdroid.apk per
-          # `.github/workflows/fdroid-release.yml`.
+          # The self-hosted F-Droid repo refresh keys off cablesnap.apk and
+          # publishes that Play-flavor APK; the GMS-free build remains
+          # available as cablesnap-fdroid.apk for official F-Droid users.
           VERSION="${{ steps.next_version.outputs.version }}"
 
           # BLD-2316 (IDEMPOTENT CREATE): a concurrent Scheduled Release run can
