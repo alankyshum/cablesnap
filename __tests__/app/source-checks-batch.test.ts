@@ -753,6 +753,8 @@ describe("FloatingTabBar component (BLD-212)", () => {
     expect(floatingTabBarSrc).toContain("accessibilityState={{ selected:");
     const tabRoleCount = (floatingTabBarSrc.match(/accessibilityRole="tab"/g) || []).length;
     expect(tabRoleCount).toBeGreaterThanOrEqual(2);
+    expect(floatingTabBarSrc).toContain("adjustsFontSizeToFit");
+    expect(floatingTabBarSrc).toContain("minimumFontScale={0.85}");
     expect(floatingTabBarSrc).toContain("minWidth: 48");
     expect(floatingTabBarSrc).toContain("minHeight: 48");
   });
