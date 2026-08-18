@@ -34,7 +34,7 @@ type Props = {
   goalMl: number;
   unit: HydrationUnit;
   presetsMl: [number, number, number];
-  colors: { primary: string; onSurface: string; onSurfaceVariant: string };
+  colors: { primary: string; primaryTextOnSurface: string; onSurface: string; onSurfaceVariant: string };
   onPresetPress: (amountMl: number) => void;
   onCustomPress: () => void;
 };
@@ -45,6 +45,7 @@ export function WaterSection({
 }: Props) {
   const headerLabel = formatTotalOverGoal(totalMl, goalMl, unit);
   const pct = goalMl > 0 ? Math.min(totalMl / goalMl, 1) * 100 : 0;
+  const chipColor = colors.primaryTextOnSurface || colors.primary;
 
   const handleHeaderPress = () => router.push("/nutrition/water");
 
@@ -84,7 +85,7 @@ export function WaterSection({
             accessibilityRole="button"
             style={({ pressed }) => [
               styles.chip,
-              { borderColor: colors.primary },
+              { borderColor: chipColor },
               pressed && { opacity: 0.6 },
             ]}
             hitSlop={4}
@@ -97,12 +98,12 @@ export function WaterSection({
             <MaterialCommunityIcons
               name="cup-water"
               size={14}
-              color={colors.primary}
+              color={chipColor}
               testID={`water-preset-icon-${idx}`}
               {...(Platform.OS !== "web" ? { accessibilityElementsHidden: true } : {})}
               {...(Platform.OS !== "web" ? { importantForAccessibility: "no-hide-descendants" as const } : {})}
             />
-            <Text variant="caption" style={[{ color: colors.primary }, styles.chipLabel]}>
+            <Text variant="caption" style={[{ color: chipColor }, styles.chipLabel]}>
               {`+${formatVolume(amt, unit)}`}
             </Text>
           </Pressable>
@@ -114,7 +115,7 @@ export function WaterSection({
           style={({ pressed }) => [
             styles.chip,
             styles.customChip,
-            { borderColor: colors.primary },
+            { borderColor: chipColor },
             pressed && { opacity: 0.6 },
           ]}
           hitSlop={4}
@@ -123,12 +124,12 @@ export function WaterSection({
           <MaterialCommunityIcons
             name="plus"
             size={14}
-            color={colors.primary}
+            color={chipColor}
             testID="water-custom-icon"
             {...(Platform.OS !== "web" ? { accessibilityElementsHidden: true } : {})}
             {...(Platform.OS !== "web" ? { importantForAccessibility: "no-hide-descendants" as const } : {})}
           />
-          <Text variant="caption" style={[{ color: colors.primary }, styles.chipLabel]}>+ Custom</Text>
+          <Text variant="caption" style={[{ color: chipColor }, styles.chipLabel]}>+ Custom</Text>
         </Pressable>
       </View>
     </View>

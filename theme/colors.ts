@@ -17,6 +17,7 @@ const lightColors = {
   // Primary — Electric Coral
   primary: "#FF6038",
   primaryForeground: "#1A2138",
+  primaryTextOnSurface: "#B02E0C",
 
   // Secondary — Navy
   secondary: "#1A2138",
@@ -113,6 +114,7 @@ const darkColors = {
   // Primary — Lighter coral for dark mode
   primary: "#FF7A55",
   primaryForeground: "#1A2138",
+  primaryTextOnSurface: "#FF7A55",
 
   // Secondary — Navy
   secondary: "#2D3350",

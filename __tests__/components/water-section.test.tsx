@@ -17,6 +17,7 @@ jest.mock('@/components/ui/progress', () => {
 
 const baseColors = {
   primary: '#1976d2',
+  primaryTextOnSurface: '#1976d2',
   onSurface: '#000',
   onSurfaceVariant: '#666',
 };

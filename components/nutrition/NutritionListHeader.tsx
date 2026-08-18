@@ -49,6 +49,7 @@ type Props = {
   waterPresetsMl: [number, number, number];
   colors: {
     primary: string;
+    primaryTextOnSurface: string;
     onSurface: string;
     onSurfaceVariant: string;
     onBackground: string;

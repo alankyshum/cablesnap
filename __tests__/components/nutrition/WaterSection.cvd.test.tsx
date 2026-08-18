@@ -61,6 +61,7 @@ import { WaterSection } from "../../../components/nutrition/WaterSection";
 
 const baseColors = {
   primary: "#FF6038",
+  primaryTextOnSurface: "#FF6038",
   onSurface: "#000",
   onSurfaceVariant: "#666",
 };

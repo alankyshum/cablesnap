@@ -15,6 +15,7 @@ function useThemeColorsInner() {
     // Primary
     primary: t.primary,
     onPrimary: t.primaryForeground,
+    primaryTextOnSurface: t.primaryTextOnSurface,
     primaryContainer: t.accent,
     onPrimaryContainer: t.accentForeground,
 
