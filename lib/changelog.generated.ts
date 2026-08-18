@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.100",
+    "date": "2026-08-18",
+    "versionCode": 168,
+    "body": "- Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.\n - Fixed exercise selection scrolling on compact screens."
+  },
+  {
     "version": "0.26.99",
     "date": "2026-08-18",
     "versionCode": 167,
