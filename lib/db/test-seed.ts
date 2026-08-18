@@ -438,8 +438,68 @@ export async function seedAdvancedSets(
 export async function seedStoreShowcase(
   db: Awaited<ReturnType<typeof getDatabase>>,
 ): Promise<void> {
-  // 1. Seed workout history so Workouts + Progress populate
-  await seedWorkoutHistory(db);
+  const now = Date.now();
+
+  // 1. Seed multi-week workout history across 6 weeks for showcase charts
+  const showcaseWorkouts = [
+    { daysAgo: 36, name: "Upper Body", sets: [["bench-press", 60, 8], ["bench-press", 65, 6], ["barbell-row", 55, 8]] },
+    { daysAgo: 34, name: "Lower Body", sets: [["squat", 80, 8], ["squat", 85, 6]] },
+    { daysAgo: 29, name: "Push Day", sets: [["bench-press", 62.5, 8], ["bench-press", 67.5, 6]] },
+    { daysAgo: 27, name: "Pull Day", sets: [["barbell-row", 57.5, 8], ["barbell-row", 62.5, 6]] },
+    { daysAgo: 25, name: "Legs", sets: [["squat", 82.5, 8], ["squat", 87.5, 6]] },
+    { daysAgo: 21, name: "Upper Body", sets: [["bench-press", 65, 8], ["bench-press", 70, 5], ["barbell-row", 60, 8]] },
+    { daysAgo: 19, name: "Lower Body", sets: [["squat", 85, 8], ["squat", 90, 5]] },
+    { daysAgo: 17, name: "Full Body", sets: [["bench-press", 65, 6], ["squat", 85, 6]] },
+    { daysAgo: 14, name: "Push Day", sets: [["bench-press", 67.5, 8], ["bench-press", 72.5, 5]] },
+    { daysAgo: 12, name: "Pull Day", sets: [["barbell-row", 62.5, 8], ["barbell-row", 65, 6]] },
+    { daysAgo: 10, name: "Legs", sets: [["squat", 87.5, 8], ["squat", 92.5, 5]] },
+    { daysAgo: 7, name: "Upper Body", sets: [["bench-press", 70, 8], ["bench-press", 75, 4], ["barbell-row", 65, 8]] },
+    { daysAgo: 5, name: "Lower Body", sets: [["squat", 90, 8], ["squat", 95, 5]] },
+    { daysAgo: 3, name: "Push Day", sets: [["bench-press", 72.5, 6], ["bench-press", 75, 5]] },
+    { daysAgo: 1, name: "Pull Day", sets: [["barbell-row", 67.5, 8], ["barbell-row", 70, 6]] },
+  ];
+
+  for (let i = 0; i < showcaseWorkouts.length; i++) {
+    const w = showcaseWorkouts[i];
+    const started = now - w.daysAgo * 24 * 60 * 60 * 1000;
+    const duration = 50 * 60; // 50 minutes
+    const completed = started + duration * 1000;
+
+    await db.runAsync(
+      `INSERT INTO workout_sessions
+         (id, template_id, name, started_at, completed_at, duration_seconds, notes, rating)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        `store-showcase-session-${i + 1}`,
+        null,
+        w.name,
+        started,
+        completed,
+        duration,
+        "",
+        5,
+      ],
+    );
+
+    for (let s = 0; s < w.sets.length; s++) {
+      const [exerciseId, weight, reps] = w.sets[s];
+      await db.runAsync(
+        `INSERT INTO workout_sets
+           (id, session_id, exercise_id, set_number, weight, reps, completed, completed_at, exercise_position, set_type)
+         VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, 'normal')`,
+        [
+          `store-showcase-set-${i + 1}-${s + 1}`,
+          `store-showcase-session-${i + 1}`,
+          exerciseId,
+          s + 1,
+          weight,
+          reps,
+          completed,
+          s,
+        ],
+      );
+    }
+  }
 
   // 2. Seed nutrition
   const d = new Date();
@@ -447,7 +507,6 @@ export async function seedStoreShowcase(
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   const todayStr = `${y}-${m}-${day}`;
-  const now = Date.now();
 
   // Macro target: 2000 cal, 150g protein, 250g carbs, 65g fat
   await db.runAsync(
