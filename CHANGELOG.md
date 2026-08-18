@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Consistent section spacing on History** — Standardises the vertical gap between section headers and their content across the workout-history screen for a more even visual rhythm. ([BLD-4051](/BLD/issues/BLD-4051))
 
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->
