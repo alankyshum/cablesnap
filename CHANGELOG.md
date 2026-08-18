@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - **Buy me a coffee button in Settings now uses native theme tokens** (theme-aware background/foreground colors) instead of a static PNG badge, meeting WCAG AA contrast (≥4.5:1) under all CVD modes including deuteranopia. ([BLD-4519](/BLD/issues/BLD-4519))
+- CI: raise Backup XML validation job timeout to 15m (job was hitting the 10m ceiling at 10m17s).
 _No user-facing changes yet._
 
 ## v0.26.100 — 2026-08-18
