@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import { getDrizzle } from "./helpers";
 import { shareSettings } from "./schema";
+import { GITHUB_REPO_URL } from "@/constants/github";
 
-export const DEFAULT_PROMO_CAPTION = "Tracked with CableSnap · https://github.com/alankyshum/cablesnap";
+export const DEFAULT_PROMO_CAPTION = `Tracked with CableSnap · ${GITHUB_REPO_URL}`;
 
 export type ShareSettingsRow = {
   id: number;

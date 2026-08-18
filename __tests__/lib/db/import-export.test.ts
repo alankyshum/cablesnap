@@ -24,9 +24,22 @@ import {
   getBackupCounts,
   getBackupCategoryCounts,
   estimateExportSize,
+  getImportCompletionMessage,
   IMPORT_TABLE_ORDER,
   type BackupV7,
 } from "../../../lib/db/import-export";
+
+describe("import completion messaging", () => {
+  it("explains an idempotent already-imported backup", () => {
+    expect(getImportCompletionMessage(0, 875)).toBe(
+      "This backup has already been imported — all 875 records already exist",
+    );
+  });
+
+  it("keeps the normal completion wording when records were added", () => {
+    expect(getImportCompletionMessage(3, 2)).toBe("3 records imported, 2 already present");
+  });
+});
 
 // BLD-913: exercises insertRow now uses PRAGMA table_info to discover columns
 const EXERCISES_COLUMNS = [
@@ -283,6 +296,69 @@ describe("getBackupCategoryCounts", () => {
 // ---- Import FK Ordering ----
 
 describe("importData", () => {
+  it("restores user-owned rows even when a seeded database already has the same IDs", async () => {
+    const sqlCalls: string[] = [];
+    mockDb.runAsync.mockImplementation(async (sql: string) => {
+      sqlCalls.push(sql);
+      return { changes: 1 };
+    });
+
+    await importData({
+      version: 7,
+      data: {
+        exercises: {
+          exercises: [{ id: "starter-customized", name: "My edited squat", is_custom: 1 }],
+        },
+        workout_templates: {
+          workout_templates: [{ id: "starter-template", name: "My edited plan", is_starter: 0, is_curated: 0 }],
+        },
+      },
+    });
+
+    expect(sqlCalls.some((sql) => sql.includes("ON CONFLICT(id) DO UPDATE"))).toBe(true);
+    expect(sqlCalls.filter((sql) => sql.includes("ON CONFLICT(id) DO UPDATE")).length).toBe(2);
+  });
+
+  it("is idempotent when the database reports existing rows", async () => {
+    mockDb.runAsync.mockResolvedValue({ changes: 0 });
+    const result = await importData({
+      version: 7,
+      data: { exercises: { exercises: [{ id: "e1", name: "Existing" }] } },
+    });
+
+    expect(result.inserted).toBe(0);
+    expect(result.skipped).toBe(1);
+    expect(result.perTable.exercises?.skipped_existing).toBe(1);
+  });
+
+  it("preserves protected installation settings but upserts ordinary preferences", async () => {
+    const sqlCalls: Array<{ sql: string; params?: unknown[] }> = [];
+    mockDb.getFirstAsync.mockImplementation(async (_sql: string, params?: unknown[]) =>
+      params?.[0] === "starter_version" ? { key: "starter_version" } : null,
+    );
+    mockDb.runAsync.mockImplementation(async (sql: string, params?: unknown[]) => {
+      sqlCalls.push({ sql, params });
+      return { changes: 1 };
+    });
+
+    await importData({
+      version: 7,
+      data: {
+        app_preferences: {
+          app_settings: [
+            { key: "starter_version", value: "old-seed" },
+            { key: "theme", value: "dark" },
+          ],
+        },
+      },
+    });
+
+    expect(sqlCalls).toHaveLength(1);
+    expect(sqlCalls[0].sql).toContain("ON CONFLICT(key) DO UPDATE");
+    expect(sqlCalls[0].params).toContain("theme");
+    expect(sqlCalls[0].params).not.toContain("starter_version");
+  });
+
   it("imports tables in FK-dependency order", // eslint-disable-next-line max-lines-per-function
   async () => {
     const importOrder: string[] = [];
@@ -342,7 +418,7 @@ describe("importData", () => {
     const result = await importData(data);
     expect(result.inserted).toBe(1);
     expect(result.skipped).toBe(1);
-    expect(result.perTable.exercises).toEqual({ inserted: 1, skipped: 1 });
+    expect(result.perTable.exercises).toEqual({ inserted: 1, skipped: 1, skipped_existing: 1 });
   });
 
   it("handles v2 backward compatibility (missing tables as empty)", async () => {
@@ -433,7 +509,7 @@ describe("importData", () => {
   it("imports new tables: programs, achievements_earned, app_settings", async () => {
     const inserted: string[] = [];
     mockDb.runAsync.mockImplementation(async (sql: string) => {
-      const match = sql.match(/INSERT OR IGNORE INTO (\w+)/);
+      const match = sql.match(/INSERT(?: OR IGNORE)? INTO (\w+)/);
       if (match) inserted.push(match[1]);
       return { changes: 1 };
     });
@@ -484,7 +560,7 @@ describe("importData", () => {
       { selectedCategories: ["plate_calculator_settings", "exercises"] },
     );
 
-    const appSettingInserts = sqlCalls.filter((c) => c.sql.includes("INSERT OR IGNORE INTO app_settings"));
+    const appSettingInserts = sqlCalls.filter((c) => c.sql.includes("INSERT INTO app_settings"));
     expect(appSettingInserts).toHaveLength(1);
     expect(appSettingInserts[0].params).toContain("plate_calculator_unit");
     expect(appSettingInserts[0].params).not.toContain("rest_timer_sound");
@@ -640,4 +716,3 @@ describe("estimateExportSize", () => {
 });
 
 // ---- BLD-622: eccentric_overload removal hardening ----
-

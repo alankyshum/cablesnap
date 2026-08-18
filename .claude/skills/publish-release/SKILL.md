@@ -429,6 +429,7 @@ gh auth switch --user kshum_LinkedIn
 | 0.15.2  | 25          | v0.15.2| 2026-04-19 |
 | 0.23.1  | 5           | v0.23.1| 2026-04-21 |
 | 0.26.1  | 51          | v0.26.1| 2026-04-22 |
+| 0.26.98 | 166         | v0.26.98| 2026-08-18 |
 
 Update this table after each release.
 

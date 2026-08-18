@@ -37,7 +37,6 @@ export default function NutritionSegment() {
     loading,
     error,
     refetch,
-    reducedMotion,
   } = useNutritionProgress();
 
   useFocusEffect(
@@ -155,14 +154,12 @@ export default function NutritionSegment() {
             dailyTotals={dailyTotals}
             calorieTarget={targets?.calories ?? null}
             chartWidth={chartWidth}
-            reducedMotion={reducedMotion}
           />
           <WeeklyAveragesCard weeklyAverages={weeklyAverages} />
           {adherence && <AdherenceCard adherence={adherence} />}
           <MacroTrendCard
             weeklyAverages={weeklyAverages}
             chartWidth={chartWidth}
-            reducedMotion={reducedMotion}
           />
         </Masonry>
       ) : (
@@ -171,14 +168,12 @@ export default function NutritionSegment() {
             dailyTotals={dailyTotals}
             calorieTarget={targets?.calories ?? null}
             chartWidth={chartWidth}
-            reducedMotion={reducedMotion}
           />
           <WeeklyAveragesCard weeklyAverages={weeklyAverages} />
           {adherence && <AdherenceCard adherence={adherence} />}
           <MacroTrendCard
             weeklyAverages={weeklyAverages}
             chartWidth={chartWidth}
-            reducedMotion={reducedMotion}
           />
         </>
       )}
