@@ -168,4 +168,38 @@ describe("PlateHint", () => {
 
     // The set's logged weight is not modified (since there are no callback props on PlateHint for updating weight)
   });
+
+  it("threads unit='lb' to sheet even when getBodySettings returns kg, and collapsed lb hint remains consistent after bar change", async () => {
+    // getBodySettings is mocked to return { weight_unit: "kg" } in the file-level mock,
+    // but we render PlateHint with unit="lb"
+    mockGetAppSetting.mockResolvedValue("45");
+
+    const { getByRole, getByLabelText, getByTestId, findByText } = render(
+      <PlateHint weight={225} unit="lb" equipment="barbell" />
+    );
+
+    // Initial load: 225lb - 45lb bar = 180lb total, 90lb per side (55 + 35 plates)
+    await findByText("Per side: 55 + 35 ▸");
+
+    const button = getByRole("button");
+    expect(button).toBeTruthy();
+
+    // Open sheet
+    fireEvent.press(button);
+
+    // Assert that the sheet uses lb bar chips/labels (such as "35 pounds bar" or 35 lb preset)
+    const barChip = getByLabelText("35 pounds bar");
+    expect(barChip).toBeTruthy();
+
+    // Select 35lb bar chip
+    fireEvent.press(barChip);
+
+    // Dismiss sheet
+    const sheet = getByTestId("bottom-sheet");
+    fireEvent(sheet, "onDismiss");
+
+    // Collapsed hint should reflect the 35lb bar weight synchronously:
+    // 225lb - 35lb bar = 190lb total, 95lb per side (55 + 35 + 5 plates)
+    await findByText("Per side: 55 + 35 + 5 ▸");
+  });
 });
