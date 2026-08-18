@@ -8,11 +8,13 @@ import {
   getAppSetting, getWeeklyCompletedCount,
   getWeeklyE1RMTrends, getRecentSessionRPEs, getRecentSessionRatings,
   getWeeklyWorkouts, getBodySettings,
+  getMuscleVolumeForWeek,
 } from "../../lib/db";
 import { getExercisesByIds, getActiveGoals, getCurrentBestWeightsByExercise, getCurrentBestRepsByExercise } from "../../lib/db";
 import { computeStreak, mondayOf } from "../../lib/format";
 import { computeAllTemplateReadiness, hasWorkoutHistory } from "../../lib/recovery-readiness";
-import { generateInsight, type GoalInsightRow } from "../../lib/insights";
+import { generateInsight, type GoalInsightRow, MIN_MEANINGFUL_SETS, type MuscleBalanceRow } from "../../lib/insights";
+import { VOLUME_LANDMARKS_SETTING_KEY, parseCustomLandmarks, mergeWithDefaults, getVolumeStatus } from "../../lib/volume-landmarks";
 import {
   computeOverreachingScore,
   parseDismissalState,
@@ -36,7 +38,7 @@ export async function loadHomeData() {
     getRecentPRs(5), getPrograms(), getNextWorkout(), getTodaySchedule(), isTodayCompleted(), getWeekAdherence(),
     getWeeklyWorkouts(mondayOf(new Date())), getBodySettings(),
   ]);
-  const [counts, setCounts, avgRPEs, dayCounts, templateMuscles, weeklyVolume, e1rmTrends, totalSessions] = await Promise.all([
+  const [counts, setCounts, avgRPEs, dayCounts, templateMuscles, weeklyVolume, e1rmTrends, totalSessions, currentWeekVolumeRaw, landmarksRaw] = await Promise.all([
     getTemplateExerciseCounts(tpls.map((t) => t.id)),
     getSessionSetCounts(sess.map((s) => s.id)),
     getSessionAvgRPEs(sess.map((s) => s.id)),
@@ -45,6 +47,8 @@ export async function loadHomeData() {
     getWeeklyVolume(8),
     getE1RMTrends(),
     getTotalSessionCount(),
+    Promise.resolve().then(() => getMuscleVolumeForWeek(mondayOf(new Date()))).catch(() => []),
+    getAppSetting(VOLUME_LANDMARKS_SETTING_KEY).catch(() => null),
   ]);
 
   // Load duration estimates (degrade gracefully — home screen must not crash)
@@ -63,7 +67,31 @@ export async function loadHomeData() {
   // Load goal insights (degrade gracefully if no goals)
   const goalInsights = await loadGoalInsights();
 
-  const insight = generateInsight({ totalSessions, timestamps, e1rmTrends, weeklyVolume, goalInsights });
+  // Pre-compute muscle balance rows safely
+  let balanceRows: MuscleBalanceRow[] = [];
+  try {
+    const parsedCustom = parseCustomLandmarks(landmarksRaw);
+    const landmarks = mergeWithDefaults(parsedCustom);
+
+    balanceRows = currentWeekVolumeRaw
+      .filter((row) => row.sets >= MIN_MEANINGFUL_SETS)
+      .map((row) => {
+        const l = landmarks[row.muscle];
+        if (!l) return null; // unknown-muscle (no landmark) -> skip
+        const status = getVolumeStatus(row.sets, l);
+        return {
+          muscle: row.muscle,
+          sets: row.sets,
+          status,
+        };
+      })
+      .filter((r): r is MuscleBalanceRow => r !== null);
+  } catch {
+    // Fail soft - empty array
+    balanceRows = [];
+  }
+
+  const insight = generateInsight({ totalSessions, timestamps, e1rmTrends, weeklyVolume, goalInsights, balanceRows });
 
   // Compute overreaching score (degrade gracefully — must not break home screen)
   let overreachingResult: OverreachingResult | null = null;

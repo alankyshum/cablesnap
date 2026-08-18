@@ -1,9 +1,11 @@
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Card, CardContent } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import { fontSizes } from '@/constants/design-tokens';
-import { updateBodySettings } from '@/lib/db';
+import { updateBodySettings, getAppSetting, setAppSetting } from '@/lib/db';
+import { getValidSteps, resolveStep } from '@/lib/weightStep';
 import type { ThemeColors } from '@/hooks/useThemeColors';
 import type { useToast } from '@/components/ui/bna-toast';
 
@@ -34,6 +36,27 @@ export default function UnitsCard({
   fatGoal,
   bareContent = false,
 }: Props) {
+  const [weightStep, setWeightStepState] = useState<string>('2.5');
+
+  useEffect(() => {
+    let cancelled = false;
+    getAppSetting('session.weightStep').then((val) => {
+      if (cancelled) return;
+      const resolved = resolveStep(val, weightUnit);
+      setWeightStepState(String(resolved));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [weightUnit]);
+
+  const updateWeightStep = async (newStepStr: string) => {
+    setWeightStepState(newStepStr);
+    try {
+      await setAppSetting('session.weightStep', newStepStr);
+    } catch {
+      toast.error('Could not save weight step setting');
+    }
+  };
+
   const content = (
     <>
       <Text
@@ -54,6 +77,10 @@ export default function UnitsCard({
               setWeightUnit(u);
               try {
                 await updateBodySettings(u, measureUnit, weightGoal, fatGoal);
+                const currentStepVal = await getAppSetting('session.weightStep');
+                const resolved = resolveStep(currentStepVal, u);
+                await setAppSetting('session.weightStep', String(resolved));
+                setWeightStepState(String(resolved));
               } catch {
                 toast.error('Could not save unit');
               }
@@ -88,6 +115,27 @@ export default function UnitsCard({
           />
         </View>
       </View>
+      <View style={[styles.row, { marginTop: 12 }]}>
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
+            Weight step
+          </Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs, marginTop: 2, lineHeight: 16 }}>
+            Input step granularity for exercises. Applies to new sessions.
+          </Text>
+        </View>
+        <View style={styles.weightStepToggle}>
+          <SegmentedControl
+            value={weightStep}
+            onValueChange={updateWeightStep}
+            buttons={getValidSteps(weightUnit).map((stepVal) => ({
+              value: String(stepVal),
+              label: String(stepVal),
+              accessibilityLabel: `Weight step ${stepVal} ${weightUnit === 'lb' ? 'pounds' : 'kilograms'}`,
+            }))}
+          />
+        </View>
+      </View>
     </>
   );
 
@@ -109,4 +157,5 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   unitToggle: { width: 140, flexShrink: 0 },
+  weightStepToggle: { width: 170, flexShrink: 0 },
 });

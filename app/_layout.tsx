@@ -11,6 +11,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Redirect, Stack, usePathname } from "expo-router";
+import Constants from "expo-constants";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import * as SplashScreen from "expo-splash-screen";
@@ -28,9 +29,9 @@ import { QueryProvider } from "../lib/query";
 import { OnboardingContext } from "../lib/onboarding-context";
 import { FormClipsContext } from "../lib/form-clips-context";
 import { useAppInit } from "../hooks/useAppInit";
-import { useSkiaWebInit } from "../hooks/useSkiaWebInit";
 import { SCREEN_CONFIGS } from "../constants/screen-config";
 import { LayoutToastBridge } from "../components/LayoutToastBridge";
+import { UpdatePromptBridge } from "../components/UpdatePromptBridge";
 import { LayoutBanners } from "../components/LayoutBanners";
 import { WebUnsupportedScreen } from "../components/WebUnsupportedScreen";
 import { DatabaseUnavailableScreen } from "../components/DatabaseUnavailableScreen";
@@ -39,9 +40,18 @@ import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
 import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
 import { filterLocalhostEvents } from '@/lib/sentry-localhost-filter';
+import { isSentryEnabled, resolveSentryDsn } from '@/lib/sentry-enabled';
+
+const sentryEnabled = isSentryEnabled(Constants.expoConfig?.extra);
+const sentryDsn = resolveSentryDsn(Constants.expoConfig?.extra);
 
 Sentry.init({
-  dsn: 'https://c61278ad2a774c2e586454f017d4b86f@o4511267124215808.ingest.us.sentry.io/4511267125133312',
+  enabled: sentryEnabled,
+  ...(sentryEnabled && sentryDsn ? { dsn: sentryDsn } : {}),
+  enableNative: sentryEnabled,
+  autoInitializeNativeSdk: sentryEnabled,
+  enableNativeCrashHandling: sentryEnabled,
+  enableAutoSessionTracking: sentryEnabled,
   sendDefaultPii: true,
   enableLogs: true,
   // BLD-2446: Drop CI/dev events (localhost/127.0.0.1/0.0.0.0). Fail-open on missing/unparseable url tag.
@@ -95,12 +105,6 @@ export default Sentry.wrap(function RootLayout() {
   );
   const formClipsCtx = useMemo(() => ({ backupExclusionOk }), [backupExclusionOk]);
 
-  // BLD-2078: warm CanvasKit (react-native-skia WASM) at boot on web. We do NOT
-  // gate the tree on readiness — each chart fails closed at its own `ChartGate`,
-  // so non-chart UI and narrow layouts render immediately (gating here regressed
-  // the narrow viewport to a crash screen — see BLD-2078 review).
-  useSkiaWebInit();
-
   if (!ready) return null;
 
   // BLD-565: on a web host without cross-origin isolation, drizzle's
@@ -149,6 +153,7 @@ export default Sentry.wrap(function RootLayout() {
         <ToastProvider>
           <BottomSheetModalProvider>
           <LayoutToastBridge />
+          <UpdatePromptBridge />
           {!onboarded && !pathname.startsWith("/onboarding") && (
             <Redirect href="/onboarding/welcome" />
           )}

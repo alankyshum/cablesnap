@@ -32,6 +32,7 @@ import { duration as durationTokens, elevation } from "../constants/design-token
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useToast } from "@/components/ui/bna-toast";
 import { fontSizes } from "@/constants/design-tokens";
+import { matchExerciseSearch } from "../lib/exercise-search-matcher";
 
 type Props = {
   visible: boolean;
@@ -58,8 +59,8 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
   const colors = useThemeColors();
   const { error: showError } = useToast();
   const { height: SCREEN_H } = useWindowDimensions();
-  // SNAP_OPEN is where the sheet lands when it opens. It is intentionally tall
-  // (sheet covers ~88% of the screen) so the exercise FlatList spans the vertical
+  // SNAP_OPEN is where the sheet lands when it opens. It is intentionally above the
+  // top detent (sheet covers ~98% of the screen) so the exercise FlatList spans the vertical
   // centre of the screen. Maestro's scrollUntilVisible swipes "from center"
   // (y≈50%→10%, see maestro.log "swipeFromCenter"); at the previous 0.45 open
   // position the list sat entirely BELOW screen-centre (its top was under the
@@ -68,7 +69,7 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
   // selector variant (BLD-1841). Opening tall puts the list under the swipe origin
   // for both Maestro and a human flicking the list. SNAP_MID/SNAP_TOP remain as
   // drag detents so the manual drag UX is unchanged.
-  const SNAP_OPEN = SCREEN_H * 0.12;
+  const SNAP_OPEN = SCREEN_H * 0.025;
   const SNAP_MID = SCREEN_H * 0.45;
   const SNAP_TOP = SCREEN_H * 0.06;
   const DISMISS_THRESHOLD = SCREEN_H * 0.75;
@@ -188,14 +189,8 @@ export default function ExercisePickerSheet({ visible, onDismiss, onPick }: Prop
   }));
 
   const filtered = useMemo(() => {
-    const norm = (s: string) => s.toLowerCase().replace(/[-_]/g, " ").replace(/\s+/g, " ").trim();
-    const q = norm(query);
-    const qNoSpace = q.replace(/ /g, "");
     return exercises.filter((ex) => {
-      if (q) {
-        const n = norm(ex.name);
-        if (!n.includes(q) && !n.replace(/ /g, "").includes(qNoSpace)) return false;
-      }
+      if (!matchExerciseSearch(ex.name, query)) return false;
       if (selected.size > 0 && !selected.has(ex.category)) return false;
       return true;
     });

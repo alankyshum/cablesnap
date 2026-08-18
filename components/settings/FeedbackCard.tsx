@@ -31,7 +31,14 @@ export default function FeedbackCard({ colors, count, onBug, onFeature, onErrors
         </Text>
       )}
       <View style={styles.buttonFlow}>
-        <Button variant="default" size="sm" icon={Bug} onPress={onBug} accessibilityLabel="Report a bug">
+        <Button
+          variant="default"
+          size="sm"
+          icon={Bug}
+          onPress={onBug}
+          accessibilityLabel="Report a bug"
+          style={{ minHeight: 44 }}
+        >
           Report Bug
         </Button>
         <Button
@@ -40,6 +47,7 @@ export default function FeedbackCard({ colors, count, onBug, onFeature, onErrors
           icon={Lightbulb}
           onPress={onFeature}
           accessibilityLabel="Request a feature"
+          style={{ minHeight: 44 }}
         >
           Feature Request
         </Button>
@@ -49,6 +57,7 @@ export default function FeedbackCard({ colors, count, onBug, onFeature, onErrors
           icon={List}
           onPress={onErrors}
           accessibilityLabel={`View error log, ${count} ${count === 1 ? 'error' : 'errors'}`}
+          style={{ minHeight: 44 }}
         >{`Errors (${count})`}</Button>
       </View>
     </>

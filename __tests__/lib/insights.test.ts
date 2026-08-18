@@ -249,6 +249,120 @@ describe("generateInsight", () => {
       expect(result).toBeNull();
     });
   });
+
+  describe("muscle volume balance (fourth priority)", () => {
+    it("returns null when balanceRows is empty", () => {
+      expect(generateInsight(makeData({ balanceRows: [] }))).toBeNull();
+    });
+
+    it("returns null when fewer than 3 muscles are trained", () => {
+      expect(generateInsight(makeData({
+        balanceRows: [
+          { muscle: "chest", sets: 1, status: "below_mev" },
+          { muscle: "back", sets: 12, status: "optimal" },
+        ],
+      }))).toBeNull();
+    });
+
+    it("returns null when all trained muscles are optimal", () => {
+      expect(generateInsight(makeData({
+        balanceRows: [
+          { muscle: "chest", sets: 10, status: "optimal" },
+          { muscle: "back", sets: 12, status: "optimal" },
+          { muscle: "quads", sets: 8, status: "optimal" },
+        ],
+      }))).toBeNull();
+    });
+
+    it("returns singular under-only copy when 1 muscle is below MEV", () => {
+      const result = generateInsight(makeData({
+        balanceRows: [
+          { muscle: "chest", sets: 5, status: "below_mev" },
+          { muscle: "back", sets: 12, status: "optimal" },
+          { muscle: "quads", sets: 10, status: "optimal" },
+        ],
+      }));
+      expect(result).not.toBeNull();
+      expect(result!.type).toBe("balance");
+      expect(result!.title).toBe("1 muscle is below this week's target");
+      expect(result!.muscle).toBe("chest");
+      expect(result!.icon).toBe("bar-chart");
+      expect(result!.accessibilityLabel).toBe("1 muscle is below this week's target. Tap to view muscle volume details.");
+    });
+
+    it("returns plural under-only copy when multiple muscles are below MEV", () => {
+      const result = generateInsight(makeData({
+        balanceRows: [
+          { muscle: "chest", sets: 5, status: "below_mev" },
+          { muscle: "back", sets: 4, status: "below_mev" },
+          { muscle: "quads", sets: 10, status: "optimal" },
+        ],
+      }));
+      expect(result!.title).toBe("2 muscles are below this week's target");
+      expect(result!.muscle).toBe("chest");
+      expect(result!.accessibilityLabel).toBe("2 muscles are below this week's target. Tap to view muscle volume details.");
+    });
+
+    it("returns singular over-only copy when 1 muscle is above MRV", () => {
+      const result = generateInsight(makeData({
+        balanceRows: [
+          { muscle: "chest", sets: 25, status: "above_mrv" },
+          { muscle: "back", sets: 12, status: "optimal" },
+          { muscle: "quads", sets: 10, status: "optimal" },
+        ],
+      }));
+      expect(result).not.toBeNull();
+      expect(result!.title).toBe("1 muscle is above this week's cap");
+      expect(result!.muscle).toBe("chest");
+      expect(result!.accessibilityLabel).toBe("1 muscle is above this week's cap. Tap to view muscle volume details.");
+    });
+
+    it("returns plural over-only copy when multiple muscles are above MRV", () => {
+      const result = generateInsight(makeData({
+        balanceRows: [
+          { muscle: "chest", sets: 25, status: "above_mrv" },
+          { muscle: "back", sets: 28, status: "above_mrv" },
+          { muscle: "quads", sets: 10, status: "optimal" },
+        ],
+      }));
+      expect(result!.title).toBe("2 muscles are above this week's cap");
+      expect(result!.muscle).toBe("chest");
+    });
+
+    it("returns mixed copy when muscles are both below MEV and above MRV", () => {
+      const result = generateInsight(makeData({
+        balanceRows: [
+          { muscle: "chest", sets: 5, status: "below_mev" },
+          { muscle: "back", sets: 28, status: "above_mrv" },
+          { muscle: "quads", sets: 10, status: "optimal" },
+        ],
+      }));
+      expect(result!.title).toBe("1 below target, 1 above cap this week.");
+      expect(result!.muscle).toBe("chest"); // under first
+    });
+
+    it("is suppressed by higher priority insights (like consistency)", () => {
+      const now = Date.now();
+      const currentDay = new Date(now).getDay();
+      const daysSinceMonday = currentDay === 0 ? 6 : currentDay - 1;
+
+      // Trigger consistency
+      const thisWeek = Array.from({ length: 4 }, (_, i) => now - (daysSinceMonday * DAY) + i * 3600000);
+      const prevWeeks = Array.from({ length: 4 }, (_, i) => now - (7 + i * 7) * DAY);
+
+      const result = generateInsight(makeData({
+        timestamps: [...thisWeek, ...prevWeeks],
+        balanceRows: [
+          { muscle: "chest", sets: 5, status: "below_mev" },
+          { muscle: "back", sets: 12, status: "optimal" },
+          { muscle: "quads", sets: 10, status: "optimal" },
+        ],
+      }));
+
+      // Since consistency has higher priority than balance, consistency should be returned
+      expect(result!.type).toBe("consistency");
+    });
+  });
 });
 
 describe("groupByISOWeek", () => {

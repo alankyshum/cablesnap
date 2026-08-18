@@ -1,0 +1,2 @@
+- Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
+ - Fixed exercise selection scrolling on compact screens.

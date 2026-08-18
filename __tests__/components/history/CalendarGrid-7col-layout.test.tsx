@@ -131,9 +131,9 @@ describe("CalendarGrid 7-column layout (BLD-661)", () => {
   });
 });
 
-// ─── BLD-2747: dot size legibility ───────────────────────────────────────────
+// ─── BLD-2747 + BLD-3498: dot size legibility + CVD contrast ─────────────────
 
-describe("CalendarGrid dot indicator size (BLD-2747)", () => {
+describe("CalendarGrid dot indicator size (BLD-2747, BLD-3498)", () => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
@@ -168,7 +168,7 @@ describe("CalendarGrid dot indicator size (BLD-2747)", () => {
     // Capture flattened style objects while the tree is still mounted.
     dotStyles = (allViews as Array<{ props: { style?: unknown } }>)
       .map((v) => StyleSheet.flatten(v.props.style) as FlatStyle | null)
-      .filter((s): s is FlatStyle => s != null && s.width === 7 && s.height === 7);
+      .filter((s): s is FlatStyle => s != null && s.width === 8 && s.height === 8);
     dotCount = dotStyles.length;
 
     // Count badge views: style has minWidth:18, height:18, borderRadius:9
@@ -180,10 +180,10 @@ describe("CalendarGrid dot indicator size (BLD-2747)", () => {
     unmount();
   });
 
-  it("dot style width and height are 7px (enlarged from 5px for legibility)", () => {
+  it("dot style width and height are 8px (enlarged from 7px for CVD contrast, BLD-3498)", () => {
     expect(dotCount).toBeGreaterThanOrEqual(1);
-    expect(dotStyles[0].width).toBe(7);
-    expect(dotStyles[0].height).toBe(7);
+    expect(dotStyles[0].width).toBe(8);
+    expect(dotStyles[0].height).toBe(8);
   });
 
   it("dot borderRadius is radii.pill (9999) so it stays a perfect circle", () => {
@@ -204,7 +204,7 @@ describe("CalendarGrid dot indicator size (BLD-2747)", () => {
     expect(dotCount).toBe(3);
   });
 
-  it("renders no 7px dot Views when dotMap is empty (count=0)", () => {
+  it("renders no 8px dot Views when dotMap is empty (count=0)", () => {
     const { StyleSheet, View } = require("react-native");
     const { UNSAFE_getAllByType, unmount } = render(
       <QueryClientProvider client={queryClient}>
@@ -216,7 +216,7 @@ describe("CalendarGrid dot indicator size (BLD-2747)", () => {
     const allViews = UNSAFE_getAllByType(View) as Array<{ props: { style?: unknown } }>;
     const emptyDotViews = allViews.filter((v) => {
       const s = StyleSheet.flatten(v.props.style) as { width?: number; height?: number } | null;
-      return s != null && s.width === 7 && s.height === 7;
+      return s != null && s.width === 8 && s.height === 8;
     });
     expect(emptyDotViews.length).toBe(0);
     unmount();

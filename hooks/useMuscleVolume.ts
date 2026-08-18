@@ -1,5 +1,5 @@
 /* eslint-disable max-lines-per-function */
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { getMuscleVolumeForWeek, getMuscleVolumeTrend } from "../lib/db";
@@ -36,12 +36,13 @@ export function formatRange(start: Date): string {
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
-export function useMuscleVolume() {
+export function useMuscleVolume(initialMuscle?: MuscleGroup) {
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<VolumeRow[]>([]);
   const [trend, setTrend] = useState<TrendRow[]>([]);
   const [selected, setSelected] = useState<MuscleGroup | null>(null);
   const selectedRef = useRef<MuscleGroup | null>(null);
+  const lastInitialMuscleRef = useRef<MuscleGroup | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reduced, setReduced] = useState(false);
@@ -67,7 +68,7 @@ export function useMuscleVolume() {
       const rows = await getMuscleVolumeForWeek(monday.getTime());
       setData(rows);
       if (rows.length > 0) {
-        const cur = selectedRef.current;
+        const cur = selectedRef.current || (initialMuscle && rows.some((r) => r.muscle === initialMuscle) ? initialMuscle : null);
         const muscle = cur && rows.some((r) => r.muscle === cur)
           ? cur
           : rows[0].muscle;
@@ -85,7 +86,7 @@ export function useMuscleVolume() {
     } finally {
       setLoading(false);
     }
-  }, [monday, loadLandmarks]);
+  }, [monday, loadLandmarks, initialMuscle]);
 
   useFocusEffect(
     useCallback(() => {
@@ -104,6 +105,13 @@ export function useMuscleVolume() {
       // trend load failure is non-critical
     }
   }, []);
+
+  useEffect(() => {
+    if (initialMuscle && initialMuscle !== lastInitialMuscleRef.current) {
+      lastInitialMuscleRef.current = initialMuscle;
+      selectMuscle(initialMuscle);
+    }
+  }, [initialMuscle, selectMuscle]);
 
   const maxSets = useMemo(() => {
     const allMrvValues = Object.values(landmarks).map((l) => l.mrv);

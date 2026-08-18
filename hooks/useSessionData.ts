@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/bna-toast";
 import {
   addSetsBatch,
   getBodySettings,
+  getAppSetting,
   getAllExercises,
   getMaxWeightByExercise,
   getRecentExerciseSetsBatch,
@@ -20,6 +21,7 @@ import {
   getExerciseNotesBatch,
   getPreferredSubstitutesBatch,
 } from "../lib/db";
+import { resolveStep } from "../lib/weightStep";
 import { parseTemplateTargetReps, parseTemplateRepRange } from "../lib/db/templates";
 import type { WorkoutSession, Exercise } from "../lib/types";
 import type { SetWithMeta, ExerciseGroup } from "../components/session/types";
@@ -109,7 +111,8 @@ export function useSessionData({ id, templateId, sourceSessionId }: UseSessionDa
     const sets = await getSessionSets(id);
 
     const body = await getBodySettings();
-    const derived = body.weight_unit === "lb" ? 5 : 2.5;
+    const rawStep = await getAppSetting("session.weightStep");
+    const derived = resolveStep(rawStep, body.weight_unit);
     setStep(derived);
     setUnit(body.weight_unit);
 

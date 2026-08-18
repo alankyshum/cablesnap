@@ -52,12 +52,6 @@ jest.mock('expo-file-system', () => ({
   Paths: { cache: '/cache' },
 }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
-jest.mock('victory-native', () => ({
-  CartesianChart: 'CartesianChart',
-  Line: 'Line',
-  Bar: 'Bar',
-}))
-
 import MuscleVolumeSegment from '../../components/MuscleVolumeSegment'
 
 type VolumeRow = { muscle: MuscleGroup; sets: number; exercises: number }
@@ -173,6 +167,35 @@ describe('MuscleVolumeSegment — Muscle Selection', () => {
     const { findByLabelText, findByText } = renderScreen(<MuscleVolumeSegment />)
     const backRow = await findByLabelText('Back: 18 sets from 4 exercises')
     fireEvent.press(backRow)
+
+    await waitFor(async () => {
+      expect(await findByText('Back — 8 Week Trend')).toBeTruthy()
+    })
+  })
+
+  it('preselects the muscle group specified by initialMuscle prop', async () => {
+    const { findByText } = renderScreen(<MuscleVolumeSegment initialMuscle="back" />)
+    await waitFor(async () => {
+      expect(await findByText('Back — 8 Week Trend')).toBeTruthy()
+    })
+  })
+
+  it('updates preselection when initialMuscle prop changes while mounted', async () => {
+    let changeMuscle: (m: MuscleGroup) => void = () => {}
+    const TestWrapper = () => {
+      const [muscle, setMuscle] = React.useState<MuscleGroup>("chest")
+      changeMuscle = setMuscle
+      return <MuscleVolumeSegment initialMuscle={muscle} />
+    }
+
+    const { findByText } = renderScreen(<TestWrapper />)
+    await waitFor(async () => {
+      expect(await findByText('Chest — 8 Week Trend')).toBeTruthy()
+    })
+
+    await waitFor(async () => {
+      changeMuscle("back")
+    })
 
     await waitFor(async () => {
       expect(await findByText('Back — 8 Week Trend')).toBeTruthy()

@@ -25,16 +25,16 @@ describe("seedExercises", () => {
   const voltra = exercises.filter((e) => e.is_voltra);
   const mw = exercises.filter((e) => !e.is_voltra);
 
-  it("returns 142 total exercises (56 Voltra + 86 community)", () => {
-    expect(exercises).toHaveLength(142);
+  it("returns 145 total exercises (56 Voltra + 89 community)", () => {
+    expect(exercises).toHaveLength(145);
     expect(voltra).toHaveLength(56);
-    expect(mw).toHaveLength(86);
+    expect(mw).toHaveLength(89);
   });
 
   it("all exercises have unique IDs", () => {
     const ids = new Set<string>();
     for (const e of exercises) ids.add(e.id);
-    expect(ids.size).toBe(142);
+    expect(ids.size).toBe(145);
   });
 
   it("all exercises are not custom", () => {
@@ -97,14 +97,14 @@ describe("Voltra exercises", () => {
 describe("community exercises", () => {
   const mw = communityExercises();
 
-  it("returns 86 exercises", () => {
-    expect(mw).toHaveLength(86);
+  it("returns 89 exercises", () => {
+    expect(mw).toHaveLength(89);
   });
 
   it("all have unique IDs", () => {
     const ids = new Set<string>();
     for (const e of mw) ids.add(e.id);
-    expect(ids.size).toBe(86);
+    expect(ids.size).toBe(89);
   });
 
   it("all use cable, bodyweight, or barbell equipment", () => {

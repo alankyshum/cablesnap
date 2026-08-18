@@ -3,7 +3,7 @@ import { fireEvent, waitFor } from '@testing-library/react-native'
 import { renderScreen } from '../../helpers/render'
 import { createBodySettings, resetIds } from '../../helpers/factories'
 
-const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() }
+const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn(), setParams: jest.fn() }
 
 jest.mock('expo-router', () => {
   const RealReact = require('react')
@@ -40,7 +40,6 @@ jest.mock('../../../lib/errors', () => ({ logError: jest.fn() }))
 jest.mock('../../../lib/interactions', () => ({ log: jest.fn() }))
 jest.mock('expo-file-system', () => ({ File: jest.fn(), Paths: { cache: '/cache' } }))
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }))
-jest.mock('victory-native', () => ({ CartesianChart: 'CartesianChart', Line: 'Line', Bar: 'Bar' }))
 jest.mock('../../../components/MuscleVolumeSegment', () => 'MuscleVolumeSegment')
 jest.mock('react-native-reanimated', () => {
   const { View: RNView } = require('react-native')

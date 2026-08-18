@@ -68,6 +68,33 @@ const barbellExercises: Exercise[] = [
     instructions:
       "1. Position a barbell across your upper back (high bar) or rear delts (low bar).\n2. Stand with feet shoulder-width apart, toes slightly turned out.\n3. Brace your core and descend by pushing hips back and bending knees.\n4. Lower until thighs are at least parallel to the floor.\n5. Drive through your heels to stand back up, keeping your chest up throughout.",
   }),
+  bbExercise(3, {
+    name: "Barbell Bench Press",
+    category: "chest",
+    primary_muscles: ["chest"],
+    secondary_muscles: ["triceps", "shoulders"],
+    difficulty: "intermediate",
+    instructions:
+      "1. Lie flat on a bench, gripping the barbell slightly wider than shoulder-width.\n2. Unrack the barbell and hold it with arms extended over your chest.\n3. Lower the barbell with control to your mid-chest, keeping elbows at roughly a 45-degree angle.\n4. Press the barbell back up to the starting position, extending arms fully but not locking elbows.\n5. Repeat for the target number of reps.",
+  }),
+  bbExercise(4, {
+    name: "Barbell Overhead Press",
+    category: "shoulders",
+    primary_muscles: ["shoulders"],
+    secondary_muscles: ["triceps", "core"],
+    difficulty: "intermediate",
+    instructions:
+      "1. Set a barbell in a rack at chest height and grip it slightly wider than shoulder-width with an overhand grip.\n2. Unrack the barbell, bracing your core and glutes to keep your body stable.\n3. Press the barbell straight overhead, pulling your head back slightly as the bar passes your face.\n4. Push your head forward slightly at the top, locking out your arms overhead.\n5. Lower the barbell with control back to your upper chest and repeat.",
+  }),
+  bbExercise(5, {
+    name: "Barbell Deadlift",
+    category: "legs_glutes",
+    primary_muscles: ["hamstrings", "glutes", "back"],
+    secondary_muscles: ["core", "forearms"],
+    difficulty: "intermediate",
+    instructions:
+      "1. Stand with feet hip-width apart, the barbell positioned over the middle of your feet.\n2. Hinge at your hips and bend your knees to grip the bar with a shoulder-width overhand or mixed grip.\n3. Flatten your back, lower your hips, and pull your shoulder blades back and down.\n4. Drive through your legs to stand up, keeping the bar close to your body and lock out your hips.\n5. Hinge at your hips to lower the bar back to the floor with control and repeat.",
+  }),
 ];
 
 // ─── Cable Exercises (non-Voltra) ────────────────────────────────────────────

@@ -30,9 +30,14 @@ jest.mock('lucide-react-native', () => {
 
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 
 import ReleaseNotesModal from '../../components/ReleaseNotesModal';
 import type { ReleaseEntry } from '../../lib/changelog.generated';
+import { CHANGELOG } from '../../lib/changelog.generated';
+import { stripInternalRefs } from '../../lib/release-notes-markdown';
+
+jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 
 const FIXTURE: ReleaseEntry[] = [
   {
@@ -110,6 +115,71 @@ describe('ReleaseNotesModal', () => {
     );
     expect(getByTestId('release-notes-empty')).toBeTruthy();
     expect(getByText('No release notes available')).toBeTruthy();
+  });
+
+  it('renders bold, italic, and inline code markdown', () => {
+    const { getByText } = render(
+      <ReleaseNotesModal
+        visible
+        onClose={jest.fn()}
+        entries={[{ ...FIXTURE[0], body: '- **bold** *italic* `code`' }]}
+      />
+    );
+
+    expect(getByText('bold')).toBeTruthy();
+    expect(getByText('italic')).toBeTruthy();
+    expect(getByText('code')).toBeTruthy();
+  });
+
+  it('renders links and opens safe URLs', () => {
+    const { getByRole } = render(
+      <ReleaseNotesModal
+        visible
+        onClose={jest.fn()}
+        entries={[{ ...FIXTURE[0], body: '- [Docs](https://example.com)' }]}
+      />
+    );
+
+    fireEvent.press(getByRole('link', { name: 'Docs' }));
+    expect(Linking.openURL).toHaveBeenCalledWith('https://example.com');
+  });
+
+  it('does not open non-http links', () => {
+    const { getByText } = render(
+      <ReleaseNotesModal
+        visible
+        onClose={jest.fn()}
+        entries={[{ ...FIXTURE[0], body: '- [Internal](/internal)' }]}
+      />
+    );
+
+    fireEvent.press(getByText('Internal'));
+    expect(Linking.openURL).not.toHaveBeenCalledWith('/internal');
+  });
+});
+
+describe('stripInternalRefs', () => {
+  it.each([
+    ['([BLD-3498](/BLD/issues/BLD-3498))', ''],
+    ['... legibility. (BLD-3195)', '... legibility.'],
+    ['(#609, BLD-1257)', '(#609)'],
+    ['(BLD-1636, BLD-1635)', ''],
+    ['(#648)', '(#648)'],
+    ['even after the BLD-2197 font-shrink fix', 'even after the font-shrink fix'],
+    ['restored the BLD-565 invariant', 'restored the invariant'],
+    ['the one-time post-BLD-485 reinstall banner', 'the one-time post reinstall banner'],
+    ['bld-123-feature branch', 'branch'],
+  ])('strips internal reference from %j', (input, expected) => {
+    expect(stripInternalRefs(input)).toBe(expected);
+  });
+
+  it('removes internal references from the full generated changelog', () => {
+    const stripped = CHANGELOG.flatMap((entry) => entry.body.split('\n'))
+      .map(stripInternalRefs)
+      .join('\n');
+
+    expect(stripped).not.toMatch(/BLD-?\d/i);
+    expect(stripped).not.toMatch(/\/BLD(?:\/|\b)/i);
   });
 });
 

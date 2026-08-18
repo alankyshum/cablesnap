@@ -50,6 +50,11 @@ jest.mock("@/lib/db/sessions", () => ({
   getActiveSession: jest.fn().mockResolvedValue(null),
 }));
 
+jest.mock("@/lib/db", () => ({
+  getBodySettings: jest.fn().mockResolvedValue({ weight_unit: "kg" }),
+  getAppSetting: jest.fn().mockResolvedValue(null),
+}));
+
 jest.mock("../../../components/ExercisePickerSheet", () => {
   const React = require("react");
   const MockPicker = ({ isVisible }: any) => isVisible ? React.createElement("View", { testID: "exercise-picker" }) : null;
