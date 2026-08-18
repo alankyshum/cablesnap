@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- **Estimated pacing progress bar is no longer cropped at the top on mobile/web viewports**, adjusting margins and spacing on the pacing card components for consistent visibility. ([BLD-4542](/BLD/issues/BLD-4542))
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
