@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Improved workout heatmap legend readability** — The “Less” and “More” labels now use explicit line spacing so they align cleanly with the heatmap legend cells. ([BLD-3990](/BLD/issues/BLD-3990))
 
 ## v0.26.88 — 2026-07-26
 <!-- versionCode: 156 -->
