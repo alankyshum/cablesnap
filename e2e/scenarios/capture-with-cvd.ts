@@ -73,6 +73,11 @@ export async function captureWithCvd(
 ): Promise<void> {
   const { page, outDir, viewport, meta } = options;
 
+  // The PR scenario gate is assertion-only: keep every DOM/IA assertion but
+  // avoid four full-page screenshots and CDP setup per capture call. The
+  // scheduled/manual capture workflow leaves this flag unset.
+  if (process.env.SCENARIO_ASSERT_ONLY === "1") return;
+
   fs.mkdirSync(outDir, { recursive: true });
 
   // 1. Baseline (no emulation). Preserve historical filename `<viewport>.png`

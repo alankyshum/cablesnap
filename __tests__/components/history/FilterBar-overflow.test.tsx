@@ -179,4 +179,13 @@ describe("FilterBar — BLD-956 overflow regression", () => {
     expect(flatChip.paddingHorizontal).toBeLessThanOrEqual(4);
     expect(flatChip.gap).toBeLessThanOrEqual(4);
   });
+
+  it("has paddingLeft: 12 on the ScrollView's row content container style for left-content alignment (BLD-4520 / BLD-4585)", () => {
+    const { UNSAFE_getAllByType } = renderBar();
+    const chipScroll = UNSAFE_getAllByType(ScrollView)[0];
+    const flatContentStyle = Array.isArray(chipScroll.props.contentContainerStyle)
+      ? Object.assign({}, ...chipScroll.props.contentContainerStyle.filter(Boolean))
+      : (chipScroll.props.contentContainerStyle ?? {});
+    expect(flatContentStyle.paddingLeft).toBe(12);
+  });
 });

@@ -62,7 +62,10 @@ jobs:
     # Phase 2 (≥50 PR runs + ≥98% pass rate observed). BLD-2861.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    # The mobile assertion suite runs on one worker after dependency/browser
+    # setup and static export; retain bounded headroom for its ~12m48s peak
+    # without weakening assertions or increasing shared-DB contention.
+    timeout-minutes: 15
     concurrency:
       group: scenario-gate-pr-${{ github.ref }}
       cancel-in-progress: true
@@ -86,9 +89,9 @@ jobs:
         run: npx expo export -p web --dev --no-minify
 
       - name: Run scenario assertions (mobile only, no visual diff)
-        # SCENARIO_ASSERT_ONLY=1 skips toHaveScreenshot() in adaptive-rest.spec.ts
-        # while keeping all DOM/IA assertions and pageerror/react-crash-overlay guards.
-        # All other specs in e2e/scenarios/ run unchanged (they have no toHaveScreenshot).
+        # SCENARIO_ASSERT_ONLY=1 retains DOM/IA assertions and pageerror/react-
+        # crash-overlay guards while captureWithCvd skips full-page/CVD shots.
+        # The scheduled/manual capture job leaves this flag unset for artifacts.
         # AC2: crash guards + structural DOM assertions still execute.
         env:
           CI: 'true'
