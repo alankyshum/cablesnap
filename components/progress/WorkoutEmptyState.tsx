@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   onStart?: () => void;
@@ -25,7 +26,7 @@ export default function WorkoutEmptyState({ onStart }: Props) {
   return (
     <View
       style={styles.container}
-      accessibilityLabel="No workouts logged yet"
+      accessibilityLabel={t({ id: "components.progress.workoutEmpty.noWorkoutsA11y", message: "No workouts logged yet" })}
       testID="progress-workouts-empty"
     >
       <View
@@ -42,12 +43,12 @@ export default function WorkoutEmptyState({ onStart }: Props) {
           { color: colors.onSurface, fontSize: fontSizes.lg },
         ]}
       >
-        Track your progress
+        {t({ id: "components.progress.workoutEmpty.title", message: "Track your progress" })}
       </Text>
       <Text
         style={[styles.description, { color: colors.onSurface, opacity: 0.8 }]}
       >
-        Complete your first workout to see sessions, PRs, and weekly trends here.
+        {t({ id: "components.progress.workoutEmpty.description", message: "Complete your first workout to see sessions, PRs, and weekly trends here." })}
       </Text>
       {/*
        * CVD a11y (BLD-2729): the `default` variant's background relies on
@@ -72,8 +73,8 @@ export default function WorkoutEmptyState({ onStart }: Props) {
         <Button
           variant="default"
           onPress={handleStart}
-          accessibilityLabel="Start your first workout"
-          label="Start a workout"
+          accessibilityLabel={t({ id: "components.progress.workoutEmpty.startA11y", message: "Start your first workout" })}
+          label={t({ id: "components.progress.workoutEmpty.start", message: "Start a workout" })}
         />
       </View>
     </View>

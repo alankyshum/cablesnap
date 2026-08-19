@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 /**
  * BLD-600 — Hydration day-detail screen.
  *
@@ -68,7 +70,7 @@ export default function WaterDetail() {
       await addWaterLog(todayKey(), amountMl);
       await load();
     } catch {
-      error("Couldn't save water log. Try again.");
+       error(t({ id: "nutrition.water.saveError", message: "Couldn't save water log. Try again." }));
     }
   }, [load, error]);
 
@@ -77,7 +79,7 @@ export default function WaterDetail() {
       await deleteWaterLog(entry.id);
       await load();
     } catch {
-      error("Couldn't remove water log. Try again.");
+       error(t({ id: "nutrition.water.removeError", message: "Couldn't remove water log. Try again." }));
     }
   }, [load, error]);
 
@@ -86,7 +88,7 @@ export default function WaterDetail() {
       await updateWaterLog(id, amountMl);
       await load();
     } catch {
-      error("Couldn't update water log. Try again.");
+       error(t({ id: "nutrition.water.updateError", message: "Couldn't update water log. Try again." }));
     }
   }, [load, error]);
 
@@ -97,11 +99,11 @@ export default function WaterDetail() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen
         options={{
-          title: "Water",
+           title: t({ id: "nutrition.water.title", message: "Water" }),
           headerRight: () => (
             <TouchableOpacity
               onPress={() => setSheet({ visible: true, entry: null })}
-              accessibilityLabel="Add water entry"
+               accessibilityLabel={t({ id: "nutrition.water.add.a11y", message: "Add water entry" })}
               accessibilityRole="button"
               hitSlop={8}
               style={{ padding: 8 }}
@@ -116,7 +118,7 @@ export default function WaterDetail() {
         <Card style={[styles.card, { backgroundColor: colors.surface }]}>
           <CardContent>
             <View style={styles.headerRowSummary}>
-              <Text variant="caption" style={{ color: colors.onSurface }}>Today</Text>
+               <Text variant="caption" style={{ color: colors.onSurface }}><Trans id="nutrition.water.today">Today</Trans></Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{headerLabel}</Text>
             </View>
             <View

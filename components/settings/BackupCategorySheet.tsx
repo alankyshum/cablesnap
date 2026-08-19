@@ -10,6 +10,7 @@ import {
   BACKUP_CATEGORY_LABELS,
   type BackupCategoryName,
 } from '@/lib/db';
+import { t } from '@lingui/core/macro';
 
 const EMPTY_COUNTS: Partial<Record<BackupCategoryName, number>> = {};
 
@@ -36,7 +37,10 @@ export default function BackupCategorySheet({
 }: Props) {
   const colors = useThemeColors();
   const [draftSelected, setDraftSelected] = useState<Set<BackupCategoryName> | null>(null);
-  const selected = draftSelected ?? new Set(initialSelected);
+  const selected = useMemo(
+    () => draftSelected ?? new Set(initialSelected),
+    [draftSelected, initialSelected],
+  );
 
   const selectedCount = selected.size;
   const title = mode === 'import' ? 'Choose what to import' : 'Choose what to export';
@@ -87,7 +91,7 @@ export default function BackupCategorySheet({
           size="sm"
           onPress={selectAll}
           disabled={loading || categories.length === 0}
-          accessibilityLabel="Select all backup categories"
+          accessibilityLabel={t({ id: "settings.backup.selectAllA11y", message: "Select all backup categories" })}
         >
           Select all
         </Button>
@@ -96,7 +100,7 @@ export default function BackupCategorySheet({
           size="sm"
           onPress={clearAll}
           disabled={loading || categories.length === 0}
-          accessibilityLabel="Clear all backup categories"
+          accessibilityLabel={t({ id: "settings.backup.clearAllA11y", message: "Clear all backup categories" })}
         >
           Clear all
         </Button>

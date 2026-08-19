@@ -9,6 +9,7 @@ import { linkLabel } from "@/hooks/useTemplateEditor";
 import { SET_TYPE_LABELS } from "@/lib/types";
 import type { TemplateExercise } from "@/lib/types";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 export type TemplateExerciseRowProps = {
   item: TemplateExercise;
@@ -174,7 +175,7 @@ export function TemplateExerciseRow({
                 style={{ alignSelf: "flex-start", minHeight: 48, minWidth: 48 }}
                 accessibilityLabel={`Replace ${item.exercise.name}`}
                 accessibilityRole="button"
-                label="Replace"
+                label={t({ id: "components.template.exercise-row.replace", message: "Replace" })}
               />
             )}
             {item.link_id && !selecting && !item.exercise?.deleted_at && (

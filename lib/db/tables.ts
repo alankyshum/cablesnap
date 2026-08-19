@@ -276,6 +276,26 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
 
 export async function createExtensionTables(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS coach_sessions (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS coach_messages (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES coach_sessions(id),
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tool_calls TEXT,
+      created_at INTEGER NOT NULL,
+      error TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_messages_session_created_at
+      ON coach_messages(session_id, created_at);
+
     CREATE TABLE IF NOT EXISTS interaction_log (
       id TEXT PRIMARY KEY,
       action TEXT NOT NULL,

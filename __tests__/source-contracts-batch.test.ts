@@ -625,7 +625,7 @@ describe("BodyweightModifierNotice — AC-23 plan-locked copy", () => {
     "Weighted-bodyweight modifier is tracked as a PR dimension but does not yet contribute to weekly/monthly volume totals.";
 
   it("exports the exact plan-locked wording (no paraphrase)", () => {
-    expect(BW_MODIFIER_VOLUME_NOTICE).toBe(expected);
+    expect(BW_MODIFIER_VOLUME_NOTICE()).toBe(expected);
   });
 
   it.each([
@@ -1232,4 +1232,3 @@ describe("CompareView / FormClipsPlayer — AC8 banned token scan", () => {
     }
   });
 });
-

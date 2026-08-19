@@ -13,6 +13,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { useLayout } from "../../lib/layout";
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
 import {
   createProgram,
   getProgramById,
@@ -64,7 +66,7 @@ export default function CreateProgram() {
   const save = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      Alert.alert("Validation", "Program name is required.");
+      Alert.alert(t({ id: "app.program.create.validation", message: "Validation" }), t({ id: "app.program.create.name-required", message: "Program name is required." }));
       return;
     }
     setSaving(true);
@@ -73,10 +75,10 @@ export default function CreateProgram() {
         const p = await createProgram(trimmed, description.trim());
         setProgram(p);
         bumpQueryVersion("home");
-        Alert.alert("Program Created", "Now add workout days to your program.");
+        Alert.alert(t({ id: "app.program.create.created", message: "Program Created" }), t({ id: "app.program.create.add-days", message: "Now add workout days to your program." }));
       } else {
         if (days.length === 0) {
-          Alert.alert("Validation", "Add at least 1 workout day.");
+          Alert.alert(t({ id: "app.program.create.validation-days", message: "Validation" }), t({ id: "app.program.create.minimum-day", message: "Add at least 1 workout day." }));
           setSaving(false);
           return;
         }
@@ -111,7 +113,7 @@ export default function CreateProgram() {
   );
 
   const dayName = (day: ProgramDay) =>
-    day.label || day.template_name || "Deleted Template";
+    day.label || day.template_name || t({ id: "app.program.create.deleted-template", message: "Deleted Template" });
 
   const renderItem = useCallback(
     ({ item, index }: { item: ProgramDay; index: number }) => (
@@ -126,22 +128,22 @@ export default function CreateProgram() {
       >
         <View style={styles.dayInfo}>
           <Text variant="subtitle" style={{ color: colors.onSurface }}>
-            Day {index + 1}: {dayName(item)}
+             {i18n._({ id: "app.program.create.day-name", message: "Day {day}: {name}", values: { day: index + 1, name: dayName(item) } })}
           </Text>
           {item.template_id === null && (
             <Text variant="caption" style={{ color: colors.error }}>
-              Template has been deleted
+              {t({ id: "app.program.create.template-deleted", message: "Template has been deleted" })}
             </Text>
           )}
         </View>
         <View style={styles.dayActions}>
-          <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={`Move ${dayName(item)} up`} accessibilityHint="Reorders workout day" hitSlop={8} style={{ padding: 8 }}>
+          <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={t({ id: "app.program.create.move-up", message: `Move ${dayName(item)} up` })} accessibilityHint={t({ id: "app.program.create.reorder-hint", message: "Reorders workout day" })} hitSlop={8} style={{ padding: 8 }}>
             <MaterialCommunityIcons name="arrow-up" size={18} color={index === 0 ? colors.onSurfaceDisabled : colors.onSurface} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => move(index, 1)} disabled={index === days.length - 1} accessibilityLabel={`Move ${dayName(item)} down`} accessibilityHint="Reorders workout day" hitSlop={8} style={{ padding: 8 }}>
+          <TouchableOpacity onPress={() => move(index, 1)} disabled={index === days.length - 1} accessibilityLabel={t({ id: "app.program.create.move-down", message: `Move ${dayName(item)} down` })} accessibilityHint={t({ id: "app.program.create.reorder-hint-down", message: "Reorders workout day" })} hitSlop={8} style={{ padding: 8 }}>
             <MaterialCommunityIcons name="arrow-down" size={18} color={index === days.length - 1 ? colors.onSurfaceDisabled : colors.onSurface} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={`Remove ${dayName(item)}`} hitSlop={8} style={{ padding: 8 }}>
+          <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={t({ id: "app.program.create.remove-day-a11y", message: `Remove ${dayName(item)}` })} hitSlop={8} style={{ padding: 8 }}>
             <MaterialCommunityIcons name="close" size={18} color={colors.onSurface} />
           </TouchableOpacity>
         </View>
@@ -153,26 +155,26 @@ export default function CreateProgram() {
   return (
     <>
       <Stack.Screen
-        options={{ title: program ? "Edit Program" : "New Program" }}
+        options={{ title: program ? t({ id: "app.program.create.edit-title", message: "Edit Program" }) : t({ id: "app.program.create.new-title", message: "New Program" }) }}
       />
       <View
         style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <Input
-          label="Program Name"
+          label={t({ id: "app.program.create.name", message: "Program Name" })}
           value={name}
           onChangeText={setName}
           containerStyle={styles.input}
-          placeholder="e.g. Push/Pull/Legs"
-          accessibilityLabel="Program name"
+          placeholder={t({ id: "app.program.create.name-placeholder", message: "e.g. Push/Pull/Legs" })}
+          accessibilityLabel={t({ id: "app.program.create.name-a11y", message: "Program name" })}
         />
         <Input
-          label="Description (optional)"
+          label={t({ id: "app.program.create.description", message: "Description (optional)" })}
           value={description}
           onChangeText={setDescription}
           containerStyle={styles.input}
-          placeholder="e.g. 6-day PPL split"
-          accessibilityLabel="Program description"
+          placeholder={t({ id: "app.program.create.description-placeholder", message: "e.g. 6-day PPL split" })}
+          accessibilityLabel={t({ id: "app.program.create.description-a11y", message: "Program description" })}
           multiline
         />
         {program && (
@@ -182,7 +184,7 @@ export default function CreateProgram() {
                 variant="title"
                 style={{ color: colors.onBackground }}
               >
-                Workout Days ({days.length})
+                {t({ id: "app.program.create.workout-days", message: `Workout Days (${days.length})` })}
               </Text>
             </View>
             <FlatList
@@ -195,9 +197,9 @@ export default function CreateProgram() {
                     variant="body"
                     style={{ color: colors.onSurfaceVariant }}
                     accessibilityRole="text"
-                    accessibilityLabel="No workout days added yet"
+                    accessibilityLabel={t({ id: "app.program.create.no-days-a11y", message: "No workout days added yet" })}
                   >
-                    No days yet. Add workout templates below.
+                    {t({ id: "app.program.create.no-days", message: "No days yet. Add workout templates below." })}
                   </Text>
                 </View>
               }
@@ -209,8 +211,8 @@ export default function CreateProgram() {
                 router.push(`/program/pick-template?programId=${program.id}`)
               }
               style={styles.addBtn}
-              accessibilityLabel="Add workout day from template"
-              label="Add Day"
+              accessibilityLabel={t({ id: "app.program.create.add-day-a11y", message: "Add workout day from template" })}
+              label={t({ id: "app.program.create.add-day", message: "Add Day" })}
             />
           </>
         )}
@@ -220,9 +222,9 @@ export default function CreateProgram() {
           loading={saving}
           disabled={saving}
           style={styles.saveBtn}
-          accessibilityLabel={program ? "Done editing program" : "Create program"}
+          accessibilityLabel={program ? t({ id: "app.program.create.done-a11y", message: "Done editing program" }) : t({ id: "app.program.create.create-a11y", message: "Create program" })}
         >
-          {program ? "Done" : "Create Program"}
+          {program ? t({ id: "app.program.create.done", message: "Done" }) : t({ id: "app.program.create.create", message: "Create Program" })}
         </Button>
       </View>
     </>

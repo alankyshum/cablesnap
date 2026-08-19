@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React, { useCallback, useState } from "react";
 import {
   Pressable,
@@ -100,15 +103,11 @@ export function TempoEditorSheet({
           style={[styles.sheet, { backgroundColor: colors.surface }]}
           onPress={(e) => e.stopPropagation()}
         >
-          <Text variant="title" style={{ color: colors.onSurface, marginBottom: 4 }}>
-            Tempo
-          </Text>
+          <Text variant="title" style={{ color: colors.onSurface, marginBottom: 4 }}>{t({ id: "session.tempoeditorsheet.str3", message: "Tempo" })}</Text>
           <Text
             variant="caption"
             style={{ color: colors.onSurfaceVariant, marginBottom: 20 }}
-          >
-            Eccentric–Pause–Concentric–Pause (seconds each)
-          </Text>
+          >{t({ id: "session.tempoeditorsheet.str4", message: "Eccentric–Pause–Concentric–Pause (seconds each)" })}</Text>
 
           {PHASE_LABELS.map(({ key, label, abbr }, idx) => (
             <View key={key} style={styles.phaseRow}>
@@ -141,7 +140,7 @@ export function TempoEditorSheet({
                 <Pressable
                   style={[styles.stepBtn, { backgroundColor: colors.surfaceVariant }]}
                   onPress={() => adjustPhase(idx, -1)}
-                  accessibilityLabel={`Decrease ${label}`}
+                  accessibilityLabel={t({ id: "session.tempoeditorsheet.dynamic1", message: `Decrease ${label}` })}
                   disabled={phases[idx] <= 0}
                 >
                   <Text
@@ -162,14 +161,14 @@ export function TempoEditorSheet({
                     minWidth: 32,
                     textAlign: "center",
                   }}
-                  accessibilityLabel={`${phases[idx]} seconds`}
+                  accessibilityLabel={t({ id: "session.tempoeditorsheet.dynamic2", message: `${phases[idx]} seconds` })}
                 >
                   {phases[idx]}s
                 </Text>
                 <Pressable
                   style={[styles.stepBtn, { backgroundColor: colors.surfaceVariant }]}
                   onPress={() => adjustPhase(idx, 1)}
-                  accessibilityLabel={`Increase ${label}`}
+                  accessibilityLabel={t({ id: "session.tempoeditorsheet.dynamic3", message: `Increase ${label}` })}
                   disabled={phases[idx] >= 60}
                 >
                   <Text
@@ -216,17 +215,17 @@ export function TempoEditorSheet({
               variant="ghost"
               onPress={handleClear}
               style={styles.clearBtn}
-              accessibilityLabel="Clear tempo"
+              accessibilityLabel={t({ id: "session.tempoeditorsheet.str1", message: "Clear tempo" })}
             >
-              <Text style={{ color: colors.onSurfaceVariant }}>Clear</Text>
+              <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "session.tempoeditorsheet.str5", message: "Clear" })}</Text>
             </Button>
             <Button
               variant="default"
               onPress={handleSave}
               style={styles.saveBtn}
-              accessibilityLabel="Save tempo"
+              accessibilityLabel={t({ id: "session.tempoeditorsheet.str2", message: "Save tempo" })}
             >
-              <Text style={{ color: colors.onPrimary }}>Save</Text>
+              <Text style={{ color: colors.onPrimary }}>{t({ id: "session.tempoeditorsheet.str6", message: "Save" })}</Text>
             </Button>
           </View>
         </Pressable>
