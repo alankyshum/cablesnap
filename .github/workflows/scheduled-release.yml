@@ -393,7 +393,7 @@ jobs:
           patchFdroidLibrarySources(process.cwd(), { removeGeneratedArtifacts: false });
           NODE
 
-      - name: Generate native project
+      - name: Generate native project (F-Droid)
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
           CABLESNAP_FDROID: "1"
@@ -522,7 +522,7 @@ jobs:
           chmod 600 android/keystore.properties android/app/release.keystore
           echo "Wrote android/keystore.properties (storeFile=release.keystore, alias=$ANDROID_KEY_ALIAS)"
 
-      - name: Build APK
+      - name: Build F-Droid APK
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
           CABLESNAP_FDROID: "1"
@@ -548,7 +548,7 @@ jobs:
            # invocation creates a combined task graph, allowing Play release
            # library artifacts to satisfy releaseFdroid matchingFallbacks.
            # Keeping the F-Droid graph isolated is required for DEX purity.
-           ./gradlew --refresh-dependencies --no-build-cache :app:assembleReleaseFdroid
+           ./gradlew --refresh-dependencies --no-build-cache --no-daemon :app:assembleReleaseFdroid
            # Preserve the clean F-Droid APK before the Play invocation can
            # reuse or overwrite app/build outputs.
            cp app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk ../cablesnap-fdroid.apk
@@ -561,20 +561,142 @@ jobs:
              ./gradlew :app:dependencies --configuration releaseFdroidRuntimeClasspath || true
              exit 1
            fi
-           rm -rf app/build
-           ./gradlew :app:assembleRelease :wear:assembleRelease
+           cd ..
+           echo "Built F-Droid artifact:"
+           ls -lh cablesnap-fdroid.apk
+
+      # F-Droid sanitization destructively rewrites node_modules. Restore the
+      # pristine dependency tree before the Play prebuild; the Play channel is
+      # actually stamped by createExpoConfig during the Gradle invocation.
+      - name: Restore pristine dependencies for GitHub / Play
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          rm -rf node_modules
+          npm ci
+          GUARD_FILE="node_modules/@expo/config-plugins/build/utils/history.js"
+          if [ ! -f "$GUARD_FILE" ]; then
+            echo "::warning::Corrupt npm cache detected — $GUARD_FILE missing after restore npm ci. Purging @expo/config-plugins from npm cache and reinstalling."
+            npm cache ls @expo/config-plugins 2>/dev/null || true
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci
+            if [ ! -f "$GUARD_FILE" ]; then
+              echo "::error::$GUARD_FILE still missing after cache purge + reinstall. Upstream tarball may be broken."
+              exit 1
+            fi
+          fi
+          node - <<'NODE'
+          const fs = require('fs');
+          for (const name of ['expo-notifications', 'expo-application']) {
+            const config = JSON.parse(fs.readFileSync(`node_modules/${name}/expo-module.config.json`, 'utf8'));
+            if (!config.platforms || !config.platforms.includes('android')) {
+              throw new Error(`${name} is still missing Android from expo-module.config.json`);
+            }
+            const pkg = JSON.parse(fs.readFileSync(`node_modules/${name}/package.json`, 'utf8'));
+            if (pkg.expo?.autolinking?.exclude?.includes(name)) {
+              throw new Error(`${name} remains excluded from autolinking in package.json`);
+            }
+          }
+          NODE
+
+      # The second clean prebuild resets the android/ tree before the Play
+      # build. Its createExpoConfig Gradle task will stamp the GitHub channel
+      # using the environment of the later Gradle invocation.
+      - name: Generate native project (GitHub / Play)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          # Deliberately omitted: CABLESNAP_FDROID must be unset for this
+          # prebuild, not merely set to "0", so app.config.ts takes its Play
+          # / GitHub path.
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx expo prebuild --clean --platform android
+
+      - name: Boost Gradle JVM heap (GitHub / Play)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          PROPS=android/gradle.properties
+          if grep -q '^org.gradle.jvmargs=' "$PROPS"; then
+            sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m|' "$PROPS"
+          else
+            echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
+          fi
+          grep '^org.gradle.jvmargs=' "$PROPS"
+
+      # Every --clean prebuild deletes android/keystore.properties and the
+      # keystore. Rewrite both after the Play prebuild and immediately before
+      # its Gradle invocation, just as for the F-Droid build above.
+      - name: Decode release keystore and write keystore.properties (GitHub / Play)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          if [ ! -s android/app/release.keystore ]; then
+            echo "::error::Decoded release.keystore is empty — check ANDROID_KEYSTORE_BASE64 secret."
+            exit 1
+          fi
+          cat > android/keystore.properties <<PROPS
+          storeFile=release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          PROPS
+          chmod 600 android/keystore.properties android/app/release.keystore
+          test -s android/keystore.properties
+          echo "Wrote android/keystore.properties (storeFile=release.keystore, alias=$ANDROID_KEY_ALIAS)"
+
+      - name: Build GitHub / Play APKs
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          # Deliberately omitted: the Play APK must embed distributionChannel
+          # "github" and use the normal dependency graph.
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd android
+          test -s keystore.properties
+          ./gradlew --refresh-dependencies --no-daemon :app:assembleRelease :wear:assembleRelease
           cd ..
-          # Phone APK (Play / `release` build type) — the canonical
-          # `cablesnap.apk` retained for the existing Play Store /
-          # GitHub-Release pipeline.
+          # Keep the existing Play / GitHub release asset names unchanged.
           cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
-           # Phone APK (`releaseFdroid` build type) was copied immediately
-           # after its isolated Gradle invocation above.
-          # Watch APK — Wear OS 4 standalone artifact; Play-only (F-Droid
-          # rejects GMS).
           cp android/wear/build/outputs/apk/release/wear-release.apk cablesnap-wear.apk
           echo "Built artifacts:"
           ls -lh cablesnap.apk cablesnap-fdroid.apk cablesnap-wear.apk
+
+      - name: Verify embedded distribution channels
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          verify_channel() {
+            local apk="$1"
+            local expected="$2"
+            local config actual
+            config=$(unzip -p "$apk" assets/app.config)
+            if command -v jq >/dev/null 2>&1; then
+              actual=$(printf '%s' "$config" | jq -r '.extra.distributionChannel // empty')
+            else
+              actual=$(CONFIG_JSON="$config" python3 -c 'import json, os; print(json.loads(os.environ["CONFIG_JSON"]).get("extra", {}).get("distributionChannel", ""))')
+            fi
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::$apk embeds distributionChannel=$actual; expected $expected"
+              exit 1
+            fi
+            echo "$apk embeds distributionChannel=$expected"
+          }
+          verify_channel cablesnap.apk github
+          verify_channel cablesnap-fdroid.apk fdroid
 
       - name: AC10b — verify F-Droid APK contains no proprietary SUSS classes
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
@@ -593,6 +715,25 @@ jobs:
             exit 1
           fi
           echo "AC10b OK — F-Droid APK contains none of the four SUSS prefixes."
+
+      - name: AC10c — verify Play APK contains proprietary and Expo native classes
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          GMS_FIREBASE_HITS=$(unzip -p cablesnap.apk 'classes*.dex' 2>/dev/null | strings \
+            | grep -oE 'com/google/android/gms|com/google/firebase' | sort -u || true)
+          NOTIFICATIONS_HITS=$(unzip -p cablesnap.apk 'classes*.dex' 2>/dev/null | strings \
+            | grep -oE 'expo/modules/notifications' | sort -u || true)
+          APPLICATION_HITS=$(unzip -p cablesnap.apk 'classes*.dex' 2>/dev/null | strings \
+            | grep -oE 'expo/modules/application' | sort -u || true)
+          if [ -z "$GMS_FIREBASE_HITS" ] || [ -z "$NOTIFICATIONS_HITS" ] || [ -z "$APPLICATION_HITS" ]; then
+            echo "::error::AC10c violated — cablesnap.apk is missing expected Play native classes (GMS/Firebase and/or Expo notifications/application)."
+            echo "GMS/Firebase matches: ${GMS_FIREBASE_HITS:-<none>}"
+            echo "Expo notifications matches: ${NOTIFICATIONS_HITS:-<none>}"
+            echo "Expo application matches: ${APPLICATION_HITS:-<none>}"
+            exit 1
+          fi
+          echo "AC10c OK — Play APK contains GMS/Firebase and Expo notifications/application classes."
 
       - name: Verify APK signature matches committed fingerprint
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
