@@ -41,10 +41,10 @@ jobs:
   release:
     name: Check, build & release
     runs-on: ubuntu-latest
-    # BLD-2290: hard cap so a wedged QEMU can never burn ~90 min again.
-    # Happy-path is ~30–35 min (build + two emulator attempts); 60 min leaves
-    # headroom while still bounding any hang.
-    timeout-minutes: 60
+    # BLD-2290: hard cap so a wedged QEMU cannot run without a bound. The two
+    # isolated native builds need about 69 min end-to-end; 90 min leaves roughly
+    # 30% headroom for runner variance while still bounding any hang.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -667,7 +667,10 @@ jobs:
           set -euo pipefail
           cd android
           test -s keystore.properties
-          ./gradlew --refresh-dependencies --no-daemon :app:assembleRelease :wear:assembleRelease
+          # The clean prebuild and npm ci above provide phase isolation. Reuse
+          # Gradle's downloaded dependency cache instead of forcing a second
+          # full network re-resolution; keep daemon isolation for channel safety.
+          ./gradlew --no-daemon :app:assembleRelease :wear:assembleRelease
           cd ..
           # Keep the existing Play / GitHub release asset names unchanged.
           cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
