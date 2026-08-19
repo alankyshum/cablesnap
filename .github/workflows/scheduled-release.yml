@@ -872,36 +872,36 @@ jobs:
             git reset --hard origin/main
             bash scripts/release-apply-bump.sh "$VERSION" "$VCODE"
             python3 - "$VERSION" <<'PY'
-            import json
-            import re
-            import sys
-            from pathlib import Path
+          import json
+          import re
+          import sys
+          from pathlib import Path
 
-            marker_path = Path("fdroid/signing-migration.json")
-            readme_path = Path("README.md")
-            try:
-                marker = json.loads(marker_path.read_text())
-                boundary = marker["boundaryTag"]
-            except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
-                raise SystemExit(f"signing migration marker is missing or unparseable: {exc}")
-            if boundary is not None and (not isinstance(boundary, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", boundary)):
-                raise SystemExit("signing migration marker boundaryTag must be null or a release tag like v0.27.0")
+          marker_path = Path("fdroid/signing-migration.json")
+          readme_path = Path("README.md")
+          try:
+              marker = json.loads(marker_path.read_text())
+              boundary = marker["boundaryTag"]
+          except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+              raise SystemExit(f"signing migration marker is missing or unparseable: {exc}")
+          if boundary is not None and (not isinstance(boundary, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", boundary)):
+              raise SystemExit("signing migration marker boundaryTag must be null or a release tag like v0.27.0")
 
-            pending = "boundary release pending — see release notes"
-            start = "<!-- SIGNING_MIGRATION_NOTICE_START -->"
-            end = "<!-- SIGNING_MIGRATION_NOTICE_END -->"
-            readme = readme_path.read_text()
-            if readme.count(start) != 1 or readme.count(end) != 1:
-                raise SystemExit("README signing migration notice markers are missing or duplicated")
-            if boundary is None:
-                boundary = f"v{sys.argv[1]}"
-                if readme.count(pending) != 1:
-                    raise SystemExit("README signing migration pending notice is missing or duplicated")
-                marker_path.write_text(json.dumps({"boundaryTag": boundary}) + "\n")
-                readme_path.write_text(readme.replace(pending, boundary))
-            elif pending in readme or readme.count(boundary) != 1:
-                raise SystemExit("README signing migration notice is out of sync with fdroid/signing-migration.json")
-            print(f"Signing migration boundary: {boundary}")
+          pending = "boundary release pending — see release notes"
+          start = "<!-- SIGNING_MIGRATION_NOTICE_START -->"
+          end = "<!-- SIGNING_MIGRATION_NOTICE_END -->"
+          readme = readme_path.read_text()
+          if readme.count(start) != 1 or readme.count(end) != 1:
+              raise SystemExit("README signing migration notice markers are missing or duplicated")
+          if boundary is None:
+              boundary = f"v{sys.argv[1]}"
+              if readme.count(pending) != 1:
+                  raise SystemExit("README signing migration pending notice is missing or duplicated")
+              marker_path.write_text(json.dumps({"boundaryTag": boundary}) + "\n")
+              readme_path.write_text(readme.replace(pending, boundary))
+          elif pending in readme or readme.count(boundary) != 1:
+              raise SystemExit("README signing migration notice is out of sync with fdroid/signing-migration.json")
+          print(f"Signing migration boundary: {boundary}")
           PY
             stage_paths
             if git diff --cached --quiet; then
