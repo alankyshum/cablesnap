@@ -10419,6 +10419,21 @@
     "srcHash": "55c84905f039",
     "origin": "machine"
   },
+  "floatingTabBar.tabs.aiCoach": {
+    "message": "AI 教练",
+    "srcHash": "07cacebdf686",
+    "origin": "machine"
+  },
+  "tabs.aiCoach.title": {
+    "message": "AI 教练",
+    "srcHash": "852c7916445c",
+    "origin": "machine"
+  },
+  "tabs.aiCoach.header": {
+    "message": "AI 教练",
+    "srcHash": "f5e0bfbaf4a6",
+    "origin": "machine"
+  },
   "settings.formClips.deleteAllMessage": {
     "message": "删除 {count, plural, one {# 个影片} other {# 个影片}}？这将永久从此装置中删除它们。此操作无法撤销。",
     "srcHash": "f81081a70568",

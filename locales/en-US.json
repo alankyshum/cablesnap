@@ -10419,6 +10419,21 @@
     "srcHash": "87eeaff10e47",
     "origin": "human"
   },
+  "floatingTabBar.tabs.aiCoach": {
+    "message": "AI Coach",
+    "srcHash": "07cacebdf686",
+    "origin": "human"
+  },
+  "tabs.aiCoach.title": {
+    "message": "AI Coach",
+    "srcHash": "852c7916445c",
+    "origin": "human"
+  },
+  "tabs.aiCoach.header": {
+    "message": "AI Coach",
+    "srcHash": "f5e0bfbaf4a6",
+    "origin": "human"
+  },
   "settings.formClips.deleteAllMessage": {
     "message": "Delete {count, plural, one {# clip} other {# clips}}? This permanently removes them from this device. This cannot be undone.",
     "srcHash": "f81081a70568",

@@ -67,5 +67,8 @@
   "components.progress.prSummary.seeAllA11y": { "message": "See all personal bests", "srcHash": "230cafefa2a6", "origin": "human" },
   "components.progress.records.errorBody": { "message": "Something went wrong while loading your personal bests. Please try again.", "srcHash": "7fc52edc4dfe", "origin": "human" },
   "components.progress.records.totalPRs": { "message": "Total PBs", "srcHash": "ec3a84ace112", "origin": "human" },
-  "components.exercises.bodyweight-modifier.notice": { "message": "Weighted-bodyweight modifier is tracked as a PB dimension but does not yet contribute to weekly/monthly volume totals.", "srcHash": "1c1d6f0a3187", "origin": "human" }
+  "components.exercises.bodyweight-modifier.notice": { "message": "Weighted-bodyweight modifier is tracked as a PB dimension but does not yet contribute to weekly/monthly volume totals.", "srcHash": "1c1d6f0a3187", "origin": "human" },
+  "floatingTabBar.tabs.aiCoach": { "message": "AI Coach", "srcHash": "07cacebdf686", "origin": "human" },
+  "tabs.aiCoach.title": { "message": "AI Coach", "srcHash": "852c7916445c", "origin": "human" },
+  "tabs.aiCoach.header": { "message": "AI Coach", "srcHash": "f5e0bfbaf4a6", "origin": "human" }
 }

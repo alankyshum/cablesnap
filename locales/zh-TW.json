@@ -10419,6 +10419,21 @@
     "srcHash": "55c84905f039",
     "origin": "machine"
   },
+  "floatingTabBar.tabs.aiCoach": {
+    "message": "AI 教練",
+    "srcHash": "07cacebdf686",
+    "origin": "machine"
+  },
+  "tabs.aiCoach.title": {
+    "message": "AI 教練",
+    "srcHash": "852c7916445c",
+    "origin": "machine"
+  },
+  "tabs.aiCoach.header": {
+    "message": "AI 教練",
+    "srcHash": "f5e0bfbaf4a6",
+    "origin": "machine"
+  },
   "settings.formClips.deleteAllMessage": {
     "message": "刪除 {count, plural, one {# 個影片} other {# 個影片}}？這將永久從此裝置中刪除它們。此操作無法撤銷。",
     "srcHash": "f81081a70568",

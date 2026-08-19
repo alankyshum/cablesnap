@@ -12944,3 +12944,18 @@ msgstr ""
 #: components/nutrition/MacroCoachCard.tsx:381
 msgid "components.nutrition.coach.explainerWeight"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: components/floating-tab-bar/TabButton.tsx:33
+msgid "floatingTabBar.tabs.aiCoach"
+msgstr "AI Coach"
+
+#. js-lingui-explicit-id
+#: app/(tabs)/_layout.tsx:120
+msgid "tabs.aiCoach.title"
+msgstr "AI Coach"
+
+#. js-lingui-explicit-id
+#: app/(tabs)/_layout.tsx:121
+msgid "tabs.aiCoach.header"
+msgstr "AI Coach"
