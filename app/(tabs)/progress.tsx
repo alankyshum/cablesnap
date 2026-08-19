@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -30,11 +31,11 @@ export default function Progress() {
             router.setParams?.({ segment: undefined, muscle: undefined });
           }}
           buttons={[
-            { value: "workouts", label: "Workouts", accessibilityLabel: "Workouts progress" },
-            { value: "body", label: "Body", accessibilityLabel: "Body metrics" },
-            { value: "muscles", label: "Muscles", accessibilityLabel: "Muscle volume analysis" },
-            { value: "nutrition", label: "Nutrition", accessibilityLabel: "Nutrition trends" },
-            { value: "monthly", label: "Monthly", accessibilityLabel: "Monthly training report" },
+            { value: "workouts", label: t({ id: "progress.tabs.workouts", message: "Workouts" }), accessibilityLabel: t({ id: "progress.tabs.workoutsA11y", message: "Workouts progress" }) },
+            { value: "body", label: t({ id: "progress.tabs.body", message: "Body" }), accessibilityLabel: t({ id: "progress.tabs.bodyA11y", message: "Body metrics" }) },
+            { value: "muscles", label: t({ id: "progress.tabs.muscles", message: "Muscles" }), accessibilityLabel: t({ id: "progress.tabs.musclesA11y", message: "Muscle volume analysis" }) },
+            { value: "nutrition", label: t({ id: "progress.tabs.nutrition", message: "Nutrition" }), accessibilityLabel: t({ id: "progress.tabs.nutritionA11y", message: "Nutrition trends" }) },
+            { value: "monthly", label: t({ id: "progress.tabs.monthly", message: "Monthly" }), accessibilityLabel: t({ id: "progress.tabs.monthlyA11y", message: "Monthly training report" }) },
           ]}
         />
       </View>

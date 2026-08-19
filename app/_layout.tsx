@@ -1,5 +1,5 @@
+import "../lib/i18n";
 import "react-native-reanimated";
-
 // Reanimated 4 performance flags for New Architecture on Android
 (global as Record<string, unknown>)._reanimatedFeatureFlags = {
   ...((global as Record<string, unknown>)._reanimatedFeatureFlags as Record<string, boolean> ?? {}),
@@ -20,6 +20,8 @@ import { ToastProvider } from "../components/ui/bna-toast";
 import { Colors } from "../theme/colors";
 import { ThemePreferenceProvider } from "../lib/theme-preference";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { I18nProvider } from "../lib/i18n/provider";
+import { LanguageProvider } from "../lib/language-preference";
 
 import { setupConsoleLogBuffer } from "../lib/console-log-buffer";
 import { log as logInteraction } from "../lib/interactions";
@@ -150,7 +152,7 @@ export default Sentry.wrap(function RootLayout() {
       <QueryProvider>
       <OnboardingContext.Provider value={onboardingCtx}>
       <FormClipsContext.Provider value={formClipsCtx}>
-      <ThemePreferenceProvider>
+        <ThemePreferenceProvider><LanguageProvider><I18nProvider>
       <BNAThemeProvider>
         <ToastProvider>
           <BottomSheetModalProvider>
@@ -181,7 +183,7 @@ export default Sentry.wrap(function RootLayout() {
           </BottomSheetModalProvider>
         </ToastProvider>
       </BNAThemeProvider>
-      </ThemePreferenceProvider>
+        </I18nProvider></LanguageProvider></ThemePreferenceProvider>
       </FormClipsContext.Provider>
       </OnboardingContext.Provider>
       </QueryProvider>

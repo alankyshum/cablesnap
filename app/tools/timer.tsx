@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { ScrollView, StyleSheet } from "react-native"
 import { Stack } from "expo-router"
 import Animated, { useReducedMotion } from "react-native-reanimated"
@@ -34,7 +35,7 @@ export function TimerContent() {
 export default function TimerScreen() {
   return (
     <>
-      <Stack.Screen options={{ headerShown: true, title: "Interval Timer" }} />
+      <Stack.Screen options={{ headerShown: true, title: t({ id: "app.tools.timer.title", message: "Interval Timer" }) }} />
       <TimerContent />
     </>
   )

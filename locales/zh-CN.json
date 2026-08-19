@@ -65,18 +65,18 @@
     "origin": "machine"
   },
   "components.progress.nutritionCards.currentStreakValue": {
-    "message": "{0} {1}",
-    "srcHash": "20b20430555e",
+    "message": "{count} {count, plural, one {天} other {天}}",
+    "srcHash": "f9833f2e9dc3",
     "origin": "machine"
   },
   "components.progress.nutritionCards.longestStreakValue": {
-    "message": "{0} {1}",
-    "srcHash": "2d24e06ff043",
+    "message": "{count} {count, plural, one {天} other {天}}",
+    "srcHash": "69ce65a7158e",
     "origin": "machine"
   },
   "history.filters.resultCount": {
-    "message": "{0} {1}",
-    "srcHash": "507fb553d542",
+    "message": "{count, plural, one {# 场} other {# 场}}",
+    "srcHash": "2595db8dc83d",
     "origin": "machine"
   },
   "app.exercise.id.history-max-weight": {
@@ -85,8 +85,8 @@
     "origin": "machine"
   },
   "home.weeklySummary.delta": {
-    "message": "{0} {1} 比上周",
-    "srcHash": "755470eda4d6",
+    "message": "{direction, select, up {上升} down {下降}} {percent} 与上周相比",
+    "srcHash": "40ec118dfe32",
     "origin": "machine"
   },
   "components.progress.records.weightValue": {
@@ -100,7 +100,7 @@
     "origin": "machine"
   },
   "settings.importWorkouts.progress": {
-    "message": "{0} / {1} 健身课程",
+    "message": "{0} / {1} 个训练",
     "srcHash": "8135fc106630",
     "origin": "machine"
   },
@@ -120,12 +120,12 @@
     "origin": "machine"
   },
   "components.session.summary.achievements.a11y": {
-    "message": "{0} 成就{1} 解锁",
-    "srcHash": "faeb8e9c7b19",
+    "message": "{count} {count, plural, one {项成就} other {项成就}} 解锁",
+    "srcHash": "d801eaebaa24",
     "origin": "machine"
   },
   "components.exercise.strength-level.next-text": {
-    "message": "{0} at {1} {unit}",
+    "message": "{0} 在 {1} 时达到 {unit}",
     "srcHash": "1c8149572979",
     "origin": "machine"
   },
@@ -140,8 +140,8 @@
     "origin": "machine"
   },
   "app.program.id.meta": {
-    "message": "{0} 日{1} · {cycle} 循环{2} 完成",
-    "srcHash": "507a824bee28",
+    "message": "{days, plural, one {# 天} other {# 天}} · {cycles, plural, one {# 个循环} other {# 个循环}} 完成",
+    "srcHash": "e16b80c8ffc7",
     "origin": "machine"
   },
   "home.programs.dayCount": {
@@ -190,8 +190,8 @@
     "origin": "machine"
   },
   "settings.gymProfiles.markerCount": {
-    "message": "{0}个标记{1}",
-    "srcHash": "f34a95e4adb6",
+    "message": "{count, plural, one {# 个标记} other {# 个标记}}",
+    "srcHash": "bef53255c4fc",
     "origin": "machine"
   },
   "components.progress.records.variant.mount": {
@@ -200,28 +200,28 @@
     "origin": "machine"
   },
   "settings.importWorkouts.exercisesCreated": {
-    "message": "{0}新运动项目{1}建立",
-    "srcHash": "0fb5393c97fb",
+    "message": "{count, plural, one {建立 # 个新动作} other {建立 # 个新动作}}",
+    "srcHash": "b75027248433",
     "origin": "machine"
   },
   "components.session.summary.prs-card.accessibility": {
-    "message": "{0}新个人纪录{1}",
-    "srcHash": "75996b067dd8",
+    "message": "达成{count}个新个人{count, plural, one {最佳纪录} other {最佳纪录}}",
+    "srcHash": "36fad62284b8",
     "origin": "machine"
   },
   "components.session.detail.prs-card.accessibility": {
-    "message": "{0}新个人纪录{1}在这场训练中达成",
-    "srcHash": "e75789228cb6",
+    "message": "在这次训练中达成{count}个新个人{count, plural, one {最佳纪录} other {最佳纪录}}",
+    "srcHash": "1fbde8779660",
     "origin": "machine"
   },
   "components.session.summary.prs-card.title": {
-    "message": "{0}新个人纪录{1}",
-    "srcHash": "0dd9caf46b56",
+    "message": "达成新{count}的{count, plural, one {PR} other {PR}}",
+    "srcHash": "267df1df5a84",
     "origin": "machine"
   },
   "components.session.detail.prs-card.title": {
-    "message": "{0}新个人纪录{1}",
-    "srcHash": "7bd5a7189658",
+    "message": "{count} 新的 {count, plural, one {PR} other {PR}}",
+    "srcHash": "3e6decdda419",
     "origin": "machine"
   },
   "components.progress.nutritionCards.onTargetDays": {
@@ -235,8 +235,8 @@
     "origin": "machine"
   },
   "components.exercise.records.plate-row-a11y": {
-    "message": "{0}个百分比的单次最大重量，{1} {2}，{3}次",
-    "srcHash": "b8cc99e60759",
+    "message": "{percent}% 的一举最大重量，{weight} {unitWord}，{reps} 次",
+    "srcHash": "77275d099812",
     "origin": "machine"
   },
   "app.tools.rm.tableRowA11y": {
@@ -255,8 +255,8 @@
     "origin": "machine"
   },
   "history.gtg.entrySummary": {
-    "message": "{0} 次数{1} · {2} 组数{3}",
-    "srcHash": "8965d698f217",
+    "message": "{reps, plural, one {# 次数} other {# 次数}} · {sets, plural, one {# 组数} other {# 组数}}",
+    "srcHash": "571ae86707b4",
     "origin": "machine"
   },
   "components.progress.prSummary.repsValue": {
@@ -275,13 +275,13 @@
     "origin": "machine"
   },
   "home.quickAdd.chipSummary": {
-    "message": "{0} 次数{1}",
-    "srcHash": "2ad77482d964",
+    "message": "{reps} 次数{hasWeight, select, true { · {weight} kg} false {}}",
+    "srcHash": "7d52a787ae7c",
     "origin": "machine"
   },
   "daysession.id.setSummary": {
-    "message": "{0} 次数{1}",
-    "srcHash": "859dd8e5c6d6",
+    "message": "{reps} 次数{hasWeight, select, true { @ {weight} kg} false {}}",
+    "srcHash": "56ee09e81634",
     "origin": "machine"
   },
   "session.tempoeditorsheet.dynamic2": {
@@ -315,13 +315,13 @@
     "origin": "machine"
   },
   "settings.importWorkouts.setsImported": {
-    "message": "{0}组已导入{1}",
-    "srcHash": "5eb2a58830d7",
+    "message": "{count, plural, one {汇入 # 组} other {汇入 # 组}}",
+    "srcHash": "a1c3853e4cd5",
     "origin": "machine"
   },
   "settings.importWorkouts.setsSkipped": {
-    "message": "{0}组已跳过{1}",
-    "srcHash": "e3779dc03e12",
+    "message": "{count, plural, one {略过 # 组} other {略过 # 组}}",
+    "srcHash": "eac05e962dd5",
     "origin": "machine"
   },
   "home.gtg.setsA11y": {
@@ -350,23 +350,18 @@
     "origin": "machine"
   },
   "settings.importWorkouts.sessionsImported": {
-    "message": "{0}工作量{1}已导入",
-    "srcHash": "51454a4d88a2",
-    "origin": "machine"
-  },
-  "app.tools.cableFinder.exerciseA11y": {
-    "message": "{0}, {1}",
-    "srcHash": "8e9a5c447723",
+    "message": "{count, plural, one {汇入 # 个训练} other {汇入 # 个训练}}",
+    "srcHash": "d584099379d3",
     "origin": "machine"
   },
   "settings.gymProfiles.toggleGymA11y": {
-    "message": "{0}, {1}",
-    "srcHash": "612d517146f3",
+    "message": "{name}，{expanded, select, true {收合} false {展开}}",
+    "srcHash": "4b109174b35f",
     "origin": "machine"
   },
   "settings.gymProfiles.toggleStackA11y": {
-    "message": "{0}, {1}",
-    "srcHash": "6fd54d88378e",
+    "message": "{name}，{expanded, select, true {收合} false {展开}}",
+    "srcHash": "a2efce317400",
     "origin": "machine"
   },
   "home.gtg.entryA11y": {
@@ -380,18 +375,18 @@
     "origin": "machine"
   },
   "history.session.a11y": {
-    "message": "{0}, {date}, {1}, {2}组{3}",
-    "srcHash": "2b2dfaaa85c3",
+    "message": "{name}, {date}, {duration}, {count} 组数{hasRating, select, true {，评分 {rating}（满分 5 分）} false {}}",
+    "srcHash": "c5d9383db2af",
     "origin": "machine"
   },
   "home.quickAdd.chipA11y": {
-    "message": "{0}, 登记一组，最后记录{1}次{2}。长按编辑。",
-    "srcHash": "dee8a4b7142e",
+    "message": "{name}，记录一组，上次记录 {reps} 次{hasWeight, select, true {，重量为 {weight} kg} false {}}。长按以编辑。",
+    "srcHash": "e03fd6e88ab0",
     "origin": "machine"
   },
   "components.exercise.progression.step-a11y": {
-    "message": "{0}, 第{1}步{2}{3}",
-    "srcHash": "bc8bd5fc05de",
+    "message": "{name}，第{step}步，共{total}{status, select, none {} current {，目前} completed {，已完成}}步",
+    "srcHash": "18b28d55cb0a",
     "origin": "machine"
   },
   "components.profile.activity.optionA11y": {
@@ -400,8 +395,8 @@
     "origin": "machine"
   },
   "home.adherence.dayA11y": {
-    "message": "{0}: {1}",
-    "srcHash": "a02da212c723",
+    "message": "{day}: {status, select, completed {已完成} scheduled {已安排} rest {休息日}}",
+    "srcHash": "6f7e2080fecf",
     "origin": "machine"
   },
   "app.onboarding.setup.levelA11y": {
@@ -415,8 +410,8 @@
     "origin": "machine"
   },
   "components.progress.prSummary.weightedRowA11y": {
-    "message": "{0}: {1} {weightUnit}, {2}",
-    "srcHash": "1eead261a709",
+    "message": "{name}: {weight} {unit}, {date}",
+    "srcHash": "61611dab1455",
     "origin": "machine"
   },
   "history.gtg.entryA11y": {
@@ -430,8 +425,8 @@
     "origin": "machine"
   },
   "components.progress.records.bestBodyweightA11y": {
-    "message": "{0}: {1} 次, {sessionCount} 节目",
-    "srcHash": "3de8e168d90f",
+    "message": "{name}：{reps} 次数，{sessions} 节",
+    "srcHash": "b085e9b7f23e",
     "origin": "machine"
   },
   "components.muscleVolume.barA11y": {
@@ -440,8 +435,8 @@
     "origin": "machine"
   },
   "home.templates.startA11y": {
-    "message": "{0}: {displayName}{spokenDuration}, {1} 运动项目",
-    "srcHash": "e7cf2707e3f9",
+    "message": "{kind}: {name}{duration}, {count, plural, one {# 个动作} other {# 个动作}}",
+    "srcHash": "d5410e3ac414",
     "origin": "machine"
   },
   "components.progress.monthlyReport.improvedA11y": {
@@ -455,33 +450,33 @@
     "origin": "machine"
   },
   "history.dateRange.optionA11y": {
-    "message": "{0}{1}",
-    "srcHash": "74268c033289",
+    "message": "{label}{selected, select, true {, 已选} false {}}",
+    "srcHash": "d811cbe3bd89",
     "origin": "machine"
   },
   "history.muscleFilter.optionA11y": {
-    "message": "{0}{1}",
-    "srcHash": "ecfb59e4b6a9",
+    "message": "{name}{selected, select, true {, 已选择} false {}}",
+    "srcHash": "0423c3d573ff",
     "origin": "machine"
   },
   "history.templateFilter.optionA11y": {
-    "message": "{0}{1}, {2}组数{3}",
-    "srcHash": "17d4ee6fcb48",
+    "message": "{name}{deleted, select, true {（已删除）} false {}}，{count} 场训练{selected, select, true {，已选取} false {}}",
+    "srcHash": "49bfc1b0d25d",
     "origin": "machine"
   },
   "components.exercises.card.a11y": {
-    "message": "{0}{1}, {2}, {3}, 难度: {diff}",
-    "srcHash": "18cfcf2a0070",
+    "message": "{name}{custom}，{category}，{equipment}，难度：{difficulty}",
+    "srcHash": "d3c354dd7f15",
     "origin": "machine"
   },
   "components.progress.records.recentPRA11y": {
-    "message": "{0}{1}: {value}, {delta}, {2}",
-    "srcHash": "db74ad72fcdb",
+    "message": "{name}{variant}: {value}, {delta}, {date}",
+    "srcHash": "3228103313c6",
     "origin": "machine"
   },
   "components.progress.records.bestWeightedA11y": {
-    "message": "{0}{1}{2}{3}, {sessionPart}",
-    "srcHash": "c2328429c219",
+    "message": "{name}{variant}{weight}{e1rm}, {sessions}",
+    "srcHash": "c9c17ec15e43",
     "origin": "machine"
   },
   "components.progress.monthlyReport.daysOnTarget": {
@@ -500,8 +495,8 @@
     "origin": "machine"
   },
   "home.adherence.progress": {
-    "message": "{completedCount} of {targetCount} this week {0}",
-    "srcHash": "07f666c36250",
+    "message": "本周完成 {completed}/{target} {symbol}",
+    "srcHash": "1f4286f4148c",
     "origin": "machine"
   },
   "history.calendar.monthSummary.withWorkouts": {
@@ -515,8 +510,8 @@
     "origin": "machine"
   },
   "components.exercise.plateau.headline-reps": {
-    "message": "{count} 次在 {0} 次 — 准备突破它？",
-    "srcHash": "c4ed6f2d1679",
+    "message": "{count} 场次，每组 {reps} 次数 — 准备突破平台吗？",
+    "srcHash": "84971b2dd72c",
     "origin": "machine"
   },
   "history.calendar.monthSummaryA11y.withWorkouts": {
@@ -575,8 +570,8 @@
     "origin": "machine"
   },
   "home.programs.itemA11y": {
-    "message": "{kindLabel}: {0}, {1} 天{2}{descSuffix}",
-    "srcHash": "1f69a65e23dc",
+    "message": "{kind}：{name}，{days}天{active, select, true {，启用中} false {}}{description}",
+    "srcHash": "3085b681b6e3",
     "origin": "machine"
   },
   "body.measurements.field.label": {
@@ -585,18 +580,18 @@
     "origin": "machine"
   },
   "body.measurements.field.a11y": {
-    "message": "{label} in {unit}",
+    "message": "测量值 {label}：{unit}",
     "srcHash": "9fbdd84a4128",
     "origin": "machine"
   },
   "home.programs.filterOptionA11y": {
-    "message": "{label} 程序筛选{0}",
-    "srcHash": "eb6426699c10",
-    "origin": "human"
+    "message": "{label} 节目筛选条件{selected, select, true {，已选取} false {}}",
+    "srcHash": "c5ed211ee80b",
+    "origin": "machine"
   },
   "components.program.weekly-schedule.day-a11y": {
-    "message": "{label}: {0}",
-    "srcHash": "13cc2841fa41",
+    "message": "{day}: {schedule, select, rest {休息日} assigned {{template}}}",
+    "srcHash": "eccce7277311",
     "origin": "machine"
   },
   "components.progress.monthlyReport.muscleSetsA11y": {
@@ -605,8 +600,8 @@
     "origin": "machine"
   },
   "components.progress.monthlyReport.statA11y": {
-    "message": "{label}: {value}{0}{1}",
-    "srcHash": "150f2067d8cf",
+    "message": "{label}: {value}{unit, select, none {} other { {unit}}}{delta, select, none {} other {, 与上个月相比 {delta}}}",
+    "srcHash": "4d6de81043f2",
     "origin": "machine"
   },
   "components.timer.configPanel.valueA11y": {
@@ -675,8 +670,8 @@
     "origin": "machine"
   },
   "components.progress.trends.chartA11y": {
-    "message": "{title}: 最新值 {0}, 第{1}次训练{2}",
-    "srcHash": "0f1966bbceec",
+    "message": "{title}：最新值 {latest}，{count} {count, plural, one {次训练} other {次训练}}",
+    "srcHash": "8a9f15074081",
     "origin": "machine"
   },
   "components.progress.monthlyReport.trainingDaysA11y": {
@@ -710,8 +705,8 @@
     "origin": "machine"
   },
   "components.progress.strengthLevels.nextHint": {
-    "message": "→ {0}公斤在{1}kg",
-    "srcHash": "5791d6d3902c",
+    "message": "→ {level} 于 {threshold} 公斤",
+    "srcHash": "b4797764006b",
     "origin": "machine"
   },
   "common.increase": {
@@ -765,7 +760,7 @@
     "origin": "machine"
   },
   "components.timer.timerBody.addRound": {
-    "message": "+1 Round",
+    "message": "+1 回合",
     "srcHash": "33e721d8fa0b",
     "origin": "machine"
   },
@@ -805,7 +800,7 @@
     "origin": "machine"
   },
   "app.tools.rm.accuracyWarning": {
-    "message": "⚠ 当次数超过12次时，估计会变得不那么准确",
+    "message": "⚠ 当次数超过12次时，估计准确度较低",
     "srcHash": "c7a87e2e9d48",
     "origin": "machine"
   },
@@ -930,7 +925,7 @@
     "origin": "machine"
   },
   "home.programs.active": {
-    "message": "ACTIVE",
+    "message": "启用中",
     "srcHash": "245309f42584",
     "origin": "machine"
   },
@@ -1210,17 +1205,17 @@
     "origin": "machine"
   },
   "settings.advancedSets.title": {
-    "message": "进阶套组类型",
+    "message": "进阶组类型",
     "srcHash": "a18441074fe4",
     "origin": "machine"
   },
   "settings.training.advancedSetTypes": {
-    "message": "进阶套组类型",
+    "message": "进阶组类型",
     "srcHash": "9cdc04344879",
     "origin": "machine"
   },
   "settings.advancedSets.intro": {
-    "message": "进阶套组类型允许您将结构化的多冲击套组记录为单一父项，并包含排序的迷你套组。每个迷你套组可记录其自己的次数、选填的重量和休息时间。",
+    "message": "进阶组类型允许您将结构化的多冲击组记录为单一父项，并包含排序的迷你组。每个迷你组可记录其自己的次数、选填的重量和休息时间。",
     "srcHash": "4c5e298aa323",
     "origin": "machine"
   },
@@ -1250,7 +1245,7 @@
     "origin": "machine"
   },
   "components.photos.filter.allA11y": {
-    "message": "所有姿势滤镜",
+    "message": "所有姿势筛选条件",
     "srcHash": "d74f4c6b2ad1",
     "origin": "machine"
   },
@@ -1265,12 +1260,12 @@
     "origin": "machine"
   },
   "components.nutrition.water.amount": {
-    "message": "水量 ({0})",
-    "srcHash": "bcbe23cd2829",
+    "message": "水量 ({unit, select, ml {ml} oz {fl oz}})",
+    "srcHash": "21fa4d91639d",
     "origin": "machine"
   },
   "components.timer.timerBody.amrap": {
-    "message": "AMRAP",
+    "message": "尽可能多回合（AMRAP）",
     "srcHash": "3e6fcd83f42d",
     "origin": "machine"
   },
@@ -1367,11 +1362,6 @@
   "components.exercises.detail-pane.attachment-a11y": {
     "message": "附件: {0}",
     "srcHash": "fc0b66bf84c3",
-    "origin": "machine"
-  },
-  "app.exercise.id.attachment-a11y": {
-    "message": "附件: {0}",
-    "srcHash": "8e689a1b455a",
     "origin": "machine"
   },
   "session.setattachmentchip.dynamic1": {
@@ -1505,8 +1495,8 @@
     "origin": "machine"
   },
   "components.exercise.records.based-on": {
-    "message": "Based on: {0}{unit} × {1} 次数",
-    "srcHash": "0220adea00dc",
+    "message": "基于：{weight}{unit} × {reps} 次数",
+    "srcHash": "aec73dd10133",
     "origin": "machine"
   },
   "components.progress.strengthLevels.beginner": {
@@ -1540,7 +1530,7 @@
     "origin": "machine"
   },
   "components.progress.strengthLevels.bestAchievedWith": {
-    "message": "best achieved with: {0}",
+    "message": "最佳成绩：{0}",
     "srcHash": "c09d4a51e266",
     "origin": "machine"
   },
@@ -1565,8 +1555,8 @@
     "origin": "machine"
   },
   "components.exercise.records.best-volume-a11y": {
-    "message": "最佳体积: {0}",
-    "srcHash": "ae8042c07db4",
+    "message": "最佳体积：{volume}",
+    "srcHash": "f22d4a28ade2",
     "origin": "machine"
   },
   "session.exercisedrawerstats.str13": {
@@ -1725,7 +1715,7 @@
     "origin": "machine"
   },
   "components.exercise.variant-filter.a11y": {
-    "message": "缆线变体滤镜",
+    "message": "缆线变体筛选条件",
     "srcHash": "82feaf3bb7b0",
     "origin": "machine"
   },
@@ -1970,7 +1960,7 @@
     "origin": "machine"
   },
   "common.cancelImportA11y": {
-    "message": "取消导入",
+    "message": "取消汇入",
     "srcHash": "c9cadd02bbb9",
     "origin": "machine"
   },
@@ -2100,7 +2090,7 @@
     "origin": "machine"
   },
   "settings.macroCoach.beforeLunch": {
-    "message": "zh-TW",
+    "message": "午餐前查看",
     "srcHash": "f7ec28e07fd2",
     "origin": "machine"
   },
@@ -2110,7 +2100,7 @@
     "origin": "machine"
   },
   "body.measurements.field.chest": {
-    "message": "zh-TW",
+    "message": "胸围",
     "srcHash": "ff28f8a8dee2",
     "origin": "machine"
   },
@@ -2145,7 +2135,7 @@
     "origin": "machine"
   },
   "session.pulleypinpickersheet.str8": {
-    "message": "zh-TW",
+    "message": "清除",
     "srcHash": "c0b7e80b90f4",
     "origin": "machine"
   },
@@ -2190,7 +2180,7 @@
     "origin": "machine"
   },
   "history.filters.clearOneA11y": {
-    "message": "清除{label}滤镜",
+    "message": "清除{label}筛选条件",
     "srcHash": "9d6b8edfd6fd",
     "origin": "machine"
   },
@@ -2215,37 +2205,37 @@
     "origin": "machine"
   },
   "history.filterBar.clearAllA11y": {
-    "message": "清除所有滤镜",
+    "message": "清除所有筛选条件",
     "srcHash": "d2bc02cc21ca",
     "origin": "machine"
   },
   "exercises.filters.clearAllA11y": {
-    "message": "清除所有滤镜",
+    "message": "清除所有筛选条件",
     "srcHash": "11d7bc72d8be",
     "origin": "machine"
   },
   "history.dateRange.clearA11y": {
-    "message": "清除日期范围滤镜",
+    "message": "清除日期范围筛选条件",
     "srcHash": "de51210802ae",
     "origin": "machine"
   },
   "history.filters.clearA11y": {
-    "message": "清除滤镜",
+    "message": "清除筛选条件",
     "srcHash": "d4f76b0b5abd",
     "origin": "machine"
   },
   "history.empty.clearFiltersA11y": {
-    "message": "清除滤镜",
+    "message": "清除筛选条件",
     "srcHash": "28525ffc80c4",
     "origin": "machine"
   },
   "history.empty.clearFilters": {
-    "message": "清除滤镜",
+    "message": "清除筛选条件",
     "srcHash": "54e8433628b1",
     "origin": "machine"
   },
   "exercises.filters.clear": {
-    "message": "清除滤镜",
+    "message": "清除筛选条件",
     "srcHash": "4103476ede28",
     "origin": "machine"
   },
@@ -2265,12 +2255,12 @@
     "origin": "machine"
   },
   "history.muscleFilter.clearA11y": {
-    "message": "清除肌肉群滤镜",
+    "message": "清除肌肉群筛选条件",
     "srcHash": "5a1e8497fad1",
     "origin": "machine"
   },
   "session.pulleypinpickersheet.str5": {
-    "message": "zh-TW",
+    "message": "清除滑轮插销",
     "srcHash": "30dc62c414b5",
     "origin": "machine"
   },
@@ -2319,13 +2309,8 @@
     "srcHash": "8ab065157b0a",
     "origin": "machine"
   },
-  "session.formlibrarytab.dynamic1": {
-    "message": "截取自{dateStr}{0}",
-    "srcHash": "01ee8461aa47",
-    "origin": "machine"
-  },
   "session.formvideosheet.str12": {
-    "message": "视频准备好",
+    "message": "视频已准备好",
     "srcHash": "fea8895eda85",
     "origin": "human"
   },
@@ -2430,7 +2415,7 @@
     "origin": "machine"
   },
   "session.miniseteditor.str8": {
-    "message": "zh-TW",
+    "message": "收合",
     "srcHash": "6ae0afe5fb2f",
     "origin": "machine"
   },
@@ -2445,7 +2430,7 @@
     "origin": "machine"
   },
   "body.photos.compare": {
-    "message": "zh-TW",
+    "message": "比较",
     "srcHash": "02ce8acab880",
     "origin": "machine"
   },
@@ -2605,7 +2590,7 @@
     "origin": "machine"
   },
   "components.progress.calendar.loadError": {
-    "message": "无法载入日历数据",
+    "message": "无法加载日历数据",
     "srcHash": "aa418861b69d",
     "origin": "human"
   },
@@ -2820,7 +2805,7 @@
     "origin": "machine"
   },
   "components.program.curated-extras.curated": {
-    "message": "zh-TW",
+    "message": "精选",
     "srcHash": "433006069da6",
     "origin": "machine"
   },
@@ -2830,12 +2815,12 @@
     "origin": "machine"
   },
   "components.program.curated-extras.caption": {
-    "message": "CableSnap精选的课程已加入。可自由编辑或透过程式画面中的滤镜隐藏这些课程。",
+    "message": "CableSnap精选的课程已加入。可自由编辑或透过程式画面中的筛选条件隐藏这些课程。",
     "srcHash": "23e63d83edd3",
     "origin": "machine"
   },
   "history.streak.current": {
-    "message": "zh-TW",
+    "message": "目前连续纪录",
     "srcHash": "9ae81a38988b",
     "origin": "machine"
   },
@@ -2885,13 +2870,13 @@
     "origin": "machine"
   },
   "app.program.id.current-day": {
-    "message": "当前：第{0}天 — {1}",
-    "srcHash": "667ccec8e6c3",
+    "message": "当前：第 {day} 天 — {name}",
+    "srcHash": "0a79947d7cd9",
     "origin": "machine"
   },
   "app.program.id.current-day-a11y": {
-    "message": "目前在第{0}天：{1}：{2}",
-    "srcHash": "d299ebceccc2",
+    "message": "目前在第 {current} 天，共 {total} 天：{name}",
+    "srcHash": "d44a1bc2cc33",
     "origin": "machine"
   },
   "home.programs.custom": {
@@ -2900,7 +2885,7 @@
     "origin": "machine"
   },
   "components.exercises.card.custom": {
-    "message": "zh-TW",
+    "message": "自订",
     "srcHash": "e15dc43f9714",
     "origin": "machine"
   },
@@ -2925,8 +2910,8 @@
     "origin": "machine"
   },
   "settings.hydration.dailyGoal": {
-    "message": "每日目标({0})",
-    "srcHash": "9ade45c9e44d",
+    "message": "每日目标 ({unit, select, ml {ml} fl_oz {液量盎司}})",
+    "srcHash": "1c27165f0a7e",
     "origin": "machine"
   },
   "settings.hydration.dailyGoalA11y": {
@@ -3010,8 +2995,8 @@
     "origin": "machine"
   },
   "app.program.id.day-name": {
-    "message": "第{0}天: {1}",
-    "srcHash": "46b30220dbff",
+    "message": "第 {day} 天：{name}",
+    "srcHash": "db6ed717bbdc",
     "origin": "machine"
   },
   "app.program.create.day-name": {
@@ -3020,8 +3005,8 @@
     "origin": "machine"
   },
   "app.program.id.day-a11y": {
-    "message": "第{0}天：{1}{2}",
-    "srcHash": "63427908fc8e",
+    "message": "第 {day} 天：{name}{current, select, true {，目前日期} false {}}",
+    "srcHash": "fd9693017b3d",
     "origin": "machine"
   },
   "components.progress.monthlyReport.days": {
@@ -3410,7 +3395,7 @@
     "origin": "machine"
   },
   "session.stackmarkerhint.str1": {
-    "message": "zh-TW",
+    "message": "关闭堆叠标记提示",
     "srcHash": "d8530bb9e7f6",
     "origin": "machine"
   },
@@ -3500,7 +3485,7 @@
     "origin": "machine"
   },
   "components.nutrition.coach.drained": {
-    "message": "zh-TW",
+    "message": "疲惫",
     "srcHash": "5ccb7cee3dda",
     "origin": "machine"
   },
@@ -3615,7 +3600,7 @@
     "origin": "machine"
   },
   "settings.advancedSets.footer": {
-    "message": "每个父级套组最多可支持8个小套组。要记录超过8次冲击，请使用独立的套组。",
+    "message": "每个父级组最多可支持8个小组。要记录超过8次冲击，请使用独立的组。",
     "srcHash": "d90c5c719a9c",
     "origin": "machine"
   },
@@ -3790,12 +3775,12 @@
     "origin": "machine"
   },
   "components.progress.strengthLevels.elite": {
-    "message": "zh-TW",
+    "message": "精英",
     "srcHash": "c9c8b5e80ef6",
     "origin": "machine"
   },
   "components.exercise.strength-level.elite": {
-    "message": "zh-TW",
+    "message": "精英",
     "srcHash": "e6d68802b24f",
     "origin": "machine"
   },
@@ -3820,7 +3805,7 @@
     "origin": "machine"
   },
   "settings.restNotifications.toggleHint": {
-    "message": "在应用程序背景运行时，当休息计时器完成时，开启或关闭推送通知",
+    "message": "在应用程式背景运行时，当休息计时器完成时，开启或关闭推送通知",
     "srcHash": "e5f55b5558a6",
     "origin": "machine"
   },
@@ -3905,8 +3890,8 @@
     "origin": "machine"
   },
   "errors.item.a11y": {
-    "message": "错误：{0}，{1}{2}",
-    "srcHash": "20fb470c05b6",
+    "message": "错误：{error}，{timestamp}{fatal, select, true {，严重错误} false {}}",
+    "srcHash": "e12f21cf4f72",
     "origin": "machine"
   },
   "components.exercise.records.est-1rm": {
@@ -3935,8 +3920,8 @@
     "origin": "machine"
   },
   "components.exercise.records.est-1rm-a11y": {
-    "message": "预估单次最大重量：{0} {unit}",
-    "srcHash": "30981d9f027b",
+    "message": "预估单次最大重量：{value} {unit}",
+    "srcHash": "e849cd950dd6",
     "origin": "machine"
   },
   "components.session.summary.pacing.title": {
@@ -3955,7 +3940,7 @@
     "origin": "machine"
   },
   "app.tools.rm.disclaimer": {
-    "message": "基于次最大表现的估计。实际1RM可能会有所不同。估计在12次以上时会变得不那么准确。",
+    "message": "基于次最大表现的估计。实际1RM可能会有所不同。估计在12次以上时准确度较低。",
     "srcHash": "fc3af4bd211a",
     "origin": "machine"
   },
@@ -3970,7 +3955,7 @@
     "origin": "machine"
   },
   "settings.advancedSets.cluster.example": {
-    "message": "zh-TW",
+    "message": "范例：5 次 @ 100 公斤，休息 45 秒；5 次 @ 100 公斤，休息 45 秒；4 次 @ 95 公斤。",
     "srcHash": "cf845858d3d1",
     "origin": "machine"
   },
@@ -4070,7 +4055,7 @@
     "origin": "machine"
   },
   "settings.data.exportA11y": {
-    "message": "将所有数据汇出为 JSON",
+    "message": "将所有数据导出为 JSON",
     "srcHash": "2636b57e4185",
     "origin": "human"
   },
@@ -4105,8 +4090,8 @@
     "origin": "machine"
   },
   "settingsHandlers.export.progress": {
-    "message": "正在汇出 {0}... ({1}/{2})",
-    "srcHash": "e332252292a1",
+    "message": "正在汇出 {label}... ({tableIndex}/{totalTables})",
+    "srcHash": "196942a80945",
     "origin": "machine"
   },
   "components.progress.nutritionCards.fatShort": {
@@ -4170,7 +4155,7 @@
     "origin": "machine"
   },
   "app.exercise.id.history-error": {
-    "message": "历史数据载入失败",
+    "message": "历史数据加载失败",
     "srcHash": "1cc4d2325185",
     "origin": "human"
   },
@@ -4301,7 +4286,7 @@
   },
   "i18n.smoke": {
     "message": "国际化的",
-    "srcHash": "1772b4188368",
+    "srcHash": "5b555a91b441",
     "origin": "machine"
   },
   "components.progress.nutritionCards.fat": {
@@ -4320,12 +4305,12 @@
     "origin": "machine"
   },
   "components.nutrition.macro.fat": {
-    "message": "zh-TW",
+    "message": "脂肪（公克）",
     "srcHash": "381df21974ee",
     "origin": "machine"
   },
   "components.nutrition.targets.fat": {
-    "message": "zh-TW",
+    "message": "脂肪（公克）",
     "srcHash": "50ca3feac0c1",
     "origin": "machine"
   },
@@ -4390,7 +4375,7 @@
     "origin": "machine"
   },
   "history.filters.active": {
-    "message": "滤镜已启用—点击“清除所有”以使用日历",
+    "message": "筛选条件已启用—点击“清除所有”以使用日历",
     "srcHash": "9df2954328e5",
     "origin": "machine"
   },
@@ -4635,7 +4620,7 @@
     "origin": "machine"
   },
   "body.measurements.field.hips": {
-    "message": "zh-TW",
+    "message": "臀围",
     "srcHash": "b8ae4aa85a25",
     "origin": "machine"
   },
@@ -4645,17 +4630,17 @@
     "origin": "machine"
   },
   "session.suggestionexplainermodal.str9": {
-    "message": "下一个是怎么计算出来的？",
+    "message": "下一个如何计算出来的？",
     "srcHash": "e442e84d359c",
     "origin": "machine"
   },
   "session.lastnextrow.str3": {
-    "message": "下一行的计算方式是什么？",
+    "message": "下一行如何计算？",
     "srcHash": "f25be2b06a47",
     "origin": "machine"
   },
   "session.suggestionexplainermodal.str2": {
-    "message": "下一个是怎么计算的？",
+    "message": "下一个如何计算？",
     "srcHash": "8fa893b8df83",
     "origin": "machine"
   },
@@ -4730,37 +4715,37 @@
     "origin": "machine"
   },
   "home.templates.import": {
-    "message": "导入",
+    "message": "汇入",
     "srcHash": "e953172f8867",
     "origin": "machine"
   },
   "common.import": {
-    "message": "导入",
+    "message": "汇入",
     "srcHash": "04674d6c2aa9",
     "origin": "machine"
   },
   "settings.importWorkouts.importA11y": {
-    "message": "导入 {workoutCount} 个工作量{0}",
-    "srcHash": "662a9bf3116b",
+    "message": "{count, plural, one {汇入 # 个训练} other {汇入 # 个训练}}",
+    "srcHash": "b81d6841fd66",
     "origin": "machine"
   },
   "settings.importWorkouts.importButton": {
-    "message": "导入{workoutCount}次训练{0}",
-    "srcHash": "4f028f42e80c",
+    "message": "{count, plural, one {汇入 # 个训练} other {汇入 # 个训练}}",
+    "srcHash": "c2bc878dad95",
     "origin": "machine"
   },
   "settings.importBackup.title": {
-    "message": "导入备份",
+    "message": "汇入备份",
     "srcHash": "2ca8d787165f",
     "origin": "machine"
   },
   "settings.importBackup.complete": {
-    "message": "备份导入完成",
+    "message": "备份汇入完成",
     "srcHash": "265dceaafe43",
     "origin": "machine"
   },
   "settings.importWorkouts.complete": {
-    "message": "导入完成",
+    "message": "汇入完成",
     "srcHash": "a464a77b1cb2",
     "origin": "machine"
   },
@@ -4770,48 +4755,48 @@
     "origin": "machine"
   },
   "settings.data.importA11y": {
-    "message": "导入资料",
+    "message": "汇入资料",
     "srcHash": "65f8e273d85c",
     "origin": "machine"
   },
   "settingsHandlers.import.failure": {
-    "message": "导入失败",
+    "message": "汇入失败",
     "srcHash": "ebdfaa98dfc0",
     "origin": "machine"
   },
   "settings.importBackup.failed": {
-    "message": "备份导入失败—所有变更已回滚",
+    "message": "备份汇入失败—所有变更已回滚",
     "srcHash": "1fc3f6e8b16f",
     "origin": "machine"
   },
   "settings.importWorkouts.progressA11y": {
-    "message": "导入进度",
+    "message": "汇入进度",
     "srcHash": "2359ba710473",
     "origin": "machine"
   },
   "home.templates.importA11y": {
-    "message": "导入模板",
+    "message": "汇入模板",
     "srcHash": "582fb125e422",
     "origin": "machine"
   },
   "settings.importWorkoutHistory.title": {
-    "message": "导入训练纪录",
+    "message": "汇入训练纪录",
     "srcHash": "3f2936da16d1",
     "origin": "machine"
   },
   "settings.importBackup.imported": {
-    "message": "导入完成",
+    "message": "汇入完成",
     "srcHash": "a32578271dd9",
     "origin": "machine"
   },
   "settings.importWorkouts.sessionsA11y": {
-    "message": "导入了{0}套工作量{1}",
-    "srcHash": "0856efda51bb",
+    "message": "{count, plural, one {已汇入 # 个训练} other {已汇入 # 个训练}}",
+    "srcHash": "488e52ab131e",
     "origin": "machine"
   },
   "settings.importBackup.progress": {
-    "message": "导入{label}... ({0}/{1}){rowProgress}",
-    "srcHash": "752418a8f0de",
+    "message": "正在汇入 {label}... ({tableIndex}/{totalTables}){hasRows, select, true { {rowIndex}/{rowCount}} false {}}",
+    "srcHash": "6ee329c6d5f7",
     "origin": "machine"
   },
   "settings.importWorkouts.importing": {
@@ -5015,7 +5000,7 @@
     "origin": "machine"
   },
   "components.session.detail.editable-set-row.kg": {
-    "message": "zh-TW",
+    "message": "公斤",
     "srcHash": "b96035e71bc0",
     "origin": "machine"
   },
@@ -5045,8 +5030,8 @@
     "origin": "machine"
   },
   "history.heatmap.toggleA11y": {
-    "message": "过去十六周，{0}",
-    "srcHash": "4ca803b100ae",
+    "message": "最近 16 周，{action, select, collapse {收合} expand {展开}}",
+    "srcHash": "dd61f4876012",
     "origin": "machine"
   },
   "history.dateRange.last30": {
@@ -5110,12 +5095,12 @@
     "origin": "machine"
   },
   "body.measurements.field.leftArm": {
-    "message": "zh-TW",
+    "message": "左臂",
     "srcHash": "0255facc725f",
     "origin": "machine"
   },
   "body.measurements.field.leftCalf": {
-    "message": "zh-TW",
+    "message": "左小腿",
     "srcHash": "d4cea637c9e6",
     "origin": "machine"
   },
@@ -5125,7 +5110,7 @@
     "origin": "machine"
   },
   "body.measurements.field.leftThigh": {
-    "message": "zh-TW",
+    "message": "左大腿",
     "srcHash": "d8db2ad9568d",
     "origin": "machine"
   },
@@ -5395,8 +5380,8 @@
     "origin": "machine"
   },
   "session.setrow.dynamic9": {
-    "message": "长按删除，或滑动行{0}",
-    "srcHash": "7fbf311ec644",
+    "message": "长按以删除，或滑动此行 {direction}",
+    "srcHash": "86eab9cbe84a",
     "origin": "machine"
   },
   "history.streak.longest": {
@@ -5480,13 +5465,13 @@
     "origin": "machine"
   },
   "session.setrow.dynamic5": {
-    "message": "第{0}组{1}",
-    "srcHash": "5b7676657801",
+    "message": "标记组数 {number} {state, select, incomplete {未完成} complete {已完成}}",
+    "srcHash": "47adb3152ad9",
     "origin": "machine"
   },
   "session.setrow.dynamic7": {
-    "message": "第{0}组{1}",
-    "srcHash": "023475b20027",
+    "message": "标记组数 {number} {state, select, incomplete {未完成} complete {已完成}}",
+    "srcHash": "c62272bbc19b",
     "origin": "machine"
   },
   "settings.gymProfiles.marker": {
@@ -5550,7 +5535,7 @@
     "origin": "machine"
   },
   "session.pulleypinpickersheet.str2": {
-    "message": "zh-TW",
+    "message": "最大插销数输入",
     "srcHash": "1be57f28ce2c",
     "origin": "machine"
   },
@@ -5575,18 +5560,18 @@
     "origin": "machine"
   },
   "components.nutrition.water.maximumError": {
-    "message": "每日最多可摄取{0}{suffix}。",
-    "srcHash": "8b7a287ccda6",
+    "message": "每项的最大值为 {maximum} {suffix}。",
+    "srcHash": "7ce642c5e1bf",
     "origin": "machine"
   },
   "components.exercise.records.max-reps-a11y": {
-    "message": "最多次数：{0}",
-    "srcHash": "5762923cccce",
+    "message": "最大次数：{reps}",
+    "srcHash": "354b87679527",
     "origin": "machine"
   },
   "components.exercise.records.max-reps-weight-a11y": {
-    "message": "最多次数：{0}",
-    "srcHash": "0ac8656a2095",
+    "message": "最大次数：{reps}",
+    "srcHash": "72e5c4909eec",
     "origin": "machine"
   },
   "nutrition.template.mealCategory": {
@@ -5640,13 +5625,13 @@
     "origin": "machine"
   },
   "components.muscleVolume.mev": {
-    "message": "zh-TW",
+    "message": "最低有效训练量（MEV）",
     "srcHash": "9edf7c6864a3",
     "origin": "machine"
   },
   "components.muscleVolume.landmarks": {
-    "message": "MEV {0} / MRV {1}{2}",
-    "srcHash": "c80b4a322b12",
+    "message": "最低有效训练量（MEV）{mev}／最大恢复训练量（MRV）{mrv}{custom, select, true { ✎} false {}}",
+    "srcHash": "9bcd989bd8a5",
     "origin": "machine"
   },
   "home.programs.mine": {
@@ -5704,11 +5689,6 @@
     "srcHash": "4d1212715698",
     "origin": "machine"
   },
-  "app.tools.cableFinder.mountPositionA11yValue": {
-    "message": "装置位置：{0}",
-    "srcHash": "660715f87deb",
-    "origin": "machine"
-  },
   "session.setmountpositionchip.dynamic1": {
     "message": "安装：{label}",
     "srcHash": "1f307c0ac48f",
@@ -5755,7 +5735,7 @@
     "origin": "machine"
   },
   "components.muscleVolume.mrv": {
-    "message": "zh-TW",
+    "message": "最大恢复量（MRV）",
     "srcHash": "61af6b8d90f8",
     "origin": "machine"
   },
@@ -5770,8 +5750,8 @@
     "origin": "machine"
   },
   "home.recovery.toggleA11y": {
-    "message": "肌肉恢复，{0}",
-    "srcHash": "71ecfcb32640",
+    "message": "肌肉恢复，{state, select, expanded {已展开} collapsed {已收合}}",
+    "srcHash": "8629dd383ff0",
     "origin": "machine"
   },
   "progress.tabs.musclesA11y": {
@@ -5825,7 +5805,7 @@
     "origin": "machine"
   },
   "body.measurements.field.neck": {
-    "message": "zh-TW",
+    "message": "颈围",
     "srcHash": "173c8c9aa768",
     "origin": "machine"
   },
@@ -5860,7 +5840,7 @@
     "origin": "machine"
   },
   "session.prcelebration.str1": {
-    "message": "zh-TW",
+    "message": "新的个人最佳纪录！",
     "srcHash": "af08286da697",
     "origin": "machine"
   },
@@ -5940,7 +5920,7 @@
     "origin": "machine"
   },
   "common.no": {
-    "message": "zh-TW",
+    "message": "否",
     "srcHash": "68599d90d446",
     "origin": "machine"
   },
@@ -6090,7 +6070,7 @@
     "origin": "machine"
   },
   "settings.import.noCategories": {
-    "message": "未找到可导入的备份类别",
+    "message": "未找到可汇入的备份类别",
     "srcHash": "359a3fbc721d",
     "origin": "machine"
   },
@@ -6305,7 +6285,7 @@
     "origin": "machine"
   },
   "components.nutrition.coach.notThisWeek": {
-    "message": "zh-TW",
+    "message": "本周未完成",
     "srcHash": "95846f86efbe",
     "origin": "machine"
   },
@@ -6365,12 +6345,12 @@
     "origin": "machine"
   },
   "components.progress.strengthLevels.novice": {
-    "message": "zh-TW",
+    "message": "新手",
     "srcHash": "8d025ed324cb",
     "origin": "machine"
   },
   "components.exercise.strength-level.novice": {
-    "message": "zh-TW",
+    "message": "新手",
     "srcHash": "e3e84394e646",
     "origin": "machine"
   },
@@ -6450,12 +6430,12 @@
     "origin": "machine"
   },
   "components.nutrition.coach.ok": {
-    "message": "zh-TW",
+    "message": "好的",
     "srcHash": "ac5f6f37a285",
     "origin": "machine"
   },
   "components.exercise.plateau.ok": {
-    "message": "zh-TW",
+    "message": "好的",
     "srcHash": "32d4505b1d72",
     "origin": "machine"
   },
@@ -6700,7 +6680,7 @@
     "origin": "machine"
   },
   "components.nutrition.coach.pause": {
-    "message": "zh-TW",
+    "message": "暂停一个月",
     "srcHash": "ac6a6e053cc6",
     "origin": "machine"
   },
@@ -6860,7 +6840,7 @@
     "origin": "machine"
   },
   "common.preferNotToSay": {
-    "message": "zh-TW",
+    "message": "不愿透露",
     "srcHash": "6d6e42707e78",
     "origin": "machine"
   },
@@ -6870,13 +6850,13 @@
     "origin": "machine"
   },
   "settings.hydration.presetA11y": {
-    "message": "预设 {0}",
-    "srcHash": "b6f1e5d7f6ea",
+    "message": "预设 {number}",
+    "srcHash": "f969c5dea87a",
     "origin": "machine"
   },
   "settings.hydration.preset": {
-    "message": "预设 {0} ({1})",
-    "srcHash": "da4dda10c5ac",
+    "message": "预设值 {number} ({unit, select, ml {ml} fl oz {液量盎司}})",
+    "srcHash": "d2f7139c776e",
     "origin": "machine"
   },
   "settings.hydration.presetPositive": {
@@ -7035,7 +7015,7 @@
     "origin": "machine"
   },
   "components.progress.nutritionCards.protein": {
-    "message": "zh-TW",
+    "message": "蛋白质",
     "srcHash": "2d2e0e1f7d77",
     "origin": "machine"
   },
@@ -7045,17 +7025,17 @@
     "origin": "machine"
   },
   "components.nutrition.header.protein": {
-    "message": "zh-TW",
+    "message": "蛋白质",
     "srcHash": "414b2ba64261",
     "origin": "machine"
   },
   "components.nutrition.macro.protein": {
-    "message": "zh-TW",
+    "message": "蛋白质（公克）",
     "srcHash": "92e306d90896",
     "origin": "machine"
   },
   "components.nutrition.targets.protein": {
-    "message": "zh-TW",
+    "message": "蛋白质（公克）",
     "srcHash": "eb7b6d0a6432",
     "origin": "machine"
   },
@@ -7065,7 +7045,7 @@
     "origin": "machine"
   },
   "share.monthly.prs": {
-    "message": "zh-TW",
+    "message": "个人最佳纪录",
     "srcHash": "b84d5e033108",
     "origin": "machine"
   },
@@ -7120,13 +7100,13 @@
     "origin": "machine"
   },
   "history.gtg.summary": {
-    "message": "快速添加组数 — {0} 程序{1}, {totalSets} 组{2}",
-    "srcHash": "ef76087c5248",
-    "origin": "human"
+    "message": "快速新增组数 — {exercises, plural, one {# 个动作} other {# 个动作}}，{sets, plural, one {# 组} other {# 组}}",
+    "srcHash": "1adc45520c8d",
+    "origin": "machine"
   },
   "history.gtg.toggleA11y": {
-    "message": "快速添加{dateLabel}的套数，{0}项运动，总共{totalSets}套。{1}",
-    "srcHash": "e1f18ebff007",
+    "message": "快速新增 {date} 的 {exercises} 种运动，总共 {sets} 组。{action, select, collapse {收合} expand {展开}}",
+    "srcHash": "2378f9aa9da4",
     "origin": "machine"
   },
   "components.progress.trends.ratingsEmpty": {
@@ -7245,12 +7225,12 @@
     "origin": "machine"
   },
   "settings.reminders.set": {
-    "message": "提醒设定为{count}天{0}",
-    "srcHash": "b47e5c84f96b",
+    "message": "已为 {count, plural, one {# 天} other {# 天}} 设定提醒",
+    "srcHash": "470f704d55f2",
     "origin": "machine"
   },
   "common.remove": {
-    "message": "zh-TW",
+    "message": "移除",
     "srcHash": "421d26c1c836",
     "origin": "machine"
   },
@@ -7675,12 +7655,12 @@
     "origin": "machine"
   },
   "body.measurements.field.rightArm": {
-    "message": "zh-TW",
+    "message": "右臂",
     "srcHash": "d519ed5d22e6",
     "origin": "machine"
   },
   "body.measurements.field.rightCalf": {
-    "message": "zh-TW",
+    "message": "右小腿",
     "srcHash": "c0099499a51e",
     "origin": "machine"
   },
@@ -7690,7 +7670,7 @@
     "origin": "machine"
   },
   "body.measurements.field.rightThigh": {
-    "message": "zh-TW",
+    "message": "右大腿",
     "srcHash": "f4bee2fa195e",
     "origin": "machine"
   },
@@ -7700,8 +7680,8 @@
     "origin": "machine"
   },
   "session.exercisegroupcard.dynamic1": {
-    "message": "第{0}轮/{totalRounds}",
-    "srcHash": "2dbb5437101b",
+    "message": "第 {round} 轮，共 {total} 轮",
+    "srcHash": "8d83f9c1bb39",
     "origin": "machine"
   },
   "components.plates.calculator.rounded": {
@@ -7825,7 +7805,7 @@
     "origin": "machine"
   },
   "body.goals.save.a11y": {
-    "message": "zh-TW",
+    "message": "储存身体目标",
     "srcHash": "ea03e076b101",
     "origin": "machine"
   },
@@ -7890,7 +7870,7 @@
     "origin": "machine"
   },
   "settings.gymProfiles.saveStack": {
-    "message": "储存套件",
+    "message": "储存组件",
     "srcHash": "f02071fd32fa",
     "origin": "machine"
   },
@@ -8235,7 +8215,7 @@
     "origin": "machine"
   },
   "session.pulleypinpickersheet.str6": {
-    "message": "zh-TW",
+    "message": "设定",
     "srcHash": "3111fd3064f8",
     "origin": "machine"
   },
@@ -8310,7 +8290,7 @@
     "origin": "machine"
   },
   "components.nutrition.coach.setOwn": {
-    "message": "zh-TW",
+    "message": "自行设定",
     "srcHash": "7043f1dc0d39",
     "origin": "machine"
   },
@@ -8330,8 +8310,8 @@
     "origin": "machine"
   },
   "session.sessionheadertoolbar.dynamic2": {
-    "message": "将休息设为{0}{1}",
-    "srcHash": "aaf8ff29e486",
+    "message": "将休息设置为 {duration}{selected, select, true {。目前已选取。} false {}}",
+    "srcHash": "a7ad2c04bd34",
     "origin": "machine"
   },
   "components.progress.nutrition.setTargets": {
@@ -8435,7 +8415,7 @@
     "origin": "machine"
   },
   "common.share": {
-    "message": "zh-TW",
+    "message": "分享",
     "srcHash": "20625d381bfd",
     "origin": "machine"
   },
@@ -8550,7 +8530,7 @@
     "origin": "machine"
   },
   "common.skip": {
-    "message": "zh-TW",
+    "message": "略过",
     "srcHash": "74118232396c",
     "origin": "machine"
   },
@@ -8685,7 +8665,7 @@
     "origin": "machine"
   },
   "home.templates.starter": {
-    "message": "zh-TW",
+    "message": "入门",
     "srcHash": "7d2468c4d199",
     "origin": "machine"
   },
@@ -8775,7 +8755,7 @@
     "origin": "machine"
   },
   "components.nutrition.coach.strong": {
-    "message": "zh-TW",
+    "message": "强壮",
     "srcHash": "bae99cd6a3d2",
     "origin": "machine"
   },
@@ -8815,7 +8795,7 @@
     "origin": "machine"
   },
   "settings.gymProfiles.editHint": {
-    "message": "鼠标向左滑动以删除•点击以编辑",
+    "message": "滑动即可删除·点击即可编辑",
     "srcHash": "122a5605a5fc",
     "origin": "human"
   },
@@ -9155,7 +9135,7 @@
     "origin": "machine"
   },
   "session.editedpill.dynamic1": {
-    "message": "这套训练在{a11yDate}进行编辑",
+    "message": "这组训练在{a11yDate}进行编辑",
     "srcHash": "35331c19a5df",
     "origin": "machine"
   },
@@ -9395,12 +9375,12 @@
     "origin": "machine"
   },
   "exercises.empty.adjustFilters": {
-    "message": "试着调整你的滤镜。({totalActiveCount} 滤镜{0} 有效)",
-    "srcHash": "98abc73f4d8f",
+    "message": "请尝试调整筛选条件。（目前有 {count, plural, one {# 个筛选条件} other {# 个筛选条件}}）",
+    "srcHash": "6eeda70464bc",
     "origin": "machine"
   },
   "exercises.empty.adjustSearch": {
-    "message": "试着调整您的搜寻或滤镜",
+    "message": "试着调整您的搜寻或筛选条件",
     "srcHash": "74be48982bc3",
     "origin": "machine"
   },
@@ -9415,7 +9395,7 @@
     "origin": "machine"
   },
   "components.exercises.rpe-capture-nudge.turn-on": {
-    "message": "zh-TW",
+    "message": "开启",
     "srcHash": "c1d1ce10e227",
     "origin": "machine"
   },
@@ -9525,7 +9505,7 @@
     "origin": "machine"
   },
   "components.nutrition.coach.useNumber": {
-    "message": "zh-TW",
+    "message": "使用此数值",
     "srcHash": "452c44b906a1",
     "origin": "machine"
   },
@@ -9680,8 +9660,8 @@
     "origin": "machine"
   },
   "components.session.summary.comparison.volume-a11y": {
-    "message": "音量 {0} 由 {1} 设定",
-    "srcHash": "a53d6dcfaeda",
+    "message": "体积 {direction}，由 {amount}",
+    "srcHash": "5a80b5ca4d2a",
     "origin": "machine"
   },
   "components.weeklySummary.weightedOnly": {
@@ -9695,7 +9675,7 @@
     "origin": "machine"
   },
   "body.measurements.field.waist": {
-    "message": "zh-TW",
+    "message": "腰围",
     "srcHash": "ee29bdf65bb2",
     "origin": "machine"
   },
@@ -9895,18 +9875,18 @@
     "origin": "machine"
   },
   "session.lastnextrow.dynamic4": {
-    "message": "将会应用{valueDesc}到{targetCount}套{targetCount, plural, one {套} other {套}}，覆盖原有值。",
+    "message": "将会应用{valueDesc}到{targetCount}组{targetCount, plural, one {组} other {组}}，覆盖原有值。",
     "srcHash": "f1c86ed4338c",
     "origin": "machine"
   },
   "session.lastnextrow.dynamic3": {
-    "message": "将会应用{weightDesc}到{0}套{1, plural, one {套} other {套}}，覆盖原有值。",
+    "message": "将会应用{weightDesc}到{0}组{1, plural, one {组} other {组}}，覆盖原有值。",
     "srcHash": "fe28c79f5702",
     "origin": "machine"
   },
   "components.exercise.plateau.fill-sets": {
-    "message": "将{0}个空的组数{1}用{weightDesc}填满。",
-    "srcHash": "6a6379777e20",
+    "message": "将用 {count} 填满 {count, plural, one {组} other {组}} 个空的 {weight}。",
+    "srcHash": "6902698847cf",
     "origin": "machine"
   },
   "components.session.detail.share-overlay.sync-queued-hint": {
@@ -9915,7 +9895,7 @@
     "origin": "machine"
   },
   "components.plates.calculator.withBar": {
-    "message": "zh-TW",
+    "message": "含杠铃",
     "srcHash": "d259d9639993",
     "origin": "machine"
   },
@@ -9955,8 +9935,8 @@
     "origin": "machine"
   },
   "home.adherence.workoutA11y": {
-    "message": "运动 {0}: {1}",
-    "srcHash": "3f0d4fbcda79",
+    "message": "训练 {number}: {status, select, completed {已完成} notYet {尚未完成}}",
+    "srcHash": "2f6d12d5ec45",
     "origin": "machine"
   },
   "session.summary.id.str4": {
@@ -10045,7 +10025,7 @@
     "origin": "machine"
   },
   "common.yes": {
-    "message": "zh-TW",
+    "message": "是",
     "srcHash": "9c89e956f6e5",
     "origin": "machine"
   },
@@ -10085,7 +10065,7 @@
     "origin": "machine"
   },
   "components.nutrition.coach.explainerTdee": {
-    "message": "zh-TW",
+    "message": "您的预估 TDEE 使用能量平衡方程式：若您平均每天摄取 X 大卡，且 14 天内体重变化 ΔW 公斤，则 TDEE ≈ X + (ΔW × 7700) / 14。注意：增肌期间增加的瘦体重会使 TDEE 略微低估。",
     "srcHash": "306acc95f971",
     "origin": "machine"
   },
@@ -10105,7 +10085,7 @@
     "origin": "machine"
   },
   "components.photos.privacy.body": {
-    "message": "zh-TW",
+    "message": "您的进度照片仅储存在此装置上，绝不会上传到任何伺服器。照片不会出现在装置的相片图库中。若重新安装 App，照片将会遗失。",
     "srcHash": "9d3f2f91f664",
     "origin": "machine"
   },
@@ -10135,8 +10115,313 @@
     "origin": "machine"
   },
   "components.nutrition.coach.explainerWeight": {
-    "message": "zh-TW",
+    "message": "您的趋势体重是每日体重测量值的指数加权移动平均（EWMA）。这能平滑水分重量波动，避免某一天体重较重而扭曲估算结果。",
     "srcHash": "87eeaff10e47",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.exerciseCount": {
+    "message": "{0, plural, one {# 个动作} other {# 个动作}}",
+    "srcHash": "124517011942",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.exerciseA11y-localized": {
+    "message": "{name}, {muscles}",
+    "srcHash": "ad3d620e6d14",
+    "origin": "machine"
+  },
+  "app.exercise.id.category.absCore": {
+    "message": "腹肌与核心肌群",
+    "srcHash": "9ece161ee7dc",
+    "origin": "machine"
+  },
+  "app.exercise.id.difficulty.advanced": {
+    "message": "高级",
+    "srcHash": "4b751824b4cd",
+    "origin": "machine"
+  },
+  "settings.about.license": {
+    "message": "AGPL-3.0 授权证书",
+    "srcHash": "8e13016f890d",
+    "origin": "machine"
+  },
+  "app.exercise.id.attachment.ankleStrap": {
+    "message": "脚踝带",
+    "srcHash": "8bba731d66db",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.attachment.ankleStrap": {
+    "message": "脚踝带",
+    "srcHash": "7110c5a7e4d4",
+    "origin": "machine"
+  },
+  "app.exercise.id.category.arms": {
+    "message": "手臂",
+    "srcHash": "08fc5590673f",
+    "origin": "machine"
+  },
+  "app.exercise.id.attachment-a11y-localized": {
+    "message": "附件：{attachment}",
+    "srcHash": "2422380cecc2",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.attachmentA11yValue": {
+    "message": "附件：{attachment}",
+    "srcHash": "cb56b48683b2",
+    "origin": "machine"
+  },
+  "app.exercise.id.category.back": {
+    "message": "背部",
+    "srcHash": "476428eaa1f4",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.back": {
+    "message": "背肌",
+    "srcHash": "f3b4d8bf6143",
+    "origin": "machine"
+  },
+  "app.exercise.id.attachment.bar": {
+    "message": "杠铃",
+    "srcHash": "38dc0000fc3d",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.attachment.bar": {
+    "message": "杠铃",
+    "srcHash": "812ca392d8a1",
+    "origin": "machine"
+  },
+  "app.exercise.id.difficulty.beginner": {
+    "message": "初阶",
+    "srcHash": "a661ce2b6c1d",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.biceps": {
+    "message": "二头肌",
+    "srcHash": "2532776e9af5",
+    "origin": "machine"
+  },
+  "settings.about.version": {
+    "message": "CableSnap v{version}",
+    "srcHash": "9de077b0f48c",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.calves": {
+    "message": "小腿",
+    "srcHash": "717b5f42413a",
+    "origin": "machine"
+  },
+  "app.exercise.id.attachment.carabiner": {
+    "message": "快扣环",
+    "srcHash": "8b4e72accb31",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.attachment.carabiner": {
+    "message": "快扣",
+    "srcHash": "0ae8053f7fa3",
+    "origin": "machine"
+  },
+  "app.exercise.id.category.chest": {
+    "message": "胸肌",
+    "srcHash": "c09cfcc43fca",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.chest": {
+    "message": "胸肌",
+    "srcHash": "c1aa77d99323",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.core": {
+    "message": "核心肌群",
+    "srcHash": "b04e93f22749",
+    "origin": "machine"
+  },
+  "settings.backups.deleteA11y": {
+    "message": "删除{dateStr}备份",
+    "srcHash": "84bd52b5839b",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.mount.floor": {
+    "message": "地板",
+    "srcHash": "b2c3c3f6940b",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.forearms": {
+    "message": "前臂",
+    "srcHash": "e2a446ce4a8a",
+    "origin": "machine"
+  },
+  "settings.about.description": {
+    "message": "免费且开放原始码的训练追踪器—优化为缆索机，支援所有主要运动。",
+    "srcHash": "088c146dafb1",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.fullBody": {
+    "message": "全身",
+    "srcHash": "1e023d2463a0",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.glutes": {
+    "message": "臀部肌肉",
+    "srcHash": "06c9b5b89f47",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.hamstrings": {
+    "message": "大腿后肌群",
+    "srcHash": "9d83d0193a39",
+    "origin": "machine"
+  },
+  "app.exercise.id.attachment.handle": {
+    "message": "握把",
+    "srcHash": "7bc225973e21",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.attachment.handle": {
+    "message": "握把",
+    "srcHash": "bdb229c391cc",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.mount.high": {
+    "message": "高",
+    "srcHash": "3df2c5e97c01",
+    "origin": "machine"
+  },
+  "app.exercise.id.difficulty.intermediate": {
+    "message": "中级",
+    "srcHash": "6f13cc4a2d29",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.lats": {
+    "message": "背阔肌",
+    "srcHash": "544ce7826e90",
+    "origin": "machine"
+  },
+  "app.exercise.id.category.legsGlutes": {
+    "message": "腿与臀部肌肉群",
+    "srcHash": "f2f3d957db49",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.mount.low": {
+    "message": "低",
+    "srcHash": "329c47e485ee",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.mount.mid": {
+    "message": "中间",
+    "srcHash": "dd6d8c0cbac7",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.mountPositionA11yValueLocalized": {
+    "message": "安装位置：{position}",
+    "srcHash": "3f853918ffe4",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.quads": {
+    "message": "大腿肌群",
+    "srcHash": "512d341f3274",
+    "origin": "machine"
+  },
+  "settings.backups.restore": {
+    "message": "恢复备份",
+    "srcHash": "115ae2b28ce3",
+    "origin": "machine"
+  },
+  "settings.backups.restoreA11y": {
+    "message": "从{dateStr}恢复备份",
+    "srcHash": "e8310b39432b",
+    "origin": "machine"
+  },
+  "app.exercise.id.attachment.ringHandle": {
+    "message": "环状握把",
+    "srcHash": "b20414584167",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.attachment.ringHandle": {
+    "message": "环状握把",
+    "srcHash": "954b552e6bca",
+    "origin": "machine"
+  },
+  "app.exercise.id.attachment.rope": {
+    "message": "绳索",
+    "srcHash": "bfe4cecdeab9",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.attachment.rope": {
+    "message": "绳索",
+    "srcHash": "47c0c4a7bc34",
+    "origin": "machine"
+  },
+  "settings.backups.shareA11y": {
+    "message": "从{dateStr}分享备份",
+    "srcHash": "300633dcbc81",
+    "origin": "machine"
+  },
+  "app.exercise.id.category.shoulders": {
+    "message": "肩膀",
+    "srcHash": "6268b0670895",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.shoulders": {
+    "message": "肩膀",
+    "srcHash": "e1c22cc11a60",
+    "origin": "machine"
+  },
+  "app.exercise.id.showingLastSessions": {
+    "message": "显示最近的 {count} 次训练会",
+    "srcHash": "b156eb404cc3",
+    "origin": "machine"
+  },
+  "app.exercise.id.attachment.squatHarness": {
+    "message": "深蹲带",
+    "srcHash": "8764279fc5ac",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.attachment.squatHarness": {
+    "message": "深蹲带",
+    "srcHash": "0a435ac9087a",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.traps": {
+    "message": "陷阱肌群",
+    "srcHash": "3f3a6bc5d97f",
+    "origin": "machine"
+  },
+  "app.tools.cableFinder.muscle.triceps": {
+    "message": "三头肌",
+    "srcHash": "71b60b0a67bd",
+    "origin": "machine"
+  },
+  "settings.about.whatsNew": {
+    "message": "新功能",
+    "srcHash": "34ba89a2c54b",
+    "origin": "machine"
+  },
+  "components.program.weekly-schedule.day-rest-a11y": {
+    "message": "{day}：休息日",
+    "srcHash": "1a0873cec97b",
+    "origin": "machine"
+  },
+  "session.formlibrarytab.dynamic1-v2": {
+    "message": "从 {date} 剪辑",
+    "srcHash": "46cde59ee6a9",
+    "origin": "machine"
+  },
+  "session.formlibrarytab.dynamic1-v2-not-selected": {
+    "message": "从 {date} 剪辑，未选取",
+    "srcHash": "a21a34eb0b67",
+    "origin": "machine"
+  },
+  "session.formlibrarytab.dynamic1-v2-selected": {
+    "message": "从 {date} 剪辑，已选取",
+    "srcHash": "8b4cfad3f62c",
+    "origin": "machine"
+  },
+  "components.exercise.records.max-weight-a11y": {
+    "message": "最大重量：{weight} {unit}",
+    "srcHash": "55c84905f039",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteAllMessage": {
+    "message": "删除 {count, plural, one {# 个影片} other {# 个影片}}？这将永久从此装置中删除它们。此操作无法撤销。",
+    "srcHash": "f81081a70568",
     "origin": "machine"
   }
 }

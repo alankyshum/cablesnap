@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 /* eslint-disable complexity */
 /**
  * CalendarGrid — month calendar for workout history.
@@ -85,10 +87,12 @@ export default function CalendarGrid({
     else if (isScheduled) cellBg = withOpacity(colors.primaryContainer, 0.2);
 
     const label = count > 0
-      ? `${day} ${monthLabel(year, month)}, ${count} workout${count > 1 ? "s" : ""}`
-      : isMissedScheduled ? `${day} ${monthLabel(year, month)}, missed scheduled workout`
-      : isScheduled && isFuture ? `${day} ${monthLabel(year, month)}, scheduled: ${scheduleEntry.template_name}`
-      : `${day} ${monthLabel(year, month)}, rest day`;
+      ? i18n._({ id: "history.calendar.dayA11y.workout", message: "{day} {month}, {count, plural, one {# workout} other {# workouts}}", values: { day, month: monthLabel(year, month), count } })
+      : isMissedScheduled
+        ? i18n._({ id: "history.calendar.dayA11y.missedScheduled", message: "{day} {month}, missed scheduled workout", values: { day, month: monthLabel(year, month) } })
+        : isScheduled && isFuture
+          ? i18n._({ id: "history.calendar.dayA11y.futureScheduled", message: "{day} {month}, scheduled: {template}", values: { day, month: monthLabel(year, month), template: scheduleEntry.template_name } })
+          : i18n._({ id: "history.calendar.dayA11y.restDay", message: "{day} {month}, rest day", values: { day, month: monthLabel(year, month) } });
 
     // CVD non-colour encoding (BLD-2721, BLD-2742):
     //   dotColor:      fill colour for workout dots (colour-only hint)
@@ -173,18 +177,22 @@ export default function CalendarGrid({
   return (
     <>
       <View style={styles.monthNav}>
-        <Pressable onPress={onPrevMonth} accessibilityLabel="Previous month" style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}>
+         <Pressable onPress={onPrevMonth} accessibilityLabel={t({ id: "history.calendar.previousMonth", message: "Previous month" })} style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}>
           <Icon name={ChevronLeft} size={24} />
         </Pressable>
         <Text variant="subtitle" style={{ color: colors.onBackground }}>{monthLabel(year, month)}</Text>
-        <Pressable onPress={onNextMonth} accessibilityLabel="Next month" style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}>
+         <Pressable onPress={onNextMonth} accessibilityLabel={t({ id: "history.calendar.nextMonth", message: "Next month" })} style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}>
           <Icon name={ChevronRight} size={24} />
         </Pressable>
       </View>
 
       <Text variant="caption" style={[styles.monthSummary, { color: colors.onSurfaceVariant }]}
-        accessibilityLabel={monthSummary.count > 0 ? `${monthSummary.count} workouts, ${monthSummary.totalHours} hours this month` : "No workouts this month"}>
-        {monthSummary.count > 0 ? `${monthSummary.count} workout${monthSummary.count !== 1 ? "s" : ""} · ${monthSummary.totalHours} hrs` : "No workouts this month"}
+        accessibilityLabel={monthSummary.count > 0
+          ? i18n._({ id: "history.calendar.monthSummaryA11y.withWorkouts", message: "{count} workouts, {hours} hours this month", values: { count: monthSummary.count, hours: monthSummary.totalHours } })
+          : t({ id: "history.calendar.monthSummaryA11y.empty", message: "No workouts this month" })}>
+        {monthSummary.count > 0
+          ? i18n._({ id: "history.calendar.monthSummary.withWorkouts", message: "{count, plural, one {# workout} other {# workouts}} · {hours} hrs", values: { count: monthSummary.count, hours: monthSummary.totalHours } })
+          : t({ id: "history.calendar.monthSummary.empty", message: "No workouts this month" })}
       </Text>
 
       <View style={styles.grid}>

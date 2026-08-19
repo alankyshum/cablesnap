@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import {
   Image,
   Linking,
@@ -125,7 +127,7 @@ export default function Settings() {
       }
       queryClient.invalidateQueries({ queryKey: ['home'] });
     } catch {
-      toast.error('Failed to save training goal');
+      toast.error(t({ id: 'settings.trainingGoal.saveFailure', message: 'Failed to save training goal' }));
     }
   };
 
@@ -135,7 +137,7 @@ export default function Settings() {
 
     const presentCategories = getPresentBackupCategories(picked.data);
     if (presentCategories.length === 0) {
-      toast.info('No importable backup categories found');
+      toast.info(t({ id: 'settings.import.noCategories', message: 'No importable backup categories found' }));
       return;
     }
 
@@ -208,7 +210,7 @@ export default function Settings() {
       <Masonry gap={spacing.base} testID="settings-masonry">
 
         {/* ── 1. Profile ── */}
-        <SettingsTile colors={colors} title="Profile" testID="settings-tile-profile" index={0}>
+        <SettingsTile colors={colors} title={t({ id: 'settings.tiles.profile', message: 'Profile' })} testID="settings-tile-profile" index={0}>
           <BodyProfileCard
             weightUnit={weightUnit}
             heightUnit={measureUnit}
@@ -224,7 +226,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 2. Units & Appearance ── */}
-        <SettingsTile colors={colors} title="Units & Appearance" testID="settings-tile-units-appearance" index={1}>
+        <SettingsTile colors={colors} title={t({ id: 'settings.tiles.unitsAppearance', message: 'Units & Appearance' })} testID="settings-tile-units-appearance" index={1}>
           <UnitsCard
             colors={colors}
             toast={toast}
@@ -241,19 +243,19 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 3. Training ── */}
-        <SettingsTile colors={colors} title="Training" testID="settings-tile-training" index={2}>
+        <SettingsTile colors={colors} title={t({ id: 'settings.tiles.training', message: 'Training' })} testID="settings-tile-training" index={2}>
           <SettingsLinkRow
             colors={colors}
-            title="Gym Profiles"
-            caption="Manage gyms, cable stacks, and marker calibrations."
-            accessibilityLabel="Open gym profiles settings"
+            title={t({ id: 'settings.training.gymProfiles', message: 'Gym Profiles' })}
+            caption={t({ id: 'settings.training.gymProfilesCaption', message: 'Manage gyms, cable stacks, and marker calibrations.' })}
+            accessibilityLabel={t({ id: 'settings.training.gymProfilesA11y', message: 'Open gym profiles settings' })}
             onPress={() => router.push('/settings/gym-profiles')}
           />
           <SettingsLinkRow
             colors={colors}
-            title="Advanced Set Types"
-            caption="How to use rest-pause, cluster, and myo-rep sets."
-            accessibilityLabel="Open advanced set types help"
+            title={t({ id: 'settings.training.advancedSetTypes', message: 'Advanced Set Types' })}
+            caption={t({ id: 'settings.training.advancedSetTypesCaption', message: 'How to use rest-pause, cluster, and myo-rep sets.' })}
+            accessibilityLabel={t({ id: 'settings.training.advancedSetTypesA11y', message: 'Open advanced set types help' })}
             onPress={() => router.push('/settings/advanced-sets')}
           />
           <Separator style={styles.tileDivider} />
@@ -265,7 +267,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 4. Notifications ── */}
-        <SettingsTile colors={colors} title="Notifications" testID="settings-tile-notifications" index={3}>
+        <SettingsTile colors={colors} title={t({ id: 'settings.tiles.notifications', message: 'Notifications' })} testID="settings-tile-notifications" index={3}>
           <ReminderSection
             colors={colors}
             toast={toast}
@@ -282,40 +284,32 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 5. Coaching ── */}
-        <SettingsTile colors={colors} title="Coaching" testID="settings-tile-coaching" index={4}>
+        <SettingsTile colors={colors} title={t({ id: 'settings.tiles.coaching', message: 'Coaching' })} testID="settings-tile-coaching" index={4}>
           <SettingsLinkRow
             colors={colors}
-            title="AI Provider"
-            caption="Connect your OpenRouter key"
-            accessibilityLabel="Open AI Provider settings"
-            onPress={() => router.push('/settings/ai-key')}
-          />
-          <Separator style={styles.tileDivider} />
-          <SettingsLinkRow
-            colors={colors}
-            title="Adaptive Macro Coach"
+            title={t({ id: 'settings.coaching.adaptiveMacroCoach', message: 'Adaptive Macro Coach' })}
             caption={
               macroCoachEnabled === null
                 ? ''
                 : macroCoachEnabled
-                  ? 'On — weekly advisory card on Nutrition tab'
-                  : 'Off — tap to set up'
+                  ? t({ id: 'settings.coaching.macroCoachOn', message: 'On — weekly advisory card on Nutrition tab' })
+                  : t({ id: 'settings.coaching.macroCoachOff', message: 'Off — tap to set up' })
             }
-            accessibilityLabel="Open Adaptive Macro Coach settings"
+            accessibilityLabel={t({ id: 'settings.coaching.adaptiveMacroCoachA11y', message: 'Open Adaptive Macro Coach settings' })}
             onPress={() => router.push('/settings/macro-coach')}
           />
           <Separator style={styles.tileDivider} />
           <SettingsLinkRow
             colors={colors}
-            title="Training-Day Macros"
+            title={t({ id: 'settings.coaching.trainingDayMacros', message: 'Training-Day Macros' })}
             caption={
               trainingDayMacrosEnabled === null
                 ? ''
                 : trainingDayMacrosEnabled
-                  ? 'On — different targets on training vs rest days'
-                  : 'Off — tap to set up'
+                  ? t({ id: 'settings.coaching.trainingDayOn', message: 'On — different targets on training vs rest days' })
+                  : t({ id: 'settings.coaching.trainingDayOff', message: 'Off — tap to set up' })
             }
-            accessibilityLabel="Open Training-Day Macro Adjustment settings"
+            accessibilityLabel={t({ id: 'settings.coaching.trainingDayMacrosA11y', message: 'Open Training-Day Macro Adjustment settings' })}
             onPress={() => router.push('/settings/training-day-macros')}
           />
           <Separator style={styles.tileDivider} />
@@ -323,7 +317,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 6. Integrations ── */}
-        <SettingsTile colors={colors} title="Integrations" testID="settings-tile-integrations" index={5}>
+        <SettingsTile colors={colors} title={t({ id: 'settings.tiles.integrations', message: 'Integrations' })} testID="settings-tile-integrations" index={5}>
           <IntegrationsCard
             colors={colors}
             toast={toast}
@@ -338,7 +332,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 7. Data & Backup ── */}
-        <SettingsTile colors={colors} title="Data & Backup" testID="settings-tile-data-backup" index={6}>
+        <SettingsTile colors={colors} title={t({ id: 'settings.tiles.dataBackup', message: 'Data & Backup' })} testID="settings-tile-data-backup" index={6}>
           <AutoBackupSection colors={colors} toast={toast} bareContent />
           <Separator style={styles.tileDivider} />
           <FormClipsStorageRow onClipsChanged={() => {}} />
@@ -362,7 +356,7 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 8. Feedback ── */}
-        <SettingsTile colors={colors} title="Feedback & Reports" testID="settings-tile-feedback" index={7}>
+        <SettingsTile colors={colors} title={t({ id: 'settings.tiles.feedback', message: 'Feedback & Reports' })} testID="settings-tile-feedback" index={7}>
           <FeedbackCard
             colors={colors}
             count={count}
@@ -374,11 +368,11 @@ export default function Settings() {
         </SettingsTile>
 
         {/* ── 9. About ── */}
-        <SettingsTile colors={colors} title="About" testID="settings-tile-about" index={8}>
+        <SettingsTile colors={colors} title={t({ id: 'settings.tiles.about', message: 'About' })} testID="settings-tile-about" index={8}>
           <Pressable
             onPress={() => setReleaseNotesVisible(true)}
             accessibilityRole="button"
-            accessibilityLabel={`View release notes, current version ${appVersion}`}
+            accessibilityLabel={t({ id: 'settings.about.releaseNotesA11y', message: `View release notes, current version ${appVersion}` })}
             testID="settings-version-row"
             android_ripple={{ color: colors.surfaceVariant }}
             style={({ pressed }) => [
@@ -390,18 +384,18 @@ export default function Settings() {
               variant="body"
               style={{ color: colors.onSurface, fontWeight: '500' }}
             >
-              {`CableSnap v${appVersion}`}
+              {i18n._({ id: 'settings.about.version', message: 'CableSnap v{version}', values: { version: appVersion } })}
             </Text>
             <View style={styles.versionRowRight}>
               <Text variant="caption" style={{ marginRight: spacing.xs }}>
-                What&apos;s new
+                {t({ id: 'settings.about.whatsNew', message: "What's new" })}
               </Text>
               <ChevronRight size={18} color={colors.onSurfaceVariant} />
             </View>
           </Pressable>
           <View style={styles.aboutBlock}>
             <Text variant="caption">
-              Free & open-source workout tracker — optimized for cable machines, supports all major exercises.
+              {t({ id: 'settings.about.description', message: 'Free & open-source workout tracker — optimized for cable machines, supports all major exercises.' })}
             </Text>
             <Text
               variant="body"
@@ -410,7 +404,7 @@ export default function Settings() {
                 Linking.openURL('https://github.com/alankyshum/cablesnap/blob/main/LICENSE')
               }
             >
-              AGPL-3.0 License
+              {t({ id: 'settings.about.license', message: 'AGPL-3.0 License' })}
             </Text>
             <View
               style={{
@@ -447,7 +441,7 @@ export default function Settings() {
               <Pressable
                 onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
                 accessibilityRole="link"
-                accessibilityLabel="Sponsor on thanks.dev"
+                accessibilityLabel={t({ id: 'settings.about.sponsorA11y', message: 'Sponsor on thanks.dev' })}
                 style={{ minHeight: 48, justifyContent: 'center' }}
               >
                 <Image
@@ -457,6 +451,17 @@ export default function Settings() {
               </Pressable>
             </View>
           </View>
+        </SettingsTile>
+
+        {/* ── 10. Language ── */}
+        <SettingsTile colors={colors} title={t({ id: 'settings.tiles.language', message: 'Language' })} testID="settings-tile-language" index={9}>
+          <SettingsLinkRow
+            colors={colors}
+            title={t({ id: 'settings.language.title', message: 'Language' })}
+            caption={t({ id: 'settings.language.caption', message: 'Choose the language used throughout the app.' })}
+            accessibilityLabel={t({ id: 'settings.language.a11y', message: 'Open language settings' })}
+            onPress={() => router.push('/settings/language')}
+          />
         </SettingsTile>
 
       </Masonry>

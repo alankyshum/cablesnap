@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /* eslint-disable max-lines-per-function */
 /**
  * BLD-850 — explainer modal for the "Next" suggestion.
@@ -47,7 +50,7 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
       <Pressable
         style={styles.backdrop}
         onPress={onClose}
-        accessibilityLabel="Close explainer"
+        accessibilityLabel={t({ id: "session.suggestionexplainermodal.str1", message: "Close explainer" })}
         accessibilityRole="button"
       >
         <Pressable
@@ -59,18 +62,16 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
             { backgroundColor: colors.surface, borderColor: colors.outlineVariant },
           ]}
           accessibilityViewIsModal
-          accessibilityLabel="How is Next calculated?"
+          accessibilityLabel={t({ id: "session.suggestionexplainermodal.str2", message: "How is Next calculated?" })}
         >
           <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={styles.header}>
-              <Text variant="title" style={{ color: colors.onSurface, fontWeight: "700" }}>
-                How is &ldquo;Next&rdquo; calculated?
-              </Text>
+              <Text variant="title" style={{ color: colors.onSurface, fontWeight: "700" }}>{t({ id: "session.suggestionexplainermodal.str9", message: "How is &ldquo;Next&rdquo; calculated?" })}</Text>
               <Pressable
                 onPress={onClose}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel="Close"
+                accessibilityLabel={t({ id: "session.suggestionexplainermodal.str3", message: "Close" })}
                 testID="suggestion-explainer-close"
                 style={styles.closeBtn}
               >
@@ -78,14 +79,12 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
               </Pressable>
             </View>
 
-            <Text variant="body" style={[styles.intro, { color: colors.onSurfaceVariant }]}>
-              We compare your last 2 sessions for this exercise:
-            </Text>
+            <Text variant="body" style={[styles.intro, { color: colors.onSurfaceVariant }]}>{t({ id: "session.suggestionexplainermodal.str10", message: "We compare your last 2 sessions for this exercise:" })}</Text>
 
             <Section
               icon="arrow-up-bold"
               iconColor={colors.primary}
-              title="Increase weight"
+              title={t({ id: "session.suggestionexplainermodal.str4", message: "Increase weight" })}
               body={
                 `When all sets completed, ${intensityMode === "rir" ? "harder than 0.5 RIR" : "RPE < 9.5"}, and your reps held vs. the prior session.\n\nNew weight = heaviest set last session + your weight step.`
               }
@@ -94,7 +93,7 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
             <Section
               icon="arrow-up-bold"
               iconColor={colors.primary}
-              title="Increase reps (range)"
+              title={t({ id: "session.suggestionexplainermodal.str5", message: "Increase reps (range)" })}
               body={
                 "You completed your sets but haven't hit the top of your 8–12 range yet. Add a rep at the same weight — we'll bump the weight once every set reaches 12."
               }
@@ -103,7 +102,7 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
             <Section
               icon="arrow-up-bold"
               iconColor={colors.primary}
-              title="Increase weight and reset reps"
+              title={t({ id: "session.suggestionexplainermodal.str6", message: "Increase weight and reset reps" })}
               body={
                 "You hit the top of your 8–12 range, so we added 2.5 kg and reset you to 8 reps. Below the top, we build reps first."
               }
@@ -112,7 +111,7 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
             <Section
               icon="arrow-up-bold"
               iconColor={colors.primary}
-              title="Increase reps (bodyweight)"
+              title={t({ id: "session.suggestionexplainermodal.str7", message: "Increase reps (bodyweight)" })}
               body={
                 "When all sets completed → highest reps in last session + 1."
               }
@@ -121,7 +120,7 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
             <Section
               icon="equal"
               iconColor={colors.onSurfaceVariant}
-              title="Maintain"
+              title={t({ id: "session.suggestionexplainermodal.str8", message: "Maintain" })}
               body={
                 `When ${maintainThreshold} or harder, you deloaded, reps dropped, or any set was incomplete.`
               }
@@ -134,9 +133,7 @@ export function SuggestionExplainerModal({ visible, onClose, plateauMode }: Sugg
             </Text>
 
             {plateauMode && (
-              <Text variant="body" style={[styles.plateauNote, { color: colors.onSurfaceVariant }]}>
-                Plateau detected: same top-set {"\u00b4"}weight × reps{"\u00b4"} for multiple sessions running. Consider this break-through plan.
-              </Text>
+              <Text variant="body" style={[styles.plateauNote, { color: colors.onSurfaceVariant }]}>{t({ id: "session.suggestionexplainermodal.str11", message: `Plateau detected: same top-set {"\u00b4"}weight × reps{"\u00b4"} for multiple sessions running. Consider this break-through plan.` })}</Text>
             )}
           </ScrollView>
         </Pressable>

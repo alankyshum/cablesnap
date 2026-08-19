@@ -13,6 +13,8 @@ import { getAppSetting, setAppSetting, deleteAppSetting } from "@/lib/db";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
 import { mlToOz, ozToMl, type HydrationUnit } from "@/lib/hydration-units";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 type Props = {
   colors: ThemeColors;
@@ -92,28 +94,28 @@ export default function HydrationCard({ colors, toast, bareContent = false }: Pr
       toDisplay(presetsMl[2] ?? DEFAULT_PRESETS_ML[2], next),
     ]);
     try { await setAppSetting("hydration.unit", next); }
-    catch { toast.error("Failed to save hydration unit"); }
+    catch { toast.error(t({ id: "settings.hydration.saveUnitFailed", message: "Failed to save hydration unit" })); }
   };
 
   const commitGoal = async () => {
     const ml = fromDisplay(goalText, unit);
     if (ml == null) {
-      toast.error("Goal must be greater than 0");
+      toast.error(t({ id: "settings.hydration.goalPositive", message: "Goal must be greater than 0" }));
       return;
     }
     try { await setAppSetting("hydration.daily_goal_ml", String(ml)); }
-    catch { toast.error("Failed to save hydration goal"); }
+    catch { toast.error(t({ id: "settings.hydration.saveGoalFailed", message: "Failed to save hydration goal" })); }
   };
 
   const commitPreset = async (idx: 0 | 1 | 2) => {
     const ml = fromDisplay(presetText[idx], unit);
     if (ml == null) {
-      toast.error("Preset must be greater than 0");
+      toast.error(t({ id: "settings.hydration.presetPositive", message: "Preset must be greater than 0" }));
       return;
     }
     const key = `hydration.preset_${idx + 1}_ml`;
     try { await setAppSetting(key, String(ml)); }
-    catch { toast.error("Failed to save preset"); }
+    catch { toast.error(t({ id: "settings.hydration.savePresetFailed", message: "Failed to save preset" })); }
   };
 
   const handleReset = async () => {
@@ -128,24 +130,24 @@ export default function HydrationCard({ colors, toast, bareContent = false }: Pr
         deleteAppSetting("hydration.preset_2_ml"),
         deleteAppSetting("hydration.preset_3_ml"),
       ]);
-    } catch { toast.error("Failed to reset hydration settings"); }
+    } catch { toast.error(t({ id: "settings.hydration.resetFailed", message: "Failed to reset hydration settings" })); }
   };
 
   const hydrationContent = (
     <>
       <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>
-        Hydration
+        {t({ id: "settings.hydration.title", message: "Hydration" })}
       </Text>
 
       {/* Unit toggle */}
       <View style={styles.row}>
-        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>Unit</Text>
+        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>{t({ id: "settings.hydration.unit", message: "Unit" })}</Text>
         <View style={styles.toggleRow}>
           {(["ml", "fl_oz"] as HydrationUnit[]).map((u) => (
             <Pressable
               key={u}
               onPress={() => handleUnitChange(u)}
-              accessibilityLabel={u === "ml" ? "Use milliliters" : "Use fluid ounces"}
+              accessibilityLabel={u === "ml" ? t({ id: "settings.hydration.useMl", message: "Use milliliters" }) : t({ id: "settings.hydration.useOz", message: "Use fluid ounces" })}
               accessibilityRole="button"
               accessibilityState={{ selected: unit === u }}
               style={({ pressed }) => [
@@ -166,10 +168,10 @@ export default function HydrationCard({ colors, toast, bareContent = false }: Pr
       {/* Daily goal */}
       <View style={styles.row}>
         <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-          Daily goal ({unit === "ml" ? "ml" : "fl oz"})
+           {i18n._({ id: "settings.hydration.dailyGoal", message: "Daily goal ({unit, select, ml {ml} fl_oz {fl oz}})", values: { unit } })}
         </Text>
         <TextInput
-          accessibilityLabel="Daily hydration goal"
+          accessibilityLabel={t({ id: "settings.hydration.dailyGoalA11y", message: "Daily hydration goal" })}
           value={goalText}
           onChangeText={setGoalText}
           onBlur={commitGoal}
@@ -183,10 +185,10 @@ export default function HydrationCard({ colors, toast, bareContent = false }: Pr
       {[0, 1, 2].map((i) => (
         <View key={`preset-${i}`} style={styles.row}>
           <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-            Preset {i + 1} ({unit === "ml" ? "ml" : "fl oz"})
+            {i18n._({ id: "settings.hydration.preset", message: "Preset {number} ({unit, select, ml {ml} fl oz {fl oz}})", values: { number: i + 1, unit } })}
           </Text>
           <TextInput
-            accessibilityLabel={`Preset ${i + 1}`}
+             accessibilityLabel={i18n._({ id: "settings.hydration.presetA11y", message: "Preset {number}", values: { number: i + 1 } })}
             value={presetText[i]}
             onChangeText={(t) => setPresetText((p) => {
               const next = [...p] as [string, string, string];
@@ -203,7 +205,7 @@ export default function HydrationCard({ colors, toast, bareContent = false }: Pr
 
       <Pressable
         onPress={handleReset}
-        accessibilityLabel="Reset hydration settings to defaults"
+        accessibilityLabel={t({ id: "settings.hydration.resetA11y", message: "Reset hydration settings to defaults" })}
         accessibilityRole="button"
         style={({ pressed }) => [
           { marginTop: 12, alignSelf: "flex-start", minHeight: 44, justifyContent: "center", paddingHorizontal: 4 },
@@ -211,7 +213,7 @@ export default function HydrationCard({ colors, toast, bareContent = false }: Pr
         ]}
         hitSlop={8}
       >
-        <Text variant="caption" style={{ color: colors.primary }}>Reset to defaults</Text>
+        <Text variant="caption" style={{ color: colors.primary }}>{t({ id: "settings.hydration.reset", message: "Reset to defaults" })}</Text>
       </Pressable>
     </>
   );

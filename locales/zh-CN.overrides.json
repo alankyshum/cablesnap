@@ -1,6 +1,6 @@
 {
   "settings.gymProfiles.editHint": {
-    "message": "鼠标向左滑动以删除•点击以编辑",
+    "message": "滑动即可删除·点击即可编辑",
     "srcHash": "122a5605a5fc",
     "origin": "human"
   },
@@ -9,28 +9,18 @@
     "srcHash": "25d932591150",
     "origin": "human"
   },
-  "home.programs.filterOptionA11y": {
-    "message": "{label} 程序筛选{0}",
-    "srcHash": "eb6426699c10",
-    "origin": "human"
-  },
   "app.program.create.new-title": {
     "message": "新程序",
     "srcHash": "49da6a3f9ae8",
     "origin": "human"
   },
-  "history.gtg.summary": {
-    "message": "快速添加组数 — {0} 程序{1}, {totalSets} 组{2}",
-    "srcHash": "ef76087c5248",
-    "origin": "human"
-  },
   "app.exercise.id.history-error": {
-    "message": "历史数据载入失败",
+    "message": "历史数据加载失败",
     "srcHash": "1cc4d2325185",
     "origin": "human"
   },
   "components.progress.calendar.loadError": {
-    "message": "无法载入日历数据",
+    "message": "无法加载日历数据",
     "srcHash": "aa418861b69d",
     "origin": "human"
   },
@@ -60,7 +50,7 @@
     "origin": "human"
   },
   "settings.data.exportA11y": {
-    "message": "将所有数据汇出为 JSON",
+    "message": "将所有数据导出为 JSON",
     "srcHash": "2636b57e4185",
     "origin": "human"
   },
@@ -70,7 +60,7 @@
     "origin": "human"
   },
   "session.formvideosheet.str12": {
-    "message": "视频准备好",
+    "message": "视频已准备好",
     "srcHash": "fea8895eda85",
     "origin": "human"
   }

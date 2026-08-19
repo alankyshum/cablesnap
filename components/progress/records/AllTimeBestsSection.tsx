@@ -1,4 +1,6 @@
 import React from "react";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
@@ -65,14 +67,24 @@ function buildBestRowA11y(
   isUnspecified: boolean,
   weightUnit: "kg" | "lb",
 ): string {
-  if (!item.is_weighted) return `${item.name}: ${displayReps ?? 0} reps, ${sessionCount} sessions`;
+  if (!item.is_weighted) return i18n._({ id: "components.progress.records.bestBodyweightA11y", message: "{name}: {reps} reps, {sessions} sessions", values: { name: item.name, reps: displayReps ?? 0, sessions: sessionCount } });
   const variantPart = variant
     ? (isUnspecified ? "(unspecified variant)" : `variant: ${variant.attachment ?? "–"} ${variant.mountPosition ?? "–"}`)
     : "";
   const weightPart = displayWeight != null ? `${toDisplay(displayWeight, weightUnit)} ${weightUnit}` : "";
   const e1rmPart = displayE1rm ? `estimated one rep max ${Math.round(toDisplay(displayE1rm, weightUnit))} ${weightUnit}` : "";
   const sessionPart = `${sessionCount} session${sessionCount !== 1 ? "s" : ""}`;
-  return [item.name, variantPart, weightPart, e1rmPart, sessionPart].filter(Boolean).join(", ");
+  return i18n._({
+    id: "components.progress.records.bestWeightedA11y",
+    message: "{name}{variant}{weight}{e1rm}, {sessions}",
+    values: {
+      name: item.name,
+      variant: variantPart ? `, ${variantPart}` : "",
+      weight: weightPart ? `, ${weightPart}` : "",
+      e1rm: e1rmPart ? `, ${e1rmPart}` : "",
+      sessions: sessionPart,
+    },
+  });
 }
 
 function BestRowValueDisplay({ item, displayWeight, displayE1rm, displayReps, weightUnit, colors }: {
@@ -168,7 +180,7 @@ export default function AllTimeBestsSection({ bests, weightUnit, onPressExercise
         style={[styles.sectionTitle, { color: colors.onSurface }]}
         accessibilityRole="header"
       >
-        All-Time Bests
+        {t({ id: "components.progress.records.allTimeBests", message: "All-Time Bests" })}
       </Text>
       {sections.map((section) => (
         <View key={section.category} style={styles.categorySection}>
@@ -220,4 +232,3 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
 });
-

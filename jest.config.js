@@ -84,6 +84,7 @@ function escapeRegex(value) {
 }
 
 const agentWorktreesPattern = `${escapeRegex(path.join(__dirname, '.paperclip', 'worktrees'))}/`;
+const e2eDirectoryPattern = `${escapeRegex(path.join(__dirname, 'e2e'))}/`;
 
 module.exports = {
   preset: 'jest-expo',
@@ -97,8 +98,11 @@ module.exports = {
   // os.totalmem() (host RAM), which ignores the cgroup, so a percentage would be
   // meaningless here. Harmless when only 1 worker runs; useful on parallel boxes.
   workerIdleMemoryLimit: 768 * 1024 * 1024,
+  transform: {
+    '\\.[jt]sx?$|\\.mjs$': 'babel-jest',
+  },
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|react-native-reanimated|react-native-gesture-handler|react-native-safe-area-context|@gorhom/bottom-sheet|d3-shape|d3-path)'
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|react-native-reanimated|react-native-gesture-handler|victory-native|react-native-safe-area-context|@gorhom/bottom-sheet|@lingui|@formatjs|@messageformat)'
   ],
   moduleNameMapper: {
     'react-native-reanimated': '<rootDir>/__mocks__/react-native-reanimated.js',
@@ -106,7 +110,7 @@ module.exports = {
   },
   // BLD-2161: Exclude paperclip agent worktrees so jest does not RUN test
   // files from isolated run-specific git worktrees.
-  testPathIgnorePatterns: ['/node_modules/', '__tests__/helpers/', '__tests__/fixtures/', '/e2e/', agentWorktreesPattern],
+  testPathIgnorePatterns: ['/node_modules/', '__tests__/helpers/', '__tests__/fixtures/', e2eDirectoryPattern, agentWorktreesPattern],
   // BLD-2482 (primary flake): testPathIgnorePatterns only filters which test
   // FILES execute — it does NOT stop jest-haste-map from crawling those dirs to
   // build the module graph and register manual mocks. A sibling agent worktree

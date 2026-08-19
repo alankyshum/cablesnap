@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Bug, Lightbulb, List } from 'lucide-react-native';
 import { fontSizes } from '@/constants/design-tokens';
 import type { ThemeColors } from '@/hooks/useThemeColors';
+import { t } from '@lingui/core/macro';
 
 type Props = {
   colors: ThemeColors;
@@ -36,7 +37,7 @@ export default function FeedbackCard({ colors, count, onBug, onFeature, onErrors
           size="sm"
           icon={Bug}
           onPress={onBug}
-          accessibilityLabel="Report a bug"
+          accessibilityLabel={t({ id: "settings.feedback.bugA11y", message: "Report a bug" })}
           style={{ minHeight: 44 }}
         >
           Report Bug
@@ -46,7 +47,7 @@ export default function FeedbackCard({ colors, count, onBug, onFeature, onErrors
           size="sm"
           icon={Lightbulb}
           onPress={onFeature}
-          accessibilityLabel="Request a feature"
+          accessibilityLabel={t({ id: "settings.feedback.featureA11y", message: "Request a feature" })}
           style={{ minHeight: 44 }}
         >
           Feature Request

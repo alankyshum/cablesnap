@@ -10,6 +10,7 @@ import { useLayout } from "../../lib/layout";
 import { toDisplay } from "../../lib/units";
 import { movingAvg } from "../../lib/format";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type WeightCardProps = {
   latest: BodyWeight;
@@ -21,25 +22,28 @@ type WeightCardProps = {
 
 export function WeightCard({ latest, delta, deltaLabel, unit, onToggleUnit }: WeightCardProps) {
   const colors = useThemeColors();
+  const switchUnitLabel = unit === "kg"
+    ? t({ id: "components.progress.bodyCards.switchToPounds", message: "Switch to pounds" })
+    : t({ id: "components.progress.bodyCards.switchToKilograms", message: "Switch to kilograms" });
 
   return (
     <Card style={styles.card}>
       <View style={styles.cardHeader}>
         <Text variant="subtitle" style={{ color: colors.onSurface }}>
-          Current Weight
+          {t({ id: "components.progress.bodyCards.currentWeight", message: "Current Weight" })}
         </Text>
         <Button
           variant="ghost"
           size="sm"
           onPress={onToggleUnit}
-          accessibilityLabel={`Switch to ${unit === "kg" ? "pounds" : "kilograms"}`}
-          label={unit === "kg" ? "kg → lb" : "lb → kg"}
+           accessibilityLabel={switchUnitLabel}
+           label={switchUnitLabel}
         />
       </View>
       <Text
         variant="heading"
         style={{ color: colors.onSurface, marginTop: 4 }}
-        accessibilityLabel={`Current weight ${toDisplay(latest.weight, unit)} ${unit}`}
+        accessibilityLabel={t({ id: "components.progress.bodyCards.currentWeightA11y", message: `Current weight ${toDisplay(latest.weight, unit)} ${unit}` })}
       >
         {toDisplay(latest.weight, unit)} {unit}
       </Text>
@@ -49,9 +53,9 @@ export function WeightCard({ latest, delta, deltaLabel, unit, onToggleUnit }: We
             color: delta > 0 ? colors.error : colors.primary,
             marginTop: 4,
           }}
-          accessibilityValue={{ text: `${deltaLabel} since previous entry` }}
+           accessibilityValue={{ text: t({ id: "components.progress.bodyCards.deltaA11y", message: `${deltaLabel} since previous entry` }) }}
         >
-          {deltaLabel} since previous
+           {t({ id: "components.progress.bodyCards.delta", message: `${deltaLabel} since previous` })}
         </Text>
       )}
       <Text
@@ -79,13 +83,13 @@ export function GoalsCard({ settings, latest, measurements, unit }: GoalsCardPro
     return (
       <Card style={styles.card}>
         <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
-          Goals
+          {t({ id: "components.progress.bodyCards.goals", message: "Goals" })}
         </Text>
         <Button
           variant="outline"
           onPress={() => router.push("/body/goals")}
-          accessibilityLabel="Set body goals"
-          label="Set Goals"
+          accessibilityLabel={t({ id: "components.progress.bodyCards.setGoalsA11y", message: "Set body goals" })}
+          label={t({ id: "components.progress.bodyCards.setGoals", message: "Set Goals" })}
         />
       </Card>
     );
@@ -95,21 +99,20 @@ export function GoalsCard({ settings, latest, measurements, unit }: GoalsCardPro
     <Card style={styles.card}>
       <View style={styles.cardHeader}>
         <Text variant="subtitle" style={{ color: colors.onSurface }}>
-          Goals
+          {t({ id: "components.progress.bodyCards.goals", message: "Goals" })}
         </Text>
         <Button
           variant="ghost"
           size="sm"
           onPress={() => router.push("/body/goals")}
-          accessibilityLabel="Edit body goals"
-          label="Edit"
+          accessibilityLabel={t({ id: "components.progress.bodyCards.editGoalsA11y", message: "Edit body goals" })}
+          label={t({ id: "components.progress.bodyCards.edit", message: "Edit" })}
         />
       </View>
       {settings.weight_goal && latest && (
         <View style={{ marginTop: 8 }}>
           <Text style={{ color: colors.onSurface }}>
-            Weight: {toDisplay(latest.weight, unit)} →{" "}
-            {toDisplay(settings.weight_goal, unit)} {unit}
+           {t({ id: "components.progress.bodyCards.weightGoal", message: `Weight: ${toDisplay(latest.weight, unit)} → ${toDisplay(settings.weight_goal, unit)} ${unit}` })}
           </Text>
           <ProgressBar
             value={Math.min(
@@ -130,7 +133,7 @@ export function GoalsCard({ settings, latest, measurements, unit }: GoalsCardPro
       {settings.body_fat_goal && measurements?.body_fat && (
         <View style={{ marginTop: 12 }}>
           <Text style={{ color: colors.onSurface }}>
-            Body fat: {measurements.body_fat}% → {settings.body_fat_goal}%
+             {t({ id: "components.progress.bodyCards.bodyFatGoal", message: `Body fat: ${measurements.body_fat}% → ${settings.body_fat_goal}%` })}
           </Text>
           <ProgressBar
             value={Math.min(
@@ -181,7 +184,7 @@ export function ChartCard({ chart, unit }: ChartCardProps) {
         variant="subtitle"
         style={{ color: colors.onSurface, marginBottom: 12 }}
       >
-        Weight Trend
+         {t({ id: "components.progress.bodyCards.weightTrend", message: "Weight Trend" })}
       </Text>
       <View style={{ width: chartWidth, height: 200 }}>
         <LineChart
@@ -215,10 +218,10 @@ export function ChartCard({ chart, unit }: ChartCardProps) {
       </View>
       <View style={{ flexDirection: "row", gap: 16, marginTop: 8 }}>
         <Text variant="caption" style={{ color: colors.primary }}>
-          ● Actual
+           {t({ id: "components.progress.bodyCards.actual", message: "● Actual" })}
         </Text>
         <Text variant="caption" style={{ color: colors.tertiary }}>
-          ● 7-day avg
+           {t({ id: "components.progress.bodyCards.sevenDayAverage", message: "● 7-day avg" })}
         </Text>
       </View>
     </Card>
@@ -239,7 +242,7 @@ export function SingleEntryCard({ latest, unit }: SingleEntryCardProps) {
         variant="subtitle"
         style={{ color: colors.onSurface, marginBottom: 8 }}
       >
-        Weight Trend
+         {t({ id: "components.progress.bodyCards.weightTrend", message: "Weight Trend" })}
       </Text>
       <Text style={{ color: colors.onSurfaceVariant }}>
         {toDisplay(latest.weight, unit)} {unit} on {latest.date}
@@ -248,7 +251,7 @@ export function SingleEntryCard({ latest, unit }: SingleEntryCardProps) {
         variant="caption"
         style={{ color: colors.onSurfaceVariant, marginTop: 4 }}
       >
-        Log more entries to see a chart
+         {t({ id: "components.progress.bodyCards.moreEntries", message: "Log more entries to see a chart" })}
       </Text>
     </Card>
   );
@@ -266,24 +269,24 @@ export function MeasurementsCard({ measurements }: MeasurementsCardProps) {
     <Card style={styles.card}>
       <View style={styles.cardHeader}>
         <Text variant="subtitle" style={{ color: colors.onSurface }}>
-          Measurements
+          {t({ id: "components.progress.bodyCards.measurements", message: "Measurements" })}
         </Text>
       </View>
       {measurements ? (
         <Text style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-          Last logged: {measurements.date}
+           {t({ id: "components.progress.bodyCards.lastLogged", message: `Last logged: ${measurements.date}` })}
         </Text>
       ) : (
         <Text style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-          No measurements logged yet
+           {t({ id: "components.progress.bodyCards.noMeasurements", message: "No measurements logged yet" })}
         </Text>
       )}
       <Button
         variant="outline"
         onPress={() => router.push("/body/measurements")}
         style={{ marginTop: 8 }}
-        accessibilityLabel="Log body measurements"
-        label={measurements ? "Log Measurements" : "Add First Measurement"}
+        accessibilityLabel={t({ id: "components.progress.bodyCards.logMeasurementsA11y", message: "Log body measurements" })}
+        label={measurements ? t({ id: "components.progress.bodyCards.logMeasurements", message: "Log Measurements" }) : t({ id: "components.progress.bodyCards.addMeasurement", message: "Add First Measurement" })}
       />
     </Card>
   );
@@ -304,17 +307,17 @@ export function ProgressPhotosCard() {
         },
       ]}
       onPress={() => router.push("/body/photos")}
-      accessibilityLabel="Progress Photos"
+      accessibilityLabel={t({ id: "components.progress.bodyCards.progressPhotosA11y", message: "Progress Photos" })}
       accessibilityRole="button"
-      accessibilityHint="View and manage your progress photos"
+      accessibilityHint={t({ id: "components.progress.bodyCards.progressPhotosHint", message: "View and manage your progress photos" })}
     >
       <View style={styles.cardHeader}>
         <Text variant="subtitle" style={{ color: colors.onSurface }}>
-          Progress Photos
+          {t({ id: "components.progress.bodyCards.progressPhotos", message: "Progress Photos" })}
         </Text>
       </View>
       <Text style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-        Document your strength journey over time
+        {t({ id: "components.progress.bodyCards.progressPhotosDescription", message: "Document your strength journey over time" })}
       </Text>
     </Pressable>
   );

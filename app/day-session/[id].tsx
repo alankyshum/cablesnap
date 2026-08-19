@@ -1,3 +1,7 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
 /**
  * BLD-1089: Read-only detail screen for a kind='day_session' workout_sessions row.
  * AC24 — never opens in the editable session UI; redirected here from /session/[id].
@@ -65,7 +69,7 @@ export default function DaySessionDetail() {
         "SELECT name FROM exercises WHERE id = ?",
         [session.day_session_exercise_id]
       );
-      const exerciseName = exerciseRow?.name ?? "Deleted Exercise";
+      const exerciseName = exerciseRow?.name ?? t({ id: "daysession.id.deletedExercise", message: "Deleted Exercise" });
 
       const setRows = await db.getAllAsync<SetRow>(
         `SELECT ws.id, ws.reps, ws.weight, ws.completed_at, ? AS exercise_name
@@ -92,7 +96,7 @@ export default function DaySessionDetail() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen
         options={{
-          title: meta?.exercise_name ?? "Quick-add sets",
+          title: meta?.exercise_name ?? t({ id: "daysession.id.quickAddSets", message: "Quick-add sets" }),
           headerStyle: { backgroundColor: colors.surface },
           headerTintColor: colors.onSurface,
         }}
@@ -110,13 +114,13 @@ export default function DaySessionDetail() {
               <Text variant="title" style={{ color: colors.primary, fontSize: 28 }}>
                 {meta.total_reps}
               </Text>
-              <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>total reps</Text>
+              <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{t({ id: "daysession.id.str1", message: "total reps" })}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Text variant="title" style={{ color: colors.primary, fontSize: 28 }}>
                 {meta.set_count}
               </Text>
-              <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>sets</Text>
+              <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>{t({ id: "daysession.id.str2", message: "sets" })}</Text>
             </View>
           </View>
         </View>
@@ -133,7 +137,7 @@ export default function DaySessionDetail() {
           <View style={[styles.setRow, { borderBottomColor: colors.outlineVariant }]}>
             <Text style={{ color: colors.onSurfaceVariant, width: 32 }}>#{index + 1}</Text>
             <Text style={{ color: colors.onSurface, flex: 1 }}>
-              {item.reps ?? 0} reps{item.weight ? ` @ ${item.weight} kg` : ""}
+              {i18n._({ id: "daysession.id.setSummary", message: "{reps} reps{hasWeight, select, true { @ {weight} kg} false {}}", values: { reps: item.reps ?? 0, hasWeight: !!item.weight, weight: item.weight ?? 0 } })}
             </Text>
             <Text style={{ color: colors.onSurfaceVariant, fontSize: 12 }}>
               {formatTime(item.completed_at)}
@@ -141,9 +145,7 @@ export default function DaySessionDetail() {
           </View>
         )}
         ListEmptyComponent={
-          <Text style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: 32 }}>
-            No sets logged
-          </Text>
+          <Text style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: 32 }}>{t({ id: "daysession.id.str3", message: "No sets logged" })}</Text>
         }
       />
     </View>

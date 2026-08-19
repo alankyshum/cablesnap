@@ -5,6 +5,7 @@ import { useThemeColors } from '@/hooks/useThemeColors';
 import { HandleIcon } from './HandleIcon';
 import { useAnimatedPress } from '@/lib/animations/hooks';
 import * as Haptics from 'expo-haptics';
+import { t } from '@lingui/core/macro';
 
 const CENTER_BUTTON_SIZE = 70;
 const BAR_HEIGHT = 56;
@@ -33,8 +34,8 @@ export function CenterButton({
       <AnimatedPressable
         onPress={onPress}
         accessibilityRole="tab"
-        accessibilityLabel="Workouts"
-        accessibilityHint="Navigate to workout screen"
+        accessibilityLabel={t({ id: 'floatingTabBar.center.workouts', message: 'Workouts' })}
+        accessibilityHint={t({ id: 'floatingTabBar.center.navigateHint', message: 'Navigate to workout screen' })}
         accessibilityState={{ selected: focused }}
         onPressIn={() => { onPressIn(); Haptics.selectionAsync(); }}
         onPressOut={onPressOut}

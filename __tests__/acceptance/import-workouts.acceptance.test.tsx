@@ -628,7 +628,7 @@ describe('Route registration — import-workouts navigation header (BLD-2463)', 
       join(__dirname, '..', '..', 'app', 'settings', '_layout.tsx'),
       'utf8',
     );
-    expect(layout).toMatch(/name="import-workouts"[\s\S]*?title:\s*"Import Workout History"/);
+    expect(layout).toMatch(/name="import-workouts"[\s\S]*?title:\s*t\(\{\s*id:\s*"settings\.importWorkoutHistory\.title",\s*message:\s*"Import Workout History"\s*\}\)/);
     expect(layout).toMatch(/headerShown:\s*true/);
   });
 });
