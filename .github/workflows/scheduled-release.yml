@@ -548,7 +548,7 @@ jobs:
            # invocation creates a combined task graph, allowing Play release
            # library artifacts to satisfy releaseFdroid matchingFallbacks.
            # Keeping the F-Droid graph isolated is required for DEX purity.
-           ./gradlew --refresh-dependencies --no-build-cache :app:assembleReleaseFdroid
+           ./gradlew --refresh-dependencies --no-build-cache --no-daemon :app:assembleReleaseFdroid
            # Preserve the clean F-Droid APK before the Play invocation can
            # reuse or overwrite app/build outputs.
            cp app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk ../cablesnap-fdroid.apk
@@ -565,10 +565,43 @@ jobs:
            echo "Built F-Droid artifact:"
            ls -lh cablesnap-fdroid.apk
 
-      # The F-Droid prebuild above stamps assets/app.config with the F-Droid
-      # channel and applies F-Droid-only native exclusions. A second clean
-      # prebuild is required before the Play build so its config is stamped
-      # with the GitHub channel and the normal native dependency graph.
+      # F-Droid sanitization destructively rewrites node_modules. Restore the
+      # pristine dependency tree before the Play prebuild; the Play channel is
+      # actually stamped by createExpoConfig during the Gradle invocation.
+      - name: Restore pristine dependencies for GitHub / Play
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          rm -rf node_modules
+          npm ci
+          GUARD_FILE="node_modules/@expo/config-plugins/build/utils/history.js"
+          if [ ! -f "$GUARD_FILE" ]; then
+            echo "::warning::Corrupt npm cache detected — $GUARD_FILE missing after restore npm ci. Purging @expo/config-plugins from npm cache and reinstalling."
+            npm cache ls @expo/config-plugins 2>/dev/null || true
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci
+            if [ ! -f "$GUARD_FILE" ]; then
+              echo "::error::$GUARD_FILE still missing after cache purge + reinstall. Upstream tarball may be broken."
+              exit 1
+            fi
+          fi
+          node - <<'NODE'
+          const fs = require('fs');
+          for (const name of ['expo-notifications', 'expo-application']) {
+            const config = JSON.parse(fs.readFileSync(`node_modules/${name}/expo-module.config.json`, 'utf8'));
+            if (!config.platforms || !config.platforms.includes('android')) {
+              throw new Error(`${name} is still missing Android from expo-module.config.json`);
+            }
+            if (config.autolinking && config.autolinking.exclude) {
+              throw new Error(`${name} remains excluded from autolinking`);
+            }
+          }
+          NODE
+
+      # The second clean prebuild resets the android/ tree before the Play
+      # build. Its createExpoConfig Gradle task will stamp the GitHub channel
+      # using the environment of the later Gradle invocation.
       - name: Generate native project (GitHub / Play)
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
@@ -633,7 +666,7 @@ jobs:
           set -euo pipefail
           cd android
           test -s keystore.properties
-          ./gradlew :app:assembleRelease :wear:assembleRelease
+          ./gradlew --refresh-dependencies --no-daemon :app:assembleRelease :wear:assembleRelease
           cd ..
           # Keep the existing Play / GitHub release asset names unchanged.
           cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
@@ -681,6 +714,25 @@ jobs:
             exit 1
           fi
           echo "AC10b OK — F-Droid APK contains none of the four SUSS prefixes."
+
+      - name: AC10c — verify Play APK contains proprietary and Expo native classes
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          GMS_FIREBASE_HITS=$(unzip -p cablesnap.apk 'classes*.dex' 2>/dev/null | strings \
+            | grep -oE 'com/google/android/gms|com/google/firebase' | sort -u || true)
+          NOTIFICATIONS_HITS=$(unzip -p cablesnap.apk 'classes*.dex' 2>/dev/null | strings \
+            | grep -oE 'expo/modules/notifications' | sort -u || true)
+          APPLICATION_HITS=$(unzip -p cablesnap.apk 'classes*.dex' 2>/dev/null | strings \
+            | grep -oE 'expo/modules/application' | sort -u || true)
+          if [ -z "$GMS_FIREBASE_HITS" ] || [ -z "$NOTIFICATIONS_HITS" ] || [ -z "$APPLICATION_HITS" ]; then
+            echo "::error::AC10c violated — cablesnap.apk is missing expected Play native classes (GMS/Firebase and/or Expo notifications/application)."
+            echo "GMS/Firebase matches: ${GMS_FIREBASE_HITS:-<none>}"
+            echo "Expo notifications matches: ${NOTIFICATIONS_HITS:-<none>}"
+            echo "Expo application matches: ${APPLICATION_HITS:-<none>}"
+            exit 1
+          fi
+          echo "AC10c OK — Play APK contains GMS/Firebase and Expo notifications/application classes."
 
       - name: Verify APK signature matches committed fingerprint
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
