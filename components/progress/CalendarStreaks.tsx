@@ -1,5 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
+import { t } from "@lingui/core/macro";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 
@@ -17,7 +18,7 @@ export default function CalendarStreaks({
   return (
     <View
       style={[styles.container, { backgroundColor: colors.surface }]}
-      accessibilityLabel={`Current training streak: ${currentStreak} day${currentStreak !== 1 ? "s" : ""}. Longest streak: ${longestStreak} day${longestStreak !== 1 ? "s" : ""}`}
+       accessibilityLabel={t({ id: "components.progress.calendarStreaks.summaryA11y", message: `Current training streak: ${currentStreak} days. Longest streak: ${longestStreak} days` })}
     >
       <View style={styles.streakItem}>
         <Text style={[styles.streakValue, { color: colors.primary }]}>
@@ -27,7 +28,7 @@ export default function CalendarStreaks({
           variant="caption"
           style={{ color: colors.onSurfaceVariant }}
         >
-          Current streak (days)
+           {t({ id: "components.progress.calendarStreaks.currentLabel", message: "Current streak (days)" })}
         </Text>
       </View>
       <View
@@ -41,7 +42,7 @@ export default function CalendarStreaks({
           variant="caption"
           style={{ color: colors.onSurfaceVariant }}
         >
-          Longest streak (days)
+           {t({ id: "components.progress.calendarStreaks.longestLabel", message: "Longest streak (days)" })}
         </Text>
       </View>
     </View>

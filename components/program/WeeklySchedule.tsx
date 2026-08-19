@@ -6,6 +6,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { DAYS } from "@/lib/format";
 import type { WorkoutTemplate } from "@/lib/types";
 import type { ScheduleEntry } from "@/lib/db/settings";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 type Props = {
   schedule: ScheduleEntry[];
@@ -37,22 +39,22 @@ export function WeeklySchedule({
       <View style={styles.scheduleSection}>
         <View style={styles.sectionHeader}>
           <Text variant="title" style={{ color: colors.onBackground }}>
-            Weekly Schedule
+             {t({ id: "components.program.weekly-schedule.title", message: "Weekly Schedule" })}
           </Text>
           {schedule.length > 0 && !starter && (
             <Button
               variant="ghost"
               size="sm"
               onPress={onClearSchedule}
-              accessibilityLabel="Clear weekly schedule"
-              label="Clear"
+               accessibilityLabel={t({ id: "components.program.weekly-schedule.clear-a11y", message: "Clear weekly schedule" })}
+               label={t({ id: "components.program.weekly-schedule.clear", message: "Clear" })}
             />
           )}
         </View>
 
         {templates.length === 0 ? (
           <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
-            Create a template first to set a schedule.
+             {t({ id: "components.program.weekly-schedule.empty", message: "Create a template first to set a schedule." })}
           </Text>
         ) : (
           <>
@@ -68,7 +70,9 @@ export function WeeklySchedule({
                     { backgroundColor: colors.surface, borderColor: colors.outlineVariant },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`${label}: ${e ? e.template_name : "Rest day"}`}
+                  accessibilityLabel={e
+                    ? i18n._({ id: "components.program.weekly-schedule.day-a11y", message: "{day}: {template}", values: { day: label, template: e.template_name } })
+                    : i18n._({ id: "components.program.weekly-schedule.day-rest-a11y", message: "{day}: Rest day", values: { day: label } })}
                 >
                   <View style={styles.dayRow}>
                     <Text variant="subtitle" style={[styles.dayLabel, { color: colors.onSurface }]}>
@@ -81,7 +85,7 @@ export function WeeklySchedule({
                         </Text>
                       ) : (
                         <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-                          Rest
+                           {t({ id: "components.program.weekly-schedule.rest", message: "Rest" })}
                         </Text>
                       )}
                     </View>
@@ -111,13 +115,13 @@ export function WeeklySchedule({
           <Card style={StyleSheet.flatten([styles.picker, { backgroundColor: colors.surface }])}>
             <CardContent>
               <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12 }}>
-                {picker !== null ? DAYS[picker] : ""} — Pick Template
+                 {picker !== null ? DAYS[picker] : ""} — {t({ id: "components.program.weekly-schedule.pick-template", message: "Pick Template" })}
               </Text>
 
               <FlatList
                 data={
                   picker !== null && schedEntry(picker)
-                    ? [{ id: "__remove__", name: "Remove (Rest Day)" } as WorkoutTemplate, ...templates]
+                      ? [{ id: "__remove__", name: t({ id: "components.program.weekly-schedule.remove-name", message: "Remove (Rest Day)" }) } as WorkoutTemplate, ...templates]
                     : templates
                 }
                 keyExtractor={(item) => item.id}
@@ -129,10 +133,10 @@ export function WeeklySchedule({
                         onPress={() => onAssignDay(picker!, null)}
                         style={[styles.pickItem, { borderBottomColor: colors.outlineVariant }]}
                         accessibilityRole="button"
-                        accessibilityLabel="Remove template, set as rest day"
+                         accessibilityLabel={t({ id: "components.program.weekly-schedule.remove-a11y", message: "Remove template, set as rest day" })}
                       >
                         <Text variant="body" style={{ color: colors.error }}>
-                          Remove (Rest Day)
+                           {t({ id: "components.program.weekly-schedule.remove", message: "Remove (Rest Day)" })}
                         </Text>
                       </Pressable>
                     );
@@ -142,7 +146,7 @@ export function WeeklySchedule({
                       onPress={() => picker !== null && onAssignDay(picker, item)}
                       style={[styles.pickItem, { borderBottomColor: colors.outlineVariant }]}
                       accessibilityRole="button"
-                      accessibilityLabel={`Select template: ${item.name}`}
+                      accessibilityLabel={t({ id: "components.program.weekly-schedule.select-a11y", message: `Select template: ${item.name}` })}
                     >
                       <Text
                         variant="body"
@@ -164,8 +168,8 @@ export function WeeklySchedule({
                 variant="ghost"
                 onPress={onPickerClose}
                 style={{ marginTop: 8 }}
-                accessibilityLabel="Cancel template selection"
-                label="Cancel"
+                 accessibilityLabel={t({ id: "components.program.weekly-schedule.cancel-a11y", message: "Cancel template selection" })}
+                 label={t({ id: "components.program.weekly-schedule.cancel", message: "Cancel" })}
               />
             </CardContent>
           </Card>

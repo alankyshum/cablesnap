@@ -1,3 +1,7 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
+import { plural } from "@lingui/core/macro";
 /* eslint-disable max-lines-per-function */
 /**
  * BLD-850 — Inline Last/Next row.
@@ -192,7 +196,10 @@ export function LastNextRow({
           : `weight: ${toDisplay(plateauHint.weight, unit)} ${unit} × ${plateauHint.reps}`;
       alertFn(
         "Apply break-through suggestion?",
-        `Will apply ${weightDesc} to ${updates.length} set${updates.length === 1 ? "" : "s"}, overwriting existing values.`,
+        t({
+          id: "session.lastnextrow.dynamic3",
+          message: `Will apply ${weightDesc} to ${updates.length} ${plural(updates.length, { one: "set", other: "sets" })}, overwriting existing values.`,
+        }),
         [
           { text: "Cancel", style: "cancel" },
           { text: "Apply", onPress: () => { onApplyBreakThrough(updates); } },
@@ -214,7 +221,10 @@ export function LastNextRow({
     const valueDesc = suggestedValueDescription(suggestion);
     alertFn(
       "Apply suggested values?",
-      `Will apply ${valueDesc} to ${targetCount} set${targetCount === 1 ? "" : "s"}, overwriting existing values.`,
+      t({
+        id: "session.lastnextrow.dynamic4",
+        message: `Will apply ${valueDesc} to ${targetCount} ${plural(targetCount, { one: "set", other: "sets" })}, overwriting existing values.`,
+      }),
       [
         { text: "Cancel", style: "cancel" },
         { text: "Apply", onPress: () => applyNextFill(suggestion, sets, onUpdate) },
@@ -236,7 +246,7 @@ export function LastNextRow({
           ]}
           accessibilityRole="button"
           accessibilityLabel={previousPerformanceA11y ?? `Last: ${previousPerformance}`}
-          accessibilityHint={`Tap to refill empty sets from previous session for ${exerciseName}`}
+          accessibilityHint={t({ id: "session.lastnextrow.dynamic1", message: `Tap to refill empty sets from previous session for ${exerciseName}` })}
           testID="last-half"
         >
           <MaterialCommunityIcons
@@ -253,7 +263,7 @@ export function LastNextRow({
               { color: colors.onSurfaceVariant, fontWeight: "400" },
             ]}
           >
-            <Text style={[styles.labelTag, { color: colors.onSurfaceVariant }]}>Last:</Text>{" "}
+            <Text style={[styles.labelTag, { color: colors.onSurfaceVariant }]}>{t({ id: "session.lastnextrow.str4", message: "Last:" })}</Text>{" "}
             {previousPerformance}
           </Text>
           {previousSetupPhotoUri ? (
@@ -261,7 +271,7 @@ export function LastNextRow({
               onLongPress={() => setPhotoPreviewVisible(true)}
               hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
               accessibilityRole="imagebutton"
-              accessibilityLabel="Previous session setup photo - long press to preview"
+              accessibilityLabel={t({ id: "session.lastnextrow.str1", message: "Previous session setup photo - long press to preview" })}
             >
               <Image
                 source={{ uri: previousSetupPhotoUri }}
@@ -287,7 +297,7 @@ export function LastNextRow({
             style={styles.modalBackdrop}
             onPress={() => setPhotoPreviewVisible(false)}
             accessibilityRole="button"
-            accessibilityLabel="Close setup photo preview"
+            accessibilityLabel={t({ id: "session.lastnextrow.str2", message: "Close setup photo preview" })}
           >
             <Image
               source={{ uri: previousSetupPhotoUri }}
@@ -316,7 +326,7 @@ export function LastNextRow({
           ]}
           accessibilityRole="button"
           accessibilityLabel={formatNextA11y(suggestion)}
-          accessibilityHint={`Tap to apply suggested values to empty sets for ${exerciseName}`}
+          accessibilityHint={t({ id: "session.lastnextrow.dynamic2", message: `Tap to apply suggested values to empty sets for ${exerciseName}` })}
           testID="next-half"
         >
           {plateauHint && plateauHint.kind !== "form_check" ? (
@@ -342,9 +352,7 @@ export function LastNextRow({
               { color: colors.primary, fontWeight: "600" },
             ]}
           >
-            <Text style={[styles.labelTag, { color: colors.primary, fontWeight: "600" }]}>
-              Next:
-            </Text>{" "}
+            <Text style={[styles.labelTag, { color: colors.primary, fontWeight: "600" }]}>{t({ id: "session.lastnextrow.str5", message: "Next:" })}</Text>{" "}
             {formatNextLabel(suggestion)}
           </Text>
           <Pressable
@@ -356,7 +364,7 @@ export function LastNextRow({
             }}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="How is Next calculated?"
+            accessibilityLabel={t({ id: "session.lastnextrow.str3", message: "How is Next calculated?" })}
             testID="next-info-icon"
             style={styles.infoBtn}
           >

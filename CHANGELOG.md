@@ -24,6 +24,13 @@ marker) at release time.
 
 - **Graceful Strava 403 Application Inactive handling** — Gracefully handles Strava API 403 Forbidden 'Application Inactive' errors, preventing misleading retry toasts and infinite loops. ([BLD-3513](/BLD/issues/BLD-3513))
 
+## v0.26.101 — 2026-08-19
+<!-- versionCode: 169 -->
+
+- The new AI Coach tab lets you chat with an AI fitness coach that can consult your workout, exercise, and nutrition history on-device. Bring your own OpenRouter API key, choose your model, and keep your key on this device while requests go directly to OpenRouter.
+- Exercises are now available from the top-right icons on the Workouts screen; AI Coach now occupies their place in the tab bar.
+- In-app language selection is now available in Settings for English (US), English (UK), Traditional Chinese (Taiwan), and Simplified Chinese, defaulting to en-US. The Chinese catalogs are machine-translated beta content and have not yet received native-speaker review.
+
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->
 
@@ -250,6 +257,8 @@ marker) at release time.
 - **Consistent spacing for Workout History Import button** — Aligns the vertical spacing and gaps around the "Choose CSV File..." button inside the settings card to match standard design patterns and other buttons. (BLD-3499)
 - **Added customizable weight-step increments (micro-loading)** — you can now configure the weight step (0.5 kg, 1.25 kg, 2.5 kg, 5 kg or 1 lb, 2.5 lb, 5 lb, 10 lb) in Units settings, which applies across all steppers in your workout sessions and quick-adds. ([BLD-3517](/BLD/issues/BLD-3517))
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
+- **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
+- **What's New now supports inline code and tappable web or email links** in release notes.
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->

@@ -72,7 +72,7 @@ export default defineConfig({
     command: process.env.E2E_USE_STATIC
       ? `npx serve -s dist -l ${PORT} -c '${path.resolve(__dirname, "e2e/serve-coop-coep.json")}'`
       : `npx expo start --web --port ${PORT}`,
-    url: BASE_URL,
+      url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },
