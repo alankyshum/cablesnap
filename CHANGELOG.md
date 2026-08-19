@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- The AI Coach tab and screen title are now translated in Chinese locales.
+- Fixed the hydration preset label showing raw placeholder text instead of the unit.
 
 ## v0.26.101 — 2026-08-19
 <!-- versionCode: 169 -->
