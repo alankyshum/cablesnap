@@ -253,6 +253,7 @@ marker) at release time.
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
+- **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->
