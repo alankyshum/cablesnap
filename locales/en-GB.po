@@ -14,11 +14,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: components/session/FormLibraryTab.tsx:600
-#~ msgid "session.formlibrarytab.dynamic1"
-#~ msgstr ""
-
-#. js-lingui-explicit-id
 #: components/session/FormLibraryTab.tsx:599
 #~ msgid "session.formlibrarytab.dynamic1-not-selected"
 #~ msgstr ""

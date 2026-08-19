@@ -14,11 +14,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: components/session/FormLibraryTab.tsx:600
-#~ msgid "session.formlibrarytab.dynamic1"
-#~ msgstr ""
-
-#. js-lingui-explicit-id
 #: components/session/FormLibraryTab.tsx:599
 #~ msgid "session.formlibrarytab.dynamic1-not-selected"
 #~ msgstr ""
@@ -8911,7 +8906,7 @@ msgstr ""
 #: components/settings/HydrationCard.tsx:188
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17767
 msgid "settings.hydration.preset"
-msgstr ""
+msgstr "预设值 {number} ({unit, select, ml {ml} fl_oz {液量盎司}})"
 
 #. js-lingui-explicit-id
 #: components/settings/HydrationCard.tsx:113

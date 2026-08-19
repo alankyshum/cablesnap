@@ -6855,8 +6855,8 @@
     "origin": "machine"
   },
   "settings.hydration.preset": {
-    "message": "預設值 {number} ({unit, select, ml {ml} fl oz {液量盎司}})",
-    "srcHash": "d2f7139c776e",
+    "message": "預設值 {number} ({unit, select, ml {ml} fl_oz {液量盎司}})",
+    "srcHash": "a8379470affb",
     "origin": "machine"
   },
   "settings.hydration.presetPositive": {
