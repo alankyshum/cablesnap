@@ -13,7 +13,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing } from "@/constants/design-tokens";
 import type { MountPosition, Attachment, MuscleGroup } from "@/lib/types";
-import { MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
+import { getAttachmentLabel, getMountPositionLabel, MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
 import {
   getCableExercises,
   getAvailableAttachments,
@@ -39,27 +39,6 @@ function muscleLabel(muscle: MuscleGroup): string {
     case "traps": return t({ id: "app.tools.cableFinder.muscle.traps", message: "Traps" });
     case "lats": return t({ id: "app.tools.cableFinder.muscle.lats", message: "Lats" });
     case "full_body": return t({ id: "app.tools.cableFinder.muscle.fullBody", message: "Full Body" });
-  }
-}
-
-function mountPositionLabel(position: MountPosition): string {
-  switch (position) {
-    case "high": return t({ id: "app.tools.cableFinder.mount.high", message: "High" });
-    case "mid": return t({ id: "app.tools.cableFinder.mount.mid", message: "Mid" });
-    case "low": return t({ id: "app.tools.cableFinder.mount.low", message: "Low" });
-    case "floor": return t({ id: "app.tools.cableFinder.mount.floor", message: "Floor" });
-  }
-}
-
-function attachmentLabel(attachment: Attachment): string {
-  switch (attachment) {
-    case "handle": return t({ id: "app.tools.cableFinder.attachment.handle", message: "Handle" });
-    case "ring_handle": return t({ id: "app.tools.cableFinder.attachment.ringHandle", message: "Ring Handle" });
-    case "ankle_strap": return t({ id: "app.tools.cableFinder.attachment.ankleStrap", message: "Ankle Strap" });
-    case "rope": return t({ id: "app.tools.cableFinder.attachment.rope", message: "Rope" });
-    case "bar": return t({ id: "app.tools.cableFinder.attachment.bar", message: "Bar" });
-    case "squat_harness": return t({ id: "app.tools.cableFinder.attachment.squatHarness", message: "Squat Harness" });
-    case "carabiner": return t({ id: "app.tools.cableFinder.attachment.carabiner", message: "Carabiner" });
   }
 }
 
@@ -176,10 +155,10 @@ export default function CableSetupFinder() {
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
               {[
                 item.mount_position
-                ? mountPositionLabel(item.mount_position)
+                ? getMountPositionLabel(item.mount_position)
                   : null,
                 item.attachment
-                  ? attachmentLabel(item.attachment)
+                  ? getAttachmentLabel(item.attachment)
                   : null,
               ]
                 .filter(Boolean)
@@ -217,9 +196,9 @@ export default function CableSetupFinder() {
                 onPress={() => toggleMount(pos)}
                 accessibilityRole="checkbox"
                 accessibilityState={{ selected: mountFilter === pos }}
-                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.mountPositionA11yValueLocalized", message: "Mount position: {position}", values: { position: mountPositionLabel(pos) } })}
+                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.mountPositionA11yValueLocalized", message: "Mount position: {position}", values: { position: getMountPositionLabel(pos) } })}
               >
-                {mountPositionLabel(pos)}
+                {getMountPositionLabel(pos)}
               </Chip>
             ))}
           </ScrollView>
@@ -246,9 +225,9 @@ export default function CableSetupFinder() {
                   onPress={() => toggleAttachment(att)}
                   accessibilityRole="checkbox"
                   accessibilityState={{ selected: attachmentFilter === att }}
-                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.attachmentA11yValue", message: "Attachment: {attachment}", values: { attachment: attachmentLabel(att) } })}
+                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.attachmentA11yValue", message: "Attachment: {attachment}", values: { attachment: getAttachmentLabel(att) } })}
                 >
-                  {attachmentLabel(att)}
+                  {getAttachmentLabel(att)}
                 </Chip>
               ))}
             </ScrollView>

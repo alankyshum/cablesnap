@@ -10149,11 +10149,6 @@
     "srcHash": "8bba731d66db",
     "origin": "machine"
   },
-  "app.tools.cableFinder.attachment.ankleStrap": {
-    "message": "脚踝带",
-    "srcHash": "7110c5a7e4d4",
-    "origin": "machine"
-  },
   "app.exercise.id.category.arms": {
     "message": "手臂",
     "srcHash": "08fc5590673f",
@@ -10184,11 +10179,6 @@
     "srcHash": "38dc0000fc3d",
     "origin": "machine"
   },
-  "app.tools.cableFinder.attachment.bar": {
-    "message": "杠铃",
-    "srcHash": "812ca392d8a1",
-    "origin": "machine"
-  },
   "app.exercise.id.difficulty.beginner": {
     "message": "初阶",
     "srcHash": "a661ce2b6c1d",
@@ -10212,11 +10202,6 @@
   "app.exercise.id.attachment.carabiner": {
     "message": "快扣环",
     "srcHash": "8b4e72accb31",
-    "origin": "machine"
-  },
-  "app.tools.cableFinder.attachment.carabiner": {
-    "message": "快扣",
-    "srcHash": "0ae8053f7fa3",
     "origin": "machine"
   },
   "app.exercise.id.category.chest": {
@@ -10274,11 +10259,6 @@
     "srcHash": "7bc225973e21",
     "origin": "machine"
   },
-  "app.tools.cableFinder.attachment.handle": {
-    "message": "握把",
-    "srcHash": "bdb229c391cc",
-    "origin": "machine"
-  },
   "app.tools.cableFinder.mount.high": {
     "message": "高",
     "srcHash": "3df2c5e97c01",
@@ -10334,19 +10314,9 @@
     "srcHash": "b20414584167",
     "origin": "machine"
   },
-  "app.tools.cableFinder.attachment.ringHandle": {
-    "message": "环状握把",
-    "srcHash": "954b552e6bca",
-    "origin": "machine"
-  },
   "app.exercise.id.attachment.rope": {
     "message": "绳索",
     "srcHash": "bfe4cecdeab9",
-    "origin": "machine"
-  },
-  "app.tools.cableFinder.attachment.rope": {
-    "message": "绳索",
-    "srcHash": "47c0c4a7bc34",
     "origin": "machine"
   },
   "settings.backups.shareA11y": {
@@ -10372,11 +10342,6 @@
   "app.exercise.id.attachment.squatHarness": {
     "message": "深蹲带",
     "srcHash": "8764279fc5ac",
-    "origin": "machine"
-  },
-  "app.tools.cableFinder.attachment.squatHarness": {
-    "message": "深蹲带",
-    "srcHash": "0a435ac9087a",
     "origin": "machine"
   },
   "app.tools.cableFinder.muscle.traps": {

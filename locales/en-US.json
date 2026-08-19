@@ -1324,11 +1324,6 @@
     "srcHash": "8bba731d66db",
     "origin": "human"
   },
-  "app.tools.cableFinder.attachment.ankleStrap": {
-    "message": "Ankle Strap",
-    "srcHash": "7110c5a7e4d4",
-    "origin": "human"
-  },
   "home.quickAdd.logHint": {
     "message": "Announces result after logging",
     "srcHash": "25e35e418609",
@@ -1547,11 +1542,6 @@
   "components.plates.calculator.bar": {
     "message": "Bar",
     "srcHash": "76131ff75b35",
-    "origin": "human"
-  },
-  "app.tools.cableFinder.attachment.bar": {
-    "message": "Bar",
-    "srcHash": "812ca392d8a1",
     "origin": "human"
   },
   "components.plates.calculator.barValueA11y": {
@@ -2137,11 +2127,6 @@
   "app.exercise.id.attachment.carabiner": {
     "message": "Carabiner",
     "srcHash": "8b4e72accb31",
-    "origin": "human"
-  },
-  "app.tools.cableFinder.attachment.carabiner": {
-    "message": "Carabiner",
-    "srcHash": "0ae8053f7fa3",
     "origin": "human"
   },
   "components.nutrition.header.carbs": {
@@ -4762,11 +4747,6 @@
   "app.exercise.id.attachment.handle": {
     "message": "Handle",
     "srcHash": "7bc225973e21",
-    "origin": "human"
-  },
-  "app.tools.cableFinder.attachment.handle": {
-    "message": "Handle",
-    "srcHash": "bdb229c391cc",
     "origin": "human"
   },
   "session.setoptionssheet.str5": {
@@ -7919,19 +7899,9 @@
     "srcHash": "b20414584167",
     "origin": "human"
   },
-  "app.tools.cableFinder.attachment.ringHandle": {
-    "message": "Ring Handle",
-    "srcHash": "954b552e6bca",
-    "origin": "human"
-  },
   "app.exercise.id.attachment.rope": {
     "message": "Rope",
     "srcHash": "bfe4cecdeab9",
-    "origin": "human"
-  },
-  "app.tools.cableFinder.attachment.rope": {
-    "message": "Rope",
-    "srcHash": "47c0c4a7bc34",
     "origin": "human"
   },
   "session.exercisegroupcard.dynamic1": {
@@ -8872,11 +8842,6 @@
   "app.exercise.id.attachment.squatHarness": {
     "message": "Squat Harness",
     "srcHash": "8764279fc5ac",
-    "origin": "human"
-  },
-  "app.tools.cableFinder.attachment.squatHarness": {
-    "message": "Squat Harness",
-    "srcHash": "0a435ac9087a",
     "origin": "human"
   },
   "settings.gymProfiles.stackDeleted": {
