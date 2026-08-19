@@ -20,13 +20,21 @@ export const TAB_ICONS: Record<string, IconName> = {
   settings: "cog",
 };
 
+export const TAB_LABELS: Record<string, string> = {
+  "ai-coach": "AI Coach",
+  nutrition: "Nutrition",
+  index: "Workouts",
+  progress: "Progress",
+  settings: "Settings",
+};
+
 function getTabLabels(): Record<string, string> {
   return {
-  exercises: t({ id: "floatingTabBar.tabs.exercises", message: "Exercises" }),
-  nutrition: t({ id: "floatingTabBar.tabs.nutrition", message: "Nutrition" }),
-  index: t({ id: "floatingTabBar.tabs.workouts", message: "Workouts" }),
-  progress: t({ id: "floatingTabBar.tabs.progress", message: "Progress" }),
-  settings: t({ id: "floatingTabBar.tabs.settings", message: "Settings" }),
+    "ai-coach": t({ id: "floatingTabBar.tabs.aiCoach", message: "AI Coach" }),
+    nutrition: t({ id: "floatingTabBar.tabs.nutrition", message: "Nutrition" }),
+    index: t({ id: "floatingTabBar.tabs.workouts", message: "Workouts" }),
+    progress: t({ id: "floatingTabBar.tabs.progress", message: "Progress" }),
+    settings: t({ id: "floatingTabBar.tabs.settings", message: "Settings" }),
   };
 }
 

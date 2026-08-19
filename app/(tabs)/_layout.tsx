@@ -42,7 +42,15 @@ export default function TabLayout() {
         name="exercises"
         options={{
            title: t({ id: "tabs.exercises.title", message: "Exercises" }),
-           headerTitle: renderHeaderTitle("format-list-bulleted", t({ id: "tabs.exercises.header", message: "Exercises" })),
+                // BreadcrumbTitle keeps the exercise route's existing breadcrumb contract (label: "exercise").
+                headerTitle: () => (
+                  <BreadcrumbTitle
+                    segments={[
+                      { label: t({ id: "tabs.workouts.header", message: "Workouts" }), href: "/" },
+                      { label: t({ id: "tabs.exercises.header", message: "exercise" }) },
+                    ]}
+                  />
+                ),
           headerRight: () => (
             <TouchableOpacity
               onPress={() => router.push("/exercise/create")}

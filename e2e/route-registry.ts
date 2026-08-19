@@ -17,6 +17,11 @@ export const TAB_SCREENS: Screen[] = [
   { name: "Settings", path: "/settings" },
 ];
 
+export const AI_SCREENS: Screen[] = [
+  { name: "AI Coach", path: "/ai-coach" },
+  { name: "AI Provider Settings", path: "/settings/ai-key" },
+];
+
 export const STORE_SCREENS: Screen[] = [
   { name: "Workouts", path: "/" },
   { name: "Nutrition", path: "/nutrition" },
@@ -75,6 +80,7 @@ export const DYNAMIC_SCREENS: Screen[] = [
 
 export const ALL_SCREENS: Screen[] = [
   ...TAB_SCREENS,
+  ...AI_SCREENS,
   ...TOOL_SCREENS,
   ...STANDALONE_SCREENS,
   ...SETTINGS_SCREENS,
