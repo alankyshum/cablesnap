@@ -593,8 +593,9 @@ jobs:
             if (!config.platforms || !config.platforms.includes('android')) {
               throw new Error(`${name} is still missing Android from expo-module.config.json`);
             }
-            if (config.autolinking && config.autolinking.exclude) {
-              throw new Error(`${name} remains excluded from autolinking`);
+            const pkg = JSON.parse(fs.readFileSync(`node_modules/${name}/package.json`, 'utf8'));
+            if (pkg.expo?.autolinking?.exclude?.includes(name)) {
+              throw new Error(`${name} remains excluded from autolinking in package.json`);
             }
           }
           NODE
