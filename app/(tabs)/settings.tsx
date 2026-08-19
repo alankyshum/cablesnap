@@ -412,28 +412,50 @@ export default function Settings() {
             >
               AGPL-3.0 License
             </Text>
-            <Pressable
-              onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
-              accessibilityRole="link"
-              accessibilityLabel="Buy me a coffee"
-              style={{ marginTop: spacing.sm, minHeight: 48, justifyContent: 'center' }}
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 8,
+                padding: spacing.xs,
+                marginTop: spacing.sm,
+                alignSelf: 'flex-start',
+              }}
             >
-              <Image
-                source={require('../../assets/badges/bmc-button.png')}
-                style={{ width: 180, height: 50, resizeMode: 'contain' }}
-              />
-            </Pressable>
-            <Pressable
-              onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
-              accessibilityRole="link"
-              accessibilityLabel="Sponsor on thanks.dev"
-              style={{ marginTop: spacing.md, minHeight: 48, justifyContent: 'center' }}
+              <Pressable
+                onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
+                accessibilityRole="link"
+                accessibilityLabel="Buy me a coffee"
+                style={{ minHeight: 48, justifyContent: 'center' }}
+              >
+                <Image
+                  source={require('../../assets/badges/bmc-button.png')}
+                  style={{ width: 180, height: 50, resizeMode: 'contain' }}
+                />
+              </Pressable>
+            </View>
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 8,
+                padding: spacing.xs,
+                marginTop: spacing.md,
+                alignSelf: 'flex-start',
+              }}
             >
-              <Image
-                source={require('../../assets/badges/thanks-dev-button.png')}
-                style={{ width: 180, height: 24, resizeMode: 'contain' }}
-              />
-            </Pressable>
+              <Pressable
+                onPress={() => Linking.openURL('https://thanks.dev/u/gh/alankyshum')}
+                accessibilityRole="link"
+                accessibilityLabel="Sponsor on thanks.dev"
+                style={{ minHeight: 48, justifyContent: 'center' }}
+              >
+                <Image
+                  source={require('../../assets/badges/thanks-dev-button.png')}
+                  style={{ width: 180, height: 24, resizeMode: 'contain' }}
+                />
+              </Pressable>
+            </View>
           </View>
         </SettingsTile>
 

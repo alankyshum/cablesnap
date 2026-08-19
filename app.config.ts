@@ -22,7 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "CableSnap",
   slug: "cablesnap",
-  version: "0.26.97",
+  version: "0.26.100",
   orientation: "default",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
@@ -41,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#FF6038", // eslint-disable-line no-restricted-syntax
     },
     package: "com.persoack.cablesnap",
-    versionCode: 165,
+    versionCode: 168,
   },
   web: {
     favicon: "./assets/favicon.png",
@@ -98,6 +98,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   owner: "alankyshum",
   extra: {
     fdroidBuild: isFdroidBuild,
+    distributionChannel: isFdroidBuild ? "fdroid" : "github",
     ...(isFdroidBuild
       ? {}
       : {

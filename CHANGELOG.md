@@ -22,7 +22,26 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- The new AI Coach tab lets you chat with an AI fitness coach that can consult your workout, exercise, and nutrition history on-device. Bring your own OpenRouter API key, choose your model, and keep your key on this device while requests go directly to OpenRouter.
+- Exercises are now available from the top-right icons on the Workouts screen; AI Coach now occupies their place in the tab bar.
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
+
+ - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
+ - Fixed exercise selection scrolling on compact screens.
+
+## v0.26.99 — 2026-08-18
+<!-- versionCode: 167 -->
+
+- Migrated self-hosted F-Droid Play-flavor releases to the persistent production signing certificate; users on the boundary release must reinstall CableSnap once.
+
+
+## v0.26.98 — 2026-08-18
+<!-- versionCode: 166 -->
+
+- Charts now work in the F-Droid build.
+- Progress, workout, nutrition, body, and muscle-volume charts now render consistently across supported platforms.
 
 ## v0.26.97 — 2026-08-03
 <!-- versionCode: 165 -->

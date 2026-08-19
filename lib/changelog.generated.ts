@@ -10,6 +10,24 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.100",
+    "date": "2026-08-18",
+    "versionCode": 168,
+    "body": "- Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.\n - Fixed exercise selection scrolling on compact screens."
+  },
+  {
+    "version": "0.26.99",
+    "date": "2026-08-18",
+    "versionCode": 167,
+    "body": "- Migrated self-hosted F-Droid Play-flavor releases to the persistent production signing certificate; users on the boundary release must reinstall CableSnap once."
+  },
+  {
+    "version": "0.26.98",
+    "date": "2026-08-18",
+    "versionCode": 166,
+    "body": "- Charts now work in the F-Droid build.\n- Progress, workout, nutrition, body, and muscle-volume charts now render consistently across supported platforms."
+  },
+  {
     "version": "0.26.97",
     "date": "2026-08-03",
     "versionCode": 165,
