@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.101 — 2026-08-19
+<!-- versionCode: 169 -->
+
 - The new AI Coach tab lets you chat with an AI fitness coach that can consult your workout, exercise, and nutrition history on-device. Bring your own OpenRouter API key, choose your model, and keep your key on this device while requests go directly to OpenRouter.
 - Exercises are now available from the top-right icons on the Workouts screen; AI Coach now occupies their place in the tab bar.
 - In-app language selection is now available in Settings for English (US), English (UK), Traditional Chinese (Taiwan), and Simplified Chinese, defaulting to en-US. The Chinese catalogs are machine-translated beta content and have not yet received native-speaker review.
