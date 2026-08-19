@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { HandleIcon } from './HandleIcon';
 import { useAnimatedPress } from '@/lib/animations/hooks';
@@ -7,6 +8,7 @@ import * as Haptics from 'expo-haptics';
 
 const CENTER_BUTTON_SIZE = 70;
 const BAR_HEIGHT = 56;
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type CenterButtonProps = {
   focused: boolean;
@@ -28,7 +30,7 @@ export function CenterButton({
 
   return (
     <View style={centerStyles.wrapper}>
-      <Pressable
+      <AnimatedPressable
         onPress={onPress}
         accessibilityRole="tab"
         accessibilityLabel="Workouts"
@@ -48,7 +50,7 @@ export function CenterButton({
           size={36}
           color={focused ? colors.onPrimary : color}
         />
-      </Pressable>
+      </AnimatedPressable>
     </View>
   );
 }

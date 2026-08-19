@@ -9,16 +9,18 @@ import * as Haptics from "expo-haptics";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-const TAB_ICONS: Record<string, IconName> = {
-  exercises: "format-list-bulleted",
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+export const TAB_ICONS: Record<string, IconName> = {
+  "ai-coach": "robot",
   nutrition: "food-apple",
   index: "arm-flex",
   progress: "chart-line",
   settings: "cog",
 };
 
-const TAB_LABELS: Record<string, string> = {
-  exercises: "Exercises",
+export const TAB_LABELS: Record<string, string> = {
+  "ai-coach": "AI Coach",
   nutrition: "Nutrition",
   index: "Workouts",
   progress: "Progress",
@@ -47,7 +49,7 @@ export function TabButton({
   const { animatedStyle, onPressIn, onPressOut } = useAnimatedPress({ haptic: false });
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       onPressIn={() => { onPressIn(); Haptics.selectionAsync(); }}
       onPressOut={onPressOut}
@@ -67,7 +69,7 @@ export function TabButton({
       >
         {label}
       </Animated.Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
