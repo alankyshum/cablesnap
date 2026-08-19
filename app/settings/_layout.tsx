@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { useLingui } from "@lingui/react/macro";
 
 /**
  * Route-group layout for every /settings/* screen.
@@ -19,6 +20,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
  */
 export default function SettingsLayout() {
   const colors = useThemeColors();
+  const { t } = useLingui();
   return (
     <Stack
       screenOptions={{
@@ -28,9 +30,11 @@ export default function SettingsLayout() {
         headerTintColor: colors.onSurface,
       }}
     >
-      <Stack.Screen name="import-workouts" options={{ title: "Import Workout History" }} />
-      <Stack.Screen name="backups" options={{ title: "Backups" }} />
-      <Stack.Screen name="import-backup" options={{ title: "Import Backup" }} />
+      <Stack.Screen name="ai-key" options={{ title: "AI Provider" }} />
+      <Stack.Screen name="import-workouts" options={{ title: t({ id: "settings.importWorkoutHistory.title", message: "Import Workout History" }) }} />
+      <Stack.Screen name="backups" options={{ title: t({ id: "settings.backups.title", message: "Backups" }) }} />
+      <Stack.Screen name="import-backup" options={{ title: t({ id: "settings.importBackup.title", message: "Import Backup" }) }} />
+      <Stack.Screen name="language" options={{ title: t({ id: "settings.language.title", message: "Language" }) }} />
     </Stack>
   );
 }

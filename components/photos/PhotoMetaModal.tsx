@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { Image, Modal, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -59,14 +61,14 @@ export default function PhotoMetaModal({
             />
           )}
           <Input
-            placeholder="Date (YYYY-MM-DD)"
+             placeholder={t({ id: "components.photos.meta.datePlaceholder", message: "Date (YYYY-MM-DD)" })}
             value={metaDate}
             onChangeText={onDateChange}
             style={styles.input}
-            accessibilityLabel="Date"
+             accessibilityLabel={t({ id: "components.photos.meta.dateA11y", message: "Date" })}
           />
           <Text variant="body" style={{ color: colors.onSurface, marginTop: 8, marginBottom: 4 }}>
-            Pose Category
+             <Trans id="components.photos.meta.poseCategory">Pose Category</Trans>
           </Text>
           <View style={styles.chips}>
             {poseOptions.map((p) => (
@@ -83,19 +85,19 @@ export default function PhotoMetaModal({
             ))}
           </View>
           <Input
-            placeholder="Note (optional)"
+             placeholder={t({ id: "components.photos.meta.notePlaceholder", message: "Note (optional)" })}
             value={metaNote}
             onChangeText={onNoteChange}
             style={styles.input}
             multiline
-            accessibilityLabel="Note"
+             accessibilityLabel={t({ id: "components.photos.meta.noteA11y", message: "Note" })}
           />
           <View style={styles.modalButtons}>
             <Button
               variant="outline"
               onPress={onCancel}
               style={{ flex: 1, marginRight: 8 }}
-              label="Cancel"
+               label={t({ id: "components.photos.meta.cancel", message: "Cancel" })}
             />
             <Button
               variant="default"
@@ -103,7 +105,7 @@ export default function PhotoMetaModal({
               loading={saving}
               disabled={saving}
               style={{ flex: 1 }}
-              label="Save"
+               label={t({ id: "components.photos.meta.save", message: "Save" })}
             />
           </View>
         </View>

@@ -9,6 +9,7 @@ import {
 import { Text } from "@/components/ui/text";
 import { useFocusEffect } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 import { useFloatingTabBarHeight } from "@/components/FloatingTabBar";
 import {
   getMonthlyWorkoutDates,
@@ -128,16 +129,16 @@ export default function CalendarView({ weekStartDay }: Props) {
     return (
       <View style={[styles.centered, { flex: 1 }]}>
         <Text style={{ color: colors.error, textAlign: "center", marginBottom: 12 }}>
-          Could not load calendar data
+          {t({ id: "components.progress.calendar.loadError", message: "Could not load calendar data" })}
         </Text>
         <Pressable
           onPress={() => loadData(year, month)}
           style={[styles.retryButton, { borderColor: colors.primary }]}
           accessibilityRole="button"
-          accessibilityLabel="Retry loading calendar"
+          accessibilityLabel={t({ id: "components.progress.calendar.retryA11y", message: "Retry loading calendar" })}
         >
           <Text style={{ color: colors.primary, fontWeight: "600" }}>
-            Retry
+            {t({ id: "components.progress.calendar.retry", message: "Retry" })}
           </Text>
         </Pressable>
       </View>
@@ -159,7 +160,7 @@ export default function CalendarView({ weekStartDay }: Props) {
           <Pressable
             onPress={goToPrevMonth}
             accessibilityRole="button"
-            accessibilityLabel="Previous month"
+            accessibilityLabel={t({ id: "components.progress.calendar.previousMonth", message: "Previous month" })}
             hitSlop={12}
             style={styles.navButton}
           >
@@ -179,7 +180,7 @@ export default function CalendarView({ weekStartDay }: Props) {
             onPress={goToNextMonth}
             disabled={isCurrentMonth}
             accessibilityRole="button"
-            accessibilityLabel="Next month"
+            accessibilityLabel={t({ id: "components.progress.calendar.nextMonth", message: "Next month" })}
             hitSlop={12}
             style={styles.navButton}
           >
@@ -198,14 +199,14 @@ export default function CalendarView({ weekStartDay }: Props) {
           <Pressable
             onPress={goToToday}
             accessibilityRole="button"
-            accessibilityLabel="Go to current month"
+            accessibilityLabel={t({ id: "components.progress.calendar.todayA11y", message: "Go to current month" })}
             style={[styles.todayButton, { borderColor: colors.primary }]}
           >
             <Text
               variant="caption"
               style={{ color: colors.primary, fontWeight: "600" }}
             >
-              Today
+              {t({ id: "components.progress.calendar.today", message: "Today" })}
             </Text>
           </Pressable>
         )}
@@ -243,8 +244,7 @@ export default function CalendarView({ weekStartDay }: Props) {
               textAlign: "center",
             }}
           >
-            No workouts this month. Start your first workout to see your
-            calendar fill up!
+            {t({ id: "components.progress.calendar.empty", message: "No workouts this month. Start your first workout to see your calendar fill up!" })}
           </Text>
         </View>
       )}

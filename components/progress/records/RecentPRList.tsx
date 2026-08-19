@@ -1,4 +1,6 @@
 import React from "react";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Separator } from "@/components/ui/separator";
@@ -22,21 +24,21 @@ type Props = {
 function formatDelta(pr: RecentPR, unit: "kg" | "lb"): string {
   if (pr.is_weighted && pr.weight != null && pr.previous_best != null) {
     const delta = toDisplay(pr.weight - pr.previous_best, unit);
-    return `+${delta} ${unit}`;
+    return t({ id: "components.progress.records.weightDelta", message: `+${delta} ${unit}` });
   }
   if (!pr.is_weighted && pr.reps != null && pr.previous_best != null) {
     const delta = pr.reps - pr.previous_best;
-    return `+${delta} reps`;
+    return t({ id: "components.progress.records.repDelta", message: `+${delta} reps` });
   }
   return "";
 }
 
 function formatValue(pr: RecentPR, unit: "kg" | "lb"): string {
   if (pr.is_weighted && pr.weight != null) {
-    return `${toDisplay(pr.weight, unit)} ${unit}`;
+    return t({ id: "components.progress.records.weightValue", message: `${toDisplay(pr.weight, unit)} ${unit}` });
   }
   if (!pr.is_weighted && pr.reps != null) {
-    return `${pr.reps} reps`;
+    return t({ id: "components.progress.records.repValue", message: `${pr.reps} reps` });
   }
   return "-";
 }
@@ -54,10 +56,8 @@ function PrRow({ pr, showSeparator, weightUnit, onPress }: PrRowProps) {
   const isUnspecified = variant ? isAllNull(variant) : false;
   const value = formatValue(pr, weightUnit);
   const delta = formatDelta(pr, weightUnit);
-  const variantLabel = variant && !isUnspecified
-    ? `, variant: ${variant.attachment ?? "unspecified"}`
-    : "";
-  const a11yLabel = `${pr.name}${variantLabel}: ${value}, ${delta}, ${formatDateShort(pr.date)}`;
+  const variantText = variant && !isUnspecified ? `, variant: ${variant.attachment ?? "unspecified"}` : "";
+  const a11yLabel = i18n._({ id: "components.progress.records.recentPRA11y", message: "{name}{variant}: {value}, {delta}, {date}", values: { name: pr.name, variant: variantText, value, delta, date: formatDateShort(pr.date) } });
 
   return (
     <React.Fragment>
@@ -108,7 +108,7 @@ export default function RecentPRList({ prs, weightUnit, onPressExercise }: Props
         style={[styles.sectionTitle]}
         accessibilityRole="header"
       >
-        Recent PRs
+        {t({ id: "components.progress.records.recentPRs", message: "Recent PRs" })}
       </Text>
       {prs.map((pr, i) => (
         <PrRow

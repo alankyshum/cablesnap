@@ -1,5 +1,19 @@
 import { Alert, Linking } from "react-native";
 import * as Sentry from "@sentry/react-native";
+import { t as linguiT } from "@lingui/core/macro";
+
+type TranslationDescriptor = { id: string; message: string };
+type TranslationValues = Record<string, string | number>;
+
+function t(descriptor: TranslationDescriptor, values?: TranslationValues): string {
+  try {
+    return (linguiT as unknown as (descriptor: TranslationDescriptor, values?: TranslationValues) => string)(descriptor, values);
+  } catch {
+    return values
+      ? descriptor.message.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? `{${key}}`))
+      : descriptor.message;
+  }
+}
 
 /**
  * Build a YouTube search URL for "<exercise name> form tutorial".
@@ -71,8 +85,11 @@ export async function openTutorialForExercise(
         opts.onError(e, url);
       } else {
         Alert.alert(
-          "Couldn't open browser",
-          `Copy this link to search manually:\n\n${url}`,
+          t({ id: "exerciseTutorialLink.openBrowserFailed", message: "Couldn't open browser" }),
+          t(
+            { id: "exerciseTutorialLink.copyLink", message: "Copy this link to search manually:\n\n{url}" },
+            { url },
+          ),
         );
       }
     }

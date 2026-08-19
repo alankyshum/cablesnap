@@ -7,6 +7,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { StravaShareCardPromo } from "./StravaShareCardPromo";
 import type { AchievementDef } from "../../lib/achievements";
+import { t } from "@/lib/i18n";
 
 export type AchievementRecapCardProps = {
   achievements: AchievementDef[];
@@ -77,7 +78,7 @@ export default function AchievementRecapCard({
         numberOfLines={1}
         ellipsizeMode="tail"
       >
-        {achievements.length} Achievement{achievements.length > 1 ? "s" : ""} Unlocked!
+         {t({ id: "share.achievement.unlocked", message: `${achievements.length} Achievement${achievements.length > 1 ? "s" : ""} Unlocked!` })}
       </Text>
 
       <View style={styles.divider} />
@@ -117,7 +118,7 @@ export default function AchievementRecapCard({
             style={[styles.overflowText, { color: colors.onSurfaceVariant }]}
             testID="achievement-recap-overflow"
           >
-            +{extraCount} more
+             {t({ id: "share.achievement.more", message: `+${extraCount} more` })}
           </Text>
         )}
       </View>

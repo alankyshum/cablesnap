@@ -7,6 +7,7 @@ import { styles } from "./recommend-styles";
 import { RecommendActions } from "./recommend-actions";
 import { MetaRow } from "./recommend-meta-row";
 import { BEGINNER_REC, INTERMEDIATE_REC } from "./recommend-data";
+import { t } from "@lingui/core/macro";
 
 export function BeginnerRecommend({
   level,
@@ -26,17 +27,17 @@ export function BeginnerRecommend({
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.scroll}>
       {errorBanner}
-      <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>We Recommend</Text>
+      <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>{t({ id: "components.onboarding.recommendBeginner.title", message: "We Recommend" })}</Text>
       <Card style={StyleSheet.flatten([styles.recCard, { backgroundColor: colors.surface }])}>
         <CardContent>
-          <Text variant="title" style={{ color: colors.onSurface }}>{rec.name}</Text>
+           <Text variant="title" style={{ color: colors.onSurface }}>{rec.name}</Text>
           <Chip compact style={{ backgroundColor: chipBg }}>{rec.chip}</Chip>
           <Text variant="body" style={[styles.recDesc, { color: colors.onSurfaceVariant }]}>{rec.desc}</Text>
           <MetaRow items={rec.metaItems} />
         </CardContent>
       </Card>
       <RecommendActions
-        primaryLabel={`Start with ${rec.name}`}
+         primaryLabel={t({ id: "components.onboarding.recommendBeginner.startWith", message: `Start with ${rec.name}` })}
         onPrimary={() => finish(rec.action)}
         onSkip={() => finish()}
         saving={saving}

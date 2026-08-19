@@ -13,6 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Text } from "@/components/ui/text";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/bna-toast";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -26,7 +28,7 @@ import {
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
-import { CATEGORY_LABELS, ATTACHMENT_LABELS } from "../../lib/types";
+import type { Attachment, Category, Difficulty } from "../../lib/types";
 import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
@@ -60,6 +62,37 @@ import { formatIntensity } from "@/lib/intensity";
 import { useIntensityMode } from "@/hooks/useIntensityMode";
 import { ExerciseIllustrationCards } from "@/components/exercises/ExerciseIllustrationCards";
 
+function categoryLabel(category: Category): string {
+  switch (category) {
+    case "abs_core": return t({ id: "app.exercise.id.category.absCore", message: "Abs & Core" });
+    case "arms": return t({ id: "app.exercise.id.category.arms", message: "Arms" });
+    case "back": return t({ id: "app.exercise.id.category.back", message: "Back" });
+    case "chest": return t({ id: "app.exercise.id.category.chest", message: "Chest" });
+    case "legs_glutes": return t({ id: "app.exercise.id.category.legsGlutes", message: "Legs & Glutes" });
+    case "shoulders": return t({ id: "app.exercise.id.category.shoulders", message: "Shoulders" });
+  }
+}
+
+function difficultyLabel(difficulty: Difficulty): string {
+  switch (difficulty) {
+    case "beginner": return t({ id: "app.exercise.id.difficulty.beginner", message: "Beginner" });
+    case "intermediate": return t({ id: "app.exercise.id.difficulty.intermediate", message: "Intermediate" });
+    case "advanced": return t({ id: "app.exercise.id.difficulty.advanced", message: "Advanced" });
+  }
+}
+
+function attachmentLabel(attachment: Attachment): string {
+  switch (attachment) {
+    case "handle": return t({ id: "app.exercise.id.attachment.handle", message: "Handle" });
+    case "ring_handle": return t({ id: "app.exercise.id.attachment.ringHandle", message: "Ring Handle" });
+    case "ankle_strap": return t({ id: "app.exercise.id.attachment.ankleStrap", message: "Ankle Strap" });
+    case "rope": return t({ id: "app.exercise.id.attachment.rope", message: "Rope" });
+    case "bar": return t({ id: "app.exercise.id.attachment.bar", message: "Bar" });
+    case "squat_harness": return t({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
+    case "carabiner": return t({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
+  }
+}
+
 function formatDateLong(ts: number): string {
   return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(new Date(ts));
 }
@@ -80,9 +113,9 @@ function GoalSection({ goalState, colors, bw, unit, onOpenSheet }: {
     );
   }
   return (
-    <Button variant="outline" onPress={onOpenSheet} label="Set Goal"
+    <Button variant="outline" onPress={onOpenSheet} label={t({ id: "app.exercise.id.set-goal", message: "Set Goal" })}
       style={{ alignSelf: "flex-start", marginTop: 8, marginBottom: 8 }}
-      accessibilityLabel="Set a strength goal for this exercise" />
+      accessibilityLabel={t({ id: "app.exercise.id.set-goal-a11y", message: "Set a strength goal for this exercise" })} />
   );
 }
 
@@ -116,7 +149,7 @@ export default function ExerciseDetail() {
         setFormClipSetNumber(anySet.set_number);
         setFormClipSetId(anySet.id);
       } else {
-        showToast({ title: "No completed sets yet — record a set first" });
+        showToast({ title: t({ id: "app.exercise.id.no-completed-sets", message: "No completed sets yet — record a set first" }) });
       }
     } catch {
       // non-fatal
@@ -154,9 +187,9 @@ export default function ExerciseDetail() {
       await updateTrackUnilateral(id, value);
       bumpQueryVersion("exercises");
       bumpQueryVersion("session");
-      showToast({ description: "Track left/right separately updated" });
+      showToast({ description: t({ id: "app.exercise.id.track-updated", message: "Track left/right separately updated" }) });
     } catch {
-      showToast({ description: "Failed to update unilateral tracking" });
+      showToast({ description: t({ id: "app.exercise.id.track-update-error", message: "Failed to update unilateral tracking" }) });
       setTrackUnilateral(!value);
     }
   }, [id, showToast]);
@@ -212,19 +245,19 @@ export default function ExerciseDetail() {
     if (!id || !d.exercise) return;
     const templates = await getTemplatesUsingExercise(id);
     const msg = templates.length > 0
-      ? `Delete ${d.exercise.name}? This exercise is used in ${templates.length} template(s). It will be removed from those templates.`
-      : `Delete ${d.exercise.name}? This exercise will be removed from the library.`;
-    Alert.alert("Delete Exercise", msg, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: async () => {
-        try { await softDeleteCustomExercise(id); bumpQueryVersion("exercises"); bumpQueryVersion("session"); bumpQueryVersion("home"); showToast({ description: "Exercise deleted" }); setTimeout(() => router.back(), 400); }
-        catch { showToast({ description: "Failed to delete exercise" }); }
+      ? t({ id: "app.exercise.id.delete-used", message: `Delete ${d.exercise.name}? This exercise is used in ${templates.length} template(s). It will be removed from those templates.` })
+      : t({ id: "app.exercise.id.delete-unused", message: `Delete ${d.exercise.name}? This exercise will be removed from the library.` });
+    Alert.alert(t({ id: "app.exercise.id.delete-title", message: "Delete Exercise" }), msg, [
+      { text: t({ id: "app.exercise.id.cancel", message: "Cancel" }), style: "cancel" },
+      { text: t({ id: "app.exercise.id.delete", message: "Delete" }), style: "destructive", onPress: async () => {
+        try { await softDeleteCustomExercise(id); bumpQueryVersion("exercises"); bumpQueryVersion("session"); bumpQueryVersion("home"); showToast({ description: t({ id: "app.exercise.id.deleted", message: "Exercise deleted" }) }); setTimeout(() => router.back(), 400); }
+        catch { showToast({ description: t({ id: "app.exercise.id.delete-error", message: "Failed to delete exercise" }) }); }
       }},
     ]);
   }, [id, d.exercise, router, showToast]);
 
   if (!d.exercise) {
-    return (<><Stack.Screen options={{ title: "Exercise" }} /><View style={[styles.center, { backgroundColor: colors.background }]}><Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text></View></>);
+    return (<><Stack.Screen options={{ title: t({ id: "app.exercise.id.exercise", message: "Exercise" }) }} /><View style={[styles.center, { backgroundColor: colors.background }]}><Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.exercise.id.loading", message: "Loading..." })}</Text></View></>);
   }
 
   const exercise = d.exercise;
@@ -236,33 +269,33 @@ export default function ExerciseDetail() {
   // eslint-disable-next-line complexity
   const renderHeader = () => (
     <View style={styles.content}>
-      {exercise.is_custom && <Chip compact style={StyleSheet.flatten([styles.badge, { backgroundColor: colors.tertiaryContainer }])}>Custom</Chip>}
+       {exercise.is_custom && <Chip compact style={StyleSheet.flatten([styles.badge, { backgroundColor: colors.tertiaryContainer }])}>{t({ id: "app.exercise.id.custom", message: "Custom" })}</Chip>}
       <View style={styles.row}>
-        <Chip compact style={{ backgroundColor: colors.primaryContainer }}>{CATEGORY_LABELS[exercise.category]}</Chip>
-        <Chip compact style={StyleSheet.flatten([styles.difficultyChip, { backgroundColor: DIFFICULTY_COLORS[exercise.difficulty] }])}>{exercise.difficulty}</Chip>
+         <Chip compact style={{ backgroundColor: colors.primaryContainer }}>{categoryLabel(exercise.category)}</Chip>
+         <Chip compact style={StyleSheet.flatten([styles.difficultyChip, { backgroundColor: DIFFICULTY_COLORS[exercise.difficulty] }])}>{difficultyLabel(exercise.difficulty)}</Chip>
       </View>
 
       {exercise.attachment && (
-        <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>Attachment</Text>
-          <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={`Attachment: ${ATTACHMENT_LABELS[exercise.attachment]}`}>{ATTACHMENT_LABELS[exercise.attachment]}</Text></View>
+          <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>{t({ id: "app.exercise.id.attachment", message: "Attachment" })}</Text>
+           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: attachmentLabel(exercise.attachment) } })}>{attachmentLabel(exercise.attachment)}</Text></View>
       )}
 
       {layout.atLeastMedium ? (
         <View style={styles.infoRow}>
-          <View style={{ flex: 1 }}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>Muscles Involved</Text>
+            <View style={{ flex: 1 }}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.exercise.id.muscles-involved", message: "Muscles Involved" })}</Text>
             <MuscleMap primary={exercise.primary_muscles} secondary={exercise.secondary_muscles} width={Math.min(screenWidth * 0.45, 400)} gender={profileGender} /></View>
           <View style={{ flex: 1 }}>
             {steps.length > 0 && <ExerciseIllustrationCards exercise={exercise} />}
-            {steps.length > 0 && (<View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>Instructions</Text>
+              {steps.length > 0 && (<View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.exercise.id.instructions", message: "Instructions" })}</Text>
             {steps.map((step, i) => <Text key={i} variant="body" style={[styles.step, { color: colors.onSurface }]}>{step}</Text>)}</View>)}
           </View>
         </View>
       ) : (
         <>
-          <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>Muscles Involved</Text>
+            <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.exercise.id.muscles-involved-mobile", message: "Muscles Involved" })}</Text>
             <MuscleMap primary={exercise.primary_muscles} secondary={exercise.secondary_muscles} width={screenWidth - 32} gender={profileGender} /></View>
           {steps.length > 0 && <ExerciseIllustrationCards exercise={exercise} />}
-          {steps.length > 0 && (<View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>Instructions</Text>
+            {steps.length > 0 && (<View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.exercise.id.instructions-mobile", message: "Instructions" })}</Text>
             {steps.map((step, i) => <Text key={i} variant="body" style={[styles.step, { color: colors.onSurface }]}>{step}</Text>)}</View>)}
         </>
       )}
@@ -282,7 +315,7 @@ export default function ExerciseDetail() {
       {/* BLD-1028: Pinned per-exercise note — off-session edit surface */}
       {id && (
         <View style={styles.section}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant }}>📌 Pinned Note for this exercise</Text>
+            <Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.exercise.id.pinned-note", message: "📌 Pinned Note for this exercise" })}</Text>
           {pinnedNoteDraft !== undefined ? (
             <PinnedExerciseNoteEditor
               exerciseId={id}
@@ -294,7 +327,7 @@ export default function ExerciseDetail() {
           ) : exercise.notes ? (
             <Pressable
               onPress={() => setPinnedNoteDraft(exercise.notes ?? "")}
-              accessibilityLabel={`Edit pinned note for ${exercise.name}`}
+              accessibilityLabel={t({ id: "app.exercise.id.edit-pinned-note-a11y", message: `Edit pinned note for ${exercise.name}` })}
               accessibilityRole="button"
             >
               <Text style={[styles.pinnedNoteText, { color: colors.onSurface, borderColor: colors.outlineVariant }]}>
@@ -306,8 +339,8 @@ export default function ExerciseDetail() {
               variant="outline"
               size="sm"
               onPress={() => setPinnedNoteDraft("")}
-              accessibilityLabel={`Add pinned note for ${exercise.name}`}
-              label="+ Add pinned note"
+              accessibilityLabel={t({ id: "app.exercise.id.add-pinned-note-a11y", message: `Add pinned note for ${exercise.name}` })}
+               label={t({ id: "app.exercise.id.add-pinned-note", message: "+ Add pinned note" })}
               style={{ alignSelf: "flex-start", marginTop: 4 }}
             />
           )}
@@ -331,10 +364,10 @@ export default function ExerciseDetail() {
       {id && (
         <View style={styles.section}>
           <Switch
-            label="Track left/right separately"
+             label={t({ id: "app.exercise.id.track-unilateral", message: "Track left/right separately" })}
             value={trackUnilateral}
             onValueChange={handleTrackUnilateralChange}
-            accessibilityLabel="Track left and right separately"
+             accessibilityLabel={t({ id: "app.exercise.id.track-unilateral-a11y", message: "Track left and right separately" })}
           />
         </View>
       )}
@@ -345,9 +378,9 @@ export default function ExerciseDetail() {
         const maxVol = Math.max(leftVol, rightVol);
         const diff = maxVol > 0 ? Math.round((Math.abs(leftVol - rightVol) / maxVol) * 100) : 0;
         return (
-          <View style={styles.section} accessibilityLabel={`Left and right differ by ${diff} percent`}>
+          <View style={styles.section} accessibilityLabel={t({ id: "app.exercise.id.unilateral-difference-a11y", message: `Left and right differ by ${diff} percent` })}>
             <Text variant="body" style={{ color: colors.onSurface }}>
-              {`Left ${toDisplay(unilateralInsight.left.weight ?? 0, d.unit)} ${d.unit}x${unilateralInsight.left.reps ?? 0} · Right ${toDisplay(unilateralInsight.right.weight ?? 0, d.unit)} ${d.unit}x${unilateralInsight.right.reps ?? 0} · Difference ${diff}%`}
+              {t({ id: "app.exercise.id.unilateral-difference", message: `Left ${toDisplay(unilateralInsight.left.weight ?? 0, d.unit)} ${d.unit}x${unilateralInsight.left.reps ?? 0} · Right ${toDisplay(unilateralInsight.right.weight ?? 0, d.unit)} ${d.unit}x${unilateralInsight.right.reps ?? 0} · Difference ${diff}%` })}
             </Text>
           </View>
         );
@@ -399,31 +432,31 @@ export default function ExerciseDetail() {
         />
       )}
 
-      <Text variant="title" style={{ color: colors.onSurface, marginTop: 8, marginBottom: 8 }}>Session History</Text>
+       <Text variant="title" style={{ color: colors.onSurface, marginTop: 8, marginBottom: 8 }}>{t({ id: "app.exercise.id.session-history", message: "Session History" })}</Text>
       {d.historyLoading ? <ActivityIndicator style={styles.loader} /> : d.historyError ? (
-        <View style={styles.errorBox}><Text style={{ color: colors.error }}>Failed to load history</Text>
-          <Button variant="ghost" onPress={() => id && d.loadHistory(id)} label="Retry" /></View>
-      ) : d.history.length === 0 ? <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>No sessions recorded for this exercise</Text> : null}
+         <View style={styles.errorBox}><Text style={{ color: colors.error }}>{t({ id: "app.exercise.id.history-error", message: "Failed to load history" })}</Text>
+           <Button variant="ghost" onPress={() => id && d.loadHistory(id)} label={t({ id: "app.exercise.id.retry", message: "Retry" })} /></View>
+       ) : d.history.length === 0 ? <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>{t({ id: "app.exercise.id.no-history", message: "No sessions recorded for this exercise" })}</Text> : null}
     </View>
   );
 
   const renderItem = ({ item }: { item: ExerciseSession }) => {
     // BLD-2701: a11y label uses active intensity mode (RPE or RIR), not hardcoded "avg RPE".
     const intensityLabel = item.avg_rpe != null
-      ? `, avg ${formatIntensity(item.avg_rpe, intensityMode)}`
+      ? t({ id: "app.exercise.id.avg-intensity", message: `, avg ${formatIntensity(item.avg_rpe, intensityMode)}` })
       : "";
     const label = d.bw
-      ? `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max reps ${item.max_reps}${intensityLabel}`
-      : `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max weight ${toDisplay(item.max_weight, d.unit)} ${d.unit}${intensityLabel}`;
+      ? t({ id: "app.exercise.id.history-bodyweight-a11y", message: `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max reps ${item.max_reps}${intensityLabel}` })
+      : t({ id: "app.exercise.id.history-weighted-a11y", message: `${exercise.name} session on ${formatDateLong(item.started_at)}, ${item.set_count} sets, max weight ${toDisplay(item.max_weight, d.unit)} ${d.unit}${intensityLabel}` });
     return (
       <Pressable onPress={() => router.push(`/session/detail/${item.session_id}`)} accessibilityLabel={label} accessibilityRole="button"
         style={[styles.historyRow, { borderBottomColor: colors.outlineVariant }]}>
         <View style={styles.historyLeft}>
           <Text variant="body" style={{ color: colors.onSurface }}>{formatDateLong(item.started_at)}</Text>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{item.session_name} · {item.set_count} sets · {item.total_reps} reps</Text>
+           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.exercise.id.history-row", message: `${item.session_name} · ${item.set_count} sets · ${item.total_reps} reps` })}</Text>
         </View>
         <View style={styles.historyRight}>
-          <Text variant="title" style={{ color: colors.primary }}>{d.bw ? `${item.max_reps} reps` : `${toDisplay(item.max_weight, d.unit)} ${d.unit}`}</Text>
+           <Text variant="title" style={{ color: colors.primary }}>{d.bw ? t({ id: "app.exercise.id.history-max-reps", message: `${item.max_reps} reps` }) : t({ id: "app.exercise.id.history-max-weight", message: `${toDisplay(item.max_weight, d.unit)} ${d.unit}` })}</Text>
           {item.avg_rpe != null && (
             <View style={[styles.rpeBadge, { backgroundColor: rpeColor(item.avg_rpe) }]}>
               {/* BLD-2701: render via formatIntensity so mode flip (RPE ↔ RIR) is reflected.
@@ -440,7 +473,7 @@ export default function ExerciseDetail() {
 
   const renderFooter = () => {
     if (d.loadingMore) return <ActivityIndicator style={{ padding: 16 }} />;
-    if (!d.hasMore && d.history.length >= MAX_ITEMS) return <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>Showing last {d.history.length} sessions</Text>;
+     if (!d.hasMore && d.history.length >= MAX_ITEMS) return <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>{i18n._({ id: "app.exercise.id.showingLastSessions", message: "Showing last {count} sessions", values: { count: d.history.length } })}</Text>;
     return null;
   };
 
@@ -448,8 +481,8 @@ export default function ExerciseDetail() {
     <>
       <Stack.Screen options={{ title: exercise.name, headerRight: exercise.is_custom ? () => (
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={edit} accessibilityLabel="Edit exercise" hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="pencil" size={22} color={colors.onSurface} /></TouchableOpacity>
-          <TouchableOpacity onPress={remove} accessibilityLabel="Delete exercise" hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="delete" size={22} color={colors.onSurface} /></TouchableOpacity>
+          <TouchableOpacity onPress={edit} accessibilityLabel={t({ id: "app.exercise.id.edit-a11y", message: "Edit exercise" })} hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="pencil" size={22} color={colors.onSurface} /></TouchableOpacity>
+          <TouchableOpacity onPress={remove} accessibilityLabel={t({ id: "app.exercise.id.delete-a11y", message: "Delete exercise" })} hitSlop={8} style={{ padding: 8 }}><MaterialCommunityIcons name="delete" size={22} color={colors.onSurface} /></TouchableOpacity>
         </View>
       ) : undefined }} />
       <FlatList style={{ flex: 1, backgroundColor: colors.background }}

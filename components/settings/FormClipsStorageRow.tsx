@@ -13,6 +13,7 @@ import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getStorageStats } from "@/lib/media/form-clips";
+import { t } from "@/lib/i18n";
 import { getSetupPhotoStats } from "@/lib/media/setup-photos";
 import { fontSizes } from "@/constants/design-tokens";
 import { FormClipsManageSheet } from "./FormClipsManageSheet";
@@ -67,8 +68,8 @@ export function FormClipsStorageRow({ onClipsChanged }: Props) {
         style={[styles.row, { borderBottomColor: colors.outline }]}
         onPress={() => setSheetVisible(true)}
         accessibilityRole="button"
-        accessibilityLabel="Manage form clips"
-        accessibilityHint="Opens a list of all recorded form clips where you can delete individual or all clips"
+         accessibilityLabel={t({ id: "settings.formClips.manageA11y", message: "Manage form clips" })}
+         accessibilityHint={t({ id: "settings.formClips.manageHint", message: "Opens a list of all recorded form clips where you can delete individual or all clips" })}
       >
         <MaterialCommunityIcons
           name="video-outline"
@@ -77,7 +78,7 @@ export function FormClipsStorageRow({ onClipsChanged }: Props) {
           style={styles.icon}
         />
         <View style={styles.info}>
-          <Text style={[styles.label, { color: colors.onSurface }]}>Form clips</Text>
+           <Text style={[styles.label, { color: colors.onSurface }]}>{t({ id: "settings.formClips.title", message: "Form clips" })}</Text>
           <Text style={[styles.sub, { color: colors.onSurfaceVariant }]}>
             {stats === null ? "Loading…" : `${clipMb} MB across ${clipCount} clip${clipCount !== 1 ? "s" : ""}`}
           </Text>
@@ -114,4 +115,3 @@ const styles = StyleSheet.create({
   label: { fontSize: fontSizes.base, fontWeight: "500" },
   sub: { fontSize: fontSizes.sm, marginTop: 2 },
 });
-

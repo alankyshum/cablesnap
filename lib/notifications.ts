@@ -1,9 +1,23 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
+import { t as linguiT } from "@lingui/core/macro";
 import { getSchedule, getTemplateById } from "./db";
 
 type ExpoNotifications = typeof import("expo-notifications");
+type TranslationDescriptor = { id: string; message: string };
+
+type TranslationValues = Record<string, string | number>;
+
+function t(descriptor: TranslationDescriptor, values?: TranslationValues): string {
+  try {
+    return (linguiT as unknown as (descriptor: TranslationDescriptor, values?: TranslationValues) => string)(descriptor, values);
+  } catch {
+    return values
+      ? descriptor.message.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? `{${key}}`))
+      : descriptor.message;
+  }
+}
 
 let _mod: ExpoNotifications | null = null;
 let _unavailable = false;
@@ -121,14 +135,20 @@ function formatBodyByKind(
 ): string | null {
   if (exerciseKind === "time_based") {
     if (typeof durationSeconds !== "number" || !Number.isFinite(durationSeconds) || durationSeconds <= 0) return null;
-    return `${exerciseName} — ${formatDuration(Math.round(durationSeconds))}`;
+    return t(
+      { id: "notifications.preview.duration", message: "{exerciseName} — {duration}" },
+      { exerciseName, duration: formatDuration(Math.round(durationSeconds)) },
+    );
   }
   if (exerciseKind === "distance") {
     if (typeof distanceMeters !== "number" || !Number.isFinite(distanceMeters) || distanceMeters <= 0) return null;
-    const dist = distanceMeters >= 1000
-      ? `${(distanceMeters / 1000).toFixed(1)} km`
-      : `${Math.round(distanceMeters)} m`;
-    return `${exerciseName} — ${dist}`;
+    const distance = distanceMeters >= 1000
+      ? t({ id: "notifications.preview.kilometers", message: "{value} km" }, { value: (distanceMeters / 1000).toFixed(1) })
+      : t({ id: "notifications.preview.meters", message: "{value} m" }, { value: Math.round(distanceMeters) });
+    return t(
+      { id: "notifications.preview.distance", message: "{exerciseName} — {distance}" },
+      { exerciseName, distance },
+    );
   }
   return formatBodyWeighted(exerciseName, exerciseKind, plannedWeight, weightUnit, repRange);
 }
@@ -144,11 +164,17 @@ function formatBodyWeighted(
   const hasWeight = typeof plannedWeight === "number" && Number.isFinite(plannedWeight) && plannedWeight > 0;
   if (exerciseKind === "bodyweight" || !hasWeight) {
     if (!reps) return null;
-    return `${exerciseName} — bodyweight × ${reps}`;
+    return t(
+      { id: "notifications.preview.bodyweight", message: "{exerciseName} — bodyweight × {reps}" },
+      { exerciseName, reps },
+    );
   }
   if (!reps) return null;
   const unit = weightUnit === "kg" ? "kg" : "lb";
-  return `${exerciseName} — ${plannedWeight} ${unit} × ${reps}`;
+  return t(
+    { id: "notifications.preview.weighted", message: "{exerciseName} — {weight} {unit} × {reps}" },
+    { exerciseName, weight: plannedWeight, unit, reps },
+  );
 }
 
 /**
@@ -164,14 +190,14 @@ export async function ensureRestChannelsRegistered(): Promise<void> {
     if (typeof mod.setNotificationChannelAsync !== "function") return;
     const AndroidImportance = mod.AndroidImportance ?? { LOW: 2, HIGH: 4 };
     await mod.setNotificationChannelAsync(REST_ONGOING_CHANNEL, {
-      name: "Rest timer (ongoing)",
+      name: t({ id: "notifications.channel.restOngoing", message: "Rest timer (ongoing)" }),
       importance: AndroidImportance.LOW ?? 2,
       sound: null,
       vibrationPattern: [],
       showBadge: false,
     });
     await mod.setNotificationChannelAsync(REST_CUE_CHANNEL, {
-      name: "Rest pre-end cue",
+      name: t({ id: "notifications.channel.restCue", message: "Rest pre-end cue" }),
       importance: AndroidImportance.LOW ?? 2,
       sound: null,
       vibrationPattern: [],
@@ -183,7 +209,7 @@ export async function ensureRestChannelsRegistered(): Promise<void> {
     // (unobtrusive ticker — bridging the live countdown would be obnoxious).
     const maxImportance = AndroidImportance.MAX ?? AndroidImportance.HIGH ?? 5;
     await mod.setNotificationChannelAsync(REST_COMPLETE_CHANNEL, {
-      name: "Rest complete",
+      name: t({ id: "notifications.channel.restComplete", message: "Rest complete" }),
       importance: maxImportance,
       sound: REST_COMPLETE_SOUND,
       vibrationPattern: [0, 250, 250, 250],
@@ -225,15 +251,24 @@ export async function schedulePreEndCue(
     const previewBody = formatPreviewBody(preview);
     let body: string;
     if (isLastSet) {
-      body = `Workout ending in ${cueSeconds}s`;
+      body = t(
+        { id: "notifications.preEnd.workoutEnding", message: "Workout ending in {seconds}s" },
+        { seconds: cueSeconds },
+      );
     } else if (previewBody) {
-      body = `Next: ${previewBody}`;
+      body = t({ id: "notifications.preEnd.next", message: "Next: {preview}" }, { preview: previewBody });
     } else {
-      body = `Next set in ${cueSeconds}s`;
+      body = t(
+        { id: "notifications.preEnd.nextSet", message: "Next set in {seconds}s" },
+        { seconds: cueSeconds },
+      );
     }
 
     const content: Record<string, unknown> = {
-      title: `Rest ending in ${cueSeconds}s`,
+      title: t(
+        { id: "notifications.preEnd.title", message: "Rest ending in {seconds}s" },
+        { seconds: cueSeconds },
+      ),
       body,
       sound: null,
       data: { sessionId, type: "rest_preend" },
@@ -289,12 +324,15 @@ export async function presentLiveRestCountdown(
     const s = secondsRemaining % 60;
     const timeStr = `${m}:${String(s).padStart(2, "0")}`;
     const previewBody = formatPreviewBody(preview);
-    const body = previewBody ?? "Resting\u2026";
+    const body = previewBody ?? t({ id: "notifications.live.resting", message: "Resting…" });
 
     const id = await mod.scheduleNotificationAsync({
       identifier: liveId,
       content: {
-        title: `Resting \u00b7 ${timeStr} remaining`,
+        title: t(
+          { id: "notifications.live.title", message: "Resting · {time} remaining" },
+          { time: timeStr },
+        ),
         body,
         channelId: REST_ONGOING_CHANNEL,
         data: { sessionId, type: "rest_live" },
@@ -371,8 +409,11 @@ export async function scheduleReminders(time: {
     const weekday = ((entry.day_of_week + 1) % 7) + 1;
     await mod.scheduleNotificationAsync({
       content: {
-        title: "Time to train!",
-        body: `${entry.template_name} is scheduled for today`,
+        title: t({ id: "notifications.reminder.title", message: "Time to train!" }),
+        body: t(
+          { id: "notifications.reminder.body", message: "{template} is scheduled for today" },
+          { template: entry.template_name },
+        ),
         data: { templateId: entry.template_id },
       },
       trigger: {
@@ -406,8 +447,8 @@ export async function sendTestNotification(): Promise<boolean> {
     await mod.scheduleNotificationAsync({
       identifier: "test-notification",
       content: {
-        title: "CableSnap test 🔔",
-        body: "Notifications are working. You're all set!",
+        title: t({ id: "notifications.test.title", message: "CableSnap test 🔔" }),
+        body: t({ id: "notifications.test.body", message: "Notifications are working. You're all set!" }),
         sound: REST_COMPLETE_SOUND,
         data: { type: "test" },
         ...androidContentExtras(mod),
@@ -447,7 +488,7 @@ export async function handleResponse(
   const tpl = await getTemplateById(id);
   if (!tpl) {
     navigate("/");
-    showSnackbar("Scheduled template no longer exists");
+    showSnackbar(t({ id: "notifications.response.templateMissing", message: "Scheduled template no longer exists" }));
     return;
   }
   navigate("/workout/new", { templateId: id });
@@ -544,17 +585,17 @@ export async function scheduleRestComplete(
     const previewBody = formatPreviewBody(preview ?? null);
     let body: string;
     if (isLastSet) {
-      body = "Last set complete";
+      body = t({ id: "notifications.complete.lastSet", message: "Last set complete" });
     } else if (previewBody) {
       body = previewBody;
     } else {
-      body = "Time for your next set.";
+      body = t({ id: "notifications.complete.nextSet", message: "Time for your next set." });
     }
 
     const id = await mod.scheduleNotificationAsync({
       identifier: `rest-complete-${sessionId}`,
       content: {
-        title: "Rest complete",
+        title: t({ id: "notifications.complete.title", message: "Rest complete" }),
         body,
         sound: REST_COMPLETE_SOUND,
         data: { sessionId, type: "rest_complete" },
