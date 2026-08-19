@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - Cable attachment and mount-position labels are now consistent between exercise details and Cable Setup Finder.
+- Cable vocabulary labels now load correctly across supported languages on both screens.
 - The AI Coach tab and screen title are now translated in Chinese locales.
 - Fixed the hydration preset label showing raw placeholder text instead of the unit.
 
