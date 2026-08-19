@@ -27,6 +27,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useToast } from "@/components/ui/bna-toast";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 // ---- Unit toggle buttons ----
 
@@ -218,8 +220,8 @@ function PreviewView({
                 Exercise Matching
               </Text>
               <View style={{ flexDirection: "row", paddingVertical: 8 }}>
-                <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>Exercise</Text>
-                <Text variant="caption" style={{ width: 100, textAlign: "right", color: colors.onSurfaceVariant }}>Match</Text>
+                <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>{t({ id: "settings.importWorkouts.exercise", message: "Exercise" })}</Text>
+                <Text variant="caption" style={{ width: 100, textAlign: "right", color: colors.onSurfaceVariant }}>{t({ id: "settings.importWorkouts.match", message: "Match" })}</Text>
               </View>
               <Separator />
             </CardContent>
@@ -272,20 +274,20 @@ function PreviewView({
             onPress={onCancel}
             style={styles.actionBtn}
             testID="import-workouts-cancel-btn"
-            accessibilityLabel="Cancel import"
+            accessibilityLabel={t({ id: "common.cancelImportA11y", message: "Cancel import" })}
             accessibilityRole="button"
           >
-            Cancel
+            {t({ id: "common.cancel", message: "Cancel" })}
           </Button>
           <Button
             variant="default"
             onPress={onImport}
             style={styles.actionBtn}
             testID="import-workouts-import-btn"
-            accessibilityLabel={`Import ${workoutCount} workout${workoutCount !== 1 ? "s" : ""}`}
+             accessibilityLabel={i18n._({ id: "settings.importWorkouts.importA11y", message: `{count, plural, one {Import # workout} other {Import # workouts}}`, values: { count: workoutCount } })}
             accessibilityRole="button"
           >
-            {`Import ${workoutCount} Workout${workoutCount !== 1 ? "s" : ""}`}
+            {i18n._({ id: "settings.importWorkouts.importButton", message: `{count, plural, one {Import # Workout} other {Import # Workouts}}`, values: { count: workoutCount } })}
           </Button>
         </View>
       }
@@ -310,13 +312,13 @@ function ImportingView({
   return (
     <View style={[styles.container, { backgroundColor: colors.background, padding: layout.horizontalPadding }]}>
       <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 24 }}>
-        Importing…
+         {t({ id: "settings.importWorkouts.importing", message: "Importing…" })}
       </Text>
       {/* Determinate progress bar */}
       <View
         style={[styles.progressTrack, { backgroundColor: colors.surfaceVariant ?? colors.outline ?? colors.onSurfaceVariant }]}
         accessibilityRole="progressbar"
-        accessibilityLabel="Import progress"
+        accessibilityLabel={t({ id: "settings.importWorkouts.progressA11y", message: "Import progress" })}
         accessibilityValue={{ min: 0, max: 100, now: pctInt }}
         testID="import-workouts-progress-bar"
       >
@@ -329,7 +331,7 @@ function ImportingView({
         style={{ color: colors.onSurfaceVariant, marginTop: 8, textAlign: "center" }}
         accessibilityLiveRegion="polite"
       >
-        {`${progress.current} / ${progress.total} workouts`}
+         {t({ id: "settings.importWorkouts.progress", message: `${progress.current} / ${progress.total} workouts` })}
       </Text>
     </View>
   );
@@ -357,7 +359,7 @@ function DoneView({
       ListHeaderComponent={
         <>
           <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 16 }}>
-            Import Complete
+             {t({ id: "settings.importWorkouts.complete", message: "Import Complete" })}
           </Text>
           <Card style={styles.card} testID="import-workouts-summary-card">
             <CardContent>
@@ -365,17 +367,17 @@ function DoneView({
               <Text
                 variant="body"
                 style={{ color: colors.onSurface, marginBottom: 4 }}
-                accessibilityLabel={`Imported ${result.sessionsInserted} workout${result.sessionsInserted !== 1 ? "s" : ""}`}
+                 accessibilityLabel={i18n._({ id: "settings.importWorkouts.sessionsA11y", message: `{count, plural, one {Imported # workout} other {Imported # workouts}}`, values: { count: result.sessionsInserted } })}
                 testID="import-workouts-sessions-count"
               >
-                {`${result.sessionsInserted} workout${result.sessionsInserted !== 1 ? "s" : ""} imported`}
+                 {i18n._({ id: "settings.importWorkouts.sessionsImported", message: `{count, plural, one {# workout imported} other {# workouts imported}}`, values: { count: result.sessionsInserted } })}
               </Text>
               <Text
                 variant="body"
                 style={{ color: colors.onSurface, marginBottom: 4 }}
                 testID="import-workouts-sets-count"
               >
-                {`${result.setsInserted} set${result.setsInserted !== 1 ? "s" : ""} imported`}
+                 {i18n._({ id: "settings.importWorkouts.setsImported", message: `{count, plural, one {# set imported} other {# sets imported}}`, values: { count: result.setsInserted } })}
               </Text>
               {result.exercisesCreated > 0 && (
                 <Text
@@ -383,7 +385,7 @@ function DoneView({
                   style={{ color: colors.onSurface, marginBottom: 4 }}
                   testID="import-workouts-exercises-created-count"
                 >
-                  {`${result.exercisesCreated} new exercise${result.exercisesCreated !== 1 ? "s" : ""} created`}
+                   {i18n._({ id: "settings.importWorkouts.exercisesCreated", message: `{count, plural, one {# new exercise created} other {# new exercises created}}`, values: { count: result.exercisesCreated } })}
                 </Text>
               )}
               {result.skippedSets > 0 && (
@@ -392,7 +394,7 @@ function DoneView({
                   style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
                   testID="import-workouts-skipped-count"
                 >
-                  {`${result.skippedSets} set${result.skippedSets !== 1 ? "s" : ""} skipped`}
+                   {i18n._({ id: "settings.importWorkouts.setsSkipped", message: `{count, plural, one {# set skipped} other {# sets skipped}}`, values: { count: result.skippedSets } })}
                 </Text>
               )}
             </CardContent>
@@ -402,7 +404,7 @@ function DoneView({
             onPress={onDone}
             style={{ marginTop: 16 }}
             testID="import-workouts-done-btn"
-            accessibilityLabel="Done, return to settings"
+        accessibilityLabel={t({ id: "common.doneReturnA11y", message: "Done, return to settings" })}
             accessibilityRole="button"
           >
             Done
@@ -466,13 +468,13 @@ export default function ImportWorkouts() {
   if (!filePath) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
-        <Text variant="body" style={{ color: colors.onBackground }}>No file selected.</Text>
+        <Text variant="body" style={{ color: colors.onBackground }}>{t({ id: "settings.importWorkouts.noFile", message: "No file selected." })}</Text>
         <Button
           variant="default"
           onPress={() => router.back()}
           style={{ marginTop: 16 }}
           testID="import-workouts-back-btn"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t({ id: "common.goBack", message: "Go back" })}
           accessibilityRole="button"
         >
           Go Back
@@ -522,7 +524,7 @@ export default function ImportWorkouts() {
           onPress={() => router.back()}
           style={{ marginTop: 16 }}
           testID="import-workouts-back-btn"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t({ id: "common.goBack", message: "Go back" })}
           accessibilityRole="button"
         >
           Go Back

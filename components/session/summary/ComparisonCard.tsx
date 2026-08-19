@@ -5,6 +5,8 @@ import { Text } from "@/components/ui/text";
 import { delta, deltaTime } from "@/lib/session-display";
 import type { Comparison } from "@/hooks/useSummaryData";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 type Props = {
   comparison: NonNullable<Comparison>;
@@ -23,24 +25,24 @@ export default function ComparisonCard({ comparison, colors }: Props) {
             variant="title"
             style={{ color: colors.onSurface, marginLeft: 8, fontWeight: "700" }}
           >
-            vs. Last Time
+            {t({ id: "components.session.summary.comparison.last-time", message: "vs. Last Time" })}
           </Text>
         </View>
         <View style={styles.compRow}>
           <Text variant="body" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
-            Volume
+            {t({ id: "components.session.summary.comparison.volume", message: "Volume" })}
           </Text>
           <Text
             variant="body"
             style={{ color: colors.onSurface }}
-            accessibilityLabel={`Volume ${comparison.current.volume >= comparison.previous.volume ? "increased" : "decreased"} by ${Math.abs(comparison.current.volume - comparison.previous.volume).toLocaleString()}`}
+            accessibilityLabel={i18n._({ id: "components.session.summary.comparison.volume-a11y", message: "Volume {direction} by {amount}", values: { direction: comparison.current.volume >= comparison.previous.volume ? "increased" : "decreased", amount: Math.abs(comparison.current.volume - comparison.previous.volume).toLocaleString() } })}
           >
             {delta(comparison.current.volume, comparison.previous.volume)}
           </Text>
         </View>
         <View style={styles.compRow}>
           <Text variant="body" style={{ color: colors.onSurfaceVariant, flex: 1 }}>
-            Duration
+            {t({ id: "components.session.summary.comparison.duration", message: "Duration" })}
           </Text>
           <Text variant="body" style={{ color: colors.onSurface }}>
             {deltaTime(comparison.current.duration, comparison.previous.duration)}

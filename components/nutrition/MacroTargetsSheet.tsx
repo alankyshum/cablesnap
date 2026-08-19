@@ -13,6 +13,8 @@ import {
 } from "../../lib/nutrition-calc";
 import { fontSizes } from "@/constants/design-tokens";
 import { getAllSettings as getTrainingDaySettings } from "../../lib/db/training-day-settings";
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 
 /**
  * PROHIBITION (AC16/C1): No "earn/earned/bonus/reward/treat/deserve/penalty/punish/
@@ -22,8 +24,7 @@ import { getAllSettings as getTrainingDaySettings } from "../../lib/db/training-
  * AC14 / C2 verbatim manual-editor helper — wording may NOT change without psych sign-off.
  * Layout (color, size, placement) may vary.
  */
-const TRAINING_DAY_HELPER_TEXT =
-  "This is your base target. Training-day fueling is applied on top — manage it in Settings › Training-Day Macros.";
+const TRAINING_DAY_HELPER_TEXT = "This is your base target. Training-day fueling is applied on top — manage it in Settings › Training-Day Macros.";
 
 type Props = { visible: boolean; onClose: () => void };
 
@@ -100,18 +101,18 @@ export function MacroTargetsSheet({ visible, onClose }: Props) {
     <BottomSheet
       isVisible={visible}
       onClose={onClose}
-      title="Macro Targets"
+       title={t({ id: "components.nutrition.targets.title", message: "Macro Targets" })}
       snapPoints={[0.65, 0.85]}
     >
       <View style={styles.container}>
         <TouchableOpacity
           onPress={() => { onClose(); router.push("/(tabs)/settings"); }}
-          accessibilityLabel={profile ? "Update your body profile in settings" : "Set your profile for personalized targets"}
+          accessibilityLabel={profile ? t({ id: "components.nutrition.targets.updateProfileA11y", message: "Update your body profile in settings" }) : t({ id: "components.nutrition.targets.setProfileA11y", message: "Set your profile for personalized targets" })}
           accessibilityRole="button"
           style={[styles.profileCta, { backgroundColor: colors.primaryContainer }]}
         >
           <Text variant="body" style={{ color: colors.onPrimaryContainer, fontSize: fontSizes.sm, fontWeight: "600" }}>
-            {profile ? "Update profile in Settings →" : "Set your profile for personalized targets →"}
+            {profile ? <Trans id="components.nutrition.targets.updateProfile">Update profile in Settings →</Trans> : <Trans id="components.nutrition.targets.setProfile">Set your profile for personalized targets →</Trans>}
           </Text>
         </TouchableOpacity>
 
@@ -131,28 +132,28 @@ export function MacroTargetsSheet({ visible, onClose }: Props) {
           </View>
         )}
 
-        <Input label="Calories" value={calories} onChangeText={setCalories} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel="Calories" />
-        <Input label="Protein (g)" value={protein} onChangeText={setProtein} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel="Protein" />
-        <Input label="Carbs (g)" value={carbs} onChangeText={setCarbs} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel="Carbs" />
-        <Input label="Fat (g)" value={fat} onChangeText={setFat} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel="Fat" />
+        <Input label={t({ id: "components.nutrition.targets.calories", message: "Calories" })} value={calories} onChangeText={setCalories} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel={t({ id: "components.nutrition.targets.caloriesA11y", message: "Calories" })} />
+        <Input label={t({ id: "components.nutrition.targets.protein", message: "Protein (g)" })} value={protein} onChangeText={setProtein} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel={t({ id: "components.nutrition.targets.proteinA11y", message: "Protein" })} />
+        <Input label={t({ id: "components.nutrition.targets.carbs", message: "Carbs (g)" })} value={carbs} onChangeText={setCarbs} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel={t({ id: "components.nutrition.targets.carbsA11y", message: "Carbs" })} />
+        <Input label={t({ id: "components.nutrition.targets.fat", message: "Fat (g)" })} value={fat} onChangeText={setFat} keyboardType="numeric" containerStyle={styles.input} accessibilityLabel={t({ id: "components.nutrition.targets.fatA11y", message: "Fat" })} />
 
         <TouchableOpacity
           style={[styles.saveBtn, { backgroundColor: colors.primary }]}
           onPress={save}
           disabled={saving}
-          accessibilityLabel="Save macro targets"
+          accessibilityLabel={t({ id: "components.nutrition.targets.saveA11y", message: "Save macro targets" })}
           accessibilityRole="button"
         >
-          <Text variant="body" style={{ color: colors.onPrimary, fontWeight: "600" }}>{saving ? "Saving…" : "Save Targets"}</Text>
+          <Text variant="body" style={{ color: colors.onPrimary, fontWeight: "600" }}>{saving ? <Trans id="components.nutrition.targets.saving">Saving…</Trans> : <Trans id="components.nutrition.targets.save">Save Targets</Trans>}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.resetBtn, { borderColor: colors.outline }]}
           onPress={reset}
-          accessibilityLabel="Reset to default targets"
+          accessibilityLabel={t({ id: "components.nutrition.targets.resetA11y", message: "Reset to default targets" })}
           accessibilityRole="button"
         >
-          <Text variant="body" style={{ color: colors.onSurface }}>Reset to Defaults</Text>
+          <Text variant="body" style={{ color: colors.onSurface }}><Trans id="components.nutrition.targets.reset">Reset to Defaults</Trans></Text>
         </TouchableOpacity>
       </View>
     </BottomSheet>

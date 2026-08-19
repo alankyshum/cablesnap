@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import { StyleSheet, View, FlatList } from "react-native";
 import { useState, useEffect } from "react";
 import { useRouter, Stack, useLocalSearchParams } from "expo-router";
@@ -65,9 +68,9 @@ export default function SessionDetail() {
   if (!session) {
     return (
       <>
-        <Stack.Screen options={{ title: "Workout" }} />
+        <Stack.Screen options={{ title: t({ id: "session.detail.id.workoutTitle", message: "Workout" }) }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text>
+          <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "session.detail.id.str4", message: "Loading..." })}</Text>
         </View>
       </>
     );
@@ -134,7 +137,7 @@ export default function SessionDetail() {
             {showPRs && <PRsCard prs={prs} colors={colors} />}
 
             {showReadOnlyExtras && (
-              <Button variant="outline" onPress={handleRepeatWorkout} disabled={completedSetCount === 0} style={styles.repeatButton} accessibilityLabel="Repeat workout" accessibilityHint="Start a new session with the same exercises and weights" accessibilityRole="button" label="Repeat Workout" />
+              <Button variant="outline" onPress={handleRepeatWorkout} disabled={completedSetCount === 0} style={styles.repeatButton} accessibilityLabel={t({ id: "session.detail.id.str1", message: "Repeat workout" })} accessibilityHint={t({ id: "session.detail.id.str2", message: "Start a new session with the same exercises and weights" })} accessibilityRole="button" label={t({ id: "session.detail.id.str3", message: "Repeat Workout" })} />
             )}
           </>
         }

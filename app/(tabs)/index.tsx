@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,7 @@ export default function Workouts() {
 
   const startNextWorkout = useCallback(async () => {
     if (!nextWorkout) return;
-    if (!nextWorkout.day.template_id) { info("Template no longer exists"); return; }
+    if (!nextWorkout.day.template_id) { info(t({ id: "home.workouts.templateMissing", message: "Template no longer exists" })); return; }
     await guardedStartWorkout({
       onResume: (id) => router.push(`/session/${id}`),
       onStartNew: async () => {
@@ -144,8 +145,8 @@ export default function Workouts() {
           value={segment}
           onValueChange={(v) => setUserSegment(v)}
           buttons={[
-            { value: "templates", label: "Templates", accessibilityLabel: "Templates tab" },
-            { value: "programs", label: "Programs", accessibilityLabel: "Programs tab" },
+            { value: "templates", label: t({ id: "home.tabs.templates", message: "Templates" }), accessibilityLabel: t({ id: "home.tabs.templatesA11y", message: "Templates tab" }) },
+            { value: "programs", label: t({ id: "home.tabs.programs", message: "Programs" }), accessibilityLabel: t({ id: "home.tabs.programsA11y", message: "Programs tab" }) },
           ]}
           style={styles.segmented}
         />
@@ -224,10 +225,10 @@ export default function Workouts() {
 
         {/* Quick Start: always full-width and prominent */}
         <View style={styles.actionRow}>
-          <Button variant="default" onPress={quickStart} accessibilityLabel="Quick start workout">
+          <Button variant="default" onPress={quickStart} accessibilityLabel={t({ id: "home.quickStart.a11y", message: "Quick start workout" })}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <MaterialCommunityIcons name="flash" size={18} color={colors.onPrimary} />
-              <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>Quick Start</Text>
+              <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>{t({ id: "home.quickStart.label", message: "Quick Start" })}</Text>
             </View>
           </Button>
         </View>

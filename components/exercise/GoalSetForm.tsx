@@ -9,6 +9,7 @@ import { fontSizes, spacing } from "@/constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getAppSetting } from "@/lib/db";
 import { resolveStep } from "@/lib/weightStep";
+import { t } from "@lingui/core/macro";
 import type { StrengthGoalRow, CreateGoalInput, UpdateGoalInput } from "@/lib/db";
 import NumericStepper from "./NumericStepper";
 
@@ -95,14 +96,14 @@ export default function GoalSetForm({
       }
       onClose();
     } catch {
-      toast({ description: "Failed to save goal. Please try again." });
+      toast({ description: t({ id: "components.exercise.goal-set-form.save-error", message: "Failed to save goal. Please try again." }) });
     } finally {
       setSaving(false);
     }
   }, [isEditing, existingGoal, exerciseId, isBodyweight, targetValue, deadline, unit, onCreate, onUpdate, onClose, toast]);
 
   const deadlineOptions = React.useMemo(() => {
-    const opts: { label: string; value: string | null }[] = [{ label: "No deadline", value: null }];
+    const opts: { label: string; value: string | null }[] = [{ label: t({ id: "components.exercise.goal-set-form.no-deadline", message: "No deadline" }), value: null }];
     const now = new Date();
     for (let i = 1; i <= 12; i++) {
       // Last day of the target month (day 0 of next month = last day of current month)
@@ -117,12 +118,12 @@ export default function GoalSetForm({
     <BottomSheet
       isVisible={isVisible}
       onClose={onClose}
-      title={isEditing ? "Edit Goal" : "Set Goal"}
+      title={isEditing ? t({ id: "components.exercise.goal-set-form.edit-title", message: "Edit Goal" }) : t({ id: "components.exercise.goal-set-form.set-title", message: "Set Goal" })}
       snapPoints={[0.45]}
     >
       <View style={styles.container}>
         <Text style={{ color: colors.onSurface, fontSize: fontSizes.base, fontWeight: "600", marginBottom: spacing.sm }}>
-          Target {isBodyweight ? "Reps" : `Weight (${unit})`}
+          {isBodyweight ? t({ id: "components.exercise.goal-set-form.target-reps", message: "Target Reps" }) : t({ id: "components.exercise.goal-set-form.target-weight", message: `Target Weight (${unit})` })}
         </Text>
 
         <NumericStepper
@@ -134,7 +135,7 @@ export default function GoalSetForm({
         />
 
         <Text style={{ color: colors.onSurface, fontSize: fontSizes.base, fontWeight: "600", marginTop: spacing.lg, marginBottom: spacing.sm }}>
-          Deadline (optional)
+          {t({ id: "components.exercise.goal-set-form.deadline", message: "Deadline (optional)" })}
         </Text>
 
         <View style={styles.deadlineRow}>
@@ -152,7 +153,7 @@ export default function GoalSetForm({
         <Button
           variant="default"
           onPress={handleSave}
-          label={saving ? "Saving..." : (isEditing ? "Update Goal" : "Save Goal")}
+          label={saving ? t({ id: "components.exercise.goal-set-form.saving", message: "Saving..." }) : (isEditing ? t({ id: "components.exercise.goal-set-form.update", message: "Update Goal" }) : t({ id: "components.exercise.goal-set-form.save", message: "Save Goal" }))}
           disabled={saving || targetValue < minValue}
           style={styles.saveButton}
         />

@@ -3,6 +3,8 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 type PRRow = { exercise_id: string; name: string; previous_max: number; weight: number };
 
@@ -17,13 +19,13 @@ export function PRsCard({ prs, colors }: Props) {
   return (
     <Card
       style={StyleSheet.flatten([styles.card, { backgroundColor: colors.tertiaryContainer }])}
-      accessibilityLabel={`${prs.length} new personal record${prs.length > 1 ? "s" : ""} achieved in this workout`}
+      accessibilityLabel={i18n._({ id: "components.session.detail.prs-card.accessibility", message: "{count} new personal {count, plural, one {record} other {records}} achieved in this workout", values: { count: prs.length } })}
     >
       <CardContent>
         <View style={styles.header}>
           <MaterialCommunityIcons name="trophy" size={20} color={colors.onTertiaryContainer} />
           <Text variant="title" style={{ color: colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}>
-            {prs.length} New PR{prs.length > 1 ? "s" : ""}
+            {i18n._({ id: "components.session.detail.prs-card.title", message: "{count} New {count, plural, one {PR} other {PRs}}", values: { count: prs.length } })}
           </Text>
         </View>
         {prs.map((pr) => (
@@ -31,7 +33,7 @@ export function PRsCard({ prs, colors }: Props) {
             <Text
               variant="body"
               style={{ color: colors.onTertiaryContainer, flex: 1 }}
-              accessibilityLabel={`New personal record: ${pr.name}, ${pr.previous_max} to ${pr.weight}`}
+              accessibilityLabel={t({ id: "components.session.detail.prs-card.row", message: `New personal record: ${pr.name}, ${pr.previous_max} to ${pr.weight}` })}
             >
               {pr.name}
             </Text>

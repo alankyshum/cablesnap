@@ -33,39 +33,39 @@ export default function SetsCard({ grouped, colors }: Props) {
           </Text>
         </View>
         <View style={styles.exerciseGroupsContainer}>
-          {grouped.map((group) => (
-            <View key={group.name}>
-              <Text
-                variant="body"
-                style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
-              >
-                {group.name}
-              </Text>
-              {group.sets.map((set) => (
-                <View key={set.id} style={styles.setRow}>
-                  <Text variant="body" style={{ color: colors.onSurface }}>
-                    {set.weight ?? 0} × {set.reps ?? 0}
+        {grouped.map((group) => (
+          <View key={group.name}>
+            <Text
+              variant="body"
+              style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}
+            >
+              {group.name}
+            </Text>
+            {group.sets.map((set) => (
+              <View key={set.id} style={styles.setRow}>
+                <Text variant="body" style={{ color: colors.onSurface }}>
+                  {set.weight ?? 0} × {set.reps ?? 0}
+                </Text>
+                {set.tempo && (
+                  <Text
+                    variant="caption"
+                    style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
+                  >
+                    ♩ {set.tempo}
                   </Text>
-                  {set.tempo && (
-                    <Text
-                      variant="caption"
-                      style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
-                    >
-                      ♩ {set.tempo}
-                    </Text>
-                  )}
-                  {set.rpe != null && (
-                    <Text
-                      variant="caption"
-                      style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
-                    >
-                      {formatIntensity(set.rpe, intensityMode)}
-                    </Text>
-                  )}
-                </View>
-              ))}
-            </View>
-          ))}
+                )}
+                {set.rpe != null && (
+                  <Text
+                    variant="caption"
+                    style={{ color: colors.onSurfaceVariant, marginLeft: 4 }}
+                  >
+                    {formatIntensity(set.rpe, intensityMode)}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </View>
+        ))}
         </View>
       </CardContent>
     </Card>

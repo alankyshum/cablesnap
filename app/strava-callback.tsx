@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useEffect, useRef } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -34,7 +35,7 @@ export default function StravaCallbackScreen() {
       try {
         const result = await completeStravaCallback(callbackUrl);
         if (result) {
-          toast.success("Connected to Strava!");
+           toast.success(t({ id: "stravaCallback.connected", message: "Connected to Strava!" }));
         }
       } catch (err) {
         toast.error(getStravaUserMessage(err), {
@@ -52,7 +53,7 @@ export default function StravaCallbackScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ActivityIndicator size="large" color={colors.primary} />
       <Text variant="body" style={[styles.text, { color: colors.onBackground }]}>
-        Connecting to Strava…
+        {t({ id: "stravaCallback.connecting", message: "Connecting to Strava…" })}
       </Text>
     </View>
   );

@@ -59,7 +59,6 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   try {
     await createCoreTables(database);
     await createScheduleAndIndexes(database);
-    await createExtensionTables(database);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Migration phase 1 failed: ${msg}`, { cause: err });
@@ -201,6 +200,10 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
 
   // body_settings table
   await addColumnIfMissing(database, "body_settings", "sex", "TEXT NOT NULL DEFAULT 'male'");
+  // Chat tables are declared by createExtensionTables and are safe to re-run.
+  // Keeping this invocation in Phase 2 makes the additive chat DDL part of the
+  // migration phase without changing the existing extension-table ordering.
+  await createExtensionTables(database);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Migration phase 2 failed: ${msg}`, { cause: err });

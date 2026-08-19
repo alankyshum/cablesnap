@@ -100,7 +100,7 @@ export async function enablePerWorkerDb(page: Page, parallelIndex: number) {
 
 /**
  * Inject a backup-JSON string that `pickImportBackup`
- * (app/(tabs)/_settings-handlers.ts) will return in place of the OS file
+ * (lib/settings-handlers.ts) will return in place of the OS file
  * picker (BLD-1769), so the production "Import data" → category sheet →
  * router.push("/settings/import-backup") flow runs headless and gives
  * expo-router's Stack the back-history the nav-header guard requires. The

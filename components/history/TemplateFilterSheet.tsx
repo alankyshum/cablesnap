@@ -1,3 +1,5 @@
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
 import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Check } from "lucide-react-native";
@@ -52,18 +54,18 @@ export function TemplateFilterSheet({
     <BottomSheet
       isVisible={isVisible}
       onClose={onClose}
-      title="Filter by template"
+       title={t({ id: "history.templateFilter.title", message: "Filter by template" })}
       snapPoints={[0.6, 0.9]}
     >
       <View style={styles.header}>
         <Pressable
           onPress={handleClear}
           style={styles.clearButton}
-          accessibilityLabel="Clear template filter"
+           accessibilityLabel={t({ id: "history.templateFilter.clearA11y", message: "Clear template filter" })}
           accessibilityRole="button"
         >
           <Text variant="body" style={{ color: colors.primary }}>
-            Clear
+             {t({ id: "history.templateFilter.clear", message: "Clear" })}
           </Text>
         </Pressable>
       </View>
@@ -71,7 +73,7 @@ export function TemplateFilterSheet({
       <TextInput
         value={search}
         onChangeText={setSearch}
-        placeholder="Search templates"
+         placeholder={t({ id: "history.templateFilter.searchPlaceholder", message: "Search templates" })}
         placeholderTextColor={colors.onSurfaceVariant}
         style={[
           styles.search,
@@ -81,14 +83,14 @@ export function TemplateFilterSheet({
             borderColor: colors.outline,
           },
         ]}
-        accessibilityLabel="Search templates"
+         accessibilityLabel={t({ id: "history.templateFilter.searchA11y", message: "Search templates" })}
       />
 
       <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
         {filtered.length === 0 ? (
           <View style={styles.empty}>
             <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-              {options.length === 0 ? "No templates yet" : "No matches"}
+               {options.length === 0 ? t({ id: "history.templateFilter.empty", message: "No templates yet" }) : t({ id: "history.templateFilter.noMatches", message: "No matches" })}
             </Text>
           </View>
         ) : (
@@ -102,9 +104,7 @@ export function TemplateFilterSheet({
                   styles.row,
                   isSelected && { backgroundColor: colors.primaryContainer },
                 ]}
-                accessibilityLabel={`${opt.template_name}${
-                  opt.is_deleted ? " (deleted)" : ""
-                }, ${opt.count} sessions${isSelected ? ", selected" : ""}`}
+                accessibilityLabel={i18n._({ id: "history.templateFilter.optionA11y", message: "{name}{deleted, select, true { (deleted)} false {}}, {count} sessions{selected, select, true {, selected} false {}}", values: { name: opt.template_name, deleted: opt.is_deleted ? "true" : "false", count: opt.count, selected: isSelected ? "true" : "false" } })}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isSelected }}
               >
@@ -122,7 +122,7 @@ export function TemplateFilterSheet({
                     ) : null}
                   </Text>
                   <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                    {opt.count} {opt.count === 1 ? "session" : "sessions"}
+                     {opt.count} {opt.count === 1 ? t({ id: "history.templateFilter.session", message: "session" }) : t({ id: "history.templateFilter.sessions", message: "sessions" })}
                   </Text>
                 </View>
                 {isSelected ? <Check size={18} color={colors.primary} /> : null}
