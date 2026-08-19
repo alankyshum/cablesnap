@@ -13,7 +13,8 @@ export type AIError =
   | ForbiddenError
   | ServerError
   | AbortedByUser
-  | EmptyResponseError;
+  | EmptyResponseError
+  | StepLimitReachedError;
 
 export type MissingKeyError = { readonly kind: "missing_key" };
 export type InvalidKeyError = { readonly kind: "invalid_key"; readonly status: 401 };
@@ -41,6 +42,7 @@ export type ForbiddenError = { readonly kind: "forbidden"; readonly status: 403 
 export type ServerError = { readonly kind: "server_error"; readonly status: number };
 export type AbortedByUser = { readonly kind: "aborted_by_user" };
 export type EmptyResponseError = { readonly kind: "empty_response" };
+export type StepLimitReachedError = { readonly kind: "step_limit_reached" };
 
 /**
  * The sole OpenRouter wire-format seam. T1 can replace this status/envelope mapping
@@ -108,6 +110,7 @@ export type ChatErrorState = {
       | "use_cached_catalog"
        | "retry_network"
        | "retry_empty_response"
+       | "retry_step_limit"
        | "dismiss";
     readonly label: string;
     readonly href?: "settings/ai-key" | "https://openrouter.ai/credits";
@@ -186,6 +189,11 @@ export function toChatErrorState(err: AIError): ChatErrorState {
       return {
         message: "The model returned nothing. Retry or try another model.",
         recovery: { kind: "retry_empty_response", label: "Retry" },
+      };
+    case "step_limit_reached":
+      return {
+        message: "The coach reached its data-checking limit before writing an answer. Retry the question.",
+        recovery: { kind: "retry_step_limit", label: "Retry" },
       };
   }
 }

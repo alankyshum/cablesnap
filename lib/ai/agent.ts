@@ -109,6 +109,7 @@ function asAIError(error: unknown): AIError {
   return typeof status === "number" ? parseOpenRouterError(status, envelope) : { kind: "network_error" };
 }
 
+// eslint-disable-next-line complexity
 async function executeCoachAgent(options: CoachAgentOptions, controller?: AbortController): Promise<CoachMessage> {
   const { sessionId, modelId, prompt, tools = {}, onEvent } = options;
 

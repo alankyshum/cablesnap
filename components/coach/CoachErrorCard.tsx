@@ -49,6 +49,7 @@ export function CoachErrorCard({
       case "retry_network":
       case "retry_rate_limit":
       case "retry_empty_response":
+      case "retry_step_limit":
         onRetry?.();
         break;
       case "use_cached_catalog":

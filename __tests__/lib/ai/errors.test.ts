@@ -19,6 +19,7 @@ const errors: AIError[] = [
   { kind: "forbidden", status: 403 },
   { kind: "server_error", status: 500 },
   { kind: "aborted_by_user" },
+  { kind: "step_limit_reached" },
 ];
 
 describe("AI error taxonomy", () => {
@@ -57,6 +58,14 @@ describe("AI error taxonomy", () => {
     expect(serialized).not.toContain(sentinel);
     expect(serialized).not.toContain("authorization");
     expect(error).toEqual({ kind: "insufficient_credits", status: 402 });
+  });
+
+  it("maps step-limit errors to retry-only copy", () => {
+    expect(toChatErrorState({ kind: "step_limit_reached" })).toEqual({
+      message: "The coach reached its data-checking limit before writing an answer. Retry the question.",
+      recovery: { kind: "retry_step_limit", label: "Retry" },
+    });
+    expect(toChatErrorState({ kind: "step_limit_reached" }).message).not.toContain("another model");
   });
 
   it("keeps HTTP status parsing at one seam", () => {

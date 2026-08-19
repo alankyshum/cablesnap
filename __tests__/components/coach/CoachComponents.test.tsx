@@ -234,6 +234,15 @@ describe("CoachErrorCard", () => {
     fireEvent.press(getByLabelText(errorState.recovery.label));
     expect(onRetry).toHaveBeenCalled();
   });
+
+  it("handles step-limit error with retry", () => {
+    const onRetry = jest.fn();
+    const errorState = toChatErrorState({ kind: "step_limit_reached" });
+    const { getByLabelText } = render(<CoachErrorCard error={errorState} onRetry={onRetry} />);
+
+    fireEvent.press(getByLabelText(errorState.recovery.label));
+    expect(onRetry).toHaveBeenCalled();
+  });
 });
 
 describe("CoachComposer", () => {

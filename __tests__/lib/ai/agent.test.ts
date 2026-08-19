@@ -109,7 +109,8 @@ describe("coach agent", () => {
 
   it("maps a failed underlying request to a network error instead of an empty response", async () => {
     mockStreamText.mockReturnValue(result((async function* () {
-      yield { type: "error", error: new TypeError("Network request failed") };
+      yield* [];
+      throw new TypeError("Network request failed");
     })(), deltasText()));
 
     await expect(runCoachAgent({
@@ -131,6 +132,34 @@ describe("coach agent", () => {
       prompt: "Hello",
     })).rejects.toEqual({ kind: "empty_response" });
     expect(mockAppendMessage).not.toHaveBeenCalled();
+  });
+
+  it("emits each tool event exactly once when fullStream also contains tool parts", async () => {
+    mockStreamText.mockImplementation(((options: { onChunk: (event: { chunk: unknown }) => Promise<void> }) => {
+      void options.onChunk({ chunk: { type: "tool-call", toolName: "record_probe", input: { marker: "ok" } } });
+      return result((async function* () {
+        yield { type: "tool-call", toolName: "record_probe", input: { marker: "ok" } };
+        yield { type: "tool-result", toolName: "record_probe", output: { completed: true } };
+        yield { type: "text-delta", text: "done" };
+        await options.onChunk({ chunk: { type: "tool-result", toolName: "record_probe", output: { completed: true } } });
+      })());
+    // The mocked SDK callback only models the tool-step fields used by this test.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any);
+
+    const events: unknown[] = [];
+    await runCoachAgent({
+      sessionId: "session-1",
+      modelId: "provider/tool-model",
+      prompt: "Use the tool",
+      onEvent: (event) => events.push(event),
+    });
+
+    expect(events).toEqual([
+      { type: "tool-call", name: "record_probe", input: { marker: "ok" } },
+      { type: "delta", text: "done" },
+      { type: "tool-result", name: "record_probe", output: { completed: true } },
+    ]);
   });
 
   it("passes a bounded history window and a model-independent system prompt", async () => {
