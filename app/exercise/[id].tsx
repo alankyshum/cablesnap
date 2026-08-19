@@ -28,7 +28,8 @@ import {
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
-import type { Attachment, Category, Difficulty } from "../../lib/types";
+import { type Attachment, type Category, type Difficulty } from "../../lib/types";
+import { ATTACHMENT_VALUES } from "../../lib/cable-variant";
 import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
@@ -83,13 +84,14 @@ function difficultyLabel(difficulty: Difficulty): string {
 
 function attachmentLabel(attachment: Attachment): string {
   switch (attachment) {
-    case "handle": return t({ id: "app.exercise.id.attachment.handle", message: "Handle" });
-    case "ring_handle": return t({ id: "app.exercise.id.attachment.ringHandle", message: "Ring Handle" });
-    case "ankle_strap": return t({ id: "app.exercise.id.attachment.ankleStrap", message: "Ankle Strap" });
-    case "rope": return t({ id: "app.exercise.id.attachment.rope", message: "Rope" });
-    case "bar": return t({ id: "app.exercise.id.attachment.bar", message: "Bar" });
-    case "squat_harness": return t({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
-    case "carabiner": return t({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
+    case ATTACHMENT_VALUES[0]: return t({ id: "app.exercise.id.attachment.handle", message: "Handle" });
+    case ATTACHMENT_VALUES[1]: return t({ id: "app.exercise.id.attachment.ringHandle", message: "Ring Handle" });
+    case ATTACHMENT_VALUES[2]: return t({ id: "app.exercise.id.attachment.ankleStrap", message: "Ankle Strap" });
+    case ATTACHMENT_VALUES[3]: return t({ id: "app.exercise.id.attachment.rope", message: "Rope" });
+    case ATTACHMENT_VALUES[4]: return t({ id: "app.exercise.id.attachment.bar", message: "Bar" });
+    case ATTACHMENT_VALUES[5]: return t({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
+    case ATTACHMENT_VALUES[6]: return t({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
+    default: throw new Error(`Unsupported attachment: ${attachment}`);
   }
 }
 
