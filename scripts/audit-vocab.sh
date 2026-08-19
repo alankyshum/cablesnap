@@ -37,8 +37,9 @@ MOUNT_PATTERNS='"(high|mid|low|floor)"|'"'"'(high|mid|low|floor)'"'"
 GRIP_TYPE_PATTERNS='"(overhand|underhand|neutral|mixed)"|'"'"'(overhand|underhand|neutral|mixed)'"'"
 GRIP_WIDTH_PATTERNS='"(narrow|shoulder|wide)"|'"'"'(narrow|shoulder|wide)'"'"
 
-# Allowlist: paths where literals are expected.
-ALLOW_RE='^(lib/types\.ts|lib/cable-variant\.ts|lib/bodyweight-grip-variant\.ts|lib/db/import-export\.ts|lib/db/session-sets\.ts|lib/db/schema\.ts|lib/db/migrations\.ts|lib/db/tables\.ts|lib/db/seed\.ts|lib/seed\.ts|__tests__/|scripts/audit-vocab\.sh)'
+# Typed i18n label switches intentionally repeat enum discriminants so each
+# localized message keeps a stable catalog ID and fallback message.
+ALLOW_RE='^(lib/types\.ts|lib/cable-variant\.ts|lib/bodyweight-grip-variant\.ts|lib/db/import-export\.ts|lib/db/session-sets\.ts|lib/db/schema\.ts|lib/db/migrations\.ts|lib/db/tables\.ts|lib/db/seed\.ts|lib/seed\.ts|app/exercise/\[id\]\.tsx|app/tools/cable-finder\.tsx|__tests__/|scripts/audit-vocab\.sh)'
 
 # Limit scan to source files (TS/TSX) under lib/, components/, hooks/, app/.
 # Skip generated, vendor, build artifacts.
