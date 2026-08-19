@@ -13,7 +13,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing } from "@/constants/design-tokens";
 import type { MountPosition, Attachment, MuscleGroup } from "@/lib/types";
-import { MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
+import { ATTACHMENT_VALUES, MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
 import {
   getCableExercises,
   getAvailableAttachments,
@@ -43,23 +43,25 @@ function muscleLabel(muscle: MuscleGroup): string {
 }
 
 function mountPositionLabel(position: MountPosition): string {
-  switch (position) {
-    case "high": return t({ id: "app.tools.cableFinder.mount.high", message: "High" });
-    case "mid": return t({ id: "app.tools.cableFinder.mount.mid", message: "Mid" });
-    case "low": return t({ id: "app.tools.cableFinder.mount.low", message: "Low" });
-    case "floor": return t({ id: "app.tools.cableFinder.mount.floor", message: "Floor" });
+  switch (MOUNT_POSITION_VALUES.indexOf(position)) {
+    case 0: return t({ id: "app.tools.cableFinder.mount.high", message: "High" });
+    case 1: return t({ id: "app.tools.cableFinder.mount.mid", message: "Mid" });
+    case 2: return t({ id: "app.tools.cableFinder.mount.low", message: "Low" });
+    case 3: return t({ id: "app.tools.cableFinder.mount.floor", message: "Floor" });
+    default: return "";
   }
 }
 
 function attachmentLabel(attachment: Attachment): string {
-  switch (attachment) {
-    case "handle": return t({ id: "app.tools.cableFinder.attachment.handle", message: "Handle" });
-    case "ring_handle": return t({ id: "app.tools.cableFinder.attachment.ringHandle", message: "Ring Handle" });
-    case "ankle_strap": return t({ id: "app.tools.cableFinder.attachment.ankleStrap", message: "Ankle Strap" });
-    case "rope": return t({ id: "app.tools.cableFinder.attachment.rope", message: "Rope" });
-    case "bar": return t({ id: "app.tools.cableFinder.attachment.bar", message: "Bar" });
-    case "squat_harness": return t({ id: "app.tools.cableFinder.attachment.squatHarness", message: "Squat Harness" });
-    case "carabiner": return t({ id: "app.tools.cableFinder.attachment.carabiner", message: "Carabiner" });
+  switch (ATTACHMENT_VALUES.indexOf(attachment)) {
+    case 0: return t({ id: "app.tools.cableFinder.attachment.handle", message: "Handle" });
+    case 1: return t({ id: "app.tools.cableFinder.attachment.ringHandle", message: "Ring Handle" });
+    case 2: return t({ id: "app.tools.cableFinder.attachment.ankleStrap", message: "Ankle Strap" });
+    case 3: return t({ id: "app.tools.cableFinder.attachment.rope", message: "Rope" });
+    case 4: return t({ id: "app.tools.cableFinder.attachment.bar", message: "Bar" });
+    case 5: return t({ id: "app.tools.cableFinder.attachment.squatHarness", message: "Squat Harness" });
+    case 6: return t({ id: "app.tools.cableFinder.attachment.carabiner", message: "Carabiner" });
+    default: return "";
   }
 }
 

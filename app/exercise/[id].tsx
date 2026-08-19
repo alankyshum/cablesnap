@@ -45,7 +45,7 @@ import { PlateauStatusCard } from "@/components/exercise/PlateauStatusCard";
 import { usePlateauStatus } from "@/hooks/usePlateauStatus";
 import { FormVideoSheet } from "@/components/session/FormVideoSheet";
 import { getMostRecentCompletedSetForExercise, getLatestUnilateralInsight } from "@/lib/db/session-sets";
-import { isCableExercise } from "@/lib/cable-variant";
+import { ATTACHMENT_VALUES, isCableExercise } from "@/lib/cable-variant";
 import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
 import { useStrengthLevel } from "@/hooks/useStrengthLevel";
 import { useStrengthGoal } from "@/hooks/useStrengthGoals";
@@ -82,14 +82,15 @@ function difficultyLabel(difficulty: Difficulty): string {
 }
 
 function attachmentLabel(attachment: Attachment): string {
-  switch (attachment) {
-    case "handle": return t({ id: "app.exercise.id.attachment.handle", message: "Handle" });
-    case "ring_handle": return t({ id: "app.exercise.id.attachment.ringHandle", message: "Ring Handle" });
-    case "ankle_strap": return t({ id: "app.exercise.id.attachment.ankleStrap", message: "Ankle Strap" });
-    case "rope": return t({ id: "app.exercise.id.attachment.rope", message: "Rope" });
-    case "bar": return t({ id: "app.exercise.id.attachment.bar", message: "Bar" });
-    case "squat_harness": return t({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
-    case "carabiner": return t({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
+  switch (ATTACHMENT_VALUES.indexOf(attachment)) {
+    case 0: return t({ id: "app.exercise.id.attachment.handle", message: "Handle" });
+    case 1: return t({ id: "app.exercise.id.attachment.ringHandle", message: "Ring Handle" });
+    case 2: return t({ id: "app.exercise.id.attachment.ankleStrap", message: "Ankle Strap" });
+    case 3: return t({ id: "app.exercise.id.attachment.rope", message: "Rope" });
+    case 4: return t({ id: "app.exercise.id.attachment.bar", message: "Bar" });
+    case 5: return t({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
+    case 6: return t({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
+    default: return "";
   }
 }
 
