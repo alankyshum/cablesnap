@@ -13,6 +13,7 @@ import { getTemplates } from "../../lib/db";
 import { addProgramDay, getProgramDayCount } from "../../lib/programs";
 import type { WorkoutTemplate } from "../../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 const ITEM_HEIGHT = 64;
 
@@ -61,7 +62,7 @@ export default function PickTemplate() {
             borderBottomColor: colors.outlineVariant,
           },
         ]}
-        accessibilityLabel={`Select template: ${item.name}`}
+          accessibilityLabel={t({ id: "app.program.pick-template.select-a11y", message: `Select template: ${item.name}` })}
         accessibilityRole="button"
       >
         <View>
@@ -86,16 +87,16 @@ export default function PickTemplate() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Pick Template" }} />
+      <Stack.Screen options={{ title: t({ id: "app.program.pick-template.title", message: "Pick Template" }) }} />
       <View
         style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <SearchBar
-          placeholder="Search templates..."
+          placeholder={t({ id: "app.program.pick-template.search", message: "Search templates..." })}
           value={query}
           onChangeText={setQuery}
           style={[styles.search, { backgroundColor: colors.surface }]}
-          accessibilityLabel="Search templates"
+          accessibilityLabel={t({ id: "app.program.pick-template.search-a11y", message: "Search templates" })}
         />
         <FlatList
           data={filtered}
@@ -109,8 +110,8 @@ export default function PickTemplate() {
                   style={{ color: colors.onSurfaceVariant }}
                 >
                   {templates.length === 0
-                    ? "No templates yet. Create one first."
-                    : "No matching templates"}
+                    ? t({ id: "app.program.pick-template.empty", message: "No templates yet. Create one first." })
+                    : t({ id: "app.program.pick-template.no-match", message: "No matching templates" })}
                 </Text>
               </View>
             )

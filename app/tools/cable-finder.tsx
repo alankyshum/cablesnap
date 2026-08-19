@@ -13,11 +13,6 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing } from "@/constants/design-tokens";
 import type { MountPosition, Attachment, MuscleGroup } from "@/lib/types";
-import {
-  MOUNT_POSITION_LABELS,
-  ATTACHMENT_LABELS,
-  MUSCLE_LABELS,
-} from "@/lib/types";
 import { MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
 import {
   getCableExercises,
@@ -25,6 +20,48 @@ import {
   type CableFinderFilters,
   type CableExercise,
 } from "@/lib/db/cable-finder";
+import { plural, t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
+
+function muscleLabel(muscle: MuscleGroup): string {
+  switch (muscle) {
+    case "chest": return t({ id: "app.tools.cableFinder.muscle.chest", message: "Chest" });
+    case "back": return t({ id: "app.tools.cableFinder.muscle.back", message: "Back" });
+    case "shoulders": return t({ id: "app.tools.cableFinder.muscle.shoulders", message: "Shoulders" });
+    case "biceps": return t({ id: "app.tools.cableFinder.muscle.biceps", message: "Biceps" });
+    case "triceps": return t({ id: "app.tools.cableFinder.muscle.triceps", message: "Triceps" });
+    case "quads": return t({ id: "app.tools.cableFinder.muscle.quads", message: "Quads" });
+    case "hamstrings": return t({ id: "app.tools.cableFinder.muscle.hamstrings", message: "Hamstrings" });
+    case "glutes": return t({ id: "app.tools.cableFinder.muscle.glutes", message: "Glutes" });
+    case "calves": return t({ id: "app.tools.cableFinder.muscle.calves", message: "Calves" });
+    case "core": return t({ id: "app.tools.cableFinder.muscle.core", message: "Core" });
+    case "forearms": return t({ id: "app.tools.cableFinder.muscle.forearms", message: "Forearms" });
+    case "traps": return t({ id: "app.tools.cableFinder.muscle.traps", message: "Traps" });
+    case "lats": return t({ id: "app.tools.cableFinder.muscle.lats", message: "Lats" });
+    case "full_body": return t({ id: "app.tools.cableFinder.muscle.fullBody", message: "Full Body" });
+  }
+}
+
+function mountPositionLabel(position: MountPosition): string {
+  switch (position) {
+    case "high": return t({ id: "app.tools.cableFinder.mount.high", message: "High" });
+    case "mid": return t({ id: "app.tools.cableFinder.mount.mid", message: "Mid" });
+    case "low": return t({ id: "app.tools.cableFinder.mount.low", message: "Low" });
+    case "floor": return t({ id: "app.tools.cableFinder.mount.floor", message: "Floor" });
+  }
+}
+
+function attachmentLabel(attachment: Attachment): string {
+  switch (attachment) {
+    case "handle": return t({ id: "app.tools.cableFinder.attachment.handle", message: "Handle" });
+    case "ring_handle": return t({ id: "app.tools.cableFinder.attachment.ringHandle", message: "Ring Handle" });
+    case "ankle_strap": return t({ id: "app.tools.cableFinder.attachment.ankleStrap", message: "Ankle Strap" });
+    case "rope": return t({ id: "app.tools.cableFinder.attachment.rope", message: "Rope" });
+    case "bar": return t({ id: "app.tools.cableFinder.attachment.bar", message: "Bar" });
+    case "squat_harness": return t({ id: "app.tools.cableFinder.attachment.squatHarness", message: "Squat Harness" });
+    case "carabiner": return t({ id: "app.tools.cableFinder.attachment.carabiner", message: "Carabiner" });
+  }
+}
 
 type Section = {
   title: string;
@@ -46,9 +83,9 @@ function buildSections(exercises: CableExercise[]): Section[] {
   }
 
   return Array.from(groups.entries())
-    .sort(([a], [b]) => (MUSCLE_LABELS[a] ?? a).localeCompare(MUSCLE_LABELS[b] ?? b))
+    .sort(([a], [b]) => muscleLabel(a).localeCompare(muscleLabel(b)))
     .map(([muscle, data]) => ({
-      title: MUSCLE_LABELS[muscle] ?? muscle,
+      title: muscleLabel(muscle),
       count: data.length,
       data,
     }));
@@ -115,7 +152,7 @@ export default function CableSetupFinder() {
           {section.title}
         </Text>
         <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-          {section.count} {section.count === 1 ? "exercise" : "exercises"}
+          {t({ id: "app.tools.cableFinder.exerciseCount", message: plural(section.count, { one: "# exercise", other: "# exercises" }) })}
         </Text>
       </View>
     ),
@@ -128,8 +165,8 @@ export default function CableSetupFinder() {
         style={[styles.exerciseRow, { borderBottomColor: colors.outline }]}
         onPress={() => handleExercisePress(item.id)}
         accessibilityRole="button"
-        accessibilityLabel={`${item.name}, ${item.primary_muscles.map((m) => MUSCLE_LABELS[m]).join(", ")}`}
-        accessibilityHint="Opens exercise details"
+         accessibilityLabel={i18n._({ id: "app.tools.cableFinder.exerciseA11y-localized", message: "{name}, {muscles}", values: { name: item.name, muscles: item.primary_muscles.map(muscleLabel).join(", ") } })}
+         accessibilityHint={t({ id: "app.tools.cableFinder.openDetails", message: "Opens exercise details" })}
       >
         <View style={styles.exerciseInfo}>
           <Text variant="body" style={{ color: colors.onSurface }}>
@@ -139,10 +176,10 @@ export default function CableSetupFinder() {
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
               {[
                 item.mount_position
-                  ? MOUNT_POSITION_LABELS[item.mount_position]
+                ? mountPositionLabel(item.mount_position)
                   : null,
                 item.attachment
-                  ? ATTACHMENT_LABELS[item.attachment]
+                  ? attachmentLabel(item.attachment)
                   : null,
               ]
                 .filter(Boolean)
@@ -166,7 +203,7 @@ export default function CableSetupFinder() {
             variant="caption"
             style={[styles.filterLabel, { color: colors.onSurfaceVariant }]}
           >
-            Mount Position
+            {t({ id: "app.tools.cableFinder.mountPosition", message: "Mount Position" })}
           </Text>
           <ScrollView
             horizontal
@@ -180,9 +217,9 @@ export default function CableSetupFinder() {
                 onPress={() => toggleMount(pos)}
                 accessibilityRole="checkbox"
                 accessibilityState={{ selected: mountFilter === pos }}
-                accessibilityLabel={`Mount position: ${MOUNT_POSITION_LABELS[pos]}`}
+                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.mountPositionA11yValueLocalized", message: "Mount position: {position}", values: { position: mountPositionLabel(pos) } })}
               >
-                {MOUNT_POSITION_LABELS[pos]}
+                {mountPositionLabel(pos)}
               </Chip>
             ))}
           </ScrollView>
@@ -195,7 +232,7 @@ export default function CableSetupFinder() {
               variant="caption"
               style={[styles.filterLabel, { color: colors.onSurfaceVariant }]}
             >
-              Attachment
+              {t({ id: "app.tools.cableFinder.attachment", message: "Attachment" })}
             </Text>
             <ScrollView
               horizontal
@@ -209,9 +246,9 @@ export default function CableSetupFinder() {
                   onPress={() => toggleAttachment(att)}
                   accessibilityRole="checkbox"
                   accessibilityState={{ selected: attachmentFilter === att }}
-                  accessibilityLabel={`Attachment: ${ATTACHMENT_LABELS[att]}`}
+                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.attachmentA11yValue", message: "Attachment: {attachment}", values: { attachment: attachmentLabel(att) } })}
                 >
-                  {ATTACHMENT_LABELS[att]}
+                  {attachmentLabel(att)}
                 </Chip>
               ))}
             </ScrollView>
@@ -237,8 +274,7 @@ export default function CableSetupFinder() {
             variant="body"
             style={{ color: colors.onSurfaceVariant, textAlign: "center" }}
           >
-            No exercises match this setup.{"\n"}Try a different mount position
-            or attachment.
+             {t({ id: "app.tools.cableFinder.empty", message: "No exercises match this setup.\nTry a different mount position or attachment." })}
           </Text>
         </View>
       ) : null,
@@ -247,7 +283,7 @@ export default function CableSetupFinder() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Cable Setup Finder" }} />
+      <Stack.Screen options={{ title: t({ id: "app.tools.cableFinder.title", message: "Cable Setup Finder" }) }} />
       <SectionList
         sections={sections}
         keyExtractor={keyExtractor}

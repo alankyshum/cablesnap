@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/bna-toast";
 import { clearImportSession, getImportSession } from "@/lib/import-session";
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
 
 type ImportResult = {
   inserted: number;
@@ -74,8 +76,8 @@ function PreviewList({
                 Categories to Import
               </Text>
               <View style={{ flexDirection: "row", paddingVertical: 8 }}>
-                <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>Category</Text>
-                <Text variant="caption" style={{ width: 60, textAlign: "right", color: colors.onSurfaceVariant }}>Count</Text>
+                <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>{t({ id: "settings.importBackup.category", message: "Category" })}</Text>
+                <Text variant="caption" style={{ width: 60, textAlign: "right", color: colors.onSurfaceVariant }}>{t({ id: "settings.importBackup.count", message: "Count" })}</Text>
               </View>
               <Separator />
             </CardContent>
@@ -108,11 +110,11 @@ function PreviewList({
             </Text>
           )}
           <View style={styles.actions}>
-            <Button variant="outline" onPress={onCancel} disabled={loading} style={styles.actionBtn} accessibilityLabel="Cancel import" accessibilityRole="button">
-              Cancel
+             <Button variant="outline" onPress={onCancel} disabled={loading} style={styles.actionBtn} accessibilityLabel={t({ id: "common.cancelImportA11y", message: "Cancel import" })} accessibilityRole="button">
+               {t({ id: "common.cancel", message: "Cancel" })}
             </Button>
             <Button variant="default" onPress={onImport} loading={loading} disabled={loading} style={styles.actionBtn} accessibilityLabel={`Import ${totalRecords} records`} accessibilityRole="button">
-              Import
+               {t({ id: "common.import", message: "Import" })}
             </Button>
           </View>
         </>
@@ -146,7 +148,7 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
       ListHeaderComponent={
         <>
           <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 16 }}>
-            Import Complete
+                {t({ id: "settings.importBackup.complete", message: "Import Complete" })}
           </Text>
           <Card style={styles.card}>
             <CardContent>
@@ -159,9 +161,9 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
                 </Text>
               )}
               <View style={{ flexDirection: "row", paddingVertical: 8 }}>
-                <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>Data</Text>
-                <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>Imported</Text>
-                <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>Skipped</Text>
+                <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>{t({ id: "settings.importBackup.data", message: "Data" })}</Text>
+                <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>{t({ id: "settings.importBackup.imported", message: "Imported" })}</Text>
+                <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>{t({ id: "settings.importBackup.skipped", message: "Skipped" })}</Text>
               </View>
               <Separator />
               {categoryResults.map(({ category, inserted, skipped }) => (
@@ -189,8 +191,8 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
         </View>
       )}
       ListFooterComponent={
-        <Button variant="default" onPress={onDone} style={{ marginTop: 16 }} accessibilityLabel="Done, return to settings" accessibilityRole="button">
-          Done
+         <Button variant="default" onPress={onDone} style={{ marginTop: 16 }} accessibilityLabel={t({ id: "common.doneReturnA11y", message: "Done, return to settings" })} accessibilityRole="button">
+           {t({ id: "common.done", message: "Done" })}
         </Button>
       }
     />
@@ -274,7 +276,7 @@ export default function ImportBackup() {
   if (fileLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
-        <Text variant="body" style={{ color: colors.onBackground }}>Loading backup file…</Text>
+        <Text variant="body" style={{ color: colors.onBackground }}>{t({ id: "settings.importBackup.loading", message: "Loading backup file…" })}</Text>
       </View>
     );
   }
@@ -282,9 +284,9 @@ export default function ImportBackup() {
   if (fileError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
-        <Text variant="body" style={{ color: colors.error }}>Failed to read backup file.</Text>
-        <Button variant="default" onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityLabel="Go back" accessibilityRole="button">
-          Go Back
+        <Text variant="body" style={{ color: colors.error }}>{t({ id: "settings.importBackup.readFailed", message: "Failed to read backup file." })}</Text>
+          <Button variant="default" onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityLabel={t({ id: "settings.importBackup.goBackA11y", message: "Go back" })} accessibilityRole="button">
+           {t({ id: "settings.importBackup.goBackButton", message: "Go Back" })}
         </Button>
       </View>
     );
@@ -294,10 +296,10 @@ export default function ImportBackup() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
         <Text variant="body" style={{ color: !importToken && !filePath ? colors.onBackground : colors.error }}>
-          {!importToken && !filePath ? "No backup data provided." : "Invalid backup data."}
+          {!importToken && !filePath ? t({ id: "settings.importBackup.noData", message: "No backup data provided." }) : t({ id: "settings.importBackup.invalidData", message: "Invalid backup data." })}
         </Text>
-        <Button variant="default" onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityLabel="Go back" accessibilityRole="button">
-          Go Back
+          <Button variant="default" onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityLabel={t({ id: "settings.importBackup.goBackA11y", message: "Go back" })} accessibilityRole="button">
+           {t({ id: "settings.importBackup.goBackButton", message: "Go Back" })}
         </Button>
       </View>
     );
@@ -314,18 +316,15 @@ export default function ImportBackup() {
             setImportProgress(null);
           } else {
             const label = BACKUP_TABLE_LABELS[progress.table as BackupTableName] ?? progress.table;
-            const rowProgress = progress.rowCount
-              ? ` ${progress.rowIndex ?? 0}/${progress.rowCount}`
-              : "";
-            setImportProgress(`Importing ${label}... (${progress.tableIndex + 1}/${progress.totalTables})${rowProgress}`);
+        setImportProgress(i18n._({ id: "settings.importBackup.progress", message: "Importing {label}... ({tableIndex}/{totalTables}){hasRows, select, true { {rowIndex}/{rowCount}} false {}}", values: { label, tableIndex: progress.tableIndex + 1, totalTables: progress.totalTables, hasRows: progress.rowCount ? "true" : "false", rowIndex: progress.rowIndex ?? 0, rowCount: progress.rowCount ?? 0 } }));
           }
         },
         selectedCategories.length > 0 ? { selectedCategories } : undefined,
       );
       setResult(importResult);
-       toast.success(`Import complete — ${getImportCompletionMessage(importResult.inserted, importResult.skipped)}`);
+       toast.success(t({ id: "settings.importBackup.completeToast", message: `Import complete — ${getImportCompletionMessage(importResult.inserted, importResult.skipped)}` }));
     } catch {
-      toast.error("Import failed — all changes have been rolled back");
+       toast.error(t({ id: "settings.importBackup.failed", message: "Import failed — all changes have been rolled back" }));
     } finally {
       setLoading(false);
       setImportProgress(null);

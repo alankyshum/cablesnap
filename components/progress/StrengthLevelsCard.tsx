@@ -16,6 +16,8 @@ import {
   GRIP_TYPE_LABELS,
 } from "@/lib/types";
 import type { Sex } from "@/lib/nutrition-calc";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 type LevelRow = StrengthResult & {
   name: string;
@@ -24,13 +26,15 @@ type LevelRow = StrengthResult & {
   variantCaption: string | null;
 };
 
-const LEVEL_LABELS: Record<StrengthLevel, string> = {
-  beginner: "Beginner",
-  novice: "Novice",
-  intermediate: "Intermediate",
-  advanced: "Advanced",
-  elite: "Elite",
-};
+function getLevelLabels(): Record<StrengthLevel, string> {
+  return {
+  beginner: t({ id: "components.progress.strengthLevels.beginner", message: "Beginner" }),
+  novice: t({ id: "components.progress.strengthLevels.novice", message: "Novice" }),
+  intermediate: t({ id: "components.progress.strengthLevels.intermediate", message: "Intermediate" }),
+  advanced: t({ id: "components.progress.strengthLevels.advanced", message: "Advanced" }),
+  elite: t({ id: "components.progress.strengthLevels.elite", message: "Elite" }),
+  };
+}
 
 /** Build "best achieved with: Rope · High" caption from variant provenance fields. */
 function buildVariantCaption(
@@ -49,11 +53,12 @@ function buildVariantCaption(
   if (gripType !== null) {
     parts.push((GRIP_TYPE_LABELS as Record<string, string>)[gripType] ?? gripType);
   }
-  return parts.length > 0 ? `best achieved with: ${parts.join(" · ")}` : null;
+  return parts.length > 0 ? t({ id: "components.progress.strengthLevels.bestAchievedWith", message: `best achieved with: ${parts.join(" · ")}` }) : null;
 }
 
 export default function StrengthLevelsCard({ style }: { style?: object }) {
   const colors = useThemeColors();
+  const levelLabels = getLevelLabels();
   const scheme = useColorScheme();
   const palette = scheme === "dark" ? STRENGTH_LEVEL_COLORS.dark : STRENGTH_LEVEL_COLORS.light;
   const [rows, setRows] = useState<LevelRow[]>([]);
@@ -103,18 +108,22 @@ export default function StrengthLevelsCard({ style }: { style?: object }) {
     <Card style={style}>
       <CardContent>
         <Text variant="title" style={[styles.title, { color: colors.onSurface }]}>
-          Strength Levels
+          {t({ id: "components.progress.strengthLevels.title", message: "Strength Levels" })}
         </Text>
         {rows.map((row) => {
           const badgeColor = palette[row.level];
-          const nextHint = row.nextLevel && row.nextThresholdKg != null
-            ? `→ ${LEVEL_LABELS[row.nextLevel]} at ${Math.round(row.e1rmKg > 0 ? toDisplay(row.nextThresholdKg, "kg") : 0)} kg`
+            const nextThreshold = row.nextThresholdKg != null && row.e1rmKg > 0
+              ? toDisplay(row.nextThresholdKg, "kg")
+              : 0;
+            const nextHint = row.nextLevel && row.nextThresholdKg != null
+              ? i18n._({ id: "components.progress.strengthLevels.nextHint", message: "→ {level} at {threshold} kg", values: { level: levelLabels[row.nextLevel], threshold: Math.round(nextThreshold) } })
             : null;
-          const a11yLabel = [
-            `${row.name}: ${LEVEL_LABELS[row.level]}`,
-            nextHint ?? "",
-            row.variantCaption ?? "",
-          ].filter(Boolean).join(". ");
+           const rowLabel = [
+             `${row.name}: ${levelLabels[row.level]}`,
+             nextHint ?? "",
+             row.variantCaption ?? "",
+           ].filter(Boolean).join(". ");
+           const a11yLabel = t({ id: "components.progress.strengthLevels.rowA11y", message: `${rowLabel}` });
 
           return (
             <View key={row.name} style={styles.row} accessibilityLabel={a11yLabel}>
@@ -134,7 +143,7 @@ export default function StrengthLevelsCard({ style }: { style?: object }) {
               </View>
               <View style={[styles.badge, { backgroundColor: badgeColor.bg }]}>
                 <Text style={[styles.badgeText, { color: badgeColor.text }]}>
-                  {LEVEL_LABELS[row.level]}
+                  {levelLabels[row.level]}
                 </Text>
               </View>
             </View>
@@ -176,4 +185,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-

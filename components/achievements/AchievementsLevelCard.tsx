@@ -6,6 +6,7 @@ import { ACHIEVEMENTS, getUserLevel } from "../../lib/achievements";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 import { StyleSheet } from "react-native";
+import { t, plural } from "@lingui/core/macro";
 
 interface AchievementsLevelCardProps {
   earnedCount: number;
@@ -45,7 +46,7 @@ export function AchievementsLevelCard({
             </Text>
           </View>
           <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-            Level {current.level}
+             {t({ id: "components.achievements.level", message: `Level ${current.level}` })}
           </Text>
           {next ? (
             <>
@@ -59,7 +60,7 @@ export function AchievementsLevelCard({
               </View>
               <View style={styles.nextLevelCaption}>
                 <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                  {achievementsFromCurrent} / {achievementsNeeded} more achievements to reach{" "}
+                   {t({ id: "components.achievements.moreToReach", message: `${achievementsFromCurrent} / ${achievementsNeeded} more achievements to reach` })}{" "}
                 </Text>
                 <MaterialCommunityIcons
                   name={next.iconName}
@@ -73,7 +74,7 @@ export function AchievementsLevelCard({
             </>
           ) : (
             <Text variant="body" style={{ color: colors.primary, fontWeight: "600" }}>
-              Max level reached!
+               {t({ id: "components.achievements.maxLevel", message: "Max level reached!" })}
             </Text>
           )}
         </CardContent>
@@ -82,7 +83,7 @@ export function AchievementsLevelCard({
         variant="body"
         style={{ color: colors.onSurfaceVariant, marginTop: 12 }}
       >
-        {earnedCount} / {ACHIEVEMENTS.length} Achievements Earned
+         {t({ id: "components.achievements.earned", message: `${earnedCount} / ${ACHIEVEMENTS.length} Achievements Earned` })}
       </Text>
       {retroBanner !== null && (
         <Card
@@ -91,7 +92,7 @@ export function AchievementsLevelCard({
         >
           <CardContent>
             <Text variant="body" style={{ color: colors.onTertiaryContainer }}>
-              Welcome back! We found {retroBanner} achievement{retroBanner !== 1 ? "s" : ""} from your workout history.
+              {t({ id: "components.achievements.retroBanner", message: `Welcome back! We found ${retroBanner} ${plural(retroBanner, { one: "achievement", other: "achievements" })} from your workout history.` })}
             </Text>
           </CardContent>
         </Card>

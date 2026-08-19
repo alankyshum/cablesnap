@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -30,7 +33,7 @@ function SetTempoChipInner({ tempo }: SetTempoChipProps) {
     <View
       style={[styles.chip, { backgroundColor: colors.surfaceVariant }]}
       accessible
-      accessibilityLabel={`Tempo: ${a11yDetail}. Double tap to edit.`}
+      accessibilityLabel={t({ id: "session.settempochip.dynamic1", message: `Tempo: ${a11yDetail}. Double tap to edit.` })}
     >
       <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>
         {`♩ ${tempo}`}

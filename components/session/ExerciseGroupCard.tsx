@@ -1,3 +1,7 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
 /* eslint-disable max-lines-per-function, complexity */
 import React, { memo } from "react";
 import { StyleSheet, View } from "react-native";
@@ -190,14 +194,12 @@ export const ExerciseGroupCard = memo(function ExerciseGroupCard({
         <View
           style={[styles.linkGroupHeader, { borderLeftColor: groupColor, borderLeftWidth: 4 }]}
           accessibilityRole="header"
-          accessibilityLabel={`Round ${completedRounds + 1} of ${totalRounds}`}
+          accessibilityLabel={i18n._({ id: "session.exercisegroupcard.dynamic1", message: "Round {round} of {total}", values: { round: completedRounds + 1, total: totalRounds } })}
         >
           <Text variant="caption" style={{ color: groupColor, fontWeight: "700" }}>
             {linked.length >= 3 ? "Circuit" : "Superset"} — Round {completedRounds + 1}/{totalRounds}
           </Text>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
-            Rest after round
-          </Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>{t({ id: "session.exercisegroupcard.str1", message: "Rest after round" })}</Text>
         </View>
       )}
 

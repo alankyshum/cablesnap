@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { typography } from "@/constants/design-tokens";
 import type { PRStats } from "@/lib/db/pr-dashboard";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   stats: PRStats;
@@ -14,10 +15,10 @@ export default function PRStatsRow({ stats }: Props) {
   const colors = useThemeColors();
 
   return (
-    <View style={styles.row} accessibilityRole="summary" accessibilityLabel={`${stats.totalPRs} total personal records, ${stats.prsThisMonth} this month`}>
+    <View style={styles.row} accessibilityRole="summary" accessibilityLabel={t({ id: "components.progress.records.statsA11y", message: `${stats.totalPRs} total personal records, ${stats.prsThisMonth} this month` })}>
       <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
         <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-          Total PRs
+          {t({ id: "components.progress.records.totalPRs", message: "Total PRs" })}
         </Text>
         <Text style={[styles.statValue, { color: colors.onSurface }]}>
           {stats.totalPRs}
@@ -25,7 +26,7 @@ export default function PRStatsRow({ stats }: Props) {
       </Card>
       <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
         <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-          PRs This Month
+          {t({ id: "components.progress.records.prsThisMonth", message: "PRs This Month" })}
         </Text>
         <Text style={[styles.statValue, { color: colors.onSurface }]}>
           {stats.prsThisMonth}

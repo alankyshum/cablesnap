@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /* eslint-disable max-lines-per-function, react-hooks/exhaustive-deps */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from "react-native";
@@ -530,9 +533,9 @@ export default function ActiveSession() {
   if (!session) {
     return (
       <>
-        <Stack.Screen options={{ title: "Workout", gestureEnabled: false }} />
+        <Stack.Screen options={{ title: t({ id: "session.id.workoutTitle", message: "Workout" }), gestureEnabled: false }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text>
+          <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "session.id.str2", message: "Loading..." })}</Text>
         </View>
       </>
     );
@@ -625,7 +628,7 @@ export default function ActiveSession() {
               </Text>
               <Pressable
                 onPress={() => detailSheetRef.current?.close()}
-                accessibilityLabel="Close exercise details"
+                accessibilityLabel={t({ id: "session.id.str1", message: "Close exercise details" })}
                 hitSlop={8}
                 style={{ padding: 8 }}
               >

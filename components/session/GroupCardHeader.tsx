@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /* eslint-disable max-lines-per-function */
 import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -162,9 +165,9 @@ function GroupCardHeaderInner({
         <Pressable
           onLongPress={() => onDeleteExercise(eid)}
           delayLongPress={500}
-          accessibilityLabel={`Remove ${group.name}`}
+          accessibilityLabel={t({ id: "session.groupcardheader.dynamic1", message: `Remove ${group.name}` })}
           accessibilityRole="button"
-          accessibilityHint="Long press to remove exercise"
+          accessibilityHint={t({ id: "session.groupcardheader.str1", message: "Long press to remove exercise" })}
         >
           <Text
             variant="title"
@@ -180,7 +183,7 @@ function GroupCardHeaderInner({
             variant="ghost"
             size="sm"
             onPress={() => onShowDetail(eid)}
-            accessibilityLabel={`View ${group.name} details`}
+            accessibilityLabel={t({ id: "session.groupcardheader.dynamic2", message: `View ${group.name} details` })}
             style={styles.detailsBtn}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -189,7 +192,7 @@ function GroupCardHeaderInner({
                 size={18}
                 color={colors.primary}
               />
-              <Text style={{ color: colors.primary, fontWeight: "600" }}>Details</Text>
+              <Text style={{ color: colors.primary, fontWeight: "600" }}>{t({ id: "session.groupcardheader.str2", message: "Details" })}</Text>
             </View>
           </Button>
           <View style={styles.controlsCluster}>
@@ -198,7 +201,7 @@ function GroupCardHeaderInner({
                 <Pressable
                   onPress={() => onMoveUp?.(eid)}
                   disabled={isFirst}
-                  accessibilityLabel={`Move ${group.name} up`}
+                  accessibilityLabel={t({ id: "session.groupcardheader.dynamic3", message: `Move ${group.name} up` })}
                   accessibilityRole="button"
                   accessibilityState={{ disabled: isFirst }}
                   hitSlop={4}
@@ -213,7 +216,7 @@ function GroupCardHeaderInner({
                 <Pressable
                   onPress={() => onMoveDown?.(eid)}
                   disabled={isLast}
-                  accessibilityLabel={`Move ${group.name} down`}
+                  accessibilityLabel={t({ id: "session.groupcardheader.dynamic4", message: `Move ${group.name} down` })}
                   accessibilityRole="button"
                   accessibilityState={{ disabled: isLast }}
                   hitSlop={4}
@@ -229,7 +232,7 @@ function GroupCardHeaderInner({
             )}
             <Pressable
               onPress={() => onSwap(eid)}
-              accessibilityLabel={`Swap ${group.name}`}
+              accessibilityLabel={t({ id: "session.groupcardheader.dynamic5", message: `Swap ${group.name}` })}
               hitSlop={8}
               style={styles.iconBtn}
             >
@@ -242,7 +245,7 @@ function GroupCardHeaderInner({
             {/* BLD-1028: pinned note pencil icon */}
             <Pressable
               onPress={() => setPinnedNoteOpen((o) => !o)}
-              accessibilityLabel={`Edit pinned note for ${group.name}`}
+              accessibilityLabel={t({ id: "session.groupcardheader.dynamic6", message: `Edit pinned note for ${group.name}` })}
               hitSlop={8}
               style={styles.iconBtn}
             >
@@ -255,7 +258,7 @@ function GroupCardHeaderInner({
             {/* Per-set session note toggle (relabeled: "Note for this session") */}
             <Pressable
               onPress={() => onToggleExerciseNotes(eid)}
-              accessibilityLabel={`Note for this session — ${group.name}`}
+              accessibilityLabel={t({ id: "session.groupcardheader.dynamic7", message: `Note for this session — ${group.name}` })}
               hitSlop={8}
               style={styles.iconBtn}
             >
@@ -314,7 +317,7 @@ function GroupCardHeaderInner({
         {!pinnedNoteOpen && group.pinnedNote ? (
           <Pressable
             onPress={() => setPinnedNoteOpen(true)}
-            accessibilityLabel={`📌 Pinned note for ${group.name}: ${group.pinnedNote}`}
+            accessibilityLabel={t({ id: "session.groupcardheader.dynamic8", message: `📌 Pinned note for ${group.name}: ${group.pinnedNote}` })}
             accessibilityRole="button"
           >
             <Text style={[styles.pinnedNotePreview, { color: colors.onSurfaceVariant, borderColor: colors.outlineVariant }]}>

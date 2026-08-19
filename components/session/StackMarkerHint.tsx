@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * BLD-1130 G1 (closes BLD-1127 AC4): one-time inline hint shown next to the
  * numeric weight keypad on cable rows when the user's session gym has zero
@@ -56,7 +59,7 @@ function StackMarkerHintInner() {
         onPress={dismiss}
         hitSlop={8}
         accessibilityRole="button"
-        accessibilityLabel="Dismiss stack marker hint"
+        accessibilityLabel={t({ id: "session.stackmarkerhint.str1", message: "Dismiss stack marker hint" })}
         testID="stack-marker-hint-dismiss"
         style={styles.dismissBtn}
       >

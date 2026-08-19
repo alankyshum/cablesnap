@@ -8,6 +8,7 @@ import { getExerciseById, updateCustomExercise } from "../../../lib/db";
 import { bumpQueryVersion, queryClient } from "../../../lib/query";
 import type { Exercise } from "../../../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 export default function EditExercise() {
   const colors = useThemeColors();
@@ -34,7 +35,7 @@ export default function EditExercise() {
       bumpQueryVersion("session");
       // BLD-1122 AC17: exercise rename/edit may change plateau window display
       queryClient.invalidateQueries({ queryKey: ["plateau"] });
-      success("Exercise updated");
+       success(t({ id: "app.exercise.edit.updated", message: "Exercise updated" }));
       timer.current = setTimeout(() => router.back(), 400);
     },
     [id, router, success]
@@ -43,8 +44,8 @@ export default function EditExercise() {
   if (!exercise) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
-        <Stack.Screen options={{ title: "Edit Exercise" }} />
-        <Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text>
+        <Stack.Screen options={{ title: t({ id: "app.exercise.edit.title", message: "Edit Exercise" }) }} />
+        <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.exercise.edit.loading", message: "Loading..." })}</Text>
       </View>
     );
   }
@@ -52,7 +53,7 @@ export default function EditExercise() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: `Edit ${exercise.name}` }} />
-      <ExerciseForm title="exercise" initial={exercise} onSave={save} />
+      <ExerciseForm title={t({ id: "app.exercise.edit.exercise", message: "exercise" })} initial={exercise} onSave={save} />
     </View>
   );
 }

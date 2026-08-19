@@ -12,6 +12,7 @@ import { useMonthlyReport, formatMonthLabel, formatVolume } from "@/hooks/useMon
 import { toDisplay } from "@/lib/units";
 import MonthlyShareCard from "@/components/share/MonthlyShareCard";
 import Masonry from "@/components/ui/Masonry";
+import { t } from "@lingui/core/macro";
 import {
   HeroStatsCard,
   ConsistencyCard,
@@ -50,7 +51,7 @@ export default function MonthlyReportSegment() {
   if (loading) {
     return (
       <View style={[styles.center, { paddingHorizontal: layout.horizontalPadding }]}>
-        <Text style={{ color: colors.onSurfaceVariant }}>Loading…</Text>
+        <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "components.progress.monthlyReport.loading", message: "Loading…" })}</Text>
       </View>
     );
   }
@@ -60,7 +61,7 @@ export default function MonthlyReportSegment() {
     return (
       <View style={[styles.center, { paddingHorizontal: layout.horizontalPadding }]}>
         <Text style={{ color: colors.onSurfaceVariant }}>
-          Couldn{"'"}t load report
+          {t({ id: "components.progress.monthlyReport.loadError", message: "Couldn't load report" })}
         </Text>
       </View>
     );
@@ -82,7 +83,7 @@ export default function MonthlyReportSegment() {
         <Pressable
           onPress={() => navigateMonth(-1)}
           disabled={!canGoBack}
-          accessibilityLabel="Previous month"
+           accessibilityLabel={t({ id: "components.progress.monthlyReport.previousMonth", message: "Previous month" })}
           accessibilityRole="button"
           style={{ opacity: canGoBack ? 1 : 0.3 }}
         >
@@ -97,7 +98,7 @@ export default function MonthlyReportSegment() {
         <Pressable
           onPress={() => navigateMonth(1)}
           disabled={!canGoForward}
-          accessibilityLabel="Next month"
+           accessibilityLabel={t({ id: "components.progress.monthlyReport.nextMonth", message: "Next month" })}
           accessibilityRole="button"
           style={{ opacity: canGoForward ? 1 : 0.3 }}
         >
@@ -114,13 +115,13 @@ export default function MonthlyReportSegment() {
           />
           <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>
             {data.workouts.sessionCount === 0
-              ? "No workouts this month"
-              : "Just getting started!"}
+               ? t({ id: "components.progress.monthlyReport.emptyTitle", message: "No workouts this month" })
+               : t({ id: "components.progress.monthlyReport.startTitle", message: "Just getting started!" })}
           </Text>
           <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
             {data.workouts.sessionCount === 0
-              ? "Complete some workouts to see your monthly recap."
-              : "Complete a few more workouts to unlock your full monthly report."}
+               ? t({ id: "components.progress.monthlyReport.emptyBody", message: "Complete some workouts to see your monthly recap." })
+               : t({ id: "components.progress.monthlyReport.startBody", message: "Complete a few more workouts to unlock your full monthly report." })}
           </Text>
         </View>
       ) : (
@@ -169,7 +170,7 @@ export default function MonthlyReportSegment() {
           <Button
             onPress={handleShare}
             disabled={imageLoading}
-            accessibilityLabel="Share monthly report"
+             accessibilityLabel={t({ id: "components.progress.monthlyReport.shareA11y", message: "Share monthly report" })}
           >
             <View style={styles.shareRow}>
               <MaterialCommunityIcons
@@ -178,7 +179,7 @@ export default function MonthlyReportSegment() {
                 color={colors.onPrimary}
               />
               <Text style={[styles.shareText, { color: colors.onPrimary }]}>
-                {imageLoading ? "Generating…" : "Share Report"}
+                 {imageLoading ? t({ id: "components.progress.monthlyReport.generating", message: "Generating…" }) : t({ id: "components.progress.monthlyReport.share", message: "Share Report" })}
               </Text>
             </View>
           </Button>

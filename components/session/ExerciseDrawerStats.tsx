@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -112,12 +115,8 @@ function renderLastSession(
       <Text
         variant="body"
         style={[styles.lastSessionDate, { color: colors.onSurfaceVariant }]}
-      >
-        Last Session ({dateStr}):
-      </Text>
-      <Text variant="body" style={{ color: colors.onSurface }}>
-        Best: {lastBestStr} · {session.set_count} sets{volumeStr}
-      </Text>
+      >{t({ id: "session.exercisedrawerstats.str12", message: `Last Session (${dateStr}):` })}</Text>
+      <Text variant="body" style={{ color: colors.onSurface }}>{t({ id: "session.exercisedrawerstats.str13", message: `Best: ${lastBestStr} · ${session.set_count} sets${volumeStr}` })}</Text>
     </View>
   );
 }
@@ -131,21 +130,19 @@ export function ExerciseDrawerStats({ exerciseId, unit }: Props) {
     return (
       <View
         style={styles.container}
-        accessibilityLabel="Loading your exercise stats"
+        accessibilityLabel={t({ id: "session.exercisedrawerstats.str1", message: "Loading your exercise stats" })}
         accessibilityLiveRegion="polite"
       >
         <Text
           variant="caption"
           style={[styles.sectionTitle, { color: colors.onSurfaceVariant }]}
-        >
-          YOUR STATS
-        </Text>
+        >{t({ id: "session.exercisedrawerstats.str14", message: "YOUR STATS" })}</Text>
         <View style={[styles.statsRow, { backgroundColor: colors.surfaceVariant }]}>
-          <StatCell label="Best" value="—" colors={colors} />
+          <StatCell label={t({ id: "session.exercisedrawerstats.str2", message: "Best" })} value="—" colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
-          <StatCell label="e1RM" value="—" colors={colors} />
+          <StatCell label={t({ id: "session.exercisedrawerstats.str3", message: "e1RM" })} value="—" colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
-          <StatCell label="Sessions" value="—" colors={colors} />
+          <StatCell label={t({ id: "session.exercisedrawerstats.str4", message: "Sessions" })} value="—" colors={colors} />
         </View>
       </View>
     );
@@ -157,15 +154,13 @@ export function ExerciseDrawerStats({ exerciseId, unit }: Props) {
         <Text
           variant="caption"
           style={[styles.sectionTitle, { color: colors.onSurfaceVariant }]}
-        >
-          YOUR STATS
-        </Text>
+        >{t({ id: "session.exercisedrawerstats.str15", message: "YOUR STATS" })}</Text>
         <View style={[styles.statsRow, { backgroundColor: colors.surfaceVariant }]}>
-          <StatCell label="Best" value="—" colors={colors} />
+          <StatCell label={t({ id: "session.exercisedrawerstats.str5", message: "Best" })} value="—" colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
-          <StatCell label="e1RM" value="—" colors={colors} />
+          <StatCell label={t({ id: "session.exercisedrawerstats.str6", message: "e1RM" })} value="—" colors={colors} />
           <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
-          <StatCell label="Sessions" value="—" colors={colors} />
+          <StatCell label={t({ id: "session.exercisedrawerstats.str7", message: "Sessions" })} value="—" colors={colors} />
         </View>
       </View>
     );
@@ -179,16 +174,12 @@ export function ExerciseDrawerStats({ exerciseId, unit }: Props) {
         <Text
           variant="caption"
           style={[styles.sectionTitle, { color: colors.onSurfaceVariant }]}
-        >
-          YOUR STATS
-        </Text>
+        >{t({ id: "session.exercisedrawerstats.str16", message: "YOUR STATS" })}</Text>
         <Text
           variant="body"
           style={[styles.emptyText, { color: colors.onSurfaceVariant }]}
-          accessibilityLabel="No history yet. Complete your first set to see stats."
-        >
-          No history yet — complete your first set!
-        </Text>
+          accessibilityLabel={t({ id: "session.exercisedrawerstats.str8", message: "No history yet. Complete your first set to see stats." })}
+        >{t({ id: "session.exercisedrawerstats.str17", message: "No history yet — complete your first set!" })}</Text>
       </View>
     );
   }
@@ -213,26 +204,24 @@ export function ExerciseDrawerStats({ exerciseId, unit }: Props) {
       <Text
         variant="caption"
         style={[styles.sectionTitle, { color: colors.onSurfaceVariant }]}
-      >
-        YOUR STATS
-      </Text>
+      >{t({ id: "session.exercisedrawerstats.str18", message: "YOUR STATS" })}</Text>
       <View style={[styles.statsRow, { backgroundColor: colors.surfaceVariant }]}>
         <StatCell
-          label="Best"
+          label={t({ id: "session.exercisedrawerstats.str9", message: "Best" })}
           value={best.display}
           accessibilityLabel={best.a11y}
           colors={colors}
         />
         <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
         <StatCell
-          label="e1RM"
+          label={t({ id: "session.exercisedrawerstats.str10", message: "e1RM" })}
           value={e1rm.display}
           accessibilityLabel={e1rm.a11y}
           colors={colors}
         />
         <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
         <StatCell
-          label="Sessions"
+          label={t({ id: "session.exercisedrawerstats.str11", message: "Sessions" })}
           value={sessionsDisplay}
           accessibilityLabel={sessionsA11y}
           colors={colors}
