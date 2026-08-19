@@ -80,7 +80,7 @@ describe("Navigation tab configuration stays in lockstep", () => {
   it("registers the AI Coach route and title", () => {
     const tabLayout = read("app/(tabs)/_layout.tsx");
     expect(tabLayout).toContain('name="ai-coach"');
-    expect(tabLayout).toContain('title: "AI Coach"');
+    expect(tabLayout).toContain('id: "tabs.aiCoach.title"');
   });
 
   it("keeps the exercises breadcrumb title registration", () => {
