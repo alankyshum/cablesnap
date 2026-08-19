@@ -24,6 +24,11 @@ marker) at release time.
 
 _No user-facing changes yet._
 
+## v0.26.102 — 2026-08-19
+<!-- versionCode: 170 -->
+
+- GitHub release APKs now retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.
+
 ## v0.26.101 — 2026-08-19
 <!-- versionCode: 169 -->
 
