@@ -508,6 +508,12 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          for secret_name in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!secret_name}" ]; then
+              echo "::error::$secret_name is empty — configure the release-signing secret before releasing."
+              exit 1
+            fi
+          done
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
           if [ ! -s android/app/release.keystore ]; then
             echo "::error::Decoded release.keystore is empty — check ANDROID_KEYSTORE_BASE64 secret."
@@ -640,6 +646,12 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          for secret_name in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!secret_name}" ]; then
+              echo "::error::$secret_name is empty — configure the release-signing secret before releasing."
+              exit 1
+            fi
+          done
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
           if [ ! -s android/app/release.keystore ]; then
             echo "::error::Decoded release.keystore is empty — check ANDROID_KEYSTORE_BASE64 secret."
@@ -769,9 +781,10 @@ jobs:
             fi
             "$APKSIGNER" verify --print-certs "$apk" | tee "$log"
             local actual_list
+            # Preserve newlines: sort -u/unique_count depend on one digest per line.
             actual_list=$(grep -oE 'certificate SHA-256 digest:[[:space:]]+[0-9a-fA-F:]+' "$log" \
               | sed -E 's/^certificate SHA-256 digest:[[:space:]]+//' \
-              | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+              | tr -d ':[:blank:]' | tr '[:lower:]' '[:upper:]')
             if [ -z "$actual_list" ]; then
               echo "::error::Could not parse any SHA-256 certificate digest from $log."
               return 1

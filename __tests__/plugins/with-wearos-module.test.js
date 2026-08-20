@@ -321,17 +321,46 @@ describe("patchAppBuildGradle", () => {
 });
 
 describe("Wear OS template signing", () => {
-  it("keeps production signing and an explicit debug fallback", () => {
+  it("loads keystore properties and creates the release signing config", () => {
     const template = fs.readFileSync(WEAR_TEMPLATE_BUILD_GRADLE, "utf8");
 
     expect(template).toMatch(/keystore\.properties/);
     expect(template).toMatch(/hasReleaseKeystore\s*=\s*!storeFileProperty\.isNullOrBlank\(\)/);
     expect(template).toMatch(/signingConfigs\.maybeCreate\(\s*["']release["']\s*\)/);
+    expect(template).toMatch(/releaseSigningConfig\.storeFile\s*=\s*if\s*\(configuredStoreFile\.isAbsolute\)/);
+    expect(template).toMatch(/rootProject\.file\(\s*["']app["']\s*\)\.resolve\(\s*configuredStoreFile\s*\)/);
+  });
+
+  it("populates every release signing property", () => {
+    const template = fs.readFileSync(WEAR_TEMPLATE_BUILD_GRADLE, "utf8");
+
+    for (const property of ["storePassword", "keyAlias", "keyPassword"]) {
+      expect(template).toMatch(
+        new RegExp(`releaseSigningConfig\\.${property}\\s*=\\s*requireProp\\(`),
+      );
+    }
+    expect(template).toMatch(/releaseSigningConfig\s*\.storeFile\s*=\s*if/);
+  });
+
+  it("rejects missing or blank signing properties with per-key errors", () => {
+    const template = fs.readFileSync(WEAR_TEMPLATE_BUILD_GRADLE, "utf8");
+
+    expect(template).toMatch(/fun\s+requireProp\(\s*value:\s*String\?\s*,\s*key:\s*String\s*\)/);
+    expect(template).toMatch(/value\?\.takeIf\(String::isNotBlank\)/);
+    for (const key of ["storePassword", "keyAlias", "keyPassword"]) {
+      expect(template).toMatch(new RegExp(`requireProp\\([^)]*['"]${key}['"]`));
+    }
+    expect(template).toMatch(/'\$key' is missing\/blank/);
+  });
+
+  it("keeps production signing and an explicit debug fallback", () => {
+    const template = fs.readFileSync(WEAR_TEMPLATE_BUILD_GRADLE, "utf8");
+
     expect(template).toMatch(
-      /if\s*\(hasReleaseKeystore\)[\s\S]*?signingConfig\s*=\s*if\s*\(hasReleaseKeystore\)[\s\S]*?releaseKeystore/,
+      /signingConfig\s*=\s*if\s*\(hasReleaseKeystore\)\s*\{/,
     );
     expect(template).toMatch(
-      /signingConfig\s*=\s*if\s*\(hasReleaseKeystore\)[\s\S]*?else\s*\{[\s\S]*?signingConfigs\.getByName\(\s*["']debug["']\s*\)/,
+      /else\s*\{\s*signingConfigs\.getByName\(\s*["']debug["']\s*\)/,
     );
     expect(template).not.toMatch(
       /getByName\(\s*["']release["']\s*\)\s*\{[^{}]*signingConfig\s*=\s*signingConfigs\.getByName\(\s*["']debug["']\s*\)/,

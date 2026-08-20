@@ -47,18 +47,21 @@ android {
     getByName("release") {
       isMinifyEnabled = false
       val releaseKeystore = if (hasReleaseKeystore) {
-        val releaseKeystore = signingConfigs.maybeCreate("release")
+        val releaseSigningConfig = signingConfigs.maybeCreate("release")
         val configuredStoreFile = java.io.File(requireNotNull(storeFileProperty))
-        releaseKeystore.storeFile = if (configuredStoreFile.isAbsolute) {
+        releaseSigningConfig.storeFile = if (configuredStoreFile.isAbsolute) {
           configuredStoreFile
         } else {
           // The phone app resolves relative storeFile values from android/app.
           rootProject.file("app").resolve(configuredStoreFile)
         }
-        releaseKeystore.storePassword = requireNotNull(storePassword)
-        releaseKeystore.keyAlias = requireNotNull(keyAlias)
-        releaseKeystore.keyPassword = requireNotNull(keyPassword)
-        releaseKeystore
+        fun requireProp(value: String?, key: String) = requireNotNull(value?.takeIf(String::isNotBlank)) {
+          "android/keystore.properties has storeFile but '$key' is missing/blank — refusing to sign."
+        }
+        releaseSigningConfig.storePassword = requireProp(storePassword, "storePassword")
+        releaseSigningConfig.keyAlias = requireProp(keyAlias, "keyAlias")
+        releaseSigningConfig.keyPassword = requireProp(keyPassword, "keyPassword")
+        releaseSigningConfig
       } else {
         null
       }
