@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.104",
+    "date": "2026-08-20",
+    "versionCode": 172,
+    "body": "- Fixed Wear OS release builds shipping with a debug signing certificate; release APKs now use the production signing key."
+  },
+  {
     "version": "0.26.103",
     "date": "2026-08-20",
     "versionCode": 171,

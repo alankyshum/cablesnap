@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.104 — 2026-08-20
+<!-- versionCode: 172 -->
+
 - Fixed Wear OS release builds shipping with a debug signing certificate; release APKs now use the production signing key.
 
 ## v0.26.103 — 2026-08-20
