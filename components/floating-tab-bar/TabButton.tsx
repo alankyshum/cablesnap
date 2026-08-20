@@ -20,6 +20,7 @@ export const TAB_ICONS: Record<string, IconName> = {
   settings: "cog",
 };
 
+// Kept as a public compatibility map for navigation tests and consumers.
 export const TAB_LABELS: Record<string, string> = {
   "ai-coach": "AI Coach",
   nutrition: "Nutrition",

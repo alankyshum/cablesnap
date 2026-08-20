@@ -156,9 +156,9 @@ export default function HydrationCard({ colors, toast, bareContent = false }: Pr
                 unit === u && { backgroundColor: colors.primary },
                 pressed && { opacity: 0.7 },
               ]}
-            >
+              >
               <Text variant="caption" style={{ color: unit === u ? "#fff" : colors.primary }}>
-                {u === "ml" ? "ml" : "fl oz"}
+                {i18n._({ id: "settings.hydration.unitLabel", message: "{unit, select, ml {ml} fl_oz {fl oz} other {ml}}", values: { unit: u } })}
               </Text>
             </Pressable>
           ))}
@@ -168,7 +168,7 @@ export default function HydrationCard({ colors, toast, bareContent = false }: Pr
       {/* Daily goal */}
       <View style={styles.row}>
         <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-           {i18n._({ id: "settings.hydration.dailyGoal", message: "Daily goal ({unit, select, ml {ml} fl_oz {fl oz}})", values: { unit } })}
+           {i18n._({ id: "settings.hydration.dailyGoal", message: "Daily goal ({unit, select, ml {ml} fl_oz {fl oz} other {ml}})", values: { unit } })}
         </Text>
         <TextInput
           accessibilityLabel={t({ id: "settings.hydration.dailyGoalA11y", message: "Daily hydration goal" })}
@@ -185,7 +185,7 @@ export default function HydrationCard({ colors, toast, bareContent = false }: Pr
       {[0, 1, 2].map((i) => (
         <View key={`preset-${i}`} style={styles.row}>
           <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-            {i18n._({ id: "settings.hydration.preset", message: "Preset {number} ({unit, select, ml {ml} fl oz {fl oz}})", values: { number: i + 1, unit } })}
+            {i18n._({ id: "settings.hydration.preset", message: "Preset {number} ({unit, select, ml {ml} fl_oz {fl oz} other {ml}})", values: { number: i + 1, unit } })}
           </Text>
           <TextInput
              accessibilityLabel={i18n._({ id: "settings.hydration.presetA11y", message: "Preset {number}", values: { number: i + 1 } })}
