@@ -12,7 +12,10 @@ export interface TranslationAdapter {
 export interface TranslationPlan { missing: string[]; stale: string[]; skipped: string[]; }
 
 const BATCH_SIZE = 1;
-const LATIN_ONLY_ALLOWLIST = new Set(["settings.integrations.strava", "settings.about.version"]);
+const LATIN_ONLY_ALLOWLIST = new Set([
+  "settings.integrations.strava", "settings.about.version",
+  "settings.formClips.sizeMegabytes", "settings.formClips.sizeKilobytes",
+]);
 const GLOSSARY = "Taiwan fitness glossary: use 深蹲 for squat, 臥推 for bench press, 硬舉 for deadlift, 組數 for sets, and 次數 for reps; use 影片, not 视频, and 滑鼠, not 鼠標. Use Taiwan-localized Traditional Chinese, not mainland vocabulary and not a bare Simplified-to-Traditional script conversion. Preserve exercise names, RPE, PR, 1RM, tempo, warm-up, cooldown, macros, units, and interpolation-like tokens accurately.";
 
 // The planning conditions intentionally combine cache, script, and ICU checks.

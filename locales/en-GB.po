@@ -14,23 +14,20 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: components/session/FormLibraryTab.tsx:600
-#~ msgid "session.formlibrarytab.dynamic1"
-#~ msgstr ""
+#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
+msgid "floatingTabBar.tabs.exercises"
+msgstr ""
 
 #. js-lingui-explicit-id
-#: components/session/FormLibraryTab.tsx:599
-#~ msgid "session.formlibrarytab.dynamic1-not-selected"
-#~ msgstr ""
+#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
+msgid "settings.language.a11y"
+msgstr ""
 
 #. js-lingui-explicit-id
-#: components/session/FormLibraryTab.tsx:598
-#~ msgid "session.formlibrarytab.dynamic1-selected"
-#~ msgstr ""
-
-#. js-lingui-explicit-id
-#: components/settings/FormClipsManageSheet.tsx:116
-#~ msgid "settings.formClips.deleteAllMessage"
+#: components/settings/KeyStatusCard.tsx:38
+#: components/settings/KeyStatusCard.tsx:39
+#: components/settings/KeyStatusCard.tsx:40
+#~ msgid "settings.keyStatus.unavailableAmount"
 #~ msgstr ""
 
 #. js-lingui-explicit-id
@@ -96,7 +93,7 @@ msgstr ""
 #. placeholder {1}: formatDuration(s.duration_seconds)
 #. placeholder {2}: s.set_count
 #. placeholder {2}: t.set_count
-#: components/progress/WorkoutCards.tsx:119
+#: components/progress/WorkoutCards.tsx:109
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17715
 msgid "components.progress.workoutCards.sessionSummary"
 msgstr ""
@@ -141,7 +138,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: nextWorkout.program.name
 #. placeholder {0}: x.program.name
-#: components/home/HomeBanners.tsx:103
+#: components/home/HomeBanners.tsx:104
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.nextProgram"
 msgstr ""
@@ -149,7 +146,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: nextWorkout.program.name
 #. placeholder {0}: x.program.name
-#: components/home/HomeBanners.tsx:111
+#: components/home/HomeBanners.tsx:112
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.schedule"
 msgstr ""
@@ -259,7 +256,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: l.daysTracked
 #. placeholder {0}: thisWeek.daysTracked
-#: components/progress/NutritionCards.tsx:143
+#: components/progress/NutritionCards.tsx:136
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.daysTracked"
 msgstr ""
@@ -267,7 +264,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: C.daysTracked
 #. placeholder {0}: lastWeek.daysTracked
-#: components/progress/NutritionCards.tsx:153
+#: components/progress/NutritionCards.tsx:146
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.lastDaysTracked"
 msgstr ""
@@ -294,7 +291,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: todaySchedule.exercise_count
 #. placeholder {0}: u.exercise_count
-#: components/home/HomeBanners.tsx:57
+#: components/home/HomeBanners.tsx:58
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.todayExercises"
 msgstr ""
@@ -338,7 +335,7 @@ msgstr ""
 #. placeholder {0}: e.onTargetDays
 #. placeholder {1}: adherence.trackedDays
 #. placeholder {1}: e.trackedDays
-#: components/progress/NutritionCards.tsx:217
+#: components/progress/NutritionCards.tsx:210
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.onTargetDays"
 msgstr ""
@@ -645,10 +642,25 @@ msgid "components.achievements.moreToReach"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:151
+msgid "settings.backup.categoryInFileA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
 #. placeholder {0}: p?"\ud83d\udd25":"\ud83c\udfaf"
 #: components/home/AdherenceBar.tsx:27
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16691
 msgid "home.adherence.progress"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:166
+msgid "settings.formClips.clipCount"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:170
+msgid "settings.formClips.exerciseCount"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -661,6 +673,11 @@ msgstr ""
 #: app/settings/import-workouts.tsx:388
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18253
 msgid "settings.importWorkouts.exercisesCreated"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:134
+msgid "settings.backup.recordCount"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -724,7 +741,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: e.currentStreak
 #. placeholder {1}: 1===e.currentStreak?"day":"days"
-#: components/progress/NutritionCards.tsx:235
+#: components/progress/NutritionCards.tsx:228
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.currentStreakValue"
 msgstr ""
@@ -732,7 +749,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: e.longestStreak
 #. placeholder {1}: 1===e.longestStreak?"day":"days"
-#: components/progress/NutritionCards.tsx:244
+#: components/progress/NutritionCards.tsx:237
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.longestStreakValue"
 msgstr ""
@@ -856,13 +873,13 @@ msgid "app.program.id.meta"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:59
+#: components/progress/BodyCards.tsx:58
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.delta"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:57
+#: components/progress/BodyCards.tsx:56
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.deltaA11y"
 msgstr ""
@@ -880,7 +897,7 @@ msgstr ""
 #. placeholder {0}: Math.abs(e)
 #. placeholder {1}: Math.abs(calDeltaPct)
 #. placeholder {1}: Math.abs(t)
-#: components/progress/NutritionCards.tsx:106
+#: components/progress/NutritionCards.tsx:99
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.deltaA11y"
 msgstr ""
@@ -1094,7 +1111,7 @@ msgid "components.progress.records.bestWeightedA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:212
+#: components/progress/NutritionCards.tsx:205
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.adherenceA11y"
 msgstr ""
@@ -1178,9 +1195,39 @@ msgid "components.progress.strengthLevels.rowA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:271
+msgid "settings.formClips.durationSeconds"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/CSVExportCard.tsx:49
+msgid "settings.csv.counts"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/CSVExportCard.tsx:47
+msgid "settings.csv.countsA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/session/BodyweightModifierChip.tsx:53
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18111
 msgid "session.bodyweightmodifierchip.dynamic1"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:276
+msgid "settings.formClips.sizeKilobytes"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:275
+msgid "settings.formClips.sizeMegabytes"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:84
+msgid "settings.formClips.storage"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1193,7 +1240,7 @@ msgstr ""
 #. placeholder {0}: _.y.toFixed(1)
 #. placeholder {1}: t.length
 #. placeholder {2}: 1===t.length?"":"s"
-#: components/progress/TrendCards.tsx:59
+#: components/progress/TrendCards.tsx:58
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.chartA11y"
 msgstr ""
@@ -1208,6 +1255,16 @@ msgstr ""
 #: components/session/BodyweightModifierSheet.tsx:255
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18158
 msgid "session.bodyweightmodifiersheet.dynamic3"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/HydrationCard.tsx:161
+msgid "settings.hydration.unitLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FrequencyGoalPicker.tsx:61
+msgid "settings.frequencyGoal.value"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1261,7 +1318,7 @@ msgid "app.exercise.id.add-pinned-note"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:58
+#: components/share/StravaShareCardPromo.tsx:59
 msgid "share.strava.addPromo"
 msgstr ""
 
@@ -1331,19 +1388,19 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: active.name
 #. placeholder {0}: t.name
-#: components/home/HomeBanners.tsx:41
+#: components/home/HomeBanners.tsx:42
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.active"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:228
+#: components/progress/BodyCards.tsx:224
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.sevenDayAverage"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:225
+#: components/progress/BodyCards.tsx:221
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.actual"
 msgstr ""
@@ -1362,7 +1419,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: todaySchedule.template_name
 #. placeholder {0}: u.template_name
-#: components/home/HomeBanners.tsx:73
+#: components/home/HomeBanners.tsx:74
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.completed"
 msgstr ""
@@ -1395,7 +1452,7 @@ msgid "settings.gymProfiles.bulkPlaceholder"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:222
+#: components/progress/NutritionSegment.tsx:217
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.period12A11y"
 msgstr ""
@@ -1425,29 +1482,29 @@ msgid "app.tools.index.rmCalculator"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:30
+#: components/settings/CSVExportCard.tsx:31
 msgid "settings.csv.range30"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:202
+#: components/progress/NutritionSegment.tsx:197
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.period4A11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:29
+#: components/settings/CSVExportCard.tsx:30
 msgid "settings.csv.range7"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:212
+#: components/progress/NutritionSegment.tsx:207
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.period8A11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:31
+#: components/settings/CSVExportCard.tsx:32
 msgid "settings.csv.range90"
 msgstr ""
 
@@ -1469,7 +1526,7 @@ msgid "settings.macroCoach.quickQuestionTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:371
+#: app/(tabs)/settings.tsx:374
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.about"
 msgstr ""
@@ -1515,6 +1572,11 @@ msgid "app.progress.achievements.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:59
+msgid "settings.backup.category.achievements"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/home/ProgramsList.tsx:125
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16714
 msgid "home.programs.active"
@@ -1535,7 +1597,7 @@ msgid "components.profile.activity.levelValueA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:290
+#: app/(tabs)/settings.tsx:293
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.adaptiveMacroCoach"
 msgstr ""
@@ -1580,6 +1642,11 @@ msgid "session.pinnedexercisenoteeditor.str1"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:28
+msgid "settings.keyStatus.missing"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/template/create.tsx:90
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18275
 msgid "app.template.create.minimum-exercise"
@@ -1597,7 +1664,7 @@ msgid "settings.gymProfiles.addStack"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:48
+#: app/(tabs)/_layout.tsx:57
 msgid "tabs.exercises.addA11y"
 msgstr ""
 
@@ -1662,13 +1729,13 @@ msgid "session.sessionlistfooter.str1"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:293
+#: components/progress/BodyCards.tsx:289
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.addMeasurement"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:65
+#: app/(tabs)/_layout.tsx:74
 msgid "tabs.nutrition.addA11y"
 msgstr ""
 
@@ -1721,12 +1788,12 @@ msgid "body.photos.addA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:55
+#: components/share/StravaShareCardPromo.tsx:56
 msgid "share.strava.addPromoA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:72
+#: components/share/StravaShareCardPromo.tsx:73
 msgid "share.strava.captionPlaceholder"
 msgstr ""
 
@@ -1820,7 +1887,7 @@ msgid "feedback.description.crashPlaceholder"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:205
+#: components/progress/NutritionCards.tsx:198
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.adherence"
 msgstr ""
@@ -1856,7 +1923,7 @@ msgid "app.onboarding.setup.advanced"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:256
+#: app/(tabs)/settings.tsx:259
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.advancedSetTypes"
 msgstr ""
@@ -1872,9 +1939,14 @@ msgid "settings.advancedSets.intro"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:407
+#: app/(tabs)/settings.tsx:410
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.license"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/floating-tab-bar/TabButton.tsx:34
+msgid "floatingTabBar.tabs.aiCoach"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -1884,7 +1956,7 @@ msgid "home.programs.all"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:32
+#: components/settings/CSVExportCard.tsx:33
 msgid "settings.csv.rangeAll"
 msgstr ""
 
@@ -1957,17 +2029,22 @@ msgid "home.quickAdd.logHint"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:58
+msgid "settings.backup.category.appPreferences"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/settings/AppearanceCard.tsx:25
 msgid "settings.appearance.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:119
+#: components/settings/ShareSettingsCard.tsx:120
 msgid "settings.sharing.appendPromoHint"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:116
+#: components/settings/ShareSettingsCard.tsx:117
 msgid "settings.sharing.appendPromo"
 msgstr ""
 
@@ -2091,6 +2168,26 @@ msgid "settings.appearance.autoHint"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:131
+msgid "settings.autoBackup.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:143
+msgid "settings.autoBackup.label"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:138
+msgid "settings.autoBackup.infoA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:161
+msgid "settings.autoBackup.tooltip"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/settings/IntegrationsCard.tsx:92
 msgid "settings.integrations.connectHint"
 msgstr ""
@@ -2128,7 +2225,7 @@ msgid "components.weeklySummary.avgPerSession"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/TrendCards.tsx:137
+#: components/progress/TrendCards.tsx:124
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.avgRpe"
 msgstr ""
@@ -2170,6 +2267,11 @@ msgid "app.tools.cableFinder.muscle.back"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:112
+msgid "settings.autoBackup.created"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/settings/backups.tsx:104
 msgid "settings.backups.created"
 msgstr ""
@@ -2180,9 +2282,20 @@ msgid "settings.backups.deleted"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:114
+#: components/settings/AutoBackupSection.tsx:117
+msgid "settings.autoBackup.failed"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/settings/backups.tsx:107
 #: app/settings/backups.tsx:110
 msgid "settings.backups.failed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:215
+msgid "settings.autoBackup.backupNow"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2191,7 +2304,12 @@ msgid "settings.backups.create"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/settings/_layout.tsx:34
+#: components/settings/AutoBackupSection.tsx:200
+msgid "settings.autoBackup.backups"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/settings/_layout.tsx:35
 #: app/settings/backups.tsx:191
 msgid "settings.backups.title"
 msgstr ""
@@ -2312,7 +2430,7 @@ msgid "components.progress.monthlyReport.bestStreak"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/share/MonthlyShareCard.tsx:89
+#: components/share/MonthlyShareCard.tsx:90
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17758
 msgid "share.monthly.bestStreak"
 msgstr ""
@@ -2396,7 +2514,7 @@ msgstr ""
 #. placeholder {0}: t.body_fat
 #. placeholder {1}: e.body_fat_goal
 #. placeholder {1}: settings.body_fat_goal
-#: components/progress/BodyCards.tsx:137
+#: components/progress/BodyCards.tsx:136
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.bodyFatGoal"
 msgstr ""
@@ -2419,13 +2537,18 @@ msgid "progress.tabs.bodyA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:54
+msgid "settings.backup.category.bodyMetrics"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/progress/MonthlyReportCards.tsx:274
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17759
 msgid "components.progress.monthlyReport.bodyWeight"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:53
+#: components/settings/CSVExportCard.tsx:54
 msgid "settings.csv.bodyWeight"
 msgstr ""
 
@@ -2456,6 +2579,11 @@ msgstr ""
 #: app/feedback.tsx:221
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17990
 msgid "feedback.title.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/ImportWorkoutsCard.tsx:46
+msgid "settings.importWorkouts.description"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2502,13 +2630,13 @@ msgid "settings.gymProfiles.bulkPaste"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:412
+#: app/(tabs)/settings.tsx:425
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.buyCoffeeA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:168
+#: components/progress/NutritionCards.tsx:161
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.carbsShort"
 msgstr ""
@@ -2537,7 +2665,7 @@ msgid "components.exercise.variant-filter.a11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:387
+#: app/(tabs)/settings.tsx:390
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.version"
 msgstr ""
@@ -2557,7 +2685,7 @@ msgid "history.calendar.disabledA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:49
+#: components/progress/NutritionCards.tsx:46
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.calorieTrend"
 msgstr ""
@@ -2565,7 +2693,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: dailyTotals.length
 #. placeholder {0}: e.length
-#: components/progress/NutritionCards.tsx:44
+#: components/progress/NutritionCards.tsx:41
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.calorieSummary"
 msgstr ""
@@ -2573,7 +2701,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: dailyTotals.length
 #. placeholder {0}: e.length
-#: components/progress/NutritionCards.tsx:43
+#: components/progress/NutritionCards.tsx:40
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.calorieSummaryTarget"
 msgstr ""
@@ -2777,7 +2905,10 @@ msgstr ""
 #: app/settings/gym-profiles.tsx:362
 #: app/settings/import-backup.tsx:114
 #: app/settings/import-workouts.tsx:280
-#: components/settings/ShareSettingsCard.tsx:97
+#: components/settings/BackupCategorySheet.tsx:178
+#: components/settings/FormClipsManageSheet.tsx:95
+#: components/settings/FormClipsManageSheet.tsx:118
+#: components/settings/ShareSettingsCard.tsx:98
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18252
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18253
 msgid "common.cancel"
@@ -2842,6 +2973,11 @@ msgid "components.session.detail.header.cancel-a11y"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:176
+msgid "settings.backup.cancelExportA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/body/goals.tsx:89
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17932
 msgid "body.goals.cancel.a11y"
@@ -2853,6 +2989,11 @@ msgstr ""
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18252
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18253
 msgid "common.cancelImportA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:175
+msgid "settings.backup.cancelImportA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2952,7 +3093,7 @@ msgid "components.nutrition.targets.carbsA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:283
+#: components/progress/NutritionCards.tsx:275
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.carbs"
 msgstr ""
@@ -3006,7 +3147,7 @@ msgid "session.compareview.dynamic4"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:63
+#: components/exercise/ExerciseChartCard.tsx:62
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.mode"
 msgstr ""
@@ -3051,6 +3192,11 @@ msgid "settings.importWorkouts.chooseFileA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/ImportWorkoutsCard.tsx:60
+msgid "settings.importWorkouts.chooseFile"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/settings/macro-coach.tsx:254
 msgid "settings.macroCoach.chooseModeHeading"
 msgstr ""
@@ -3062,9 +3208,19 @@ msgid "body.photos.fromLibraryA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:439
+#: components/ui/dropdown.tsx:43
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.language.caption"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:64
+msgid "settings.backup.chooseExport"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:63
+msgid "settings.backup.chooseImport"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3133,6 +3289,11 @@ msgid "session.pulleypinpickersheet.str8"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FrequencyGoalPicker.tsx:80
+msgid "settings.frequencyGoal.clear"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/history/FilterBar.tsx:179
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18011
 msgid "history.filters.clearOneA11y"
@@ -3145,13 +3306,18 @@ msgid "history.filterBar.clearAll"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:125
+msgid "settings.backup.clearAll"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/errors.tsx:51
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17963
 msgid "errors.clear.all"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/BackupCategorySheet.tsx:100
+#: components/settings/BackupCategorySheet.tsx:123
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17881
 msgid "settings.backup.clearAllA11y"
 msgstr ""
@@ -3271,7 +3437,7 @@ msgid "components.program.weekly-schedule.clear-a11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/FrequencyGoalPicker.tsx:75
+#: components/settings/FrequencyGoalPicker.tsx:76
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17768
 msgid "settings.frequencyGoal.clearA11y"
 msgstr ""
@@ -3358,6 +3524,11 @@ msgid "session.setupphotosheet.str5"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/ui/dropdown.tsx:50
+msgid "common.close"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/nutrition/MacroCoachCard.tsx:399
 msgid "components.nutrition.coach.close"
 msgstr ""
@@ -3384,6 +3555,11 @@ msgstr ""
 #: components/session/SuggestionExplainerModal.tsx:53
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18106
 msgid "session.suggestionexplainermodal.str1"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:151
+msgid "settings.formClips.closeA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3422,7 +3598,7 @@ msgid "session.setoptionssheet.str4"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:287
+#: app/(tabs)/settings.tsx:290
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.coaching"
 msgstr ""
@@ -3543,7 +3719,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: todaySchedule.template_name
 #. placeholder {0}: u.template_name
-#: components/home/HomeBanners.tsx:67
+#: components/home/HomeBanners.tsx:68
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.completedA11y"
 msgstr ""
@@ -3658,8 +3834,8 @@ msgid "components.progress.calendarDayDetail.loadError"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:221
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:221
 msgid "settingsHandlers.csv.pickerFailure"
 msgstr ""
 
@@ -3687,6 +3863,16 @@ msgid "settings.reminders.testFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:129
+msgid "settings.formClips.deleteAllFailedTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:105
+msgid "settings.formClips.deleteFailedTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/settings/ReminderSection.tsx:80
 msgid "settings.reminders.disableFailed"
 msgstr ""
@@ -3702,7 +3888,7 @@ msgid "settings.restNotifications.enableFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:60
+#: components/progress/NutritionSegment.tsx:59
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.loadError"
 msgstr ""
@@ -3783,6 +3969,11 @@ msgstr ""
 #: components/home/ProgramsList.tsx:77
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16714
 msgid "home.programs.create"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:212
+msgid "settings.autoBackup.createA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -3884,7 +4075,7 @@ msgid "home.templates.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:41
+#: components/settings/CSVExportCard.tsx:42
 msgid "settings.csv.title"
 msgstr ""
 
@@ -3921,7 +4112,7 @@ msgid "history.streak.current"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:230
+#: components/progress/NutritionCards.tsx:223
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.currentStreak"
 msgstr ""
@@ -3935,7 +4126,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: adherence.currentStreak
 #. placeholder {0}: e.currentStreak
-#: components/progress/NutritionCards.tsx:233
+#: components/progress/NutritionCards.tsx:226
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.currentStreakA11y"
 msgstr ""
@@ -3953,7 +4144,7 @@ msgid "components.progress.calendarStreaks.summaryA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:34
+#: components/progress/BodyCards.tsx:33
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.currentWeight"
 msgstr ""
@@ -3961,7 +4152,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: (0,b.toDisplay)(e.weight,n)
 #. placeholder {0}: toDisplay(latest.weight, unit)
-#: components/progress/BodyCards.tsx:47
+#: components/progress/BodyCards.tsx:46
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.currentWeightA11y"
 msgstr ""
@@ -4058,15 +4249,20 @@ msgid "settings.importBackup.data"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:335
+#: app/(tabs)/settings.tsx:338
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.dataBackup"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:90
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:90
 msgid "settingsHandlers.export.success"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/DataManagementCard.tsx:37
+msgid "settings.data.title"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -4106,22 +4302,22 @@ msgid "history.filters.dateRange"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:30
+#: components/settings/CSVExportCard.tsx:31
 msgid "settings.csv.range30A11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:29
+#: components/settings/CSVExportCard.tsx:30
 msgid "settings.csv.range7A11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:31
+#: components/settings/CSVExportCard.tsx:32
 msgid "settings.csv.range90A11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:32
+#: components/settings/CSVExportCard.tsx:33
 msgid "settings.csv.rangeAllA11y"
 msgstr ""
 
@@ -4235,6 +4431,11 @@ msgid "components.timer.configPanel.decreaseA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:182
+msgid "settings.autoBackup.decreaseA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/exercise/NumericStepper.tsx:41
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16828
 msgid "components.exercise.numeric-stepper.decrease"
@@ -4260,7 +4461,7 @@ msgid "settings.trainingDayMacros.decreaseBoostA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/FrequencyGoalPicker.tsx:54
+#: components/settings/FrequencyGoalPicker.tsx:55
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17768
 msgid "settings.frequencyGoal.decreaseA11y"
 msgstr ""
@@ -4271,7 +4472,7 @@ msgid "settings.trainingDayMacros.decreaseDaysA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:105
+#: components/progress/NutritionCards.tsx:98
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.decreased"
 msgstr ""
@@ -4317,6 +4518,16 @@ msgid "components.exercise.goal-progress.delete"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: app/settings/backups.tsx:55
+#: app/settings/backups.tsx:161
+#: app/settings/gym-profiles.tsx:204
+#: app/settings/gym-profiles.tsx:255
+#: app/settings/gym-profiles.tsx:495
+#: components/settings/FormClipsManageSheet.tsx:97
+msgid "common.delete"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/session/FormLibraryTab.tsx:478
 msgid "session.formlibrarytab.str10"
 msgstr ""
@@ -4329,15 +4540,6 @@ msgstr ""
 #. js-lingui-explicit-id
 #: components/nutrition/WaterAmountSheet.tsx:108
 msgid "components.nutrition.water.delete"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: app/settings/backups.tsx:55
-#: app/settings/backups.tsx:161
-#: app/settings/gym-profiles.tsx:204
-#: app/settings/gym-profiles.tsx:255
-#: app/settings/gym-profiles.tsx:495
-msgid "common.delete"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -4371,6 +4573,31 @@ msgid "app.exercise.id.delete-unused"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:116
+msgid "settings.formClips.deleteAllMessage"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:120
+msgid "settings.formClips.deleteAllAction"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:211
+msgid "settings.formClips.deleteAllA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:115
+msgid "settings.formClips.deleteAllTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:220
+msgid "settings.formClips.deleteAll"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/settings/backups.tsx:50
 msgid "settings.backups.deleteTitle"
 msgstr ""
@@ -4400,6 +4627,21 @@ msgstr ""
 #: components/session/FormLibraryTab.tsx:217
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17896
 msgid "session.formlibrarytab.str17"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:94
+msgid "settings.formClips.deleteTitle"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:302
+msgid "settings.formClips.deleteA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:94
+msgid "settings.formClips.deleteMessage"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -4530,6 +4772,11 @@ msgid "app.program.create.deleted-template"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:220
+msgid "common.deleting"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/home/DeloadNudgeCard.tsx:72
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16699
 msgid "home.deload.guidanceA11y"
@@ -4628,7 +4875,7 @@ msgid "session.stackmarkerhint.str1"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:324
+#: components/progress/BodyCards.tsx:320
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.progressPhotosDescription"
 msgstr ""
@@ -4892,7 +5139,7 @@ msgid "home.templates.edit"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:110
+#: components/progress/BodyCards.tsx:109
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.edit"
 msgstr ""
@@ -4942,18 +5189,18 @@ msgid "session.restbreakdownsheet.str8"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:109
+#: components/progress/BodyCards.tsx:108
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.editGoalsA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:106
+#: components/settings/ShareSettingsCard.tsx:107
 msgid "settings.sharing.editCaption"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:106
+#: components/settings/ShareSettingsCard.tsx:107
 msgid "settings.sharing.editCaptionOptional"
 msgstr ""
 
@@ -5034,8 +5281,8 @@ msgid "app.program.create.edit-title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:94
-#: components/settings/ShareSettingsCard.tsx:107
+#: components/settings/ShareSettingsCard.tsx:95
+#: components/settings/ShareSettingsCard.tsx:108
 msgid "settings.sharing.editPromoA11y"
 msgstr ""
 
@@ -5233,6 +5480,11 @@ msgid "errors.item.a11y"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FeedbackCard.tsx:63
+msgid "settings.feedback.errors"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/exercise/ExerciseRecordsCard.tsx:83
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17967
 msgid "components.exercise.records.est-1rm"
@@ -5245,7 +5497,7 @@ msgid "app.tools.rm.estOneRm"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:65
+#: components/exercise/ExerciseChartCard.tsx:64
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.est-1rm"
 msgstr ""
@@ -5326,6 +5578,11 @@ msgid "app.exercise.edit.exercise"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: app/(tabs)/_layout.tsx:50
+msgid "tabs.exercises.header"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/session/summary/PacingBreakdownSheet.tsx:121
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17907
 msgid "components.session.summary.pacing-breakdown.exercise"
@@ -5374,19 +5631,18 @@ msgid "components.onboarding.recommendAdvanced.exercises"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/TabButton.tsx:23
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
-msgid "floatingTabBar.tabs.exercises"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:43
-msgid "tabs.exercises.title"
+#: components/settings/BackupCategorySheet.tsx:52
+msgid "settings.backup.category.exercises"
 msgstr ""
 
 #. js-lingui-explicit-id
 #: app/(tabs)/_layout.tsx:44
-msgid "tabs.exercises.header"
+msgid "tabs.exercises.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/(tabs)/_layout.tsx:99
+msgid "tabs.workouts.exercisesA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -5426,54 +5682,69 @@ msgid "home.templates.export"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/DataManagementCard.tsx:50
+msgid "settings.data.exportAll"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/settings/DataManagementCard.tsx:47
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17787
 msgid "settings.data.exportA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:54
+#: components/settings/CSVExportCard.tsx:55
 msgid "settings.csv.measurementsA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:53
+#: components/settings/CSVExportCard.tsx:54
 msgid "settings.csv.bodyWeightA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:88
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:88
 msgid "settingsHandlers.export.dialogTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:92
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:92
 msgid "settingsHandlers.export.failure"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:52
+#: components/settings/CSVExportCard.tsx:53
 msgid "settings.csv.nutritionA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:51
+#: components/settings/BackupCategorySheet.tsx:67
+msgid "settings.backup.exportSelected"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/CSVExportCard.tsx:52
 msgid "settings.csv.workoutsA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/DataManagementCard.tsx:79
+msgid "settings.data.description"
 msgstr ""
 
 #. js-lingui-explicit-id
 #. placeholder {0}: u.BACKUP_TABLE_LABELS[e.table]??e.table
 #. placeholder {1}: e.tableIndex+1
 #. placeholder {2}: e.totalTables
-#: app/(tabs)/_settings-handlers.ts:74
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:74
 msgid "settingsHandlers.export.progress"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:169
+#: components/progress/NutritionCards.tsx:162
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.fatShort"
 msgstr ""
@@ -5521,7 +5792,7 @@ msgid "settings.backups.loadFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:72
+#: components/exercise/ExerciseChartCard.tsx:71
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.error"
 msgstr ""
@@ -5642,7 +5913,7 @@ msgid "settings.gymProfiles.stackSaveFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:130
+#: app/(tabs)/settings.tsx:133
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.trainingGoal.saveFailure"
 msgstr ""
@@ -5666,6 +5937,16 @@ msgstr ""
 #. js-lingui-explicit-id
 #: app/settings/gym-profiles.tsx:186
 msgid "settings.gymProfiles.updateFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:101
+msgid "settings.autoBackup.retentionFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:87
+msgid "settings.autoBackup.updateFailed"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -5703,7 +5984,7 @@ msgid "components.nutrition.targets.fatA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:284
+#: components/progress/NutritionCards.tsx:276
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.fat"
 msgstr ""
@@ -5739,23 +6020,33 @@ msgid "feedback.type.feature"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:359
+#: components/settings/FeedbackCard.tsx:54
+msgid "settings.feedback.featureRequest"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:362
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.feedback"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:216
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
-msgid "settingsHandlers.csv.fileTooLarge"
+#: components/settings/FeedbackCard.tsx:32
+msgid "settings.feedback.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:113
-#: app/(tabs)/_settings-handlers.ts:121
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:113
+#: lib/settings-handlers.ts:121
 msgid "settingsHandlers.import.fileTooLarge"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:216
+msgid "settingsHandlers.csv.fileTooLarge"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -5841,6 +6132,12 @@ msgid "app.tools.cableFinder.muscle.forearms"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:146
+#: components/settings/FormClipsStorageRow.tsx:82
+msgid "settings.formClips.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/session/ExerciseDetailDrawer.tsx:142
 msgid "session.exercisedetaildrawer.str5"
 msgstr ""
@@ -5868,7 +6165,7 @@ msgid "components.nutrition.search.found"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:398
+#: app/(tabs)/settings.tsx:401
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.description"
 msgstr ""
@@ -5962,13 +6259,13 @@ msgid "components.progress.calendar.todayA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:111
+#: components/progress/NutritionSegment.tsx:110
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.goToNutrition"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:110
+#: components/progress/NutritionSegment.tsx:109
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.goToNutritionA11y"
 msgstr ""
@@ -5998,8 +6295,8 @@ msgid "home.adherence.goalReached"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:87
-#: components/progress/BodyCards.tsx:103
+#: components/progress/BodyCards.tsx:86
+#: components/progress/BodyCards.tsx:102
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.goals"
@@ -6047,7 +6344,7 @@ msgid "settings.gymProfiles.nameRequired"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:249
+#: app/(tabs)/settings.tsx:252
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.gymProfiles"
 msgstr ""
@@ -6195,7 +6492,7 @@ msgid "components.nutrition.coach.howComputed"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:257
+#: app/(tabs)/settings.tsx:260
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.advancedSetTypesCaption"
 msgstr ""
@@ -6266,8 +6563,13 @@ msgid "common.import"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/settings/_layout.tsx:35
+#: app/settings/_layout.tsx:36
 msgid "settings.importBackup.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/DataManagementCard.tsx:62
+msgid "settings.data.importBackup"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -6297,8 +6599,8 @@ msgid "settings.data.importA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:138
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:138
 msgid "settingsHandlers.import.failure"
 msgstr ""
 
@@ -6315,13 +6617,23 @@ msgid "settings.importWorkouts.progressA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:66
+msgid "settings.backup.importSelected"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/home/TemplatesList.tsx:82
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16708
 msgid "home.templates.importA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/settings/_layout.tsx:33
+#: components/settings/ImportWorkoutsCard.tsx:40
+msgid "settings.importWorkouts.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/settings/_layout.tsx:34
 msgid "settings.importWorkoutHistory.title"
 msgstr ""
 
@@ -6358,6 +6670,11 @@ msgid "feedback.diagnostics.includeA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:160
+msgid "settings.backup.include"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/muscle-volume/VolumeLandmarksSheet.tsx:74
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17709
 msgid "components.muscleVolume.increaseA11y"
@@ -6373,6 +6690,11 @@ msgstr ""
 #: components/timer/ConfigPanel.tsx:118
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18155
 msgid "components.timer.configPanel.increaseA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:194
+msgid "settings.autoBackup.increaseA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -6413,7 +6735,7 @@ msgid "settings.trainingDayMacros.increaseBoostA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/FrequencyGoalPicker.tsx:66
+#: components/settings/FrequencyGoalPicker.tsx:67
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17768
 msgid "settings.frequencyGoal.increaseA11y"
 msgstr ""
@@ -6436,7 +6758,7 @@ msgid "session.suggestionexplainermodal.str6"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:105
+#: components/progress/NutritionCards.tsx:98
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.increased"
 msgstr ""
@@ -6464,7 +6786,7 @@ msgid "app.exercise.id.instructions-mobile"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:320
+#: app/(tabs)/settings.tsx:323
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.integrations"
 msgstr ""
@@ -6517,8 +6839,8 @@ msgid "app.tools.index.intervalTimer"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:133
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:133
 msgid "settingsHandlers.import.invalidBackup"
 msgstr ""
 
@@ -6529,15 +6851,15 @@ msgid "settings.importBackup.invalidData"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:212
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
-msgid "settingsHandlers.csv.invalidFile"
+#: lib/settings-handlers.ts:128
+msgid "settingsHandlers.import.invalidFile"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:128
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
-msgid "settingsHandlers.import.invalidFile"
+#: lib/settings-handlers.ts:212
+msgid "settingsHandlers.csv.invalidFile"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -6574,8 +6896,23 @@ msgid "components.progress.monthlyReport.startTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/muscle-volume/VolumeTrendChart.tsx:113
+#: components/settings/AutoBackupSection.tsx:176
+msgid "settings.autoBackup.keepLast"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:174
+msgid "settings.autoBackup.retentionA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/muscle-volume/VolumeTrendChart.tsx:92
 msgid "components.muscleVolume.keepTraining"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:31
+msgid "settings.keyStatus.unavailable"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -6597,15 +6934,14 @@ msgid "app.onboarding.setup.kilograms"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:435
+#: app/(tabs)/settings.tsx:460
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.language"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:438
-#: app/settings/_layout.tsx:36
-#: app/settings/language.tsx:27
+#: app/(tabs)/settings.tsx:464
+#: app/settings/_layout.tsx:37
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.language.title"
 msgstr ""
@@ -6642,9 +6978,24 @@ msgid "history.dateRange.last90"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:48
+msgid "settings.autoBackup.lastDate"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:38
+msgid "settings.autoBackup.lastToday"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:46
+msgid "settings.autoBackup.lastYesterday"
+msgstr ""
+
+#. js-lingui-explicit-id
 #. placeholder {0}: e.date
 #. placeholder {0}: measurements.date
-#: components/progress/BodyCards.tsx:281
+#: components/progress/BodyCards.tsx:277
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.lastLogged"
 msgstr ""
@@ -6662,7 +7013,7 @@ msgid "components.nutrition.coach.lastWeekFeel"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:148
+#: components/progress/NutritionCards.tsx:141
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.lastWeek"
 msgstr ""
@@ -6674,7 +7025,7 @@ msgid "session.lastnextrow.str4"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/TrendCards.tsx:150
+#: components/progress/TrendCards.tsx:137
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.latestAvg"
 msgstr ""
@@ -6682,7 +7033,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: Math.round(10*(0,u.rpeToRir)(R))/10
 #. placeholder {0}: Math.round(rpeToRir(latestRpe) * 10) / 10
-#: components/progress/TrendCards.tsx:148
+#: components/progress/TrendCards.tsx:135
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.latestRirA11y"
 msgstr ""
@@ -6828,6 +7179,11 @@ msgid "settings.gymProfiles.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:26
+msgid "settings.keyStatus.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/body/compare.tsx:67
 msgid "body.compare.loading"
 msgstr ""
@@ -6887,6 +7243,13 @@ msgid "components.progress.monthlyReport.loading"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:178
+#: components/settings/FormClipsStorageRow.tsx:84
+#: components/settings/FormClipsStorageRow.tsx:87
+msgid "settings.formClips.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/onboarding/welcome.tsx:30
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18033
 msgid "app.onboarding.welcome.privacyA11y"
@@ -6907,7 +7270,7 @@ msgid "components.nutrition.water.logA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:292
+#: components/progress/BodyCards.tsx:288
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.logMeasurementsA11y"
 msgstr ""
@@ -6927,7 +7290,7 @@ msgid "components.nutrition.water.customA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:293
+#: components/progress/BodyCards.tsx:289
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.logMeasurements"
 msgstr ""
@@ -6944,19 +7307,19 @@ msgid "body.measurements.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:258
+#: components/progress/BodyCards.tsx:254
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.moreEntries"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:77
+#: components/exercise/ExerciseChartCard.tsx:76
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.more-data"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/TrendCards.tsx:141
+#: components/progress/TrendCards.tsx:128
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.rpeEmpty"
 msgstr ""
@@ -7093,7 +7456,7 @@ msgid "history.streak.longest"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:239
+#: components/progress/NutritionCards.tsx:232
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.longestStreak"
 msgstr ""
@@ -7107,7 +7470,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: adherence.longestStreak
 #. placeholder {0}: e.longestStreak
-#: components/progress/NutritionCards.tsx:242
+#: components/progress/NutritionCards.tsx:235
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.longestStreakA11y"
 msgstr ""
@@ -7162,7 +7525,7 @@ msgid "components.nutrition.targets.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:279
+#: components/progress/NutritionCards.tsx:271
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.macroTrends"
 msgstr ""
@@ -7174,7 +7537,7 @@ msgstr ""
 #. placeholder {1}: v.avgCarbs
 #. placeholder {2}: latestWeek.avgFat
 #. placeholder {2}: v.avgFat
-#: components/progress/NutritionCards.tsx:274
+#: components/progress/NutritionCards.tsx:266
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.macroSummary"
 msgstr ""
@@ -7186,7 +7549,12 @@ msgid "session.suggestionexplainermodal.str8"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:250
+#: components/settings/FormClipsStorageRow.tsx:72
+msgid "settings.formClips.manageA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:253
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.gymProfilesCaption"
 msgstr ""
@@ -7300,7 +7668,7 @@ msgid "components.exercise.records.max-reps-weight"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:64
+#: components/exercise/ExerciseChartCard.tsx:63
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.max-weight"
 msgstr ""
@@ -7386,13 +7754,13 @@ msgid "app.onboarding.setup.measurementUnit"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:276
+#: components/progress/BodyCards.tsx:272
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.measurements"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:54
+#: components/settings/CSVExportCard.tsx:55
 msgid "settings.csv.measurements"
 msgstr ""
 
@@ -7633,7 +8001,7 @@ msgid "nutrition.template.name.required"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/CenterButton.tsx:36
+#: components/floating-tab-bar/CenterButton.tsx:38
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2129
 msgid "floatingTabBar.center.navigateHint"
 msgstr ""
@@ -7645,7 +8013,7 @@ msgid "body.measurements.field.neck"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:88
+#: components/progress/NutritionCards.tsx:81
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.chartMinimum"
 msgstr ""
@@ -7772,7 +8140,7 @@ msgstr ""
 #. placeholder {0}: x.day.label||x.day.template_name||"workout"
 #. placeholder {1}: nextWorkout.program.name
 #. placeholder {1}: x.program.name
-#: components/home/HomeBanners.tsx:96
+#: components/home/HomeBanners.tsx:97
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.nextA11y"
 msgstr ""
@@ -7786,7 +8154,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: nextWorkout.day.label || nextWorkout.day.template_name || "Workout"
 #. placeholder {0}: x.day.label||x.day.template_name||"Workout"
-#: components/home/HomeBanners.tsx:102
+#: components/home/HomeBanners.tsx:103
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.next"
 msgstr ""
@@ -7814,6 +8182,11 @@ msgid "settings.importBackup.noData"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:29
+msgid "settings.autoBackup.noBackups"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/settings/backups.tsx:201
 msgid "settings.backups.empty"
 msgstr ""
@@ -7821,6 +8194,11 @@ msgstr ""
 #. js-lingui-explicit-id
 #: app/settings/gym-profiles.tsx:449
 msgid "settings.gymProfiles.noStacks"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:183
+msgid "settings.formClips.emptyTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -7852,14 +8230,14 @@ msgid "home.programs.noCurated"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:77
+#: components/exercise/ExerciseChartCard.tsx:76
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.empty"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:80
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:80
 msgid "settingsHandlers.export.noData"
 msgstr ""
 
@@ -7971,7 +8349,7 @@ msgid "session.exercisedrawerstats.str8"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:140
+#: app/(tabs)/settings.tsx:143
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.import.noCategories"
 msgstr ""
@@ -8006,7 +8384,7 @@ msgid "app.program.pick-template.no-match"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:285
+#: components/progress/BodyCards.tsx:281
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.noMeasurements"
 msgstr ""
@@ -8043,13 +8421,18 @@ msgid "feedback.diagnostics.noInteractions"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:135
+msgid "settings.backup.noRecords"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/progress/records.tsx:42
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18046
 msgid "app.progress.records.emptyTitle"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/WorkoutCards.tsx:75
+#: components/progress/WorkoutCards.tsx:65
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17715
 msgid "components.progress.workoutCards.noRecords"
 msgstr ""
@@ -8157,7 +8540,7 @@ msgid "settings.reminders.noSchedule"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/home/HomeBanners.tsx:86
+#: components/home/HomeBanners.tsx:87
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.noWorkout"
 msgstr ""
@@ -8272,7 +8655,7 @@ msgid "settings.reminders.permissionDenied"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:270
+#: app/(tabs)/settings.tsx:273
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.notifications"
 msgstr ""
@@ -8324,7 +8707,7 @@ msgid "app.tools.rm.repsA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/TabButton.tsx:24
+#: components/floating-tab-bar/TabButton.tsx:35
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
 msgid "floatingTabBar.tabs.nutrition"
 msgstr ""
@@ -8348,17 +8731,22 @@ msgid "app.progress.achievements.nutrition"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:52
+#: components/settings/BackupCategorySheet.tsx:53
+msgid "settings.backup.category.nutrition"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/CSVExportCard.tsx:53
 msgid "settings.csv.nutrition"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:60
+#: app/(tabs)/_layout.tsx:69
 msgid "tabs.nutrition.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:61
+#: app/(tabs)/_layout.tsx:70
 msgid "tabs.nutrition.header"
 msgstr ""
 
@@ -8380,13 +8768,13 @@ msgid "settings.sharing.off"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:296
+#: app/(tabs)/settings.tsx:299
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.macroCoachOff"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:310
+#: app/(tabs)/settings.tsx:313
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.trainingDayOff"
 msgstr ""
@@ -8410,13 +8798,13 @@ msgid "components.exercise.plateau.queued-ok"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:309
+#: app/(tabs)/settings.tsx:312
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.trainingDayOn"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:295
+#: app/(tabs)/settings.tsx:298
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.macroCoachOn"
 msgstr ""
@@ -8438,6 +8826,16 @@ msgid "settings.macroCoach.quickQuestionHeading"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:69
+msgid "settings.backup.importHelper"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:70
+msgid "settings.backup.exportHelper"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/exercise/ExerciseRecordsCard.tsx:116
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17967
 msgid "components.exercise.records.rm-a11y"
@@ -8456,13 +8854,13 @@ msgid "home.quickAdd.openActive"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:298
+#: app/(tabs)/settings.tsx:301
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.adaptiveMacroCoachA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:258
+#: app/(tabs)/settings.tsx:261
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.advancedSetTypesA11y"
 msgstr ""
@@ -8473,7 +8871,7 @@ msgid "settings.reminders.openSettingsA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:251
+#: app/(tabs)/settings.tsx:254
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.gymProfilesA11y"
 msgstr ""
@@ -8482,12 +8880,6 @@ msgstr ""
 #: components/nutrition/WaterSection.tsx:57
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16873
 msgid "components.nutrition.water.openA11y"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:440
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
-msgid "settings.language.a11y"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -8538,7 +8930,7 @@ msgid "components.session.summary.footer.strava-hint"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:312
+#: app/(tabs)/settings.tsx:315
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.trainingDayMacrosA11y"
 msgstr ""
@@ -8550,9 +8942,19 @@ msgid "session.sessionheadertoolbar.str1"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:22
+msgid "settings.keyStatus.title"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/session/summary/PacingCard.tsx:632
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17905
 msgid "components.session.summary.pacing.show-calculation-hint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:73
+msgid "settings.formClips.manageHint"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -8681,7 +9083,7 @@ msgid "history.dayDetail.other"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:167
+#: components/progress/NutritionCards.tsx:160
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.proteinShort"
 msgstr ""
@@ -8716,12 +9118,17 @@ msgid "components.nutrition.coach.pauseA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:212
+msgid "settings.formClips.deleteAllHint"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/session/FormLibraryTab.tsx:671
 msgid "session.formlibrarytab.str5"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/WorkoutCards.tsx:71
+#: components/progress/WorkoutCards.tsx:61
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17715
 msgid "components.progress.workoutCards.personalRecords"
 msgstr ""
@@ -8828,6 +9235,11 @@ msgid "app.tools.index.plateCalculator"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:56
+msgid "settings.backup.category.plateCalculator"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/exercise/PlateauStatusCard.tsx:189
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17970
 msgid "components.exercise.plateau.card-a11y"
@@ -8858,8 +9270,13 @@ msgid "session.compareview.str8"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:212
+#: components/settings/FormClipsManageSheet.tsx:286
+msgid "settings.formClips.playA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:212
 msgid "settingsHandlers.csv.invalidMessage"
 msgstr ""
 
@@ -8867,6 +9284,12 @@ msgstr ""
 #: components/session/SetupPhotoSheet.tsx:63
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18162
 msgid "session.setupphotosheet.str11"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:105
+#: components/settings/FormClipsManageSheet.tsx:129
+msgid "settings.formClips.tryAgain"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -8893,8 +9316,8 @@ msgid "common.preferNotToSay"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:67
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:67
 msgid "settingsHandlers.export.preparing"
 msgstr ""
 
@@ -8973,7 +9396,7 @@ msgid "session.exercisedetaildrawer.str2"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:213
+#: app/(tabs)/settings.tsx:216
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.profile"
 msgstr ""
@@ -8992,7 +9415,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: nextWorkout.program.name
 #. placeholder {0}: x.program.name
-#: components/home/HomeBanners.tsx:110
+#: components/home/HomeBanners.tsx:111
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.scheduleA11y"
 msgstr ""
@@ -9040,6 +9463,11 @@ msgid "home.programs.title"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:55
+msgid "settings.backup.category.programs"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/home/ProgramsList.tsx:85
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16714
 msgid "home.programs.filterA11y"
@@ -9052,29 +9480,29 @@ msgid "home.tabs.programsA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/TabButton.tsx:26
+#: components/floating-tab-bar/TabButton.tsx:37
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
 msgid "floatingTabBar.tabs.progress"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:101
+#: app/(tabs)/_layout.tsx:127
 msgid "tabs.progress.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:102
+#: app/(tabs)/_layout.tsx:128
 msgid "tabs.progress.header"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:314
+#: components/progress/BodyCards.tsx:310
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.progressPhotosA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:320
+#: components/progress/BodyCards.tsx:316
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.progressPhotos"
 msgstr ""
@@ -9091,7 +9519,7 @@ msgid "settings.sharing.promoCaption"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:80
+#: components/share/StravaShareCardPromo.tsx:81
 msgid "share.strava.captionInputA11y"
 msgstr ""
 
@@ -9108,7 +9536,7 @@ msgid "components.nutrition.targets.proteinA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:282
+#: components/progress/NutritionCards.tsx:274
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.protein"
 msgstr ""
@@ -9132,7 +9560,7 @@ msgid "components.weeklySummary.proteinAvg"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/share/MonthlyShareCard.tsx:88
+#: components/share/MonthlyShareCard.tsx:89
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17758
 msgid "share.monthly.prs"
 msgstr ""
@@ -9223,7 +9651,7 @@ msgid "history.gtg.toggleA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/TrendCards.tsx:184
+#: components/progress/TrendCards.tsx:171
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.ratingsEmpty"
 msgstr ""
@@ -9265,7 +9693,7 @@ msgid "components.progress.records.recentPRs"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/WorkoutCards.tsx:111
+#: components/progress/WorkoutCards.tsx:101
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17715
 msgid "components.progress.workoutCards.recentSessions"
 msgstr ""
@@ -9321,6 +9749,11 @@ msgid "session.formlibrarytab.str1"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:185
+msgid "settings.formClips.emptyBody"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/session/FormVideoSheet.tsx:141
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17898
 msgid "session.formvideosheet.str14"
@@ -9350,6 +9783,17 @@ msgid "components.nutrition.badge.restHint"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:33
+#: components/settings/KeyStatusCard.tsx:47
+msgid "settings.keyStatus.refresh"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:39
+msgid "settings.keyStatus.remaining"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/settings/ReminderSection.tsx:112
 msgid "settings.reminders.timeA11y"
 msgstr ""
@@ -9360,7 +9804,7 @@ msgid "settings.reminders.set"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:89
+#: components/share/StravaShareCardPromo.tsx:90
 msgid "common.remove"
 msgstr ""
 
@@ -9423,7 +9867,7 @@ msgid "app.template.create.remove-a11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:87
+#: components/share/StravaShareCardPromo.tsx:88
 msgid "share.strava.removePromoA11y"
 msgstr ""
 
@@ -9443,6 +9887,11 @@ msgstr ""
 #: components/session/BodyweightGripPickerSheet.tsx:121
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18160
 msgid "session.bodyweightgrippickersheet.str2"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:303
+msgid "settings.formClips.deleteHint"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -9498,9 +9947,14 @@ msgid "session.formlibrarytab.dynamic3"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/FeedbackCard.tsx:40
+#: components/settings/FeedbackCard.tsx:41
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17806
 msgid "settings.feedback.bugA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FeedbackCard.tsx:44
+msgid "settings.feedback.reportBug"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -9564,13 +10018,13 @@ msgid "session.miniseteditor.str3"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:60
+#: components/exercise/ExerciseChartCard.tsx:59
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.reps-progression"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/FeedbackCard.tsx:50
+#: components/settings/FeedbackCard.tsx:51
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17806
 msgid "settings.feedback.featureA11y"
 msgstr ""
@@ -9710,7 +10164,7 @@ msgid "settings.trainingDayMacros.restDay"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/home/HomeBanners.tsx:85
+#: components/home/HomeBanners.tsx:86
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.restDay"
 msgstr ""
@@ -9722,7 +10176,7 @@ msgid "components.nutrition.badge.restRecovery"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/home/HomeBanners.tsx:81
+#: components/home/HomeBanners.tsx:82
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.restDayA11y"
 msgstr ""
@@ -9757,6 +10211,11 @@ msgid "settings.restNotifications.infoA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:57
+msgid "settings.backup.category.restTimer"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/settings/advanced-sets.tsx:98
 msgid "settings.advancedSets.restPause.title"
 msgstr ""
@@ -9774,7 +10233,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: active.name
 #. placeholder {0}: t.name
-#: components/home/HomeBanners.tsx:38
+#: components/home/HomeBanners.tsx:39
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.resumeA11y"
 msgstr ""
@@ -9792,7 +10251,7 @@ msgid "components.progress.calendar.retry"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:69
+#: components/progress/NutritionSegment.tsx:68
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.retry"
 msgstr ""
@@ -9810,7 +10269,7 @@ msgid "components.exercise.records.retry"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:73
+#: components/exercise/ExerciseChartCard.tsx:72
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.retry"
 msgstr ""
@@ -9857,7 +10316,7 @@ msgid "components.progress.calendar.retryA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:68
+#: components/progress/NutritionSegment.tsx:67
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.retryA11y"
 msgstr ""
@@ -10031,7 +10490,7 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #: app/settings/macro-coach.tsx:443
-#: components/settings/ShareSettingsCard.tsx:98
+#: components/settings/ShareSettingsCard.tsx:99
 msgid "common.save"
 msgstr ""
 
@@ -10405,7 +10864,12 @@ msgid "session.markerpickersheet.str4"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/BackupCategorySheet.tsx:91
+#: components/settings/BackupCategorySheet.tsx:116
+msgid "settings.backup.selectAll"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:114
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17881
 msgid "settings.backup.selectAllA11y"
 msgstr ""
@@ -10520,7 +10984,7 @@ msgid "session.summary.id.str2"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/TrendCards.tsx:180
+#: components/progress/TrendCards.tsx:167
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.ratings"
 msgstr ""
@@ -10562,7 +11026,7 @@ msgid "session.exercisedrawerstats.str11"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/WorkoutCards.tsx:138
+#: components/progress/WorkoutCards.tsx:128
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17715
 msgid "components.progress.workoutCards.sessionsByGym"
 msgstr ""
@@ -10600,6 +11064,11 @@ msgid "session.formvideosheet.str10"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FrequencyGoalPicker.tsx:45
+msgid "settings.frequencyGoal.set"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/exercise/[id].tsx:118
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17964
 msgid "app.exercise.id.set-goal-a11y"
@@ -10629,7 +11098,7 @@ msgid "settings.gymProfiles.setDefault"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:92
+#: components/progress/BodyCards.tsx:91
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.setGoalsA11y"
 msgstr ""
@@ -10659,7 +11128,7 @@ msgid "components.exercise.goal-set-form.set-title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:93
+#: components/progress/BodyCards.tsx:92
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.setGoals"
 msgstr ""
@@ -10697,7 +11166,7 @@ msgid "session.sessionheadertoolbar.dynamic2"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:146
+#: components/progress/NutritionSegment.tsx:145
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.setTargets"
 msgstr ""
@@ -10715,13 +11184,13 @@ msgid "app.onboarding.setup.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/FrequencyGoalPicker.tsx:40
+#: components/settings/FrequencyGoalPicker.tsx:41
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17768
 msgid "settings.frequencyGoal.setA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:140
+#: components/progress/NutritionSegment.tsx:139
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.setTargetsMessage"
 msgstr ""
@@ -10761,19 +11230,24 @@ msgid "components.muscleVolume.setsPerMuscle"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/TabButton.tsx:27
+#: components/floating-tab-bar/TabButton.tsx:38
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
 msgid "floatingTabBar.tabs.settings"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:108
+#: app/(tabs)/_layout.tsx:134
 msgid "tabs.settings.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:109
+#: app/(tabs)/_layout.tsx:135
 msgid "tabs.settings.header"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:87
+msgid "settings.formClips.setupPhotos"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -10962,6 +11436,11 @@ msgid "components.nutrition.coach.infoOnly"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FrequencyGoalPicker.tsx:35
+msgid "settings.frequencyGoal.description"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/onboarding/recommend-error-banner.tsx:21
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18030
 msgid "components.onboarding.recommendError.skip"
@@ -11043,7 +11522,7 @@ msgid "components.program.curated-extras.source-a11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:423
+#: app/(tabs)/settings.tsx:447
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.sponsorA11y"
 msgstr ""
@@ -11120,7 +11599,7 @@ msgid "session.setoptionssheet.dynamic2"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:105
+#: components/progress/NutritionSegment.tsx:104
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.empty"
 msgstr ""
@@ -11314,7 +11793,7 @@ msgid "components.progress.workout.switchCalendar"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:28
+#: components/progress/BodyCards.tsx:27
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.switchToKilograms"
 msgstr ""
@@ -11326,7 +11805,7 @@ msgid "components.progress.workout.switchList"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:27
+#: components/progress/BodyCards.tsx:26
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.switchToPounds"
 msgstr ""
@@ -11409,7 +11888,7 @@ msgid "session.lastnextrow.dynamic1"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/home/HomeBanners.tsx:42
+#: components/home/HomeBanners.tsx:43
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.tapResume"
 msgstr ""
@@ -11648,8 +12127,13 @@ msgid "settings.appearance.theme"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:113
+#: components/settings/KeyStatusCard.tsx:44
+msgid "settings.keyStatus.note"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:113
 msgid "settingsHandlers.import.backupTooLarge"
 msgstr ""
 
@@ -11660,14 +12144,14 @@ msgid "session.setupphotosheet.str13"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:216
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:216
 msgid "settingsHandlers.csv.tooLarge"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:128
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:128
 msgid "settingsHandlers.import.invalidBackupFile"
 msgstr ""
 
@@ -11689,7 +12173,7 @@ msgid "home.weeklySummary.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:138
+#: components/progress/NutritionCards.tsx:131
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.thisWeek"
 msgstr ""
@@ -11753,7 +12237,7 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: todaySchedule.template_name
 #. placeholder {0}: u.template_name
-#: components/home/HomeBanners.tsx:56
+#: components/home/HomeBanners.tsx:57
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.today"
 msgstr ""
@@ -11761,14 +12245,19 @@ msgstr ""
 #. js-lingui-explicit-id
 #. placeholder {0}: todaySchedule.template_name
 #. placeholder {0}: u.template_name
-#: components/home/HomeBanners.tsx:50
+#: components/home/HomeBanners.tsx:51
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.todayA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:130
+#: components/settings/ShareSettingsCard.tsx:131
 msgid "settings.sharing.toggleAppendA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:152
+msgid "settings.autoBackup.toggleA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -11866,7 +12355,7 @@ msgid "session.miniseteditor.str7"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:133
+#: components/progress/NutritionSegment.tsx:132
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.moreDays"
 msgstr ""
@@ -11908,13 +12397,13 @@ msgid "body.photos.empty.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/home/HomeBanners.tsx:74
+#: components/home/HomeBanners.tsx:75
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.trainAgain"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:246
+#: app/(tabs)/settings.tsx:249
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.training"
 msgstr ""
@@ -11957,7 +12446,7 @@ msgid "settings.trainingDayMacros.adjustment"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:304
+#: app/(tabs)/settings.tsx:307
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.trainingDayMacros"
 msgstr ""
@@ -12092,6 +12581,13 @@ msgid "feedback.share.failure"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:39
+#: components/settings/KeyStatusCard.tsx:40
+#: components/settings/KeyStatusCard.tsx:41
+msgid "settings.keyStatus.amountUnavailable"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: components/home/QuickAddSheet.tsx:135
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16723
 msgid "home.quickAdd.undo"
@@ -12120,7 +12616,7 @@ msgid "settings.hydration.unit"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:229
+#: app/(tabs)/settings.tsx:232
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.unitsAppearance"
 msgstr ""
@@ -12193,8 +12689,18 @@ msgid "components.nutrition.coach.useNumber"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:41
+msgid "settings.keyStatus.month"
+msgstr ""
+
+#. js-lingui-explicit-id
 #: app/settings/training-day-macros.tsx:232
 msgid "settings.trainingDayMacros.daysPerWeekHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:40
+msgid "settings.keyStatus.today"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -12248,6 +12754,11 @@ msgid "session.sessionheadertoolbar.str6"
 msgstr ""
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:294
+msgid "settings.formClips.video"
+msgstr ""
+
+#. js-lingui-explicit-id
 #. placeholder {0}: e.name
 #. placeholder {0}: group.name
 #: components/session/GroupCardHeader.tsx:186
@@ -12259,6 +12770,11 @@ msgstr ""
 #: components/session/summary/AchievementsCard.tsx:68
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18242
 msgid "components.session.summary.achievements.more-a11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:221
+msgid "settings.autoBackup.viewA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -12274,9 +12790,14 @@ msgid "home.recent.viewAllA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:316
+#: components/progress/BodyCards.tsx:312
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.progressPhotosHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:224
+msgid "settings.autoBackup.viewBackups"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -12295,6 +12816,11 @@ msgstr ""
 #: components/session/summary/SummaryFooter.tsx:208
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18247
 msgid "components.session.summary.footer.details"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FeedbackCard.tsx:61
+msgid "settings.feedback.errorsA11y"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -12322,7 +12848,7 @@ msgid "components.session.summary.footer.strava"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:375
+#: app/(tabs)/settings.tsx:378
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.releaseNotesA11y"
 msgstr ""
@@ -12371,7 +12897,7 @@ msgid "components.weeklySummary.volume"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/share/MonthlyShareCard.tsx:87
+#: components/share/MonthlyShareCard.tsx:88
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17758
 msgid "share.monthly.volume"
 msgstr ""
@@ -12462,7 +12988,7 @@ msgid "settings.trainingDayMacros.weeklyAverage"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:134
+#: components/progress/NutritionCards.tsx:127
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.weeklyAverages"
 msgstr ""
@@ -12480,7 +13006,17 @@ msgid "settings.macroCoach.fullModeHint"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/muscle-volume/VolumeTrendChart.tsx:64
+#: components/settings/FrequencyGoalPicker.tsx:32
+msgid "settings.frequencyGoal.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FrequencyGoalPicker.tsx:50
+msgid "settings.frequencyGoal.valueA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/muscle-volume/VolumeTrendChart.tsx:48
 msgid "components.muscleVolume.weeklyTrend"
 msgstr ""
 
@@ -12570,7 +13106,7 @@ msgid "components.plates.calculator.weightExceedsBar"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:60
+#: components/exercise/ExerciseChartCard.tsx:59
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.weight-progression"
 msgstr ""
@@ -12581,8 +13117,13 @@ msgid "components.nutrition.coach.stable"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:188
-#: components/progress/BodyCards.tsx:249
+#: components/settings/UnitsCard.tsx:136
+msgid "settings.units.weightStepA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/progress/BodyCards.tsx:187
+#: components/progress/BodyCards.tsx:245
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.weightTrend"
@@ -12605,7 +13146,7 @@ msgstr ""
 #. placeholder {0}: toDisplay(latest.weight, unit)
 #. placeholder {1}: (0,b.toDisplay)(e.weight_goal,n)
 #. placeholder {1}: toDisplay(settings.weight_goal, unit)
-#: components/progress/BodyCards.tsx:116
+#: components/progress/BodyCards.tsx:115
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.weightGoal"
 msgstr ""
@@ -12629,7 +13170,7 @@ msgid "app.onboarding.welcome.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:391
+#: app/(tabs)/settings.tsx:394
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.whatsNew"
 msgstr ""
@@ -12766,7 +13307,17 @@ msgid "settings.reminders.title"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:89
+#: components/settings/BackupCategorySheet.tsx:51
+msgid "settings.backup.category.workoutHistory"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:50
+msgid "settings.backup.category.workoutTemplates"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/(tabs)/_layout.tsx:107
 msgid "tabs.workouts.toolsA11y"
 msgstr ""
 
@@ -12783,13 +13334,13 @@ msgid "history.streak.workouts"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/CenterButton.tsx:35
+#: components/floating-tab-bar/CenterButton.tsx:37
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2129
 msgid "floatingTabBar.center.workouts"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/TabButton.tsx:25
+#: components/floating-tab-bar/TabButton.tsx:36
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
 msgid "floatingTabBar.tabs.workouts"
 msgstr ""
@@ -12801,7 +13352,7 @@ msgid "progress.tabs.workouts"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/share/MonthlyShareCard.tsx:86
+#: components/share/MonthlyShareCard.tsx:87
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17758
 msgid "share.monthly.workouts"
 msgstr ""
@@ -12813,18 +13364,19 @@ msgid "components.progress.monthlyReport.workouts"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:51
+#: components/settings/CSVExportCard.tsx:52
 msgid "settings.csv.workouts"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:77
-msgid "tabs.workouts.title"
+#: app/(tabs)/_layout.tsx:49
+#: app/(tabs)/_layout.tsx:91
+msgid "tabs.workouts.header"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:82
-msgid "tabs.workouts.header"
+#: app/(tabs)/_layout.tsx:86
+msgid "tabs.workouts.title"
 msgstr ""
 
 #. js-lingui-explicit-id

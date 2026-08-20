@@ -80,7 +80,7 @@
     "origin": "machine"
   },
   "app.exercise.id.history-max-weight": {
-    "message": "{0} {1}",
+    "message": "最大重量 {0} {1}",
     "srcHash": "a39733557353",
     "origin": "machine"
   },
@@ -90,12 +90,12 @@
     "origin": "machine"
   },
   "components.progress.records.weightValue": {
-    "message": "{0} {unit}",
+    "message": "重量 {0} {unit}",
     "srcHash": "3cfe1237d287",
     "origin": "machine"
   },
   "components.progress.prSummary.weightValue": {
-    "message": "{0} {weightUnit}",
+    "message": "重量 {0} {weightUnit}",
     "srcHash": "e3d834bc4bf3",
     "origin": "machine"
   },
@@ -390,7 +390,7 @@
     "origin": "machine"
   },
   "components.profile.activity.optionA11y": {
-    "message": "{0}: {1}",
+    "message": "活動程度：{0}，{1}",
     "srcHash": "b83023b9f7f5",
     "origin": "machine"
   },
@@ -400,7 +400,7 @@
     "origin": "machine"
   },
   "app.onboarding.setup.levelA11y": {
-    "message": "{0}: {1}",
+    "message": "程度：{0}，{1}",
     "srcHash": "d6727f37a564",
     "origin": "machine"
   },
@@ -410,7 +410,7 @@
     "origin": "machine"
   },
   "components.progress.prSummary.weightedRowA11y": {
-    "message": "{name}: {weight} {unit}, {date}",
+    "message": "{name}：重量 {weight} {unit}，日期 {date}",
     "srcHash": "61611dab1455",
     "origin": "machine"
   },
@@ -470,12 +470,12 @@
     "origin": "machine"
   },
   "components.progress.records.recentPRA11y": {
-    "message": "{name}{variant}: {value}, {delta}, {date}",
+    "message": "{name}{variant}：數值 {value}，變化 {delta}，日期 {date}",
     "srcHash": "3228103313c6",
     "origin": "machine"
   },
   "components.progress.records.bestWeightedA11y": {
-    "message": "{name}{variant}{weight}{e1rm}, {sessions}",
+    "message": "{name}{variant}重量 {weight}{e1rm}，訓練次數 {sessions}",
     "srcHash": "c9c17ec15e43",
     "origin": "machine"
   },
@@ -575,7 +575,7 @@
     "origin": "machine"
   },
   "body.measurements.field.label": {
-    "message": "{label} ({unit})",
+    "message": "測量項目 {label}（{unit}）",
     "srcHash": "d07b887c69b1",
     "origin": "machine"
   },
@@ -605,7 +605,7 @@
     "origin": "machine"
   },
   "components.timer.configPanel.valueA11y": {
-    "message": "{label}: {value}{suffix}",
+    "message": "{label}：數值 {value}{suffix}",
     "srcHash": "66aba7744d82",
     "origin": "machine"
   },
@@ -655,12 +655,12 @@
     "origin": "machine"
   },
   "components.progress.strengthLevels.rowA11y": {
-    "message": "{rowLabel}",
+    "message": "力量等級：{rowLabel}",
     "srcHash": "b06d8d65622b",
     "origin": "machine"
   },
   "session.bodyweightmodifierchip.dynamic1": {
-    "message": "{setPrefix}{a11y}",
+    "message": "組別 {setPrefix}{a11y}",
     "srcHash": "45fd39535c47",
     "origin": "machine"
   },
@@ -680,22 +680,22 @@
     "origin": "machine"
   },
   "session.bodyweightmodifiersheet.dynamic3": {
-    "message": "{UNICODE_MINUS}{v}",
+    "message": "減少 {UNICODE_MINUS}{v}",
     "srcHash": "1d44517d59bf",
     "origin": "machine"
   },
   "components.exercise.numeric-stepper.value": {
-    "message": "{value} {unit}",
+    "message": "數值 {value} {unit}",
     "srcHash": "4a172a9fe784",
     "origin": "machine"
   },
   "components.exercise.records.percent-1rm": {
-    "message": "% 1RM",
+    "message": "單次最大重量百分比",
     "srcHash": "45ce8c589ae2",
     "origin": "machine"
   },
   "app.tools.rm.percentOneRm": {
-    "message": "% 1RM",
+    "message": "單次最大重量百分比",
     "srcHash": "bce3e06713e9",
     "origin": "machine"
   },
@@ -735,7 +735,7 @@
     "origin": "machine"
   },
   "components.progress.prSummary.weightDelta": {
-    "message": "+{0} {weightUnit}",
+    "message": "增加 +{0} {weightUnit}",
     "srcHash": "a03612864a66",
     "origin": "machine"
   },
@@ -745,7 +745,7 @@
     "origin": "machine"
   },
   "components.progress.records.weightDelta": {
-    "message": "+{delta} {unit}",
+    "message": "增加 +{delta} {unit}",
     "srcHash": "81e9bfc246a6",
     "origin": "machine"
   },
@@ -755,7 +755,7 @@
     "origin": "machine"
   },
   "session.bodyweightmodifiersheet.dynamic1": {
-    "message": "+{v}",
+    "message": "增加 +{v}",
     "srcHash": "aa8bedcb832c",
     "origin": "machine"
   },
@@ -1690,7 +1690,7 @@
     "origin": "machine"
   },
   "settings.about.buyCoffeeA11y": {
-    "message": "給我買杯咖啡",
+    "message": "請我喝杯咖啡",
     "srcHash": "168a66f9a115",
     "origin": "machine"
   },
@@ -2535,8 +2535,8 @@
     "origin": "machine"
   },
   "settings.integrations.connectedAs": {
-    "message": "以{stravaAthlete}連接",
-    "srcHash": "5baff51f5a06",
+    "message": "以{athlete}連接",
+    "srcHash": "fa511b42a03d",
     "origin": "machine"
   },
   "settings.integrations.connected": {
@@ -2910,8 +2910,8 @@
     "origin": "machine"
   },
   "settings.hydration.dailyGoal": {
-    "message": "每日目標 ({unit, select, ml {ml} fl_oz {液量盎司}})",
-    "srcHash": "1c27165f0a7e",
+    "message": "每日目標 ({unit, select, ml {ml} fl_oz {液量盎司} other {ml}})",
+    "srcHash": "8cc808bb33f4",
     "origin": "machine"
   },
   "settings.hydration.dailyGoalA11y": {
@@ -3350,8 +3350,8 @@
     "origin": "machine"
   },
   "settings.integrations.disconnectA11y": {
-    "message": "斷開Strava帳號({stravaAthlete})",
-    "srcHash": "d244ef7960d4",
+    "message": "斷開Strava帳戶（{athlete}）",
+    "srcHash": "9fb3383d7df2",
     "origin": "machine"
   },
   "session.backfillnotesuggestion.str2": {
@@ -6855,8 +6855,8 @@
     "origin": "machine"
   },
   "settings.hydration.preset": {
-    "message": "預設值 {number} ({unit, select, ml {ml} fl oz {液量盎司}})",
-    "srcHash": "d2f7139c776e",
+    "message": "預設值 {number} ({unit, select, ml {ml} fl_oz {液量盎司} other {ml}})",
+    "srcHash": "df01f4c6fab4",
     "origin": "machine"
   },
   "settings.hydration.presetPositive": {
@@ -9615,8 +9615,8 @@
     "origin": "machine"
   },
   "settings.about.releaseNotesA11y": {
-    "message": "查看版本更新，目前版本 {appVersion}",
-    "srcHash": "9eb1bf3b434a",
+    "message": "查看發行記錄，目前版本 {version}",
+    "srcHash": "5939fcad0f4a",
     "origin": "machine"
   },
   "home.recent.workoutA11y": {
@@ -10045,8 +10045,8 @@
     "origin": "machine"
   },
   "settings.reminders.scheduleHint": {
-    "message": "在安排好的訓練日，您將於{reminderTime}收到提醒",
-    "srcHash": "441e03e48b4c",
+    "message": "在安排好的訓練日 {time} 會提醒你",
+    "srcHash": "177d8751c666",
     "origin": "machine"
   },
   "components.exercise.progression.next": {
@@ -10125,7 +10125,7 @@
     "origin": "machine"
   },
   "app.tools.cableFinder.exerciseA11y-localized": {
-    "message": "{name}, {muscles}",
+    "message": "動作 {name}，訓練肌群 {muscles}",
     "srcHash": "ad3d620e6d14",
     "origin": "machine"
   },
@@ -10422,6 +10422,556 @@
   "settings.formClips.deleteAllMessage": {
     "message": "刪除 {count, plural, one {# 個影片} other {# 個影片}}？這將永久從此裝置中刪除它們。此操作無法撤銷。",
     "srcHash": "f81081a70568",
+    "origin": "machine"
+  },
+  "floatingTabBar.tabs.aiCoach": {
+    "message": "AI 教練",
+    "srcHash": "07cacebdf686",
+    "origin": "machine"
+  },
+  "settings.feedback.title": {
+    "message": "意見與回報",
+    "srcHash": "5c1e31427bd4",
+    "origin": "machine"
+  },
+  "settings.feedback.reportBug": {
+    "message": "回報錯誤",
+    "srcHash": "5df0300b07df",
+    "origin": "machine"
+  },
+  "settings.feedback.featureRequest": {
+    "message": "功能請求",
+    "srcHash": "70150b233db9",
+    "origin": "machine"
+  },
+  "settings.feedback.errors": {
+    "message": "錯誤 ({count})",
+    "srcHash": "30e027fafb37",
+    "origin": "machine"
+  },
+  "settings.autoBackup.title": {
+    "message": "自動備份",
+    "srcHash": "080e87c56b94",
+    "origin": "machine"
+  },
+  "settings.autoBackup.label": {
+    "message": "自動備份",
+    "srcHash": "a1cd752c57cb",
+    "origin": "machine"
+  },
+  "settings.autoBackup.tooltip": {
+    "message": "每次訓練後自動儲存資料。",
+    "srcHash": "93ade53f1e0b",
+    "origin": "machine"
+  },
+  "settings.autoBackup.retentionA11y": {
+    "message": "保留最近 {count} 份備份",
+    "srcHash": "56b8bdd6fd31",
+    "origin": "machine"
+  },
+  "settings.autoBackup.keepLast": {
+    "message": "保留最近",
+    "srcHash": "a085932d8f69",
+    "origin": "machine"
+  },
+  "settings.autoBackup.backups": {
+    "message": "份備份",
+    "srcHash": "114512c8a903",
+    "origin": "machine"
+  },
+  "settings.autoBackup.backupNow": {
+    "message": "立即備份",
+    "srcHash": "2a50bddee39b",
+    "origin": "machine"
+  },
+  "settings.autoBackup.viewBackups": {
+    "message": "檢視備份",
+    "srcHash": "2041197bda63",
+    "origin": "machine"
+  },
+  "settings.data.title": {
+    "message": "資料管理",
+    "srcHash": "a531c109d8a3",
+    "origin": "machine"
+  },
+  "settings.data.exportAll": {
+    "message": "匯出所有資料",
+    "srcHash": "5ead6de3bd29",
+    "origin": "machine"
+  },
+  "settings.data.importBackup": {
+    "message": "匯入 CableSnap 備份",
+    "srcHash": "2332021995a4",
+    "origin": "machine"
+  },
+  "settings.data.description": {
+    "message": "將完整的 CableSnap 資料匯出為 JSON 備份檔案，或從先前的備份還原。重複資料會略過。",
+    "srcHash": "30d7e7676f54",
+    "origin": "machine"
+  },
+  "settings.formClips.title": {
+    "message": "動作影片",
+    "srcHash": "8c6b7e520a70",
+    "origin": "machine"
+  },
+  "settings.formClips.loading": {
+    "message": "載入中…",
+    "srcHash": "6e297330665f",
+    "origin": "machine"
+  },
+  "settings.formClips.storage": {
+    "message": "{size} MB，{count} 個影片",
+    "srcHash": "87049544f746",
+    "origin": "machine"
+  },
+  "settings.formClips.setupPhotos": {
+    "message": "設定照片：{size} MB，{count} 張照片",
+    "srcHash": "2548f3ecfc37",
+    "origin": "machine"
+  },
+  "settings.formClips.closeA11y": {
+    "message": "關閉動作影片管理視窗",
+    "srcHash": "fe4a619ebd08",
+    "origin": "machine"
+  },
+  "settings.formClips.emptyTitle": {
+    "message": "尚未錄製影片",
+    "srcHash": "b16deeb128ff",
+    "origin": "machine"
+  },
+  "settings.formClips.emptyBody": {
+    "message": "前往任何動作的動作影片分頁錄製影片。",
+    "srcHash": "01867ab6bc67",
+    "origin": "machine"
+  },
+  "settings.feedback.errorsA11y": {
+    "message": "檢視錯誤記錄，共 {count, plural, one {# 個錯誤} other {# 個錯誤}}",
+    "srcHash": "a478952359d2",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteTitle": {
+    "message": "刪除片段",
+    "srcHash": "3e2d45136651",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteMessage": {
+    "message": "要刪除 {date} 的片段嗎？",
+    "srcHash": "4e19251635de",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteFailedTitle": {
+    "message": "無法刪除片段",
+    "srcHash": "68845356e29b",
+    "origin": "machine"
+  },
+  "settings.formClips.tryAgain": {
+    "message": "請再試一次。",
+    "srcHash": "61d6f717060b",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteAllTitle": {
+    "message": "刪除所有片段",
+    "srcHash": "4481187973db",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteAllAction": {
+    "message": "全部刪除",
+    "srcHash": "05d0a8ff14e2",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteAllFailedTitle": {
+    "message": "無法刪除所有片段",
+    "srcHash": "c1e6192cfd87",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteAllA11y": {
+    "message": "刪除全部 {count} 個表單片段",
+    "srcHash": "f5ddaba91eb4",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteAllHint": {
+    "message": "永久從此裝置移除所有片段，且無法復原。",
+    "srcHash": "0a140e6ec357",
+    "origin": "machine"
+  },
+  "settings.formClips.video": {
+    "message": "影片",
+    "srcHash": "682b0f370a9f",
+    "origin": "machine"
+  },
+  "settings.autoBackup.infoA11y": {
+    "message": "自動備份資訊",
+    "srcHash": "56388d0b065a",
+    "origin": "machine"
+  },
+  "settings.formClips.clipCount": {
+    "message": "{count, plural, one {# 個片段} other {# 個片段}}",
+    "srcHash": "0c2111b3bc9f",
+    "origin": "machine"
+  },
+  "settings.formClips.exerciseCount": {
+    "message": "{count, plural, one {# 個動作} other {# 個動作}}",
+    "srcHash": "ef9c1edb1dc5",
+    "origin": "machine"
+  },
+  "settings.formClips.playA11y": {
+    "message": "播放 {date} 的片段",
+    "srcHash": "e12bf41f07c2",
+    "origin": "machine"
+  },
+  "settings.backup.categoryInFileA11y": {
+    "message": "{category}, {countLabel} 在檔案",
+    "srcHash": "740521189dd9",
+    "origin": "machine"
+  },
+  "settings.backup.recordCount": {
+    "message": "{count, plural, one {# 組} other {# 組}}",
+    "srcHash": "f8a116dcc5f3",
+    "origin": "machine"
+  },
+  "settings.csv.counts": {
+    "message": "{sessions, plural, one {# 堂訓練} other {# 堂訓練}}，{entries, plural, one {# 筆營養紀錄} other {# 筆營養紀錄}}",
+    "srcHash": "9949d7bb5e39",
+    "origin": "machine"
+  },
+  "settings.csv.countsA11y": {
+    "message": "{sessions, plural, one {# 堂訓練} other {# 堂訓練}}，{entries, plural, one {# 筆營養紀錄} other {# 筆營養紀錄}}",
+    "srcHash": "71625c526736",
+    "origin": "machine"
+  },
+  "settings.frequencyGoal.value": {
+    "message": "{value, plural, one {# 天} other {# 天}}／週",
+    "srcHash": "3028e47297a7",
+    "origin": "machine"
+  },
+  "settings.keyStatus.missing": {
+    "message": "新增 OpenRouter 金鑰以查看使用量。",
+    "srcHash": "3753882b6fac",
+    "origin": "machine"
+  },
+  "settings.autoBackup.created": {
+    "message": "備份成功建立",
+    "srcHash": "2482a7bc4784",
+    "origin": "machine"
+  },
+  "settings.autoBackup.failed": {
+    "message": "備份失敗",
+    "srcHash": "5ba9485cc7b2",
+    "origin": "machine"
+  },
+  "settings.backup.cancelExportA11y": {
+    "message": "取消匯出",
+    "srcHash": "25937c55ef24",
+    "origin": "machine"
+  },
+  "settings.backup.cancelImportA11y": {
+    "message": "取消匯入",
+    "srcHash": "3407c0e3ff18",
+    "origin": "machine"
+  },
+  "settings.backup.chooseExport": {
+    "message": "選擇要匯出的項目",
+    "srcHash": "23e6b9de510d",
+    "origin": "machine"
+  },
+  "settings.backup.chooseImport": {
+    "message": "選擇要匯入的項目",
+    "srcHash": "713d177ce8b5",
+    "origin": "machine"
+  },
+  "settings.frequencyGoal.clear": {
+    "message": "清除",
+    "srcHash": "bc0862d1b7b9",
+    "origin": "machine"
+  },
+  "settings.backup.clearAll": {
+    "message": "清除所有",
+    "srcHash": "b3f5e2326157",
+    "origin": "machine"
+  },
+  "common.close": {
+    "message": "關閉",
+    "srcHash": "366bfec20d88",
+    "origin": "machine"
+  },
+  "settings.autoBackup.createA11y": {
+    "message": "立即創建備份",
+    "srcHash": "3861b8c2fce5",
+    "origin": "machine"
+  },
+  "settings.autoBackup.decreaseA11y": {
+    "message": "減少備份保留時間",
+    "srcHash": "7dac1c316ceb",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteAll": {
+    "message": "刪除所有影片",
+    "srcHash": "f7ef8f1b592e",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteA11y": {
+    "message": "從{date}刪除影片",
+    "srcHash": "5344217f58a6",
+    "origin": "machine"
+  },
+  "common.deleting": {
+    "message": "刪除中...",
+    "srcHash": "517d142eca23",
+    "origin": "machine"
+  },
+  "tabs.workouts.exercisesA11y": {
+    "message": "運動",
+    "srcHash": "fe34e979251c",
+    "origin": "machine"
+  },
+  "settings.backup.exportSelected": {
+    "message": "選取備份",
+    "srcHash": "0ce6990a5e78",
+    "origin": "machine"
+  },
+  "settings.autoBackup.retentionFailed": {
+    "message": "更新保留失敗",
+    "srcHash": "081fa241a4b4",
+    "origin": "machine"
+  },
+  "settings.autoBackup.updateFailed": {
+    "message": "更新設定失敗",
+    "srcHash": "67782859060e",
+    "origin": "machine"
+  },
+  "settings.backup.importSelected": {
+    "message": "選取的匯入",
+    "srcHash": "40fc44a96739",
+    "origin": "machine"
+  },
+  "settings.backup.include": {
+    "message": "備份時包含",
+    "srcHash": "5ef27c3c5460",
+    "origin": "machine"
+  },
+  "settings.autoBackup.increaseA11y": {
+    "message": "增加備份保留時間",
+    "srcHash": "fdf693440d71",
+    "origin": "machine"
+  },
+  "settings.keyStatus.unavailable": {
+    "message": "目前無法使用鍵盤範圍的功能。",
+    "srcHash": "406033cf1e65",
+    "origin": "machine"
+  },
+  "settings.autoBackup.lastDate": {
+    "message": "最後備份：{date} {time}",
+    "srcHash": "538ab10ab1c4",
+    "origin": "machine"
+  },
+  "settings.autoBackup.lastToday": {
+    "message": "最後備份：今天 {time}",
+    "srcHash": "ef6d1a760156",
+    "origin": "machine"
+  },
+  "settings.autoBackup.lastYesterday": {
+    "message": "最後備份：昨天 {time}",
+    "srcHash": "4284b84009af",
+    "origin": "machine"
+  },
+  "settings.keyStatus.loading": {
+    "message": "正在載入關鍵字範圍的使用…",
+    "srcHash": "3b7057eb4267",
+    "origin": "machine"
+  },
+  "settings.formClips.manageA11y": {
+    "message": "管理表單片段",
+    "srcHash": "59ad460b32f4",
+    "origin": "machine"
+  },
+  "settings.autoBackup.noBackups": {
+    "message": "尚未備份",
+    "srcHash": "75c63571586c",
+    "origin": "machine"
+  },
+  "settings.backup.noRecords": {
+    "message": "無紀錄",
+    "srcHash": "767a7130de04",
+    "origin": "machine"
+  },
+  "settings.backup.importHelper": {
+    "message": "只有勾選的類別會匯入；目前應用程式資料中未勾選的類別將保持不變。",
+    "srcHash": "c9b78e7ed46b",
+    "origin": "machine"
+  },
+  "settings.backup.exportHelper": {
+    "message": "備份檔案中僅包含已勾選的類別。",
+    "srcHash": "6eea2bd084cb",
+    "origin": "machine"
+  },
+  "settings.keyStatus.title": {
+    "message": "OpenRouter 金鑰狀態",
+    "srcHash": "367387f735d8",
+    "origin": "machine"
+  },
+  "settings.formClips.manageHint": {
+    "message": "開啟所有已錄製的動作片段清單，您可以刪除單個或全部片段",
+    "srcHash": "1a38a45da58b",
+    "origin": "machine"
+  },
+  "settings.keyStatus.refresh": {
+    "message": "刷新",
+    "srcHash": "b422c551272f",
+    "origin": "machine"
+  },
+  "settings.keyStatus.remaining": {
+    "message": "剩餘限制",
+    "srcHash": "2d82ecfa5249",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteHint": {
+    "message": "從您的裝置中移除此片段",
+    "srcHash": "5077d25254cf",
+    "origin": "machine"
+  },
+  "settings.backup.selectAll": {
+    "message": "全選",
+    "srcHash": "5fb742afb5b5",
+    "origin": "machine"
+  },
+  "settings.frequencyGoal.set": {
+    "message": "設定目標",
+    "srcHash": "2020792e088c",
+    "origin": "machine"
+  },
+  "settings.frequencyGoal.description": {
+    "message": "顯示在首頁，追蹤每週完成的訓練與目標的比較。",
+    "srcHash": "4715fb491187",
+    "origin": "machine"
+  },
+  "settings.keyStatus.note": {
+    "message": "這些數字僅適用於此密鑰，不適用於您整個OpenRouter帳戶。帳戶範圍內的信用額度需要管理密鑰，而本應用程式從未持有此密鑰。",
+    "srcHash": "e50ce79b997f",
+    "origin": "machine"
+  },
+  "settings.autoBackup.toggleA11y": {
+    "message": "運動後開關自動備份",
+    "srcHash": "461901bc639d",
+    "origin": "machine"
+  },
+  "settings.keyStatus.month": {
+    "message": "本月使用",
+    "srcHash": "707e5abd2cc3",
+    "origin": "machine"
+  },
+  "settings.keyStatus.today": {
+    "message": "今天使用過",
+    "srcHash": "2e673d71050f",
+    "origin": "machine"
+  },
+  "settings.autoBackup.viewA11y": {
+    "message": "查看所有備份",
+    "srcHash": "635f1282f3a1",
+    "origin": "machine"
+  },
+  "settings.frequencyGoal.title": {
+    "message": "週訓練目標",
+    "srcHash": "653cc7b2bb37",
+    "origin": "machine"
+  },
+  "settings.frequencyGoal.valueA11y": {
+    "message": "每週訓練目標：{value, plural, one {# 天} other {# 天}}",
+    "srcHash": "06eb9b593c1d",
+    "origin": "machine"
+  },
+  "settings.backup.category.achievements": {
+    "message": "成就",
+    "srcHash": "a911685bd74f",
+    "origin": "machine"
+  },
+  "settings.backup.category.appPreferences": {
+    "message": "應用程式偏好設定",
+    "srcHash": "d01999bf2449",
+    "origin": "machine"
+  },
+  "settings.backup.category.bodyMetrics": {
+    "message": "身體指標",
+    "srcHash": "ef263be99d1c",
+    "origin": "machine"
+  },
+  "settings.backup.category.exercises": {
+    "message": "運動",
+    "srcHash": "269d662fbbfa",
+    "origin": "machine"
+  },
+  "settings.backup.category.nutrition": {
+    "message": "營養",
+    "srcHash": "3dc1ae628a0a",
+    "origin": "machine"
+  },
+  "settings.backup.category.plateCalculator": {
+    "message": "盤片計算器設定",
+    "srcHash": "c82a5dc98688",
+    "origin": "machine"
+  },
+  "settings.backup.category.programs": {
+    "message": "程式",
+    "srcHash": "393d2ffcb959",
+    "origin": "machine"
+  },
+  "settings.backup.category.restTimer": {
+    "message": "休息計時器設定",
+    "srcHash": "b4bc31d1c049",
+    "origin": "machine"
+  },
+  "settings.keyStatus.amountUnavailable": {
+    "message": "不可用",
+    "srcHash": "e688c90ad13b",
+    "origin": "machine"
+  },
+  "settings.backup.category.workoutHistory": {
+    "message": "運動會計紀錄",
+    "srcHash": "d29fb33fedaf",
+    "origin": "machine"
+  },
+  "settings.backup.category.workoutTemplates": {
+    "message": "訓練模版",
+    "srcHash": "bcb0f8d54ba1",
+    "origin": "machine"
+  },
+  "settings.hydration.unitLabel": {
+    "message": "{unit, select, ml {ml} fl_oz {液量盎司} other {ml}}",
+    "srcHash": "925d26531a3d",
+    "origin": "machine"
+  },
+  "settings.formClips.durationSeconds": {
+    "message": "{seconds} 秒",
+    "srcHash": "79fabc186a05",
+    "origin": "machine"
+  },
+  "settings.formClips.sizeMegabytes": {
+    "message": "{size} MB",
+    "srcHash": "c4e089d94d8a",
+    "origin": "machine"
+  },
+  "settings.formClips.sizeKilobytes": {
+    "message": "{size} KB",
+    "srcHash": "8e55b2bc49a1",
+    "origin": "machine"
+  },
+  "settings.units.weightStepA11y": {
+    "message": "重量增量 {step} {unit, select, lb {磅} kg {公斤} other {公斤}}",
+    "srcHash": "9876d52e12e6",
+    "origin": "machine"
+  },
+  "settings.importWorkouts.description": {
+    "message": "匯入來自Strong、Hevy或FitNotes (.csv) 的歷史紀錄",
+    "srcHash": "4630e2cd0ded",
+    "origin": "machine"
+  },
+  "settings.importWorkouts.chooseFile": {
+    "message": "選擇 CSV 檔案…",
+    "srcHash": "69648ec55d04",
+    "origin": "machine"
+  },
+  "settings.importWorkouts.title": {
+    "message": "匯入訓練紀錄",
+    "srcHash": "9300c5cf8e12",
     "origin": "machine"
   }
 }

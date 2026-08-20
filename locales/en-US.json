@@ -1,4 +1,14 @@
 {
+  "floatingTabBar.tabs.exercises": {
+    "message": "Exercises",
+    "srcHash": "55a860e342e1",
+    "origin": "human"
+  },
+  "settings.language.a11y": {
+    "message": "Open language settings",
+    "srcHash": "37f63f7ab99e",
+    "origin": "human"
+  },
   "components.plates.calculator.barBreakdown": {
     "message": " (bar {active}{unit} + 2×{0}{unit})",
     "srcHash": "7246cbf44b2f",
@@ -329,9 +339,24 @@
     "srcHash": "98ecceb1ce5f",
     "origin": "human"
   },
+  "settings.backup.categoryInFileA11y": {
+    "message": "{category}, {countLabel} in file",
+    "srcHash": "740521189dd9",
+    "origin": "human"
+  },
   "home.adherence.progress": {
     "message": "{completed} of {target} this week {symbol}",
     "srcHash": "1f4286f4148c",
+    "origin": "human"
+  },
+  "settings.formClips.clipCount": {
+    "message": "{count, plural, one {# clip} other {# clips}}",
+    "srcHash": "0c2111b3bc9f",
+    "origin": "human"
+  },
+  "settings.formClips.exerciseCount": {
+    "message": "{count, plural, one {# exercise} other {# exercises}}",
+    "srcHash": "ef9c1edb1dc5",
     "origin": "human"
   },
   "settings.gymProfiles.markerCount": {
@@ -342,6 +367,11 @@
   "settings.importWorkouts.exercisesCreated": {
     "message": "{count, plural, one {# new exercise created} other {# new exercises created}}",
     "srcHash": "b75027248433",
+    "origin": "human"
+  },
+  "settings.backup.recordCount": {
+    "message": "{count, plural, one {# record} other {# records}}",
+    "srcHash": "f8a116dcc5f3",
     "origin": "human"
   },
   "history.filters.resultCount": {
@@ -689,9 +719,39 @@
     "srcHash": "b06d8d65622b",
     "origin": "human"
   },
+  "settings.formClips.durationSeconds": {
+    "message": "{seconds}s",
+    "srcHash": "79fabc186a05",
+    "origin": "human"
+  },
+  "settings.csv.counts": {
+    "message": "{sessions, plural, one {# session} other {# sessions}}, {entries, plural, one {# nutrition entry} other {# nutrition entries}}",
+    "srcHash": "9949d7bb5e39",
+    "origin": "human"
+  },
+  "settings.csv.countsA11y": {
+    "message": "{sessions, plural, one {# workout session} other {# workout sessions}}, {entries, plural, one {# nutrition entry} other {# nutrition entries}}",
+    "srcHash": "71625c526736",
+    "origin": "human"
+  },
   "session.bodyweightmodifierchip.dynamic1": {
     "message": "{setPrefix}{a11y}",
     "srcHash": "45fd39535c47",
+    "origin": "human"
+  },
+  "settings.formClips.sizeKilobytes": {
+    "message": "{size} KB",
+    "srcHash": "8e55b2bc49a1",
+    "origin": "human"
+  },
+  "settings.formClips.sizeMegabytes": {
+    "message": "{size} MB",
+    "srcHash": "c4e089d94d8a",
+    "origin": "human"
+  },
+  "settings.formClips.storage": {
+    "message": "{size} MB across {count} clips",
+    "srcHash": "87049544f746",
     "origin": "human"
   },
   "home.stats.streakA11y": {
@@ -712,6 +772,16 @@
   "session.bodyweightmodifiersheet.dynamic3": {
     "message": "{UNICODE_MINUS}{v}",
     "srcHash": "1d44517d59bf",
+    "origin": "human"
+  },
+  "settings.hydration.unitLabel": {
+    "message": "{unit, select, ml {ml} fl_oz {fl oz} other {ml}}",
+    "srcHash": "925d26531a3d",
+    "origin": "human"
+  },
+  "settings.frequencyGoal.value": {
+    "message": "{value, plural, one {# day} other {# days}} / week",
+    "srcHash": "3028e47297a7",
     "origin": "human"
   },
   "components.exercise.numeric-stepper.value": {
@@ -959,6 +1029,11 @@
     "srcHash": "255eac9db76e",
     "origin": "human"
   },
+  "settings.backup.category.achievements": {
+    "message": "Achievements",
+    "srcHash": "a911685bd74f",
+    "origin": "human"
+  },
   "home.programs.active": {
     "message": "ACTIVE",
     "srcHash": "245309f42584",
@@ -1012,6 +1087,11 @@
   "session.pinnedexercisenoteeditor.str1": {
     "message": "Add a pinned note…",
     "srcHash": "b4c1b3c06adb",
+    "origin": "human"
+  },
+  "settings.keyStatus.missing": {
+    "message": "Add an OpenRouter key to view its usage.",
+    "srcHash": "3753882b6fac",
     "origin": "human"
   },
   "app.template.create.minimum-exercise": {
@@ -1264,6 +1344,11 @@
     "srcHash": "8e13016f890d",
     "origin": "human"
   },
+  "floatingTabBar.tabs.aiCoach": {
+    "message": "AI Coach",
+    "srcHash": "07cacebdf686",
+    "origin": "human"
+  },
   "home.programs.all": {
     "message": "All",
     "srcHash": "7173d9505fd9",
@@ -1332,6 +1417,11 @@
   "home.quickAdd.logHint": {
     "message": "Announces result after logging",
     "srcHash": "25e35e418609",
+    "origin": "human"
+  },
+  "settings.backup.category.appPreferences": {
+    "message": "App preferences",
+    "srcHash": "d01999bf2449",
     "origin": "human"
   },
   "settings.appearance.title": {
@@ -1449,6 +1539,26 @@
     "srcHash": "77d77e1429e9",
     "origin": "human"
   },
+  "settings.autoBackup.title": {
+    "message": "Auto-Backup",
+    "srcHash": "080e87c56b94",
+    "origin": "human"
+  },
+  "settings.autoBackup.label": {
+    "message": "Auto-Backup",
+    "srcHash": "a1cd752c57cb",
+    "origin": "human"
+  },
+  "settings.autoBackup.infoA11y": {
+    "message": "Automatic backup information",
+    "srcHash": "56388d0b065a",
+    "origin": "human"
+  },
+  "settings.autoBackup.tooltip": {
+    "message": "Automatically saves your data after each workout.",
+    "srcHash": "93ade53f1e0b",
+    "origin": "human"
+  },
   "settings.integrations.connectHint": {
     "message": "Automatically upload completed workouts to your Strava account.",
     "srcHash": "573ef89b2d83",
@@ -1514,6 +1624,11 @@
     "srcHash": "f3b4d8bf6143",
     "origin": "human"
   },
+  "settings.autoBackup.created": {
+    "message": "Backup created successfully",
+    "srcHash": "2482a7bc4784",
+    "origin": "human"
+  },
   "settings.backups.created": {
     "message": "Backup created successfully",
     "srcHash": "fd236c4bd1e3",
@@ -1524,14 +1639,29 @@
     "srcHash": "2312e3727257",
     "origin": "human"
   },
+  "settings.autoBackup.failed": {
+    "message": "Backup failed",
+    "srcHash": "5ba9485cc7b2",
+    "origin": "human"
+  },
   "settings.backups.failed": {
     "message": "Backup failed",
     "srcHash": "0782bbd3bcc4",
     "origin": "human"
   },
+  "settings.autoBackup.backupNow": {
+    "message": "Backup Now",
+    "srcHash": "2a50bddee39b",
+    "origin": "human"
+  },
   "settings.backups.create": {
     "message": "Backup Now",
     "srcHash": "d2a44b1bc60e",
+    "origin": "human"
+  },
+  "settings.autoBackup.backups": {
+    "message": "backups",
+    "srcHash": "114512c8a903",
     "origin": "human"
   },
   "settings.backups.title": {
@@ -1719,6 +1849,11 @@
     "srcHash": "ffbd3df0b767",
     "origin": "human"
   },
+  "settings.backup.category.bodyMetrics": {
+    "message": "Body metrics",
+    "srcHash": "ef263be99d1c",
+    "origin": "human"
+  },
   "components.progress.monthlyReport.bodyWeight": {
     "message": "Body Weight",
     "srcHash": "dd65ad21fbff",
@@ -1752,6 +1887,11 @@
   "feedback.title.placeholder": {
     "message": "Brief summary of the issue",
     "srcHash": "5838bcda002c",
+    "origin": "human"
+  },
+  "settings.importWorkouts.description": {
+    "message": "Bring your history from Strong, Hevy, or FitNotes (.csv)",
+    "srcHash": "4630e2cd0ded",
     "origin": "human"
   },
   "components.onboarding.recommendAdvanced.browse": {
@@ -2064,6 +2204,11 @@
     "srcHash": "0dcc072e61d2",
     "origin": "human"
   },
+  "settings.backup.cancelExportA11y": {
+    "message": "Cancel export",
+    "srcHash": "25937c55ef24",
+    "origin": "human"
+  },
   "body.goals.cancel.a11y": {
     "message": "Cancel goal editing",
     "srcHash": "1f1c06b00cb8",
@@ -2072,6 +2217,11 @@
   "common.cancelImportA11y": {
     "message": "Cancel import",
     "srcHash": "c9cadd02bbb9",
+    "origin": "human"
+  },
+  "settings.backup.cancelImportA11y": {
+    "message": "Cancel import",
+    "srcHash": "3407c0e3ff18",
     "origin": "human"
   },
   "session.pulleypinpickersheet.str4": {
@@ -2239,6 +2389,11 @@
     "srcHash": "0fd2d49b9809",
     "origin": "human"
   },
+  "settings.importWorkouts.chooseFile": {
+    "message": "Choose CSV File…",
+    "srcHash": "69648ec55d04",
+    "origin": "human"
+  },
   "settings.macroCoach.chooseModeHeading": {
     "message": "Choose how you'd like to use this",
     "srcHash": "95c67cb77bf6",
@@ -2252,6 +2407,16 @@
   "settings.language.caption": {
     "message": "Choose the language used throughout the app.",
     "srcHash": "abbfbb2676d5",
+    "origin": "human"
+  },
+  "settings.backup.chooseExport": {
+    "message": "Choose what to export",
+    "srcHash": "23e6b9de510d",
+    "origin": "human"
+  },
+  "settings.backup.chooseImport": {
+    "message": "Choose what to import",
+    "srcHash": "713d177ce8b5",
     "origin": "human"
   },
   "settings.macroCoach.chooseModeTitle": {
@@ -2309,6 +2474,11 @@
     "srcHash": "c0b7e80b90f4",
     "origin": "human"
   },
+  "settings.frequencyGoal.clear": {
+    "message": "Clear",
+    "srcHash": "bc0862d1b7b9",
+    "origin": "human"
+  },
   "history.filters.clearOneA11y": {
     "message": "Clear {label} filter",
     "srcHash": "9d6b8edfd6fd",
@@ -2317,6 +2487,11 @@
   "history.filterBar.clearAll": {
     "message": "Clear all",
     "srcHash": "34e4589aec28",
+    "origin": "human"
+  },
+  "settings.backup.clearAll": {
+    "message": "Clear all",
+    "srcHash": "b3f5e2326157",
     "origin": "human"
   },
   "errors.clear.all": {
@@ -2499,6 +2674,11 @@
     "srcHash": "bc25133e2a84",
     "origin": "human"
   },
+  "common.close": {
+    "message": "Close",
+    "srcHash": "366bfec20d88",
+    "origin": "human"
+  },
   "components.nutrition.coach.close": {
     "message": "Close",
     "srcHash": "422562df4817",
@@ -2522,6 +2702,11 @@
   "session.suggestionexplainermodal.str1": {
     "message": "Close explainer",
     "srcHash": "c5a4688816cb",
+    "origin": "human"
+  },
+  "settings.formClips.closeA11y": {
+    "message": "Close form clips manage sheet",
+    "srcHash": "fe4a619ebd08",
     "origin": "human"
   },
   "session.pulleypinpickersheet.str1": {
@@ -2680,8 +2865,8 @@
     "origin": "human"
   },
   "settings.integrations.connectedAs": {
-    "message": "Connected as {stravaAthlete}",
-    "srcHash": "5baff51f5a06",
+    "message": "Connected as {athlete}",
+    "srcHash": "fa511b42a03d",
     "origin": "human"
   },
   "stravaCallback.connected": {
@@ -2779,6 +2964,16 @@
     "srcHash": "d1188463ce48",
     "origin": "human"
   },
+  "settings.formClips.deleteAllFailedTitle": {
+    "message": "Couldn't delete all clips",
+    "srcHash": "c1e6192cfd87",
+    "origin": "human"
+  },
+  "settings.formClips.deleteFailedTitle": {
+    "message": "Couldn't delete clip",
+    "srcHash": "68845356e29b",
+    "origin": "human"
+  },
   "settings.reminders.disableFailed": {
     "message": "Couldn't disable reminders. Try again later.",
     "srcHash": "02c2dcd76d17",
@@ -2862,6 +3057,11 @@
   "home.programs.create": {
     "message": "Create",
     "srcHash": "d74b9b009145",
+    "origin": "human"
+  },
+  "settings.autoBackup.createA11y": {
+    "message": "Create a backup now",
+    "srcHash": "3861b8c2fce5",
     "origin": "human"
   },
   "settings.backups.createA11y": {
@@ -3060,8 +3260,8 @@
     "origin": "human"
   },
   "settings.hydration.dailyGoal": {
-    "message": "Daily goal ({unit, select, ml {ml} fl_oz {fl oz}})",
-    "srcHash": "1c27165f0a7e",
+    "message": "Daily goal ({unit, select, ml {ml} fl_oz {fl oz} other {ml}})",
+    "srcHash": "8cc808bb33f4",
     "origin": "human"
   },
   "settings.hydration.dailyGoalA11y": {
@@ -3087,6 +3287,11 @@
   "settingsHandlers.export.success": {
     "message": "Data exported successfully",
     "srcHash": "d1128fb65c43",
+    "origin": "human"
+  },
+  "settings.data.title": {
+    "message": "Data Management",
+    "srcHash": "a531c109d8a3",
     "origin": "human"
   },
   "components.photos.meta.dateA11y": {
@@ -3224,6 +3429,11 @@
     "srcHash": "6e86795962b0",
     "origin": "human"
   },
+  "settings.autoBackup.decreaseA11y": {
+    "message": "Decrease backup retention",
+    "srcHash": "7dac1c316ceb",
+    "origin": "human"
+  },
   "components.exercise.numeric-stepper.decrease": {
     "message": "Decrease by {step}",
     "srcHash": "7c7d88845763",
@@ -3294,6 +3504,11 @@
     "srcHash": "806fd142a7d8",
     "origin": "human"
   },
+  "common.delete": {
+    "message": "Delete",
+    "srcHash": "0a4ee4937897",
+    "origin": "human"
+  },
   "session.formlibrarytab.str10": {
     "message": "Delete",
     "srcHash": "4dd8d14baa95",
@@ -3307,11 +3522,6 @@
   "components.nutrition.water.delete": {
     "message": "Delete",
     "srcHash": "19790754eff1",
-    "origin": "human"
-  },
-  "common.delete": {
-    "message": "Delete",
-    "srcHash": "0a4ee4937897",
     "origin": "human"
   },
   "settings.gymProfiles.deleteGymMessage": {
@@ -3332,6 +3542,31 @@
   "app.exercise.id.delete-unused": {
     "message": "Delete {0}? This exercise will be removed from the library.",
     "srcHash": "ca3020503f28",
+    "origin": "human"
+  },
+  "settings.formClips.deleteAllMessage": {
+    "message": "Delete {count, plural, one {# clip} other {# clips}}? This permanently removes them from this device. This cannot be undone.",
+    "srcHash": "f81081a70568",
+    "origin": "human"
+  },
+  "settings.formClips.deleteAllAction": {
+    "message": "Delete all",
+    "srcHash": "05d0a8ff14e2",
+    "origin": "human"
+  },
+  "settings.formClips.deleteAllA11y": {
+    "message": "Delete all {count} form clips",
+    "srcHash": "f5ddaba91eb4",
+    "origin": "human"
+  },
+  "settings.formClips.deleteAllTitle": {
+    "message": "Delete all clips",
+    "srcHash": "4481187973db",
+    "origin": "human"
+  },
+  "settings.formClips.deleteAll": {
+    "message": "Delete all clips",
+    "srcHash": "f7ef8f1b592e",
     "origin": "human"
   },
   "settings.backups.deleteTitle": {
@@ -3362,6 +3597,21 @@
   "session.formlibrarytab.str17": {
     "message": "Delete clip",
     "srcHash": "d8f28b9b823a",
+    "origin": "human"
+  },
+  "settings.formClips.deleteTitle": {
+    "message": "Delete clip",
+    "srcHash": "3e2d45136651",
+    "origin": "human"
+  },
+  "settings.formClips.deleteA11y": {
+    "message": "Delete clip from {date}",
+    "srcHash": "5344217f58a6",
+    "origin": "human"
+  },
+  "settings.formClips.deleteMessage": {
+    "message": "Delete clip from {date}?",
+    "srcHash": "4e19251635de",
     "origin": "human"
   },
   "session.formlibrarytab.dynamic4": {
@@ -3469,6 +3719,11 @@
     "srcHash": "4ec049d911c5",
     "origin": "human"
   },
+  "common.deleting": {
+    "message": "Deleting…",
+    "srcHash": "517d142eca23",
+    "origin": "human"
+  },
   "home.deload.guidanceA11y": {
     "message": "Deload guidance: Try reducing weights to 60% and sets by 40% this week",
     "srcHash": "8b99a3b464f0",
@@ -3505,8 +3760,8 @@
     "origin": "human"
   },
   "settings.integrations.disconnectA11y": {
-    "message": "Disconnect Strava account ({stravaAthlete})",
-    "srcHash": "d244ef7960d4",
+    "message": "Disconnect Strava account ({athlete})",
+    "srcHash": "9fb3383d7df2",
     "origin": "human"
   },
   "components.nutrition.coach.dismissA11y": {
@@ -4049,6 +4304,11 @@
     "srcHash": "e12f21cf4f72",
     "origin": "human"
   },
+  "settings.feedback.errors": {
+    "message": "Errors ({count})",
+    "srcHash": "30e027fafb37",
+    "origin": "human"
+  },
   "components.exercise.records.est-1rm": {
     "message": "Est 1RM",
     "srcHash": "aa4fd33c152f",
@@ -4129,6 +4389,11 @@
     "srcHash": "67747fb42d47",
     "origin": "human"
   },
+  "tabs.exercises.header": {
+    "message": "Exercises",
+    "srcHash": "8af98e8d3da1",
+    "origin": "human"
+  },
   "components.session.summary.pacing-breakdown.exercise": {
     "message": "Exercise",
     "srcHash": "ef5af2e0cedb",
@@ -4169,9 +4434,9 @@
     "srcHash": "cb1ba1a25176",
     "origin": "human"
   },
-  "floatingTabBar.tabs.exercises": {
+  "settings.backup.category.exercises": {
     "message": "Exercises",
-    "srcHash": "55a860e342e1",
+    "srcHash": "269d662fbbfa",
     "origin": "human"
   },
   "tabs.exercises.title": {
@@ -4179,9 +4444,9 @@
     "srcHash": "0fb7d657b43d",
     "origin": "human"
   },
-  "tabs.exercises.header": {
+  "tabs.workouts.exercisesA11y": {
     "message": "Exercises",
-    "srcHash": "8af98e8d3da1",
+    "srcHash": "fe34e979251c",
     "origin": "human"
   },
   "app.template.id.exercises": {
@@ -4207,6 +4472,11 @@
   "home.templates.export": {
     "message": "Export",
     "srcHash": "94bac203c0ce",
+    "origin": "human"
+  },
+  "settings.data.exportAll": {
+    "message": "Export All Data",
+    "srcHash": "5ead6de3bd29",
     "origin": "human"
   },
   "settings.data.exportA11y": {
@@ -4239,9 +4509,19 @@
     "srcHash": "572b3104d8da",
     "origin": "human"
   },
+  "settings.backup.exportSelected": {
+    "message": "Export Selected",
+    "srcHash": "0ce6990a5e78",
+    "origin": "human"
+  },
   "settings.csv.workoutsA11y": {
     "message": "Export workouts as CSV",
     "srcHash": "165e147864ef",
+    "origin": "human"
+  },
+  "settings.data.description": {
+    "message": "Export your complete CableSnap data as a JSON backup file, or restore from a previous backup. Duplicates are skipped.",
+    "srcHash": "30d7e7676f54",
     "origin": "human"
   },
   "settingsHandlers.export.progress": {
@@ -4424,6 +4704,16 @@
     "srcHash": "ebd056c0b4b6",
     "origin": "human"
   },
+  "settings.autoBackup.retentionFailed": {
+    "message": "Failed to update retention",
+    "srcHash": "081fa241a4b4",
+    "origin": "human"
+  },
+  "settings.autoBackup.updateFailed": {
+    "message": "Failed to update setting",
+    "srcHash": "67782859060e",
+    "origin": "human"
+  },
   "settings.gymProfiles.stackUpdateFailed": {
     "message": "Failed to update stack",
     "srcHash": "771f14fb3a29",
@@ -4484,19 +4774,29 @@
     "srcHash": "f15c2b9f3206",
     "origin": "human"
   },
+  "settings.feedback.featureRequest": {
+    "message": "Feature Request",
+    "srcHash": "70150b233db9",
+    "origin": "human"
+  },
   "settings.tiles.feedback": {
     "message": "Feedback & Reports",
     "srcHash": "33f7761d2d3a",
     "origin": "human"
   },
-  "settingsHandlers.csv.fileTooLarge": {
-    "message": "File Too Large",
-    "srcHash": "4dfd10744e36",
+  "settings.feedback.title": {
+    "message": "Feedback & Reports",
+    "srcHash": "5c1e31427bd4",
     "origin": "human"
   },
   "settingsHandlers.import.fileTooLarge": {
     "message": "File Too Large",
     "srcHash": "091acb8702eb",
+    "origin": "human"
+  },
+  "settingsHandlers.csv.fileTooLarge": {
+    "message": "File Too Large",
+    "srcHash": "4dfd10744e36",
     "origin": "human"
   },
   "exercises.filters.by": {
@@ -4562,6 +4862,11 @@
   "app.tools.cableFinder.muscle.forearms": {
     "message": "Forearms",
     "srcHash": "e2a446ce4a8a",
+    "origin": "human"
+  },
+  "settings.formClips.title": {
+    "message": "Form clips",
+    "srcHash": "8c6b7e520a70",
     "origin": "human"
   },
   "session.exercisedetaildrawer.str5": {
@@ -4929,6 +5234,11 @@
     "srcHash": "2ca8d787165f",
     "origin": "human"
   },
+  "settings.data.importBackup": {
+    "message": "Import CableSnap Backup",
+    "srcHash": "2332021995a4",
+    "origin": "human"
+  },
   "settings.importBackup.complete": {
     "message": "Import Complete",
     "srcHash": "265dceaafe43",
@@ -4964,9 +5274,19 @@
     "srcHash": "2359ba710473",
     "origin": "human"
   },
+  "settings.backup.importSelected": {
+    "message": "Import Selected",
+    "srcHash": "40fc44a96739",
+    "origin": "human"
+  },
   "home.templates.importA11y": {
     "message": "Import template",
     "srcHash": "582fb125e422",
+    "origin": "human"
+  },
+  "settings.importWorkouts.title": {
+    "message": "Import Workout History",
+    "srcHash": "9300c5cf8e12",
     "origin": "human"
   },
   "settings.importWorkoutHistory.title": {
@@ -4999,6 +5319,11 @@
     "srcHash": "16755a1552da",
     "origin": "human"
   },
+  "settings.backup.include": {
+    "message": "Include in backup",
+    "srcHash": "5ef27c3c5460",
+    "origin": "human"
+  },
   "components.muscleVolume.increaseA11y": {
     "message": "Increase {label}",
     "srcHash": "653d431f4220",
@@ -5012,6 +5337,11 @@
   "components.timer.configPanel.increaseA11y": {
     "message": "Increase {label}",
     "srcHash": "1329e22b5a6d",
+    "origin": "human"
+  },
+  "settings.autoBackup.increaseA11y": {
+    "message": "Increase backup retention",
+    "srcHash": "fdf693440d71",
     "origin": "human"
   },
   "components.exercise.numeric-stepper.increase": {
@@ -5144,14 +5474,14 @@
     "srcHash": "b958feeeb3b0",
     "origin": "human"
   },
-  "settingsHandlers.csv.invalidFile": {
-    "message": "Invalid File",
-    "srcHash": "5bcce73aa274",
-    "origin": "human"
-  },
   "settingsHandlers.import.invalidFile": {
     "message": "Invalid File",
     "srcHash": "2c24d0ad83d0",
+    "origin": "human"
+  },
+  "settingsHandlers.csv.invalidFile": {
+    "message": "Invalid File",
+    "srcHash": "5bcce73aa274",
     "origin": "human"
   },
   "settings.reminders.invalidTime": {
@@ -5184,9 +5514,24 @@
     "srcHash": "b627eb07ac9c",
     "origin": "human"
   },
+  "settings.autoBackup.keepLast": {
+    "message": "Keep last",
+    "srcHash": "a085932d8f69",
+    "origin": "human"
+  },
+  "settings.autoBackup.retentionA11y": {
+    "message": "Keep last {count} backups",
+    "srcHash": "56b8bdd6fd31",
+    "origin": "human"
+  },
   "components.muscleVolume.keepTraining": {
     "message": "Keep training to see your trends",
     "srcHash": "33f1f6d3e3b0",
+    "origin": "human"
+  },
+  "settings.keyStatus.unavailable": {
+    "message": "Key-scoped usage is unavailable right now.",
+    "srcHash": "406033cf1e65",
     "origin": "human"
   },
   "components.session.detail.editable-set-row.kg": {
@@ -5237,6 +5582,21 @@
   "history.dateRange.last90": {
     "message": "Last 90 days",
     "srcHash": "2c13cb3d6e56",
+    "origin": "human"
+  },
+  "settings.autoBackup.lastDate": {
+    "message": "Last backup: {date} at {time}",
+    "srcHash": "538ab10ab1c4",
+    "origin": "human"
+  },
+  "settings.autoBackup.lastToday": {
+    "message": "Last backup: Today at {time}",
+    "srcHash": "ef6d1a760156",
+    "origin": "human"
+  },
+  "settings.autoBackup.lastYesterday": {
+    "message": "Last backup: Yesterday at {time}",
+    "srcHash": "4284b84009af",
     "origin": "human"
   },
   "components.progress.bodyCards.lastLogged": {
@@ -5379,6 +5739,11 @@
     "srcHash": "29827cc96501",
     "origin": "human"
   },
+  "settings.keyStatus.loading": {
+    "message": "Loading key-scoped usage…",
+    "srcHash": "3b7057eb4267",
+    "origin": "human"
+  },
   "body.compare.loading": {
     "message": "Loading photos...",
     "srcHash": "a4fca6ab8dfb",
@@ -5427,6 +5792,11 @@
   "components.progress.monthlyReport.loading": {
     "message": "Loading…",
     "srcHash": "7b84029fa487",
+    "origin": "human"
+  },
+  "settings.formClips.loading": {
+    "message": "Loading…",
+    "srcHash": "6e297330665f",
     "origin": "human"
   },
   "app.onboarding.welcome.privacyA11y": {
@@ -5662,6 +6032,11 @@
   "session.suggestionexplainermodal.str8": {
     "message": "Maintain",
     "srcHash": "5042aa083daf",
+    "origin": "human"
+  },
+  "settings.formClips.manageA11y": {
+    "message": "Manage form clips",
+    "srcHash": "59ad460b32f4",
     "origin": "human"
   },
   "settings.training.gymProfilesCaption": {
@@ -6154,6 +6529,11 @@
     "srcHash": "f7009fd21388",
     "origin": "human"
   },
+  "settings.autoBackup.noBackups": {
+    "message": "No backups yet",
+    "srcHash": "75c63571586c",
+    "origin": "human"
+  },
   "settings.backups.empty": {
     "message": "No backups yet — your first backup will be created after your next workout.",
     "srcHash": "509eeb32f409",
@@ -6162,6 +6542,11 @@
   "settings.gymProfiles.noStacks": {
     "message": "No cable stacks yet.",
     "srcHash": "f2b4d6a4f8ea",
+    "origin": "human"
+  },
+  "settings.formClips.emptyTitle": {
+    "message": "No clips recorded yet",
+    "srcHash": "b16deeb128ff",
     "origin": "human"
   },
   "session.formlibrarytab.str12": {
@@ -6347,6 +6732,11 @@
   "feedback.diagnostics.noInteractions": {
     "message": "No recent interactions",
     "srcHash": "820d85517ed9",
+    "origin": "human"
+  },
+  "settings.backup.noRecords": {
+    "message": "No records",
+    "srcHash": "767a7130de04",
     "origin": "human"
   },
   "app.progress.records.emptyTitle": {
@@ -6609,6 +6999,11 @@
     "srcHash": "8476d48330a2",
     "origin": "human"
   },
+  "settings.backup.category.nutrition": {
+    "message": "Nutrition",
+    "srcHash": "3dc1ae628a0a",
+    "origin": "human"
+  },
   "settings.csv.nutrition": {
     "message": "Nutrition",
     "srcHash": "136e35344650",
@@ -6689,6 +7084,16 @@
     "srcHash": "6d6139801fd8",
     "origin": "human"
   },
+  "settings.backup.importHelper": {
+    "message": "Only checked categories will be imported. Unchecked categories in your current app data will be left untouched.",
+    "srcHash": "c9b78e7ed46b",
+    "origin": "human"
+  },
+  "settings.backup.exportHelper": {
+    "message": "Only checked categories will be included in the backup file.",
+    "srcHash": "6eea2bd084cb",
+    "origin": "human"
+  },
   "components.exercise.records.rm-a11y": {
     "message": "Open 1RM calculator",
     "srcHash": "c1be3effabaf",
@@ -6727,11 +7132,6 @@
   "components.nutrition.water.openA11y": {
     "message": "Open hydration day detail",
     "srcHash": "6c3e4def4b6c",
-    "origin": "human"
-  },
-  "settings.language.a11y": {
-    "message": "Open language settings",
-    "srcHash": "37f63f7ab99e",
     "origin": "human"
   },
   "feedback.github.open": {
@@ -6784,9 +7184,19 @@
     "srcHash": "eb2804e741d1",
     "origin": "human"
   },
+  "settings.keyStatus.title": {
+    "message": "OpenRouter key status",
+    "srcHash": "367387f735d8",
+    "origin": "human"
+  },
   "components.session.summary.pacing.show-calculation-hint": {
     "message": "Opens a brief explanation of how working time and rest are estimated",
     "srcHash": "b976c0173b61",
+    "origin": "human"
+  },
+  "settings.formClips.manageHint": {
+    "message": "Opens a list of all recorded form clips where you can delete individual or all clips",
+    "srcHash": "1a38a45da58b",
     "origin": "human"
   },
   "home.quickAdd.hint": {
@@ -6914,6 +7324,11 @@
     "srcHash": "471688c15bac",
     "origin": "human"
   },
+  "settings.formClips.deleteAllHint": {
+    "message": "Permanently removes all clips from this device. This cannot be undone.",
+    "srcHash": "0a140e6ec357",
+    "origin": "human"
+  },
   "session.formlibrarytab.str5": {
     "message": "Permanently removes this clip from your device",
     "srcHash": "8abb881a2141",
@@ -7009,6 +7424,11 @@
     "srcHash": "da43c00b054b",
     "origin": "human"
   },
+  "settings.backup.category.plateCalculator": {
+    "message": "Plate calculator settings",
+    "srcHash": "c82a5dc98688",
+    "origin": "human"
+  },
   "components.exercise.plateau.card-a11y": {
     "message": "Plateau detected on {exerciseName}. {headline}. {bodyCopy}",
     "srcHash": "cd62344d154b",
@@ -7034,6 +7454,11 @@
     "srcHash": "61a2a0235043",
     "origin": "human"
   },
+  "settings.formClips.playA11y": {
+    "message": "Play clip from {date}",
+    "srcHash": "e12bf41f07c2",
+    "origin": "human"
+  },
   "settingsHandlers.csv.invalidMessage": {
     "message": "Please select a .csv file exported from your workout app.",
     "srcHash": "1f3e9c8de1fd",
@@ -7042,6 +7467,11 @@
   "session.setupphotosheet.str11": {
     "message": "Please try again.",
     "srcHash": "68e22a417c48",
+    "origin": "human"
+  },
+  "settings.formClips.tryAgain": {
+    "message": "Please try again.",
+    "srcHash": "61d6f717060b",
     "origin": "human"
   },
   "components.photos.meta.poseCategory": {
@@ -7075,8 +7505,8 @@
     "origin": "human"
   },
   "settings.hydration.preset": {
-    "message": "Preset {number} ({unit, select, ml {ml} fl oz {fl oz}})",
-    "srcHash": "d2f7139c776e",
+    "message": "Preset {number} ({unit, select, ml {ml} fl_oz {fl oz} other {ml}})",
+    "srcHash": "df01f4c6fab4",
     "origin": "human"
   },
   "settings.hydration.presetPositive": {
@@ -7182,6 +7612,11 @@
   "home.programs.title": {
     "message": "Programs",
     "srcHash": "48f887e77def",
+    "origin": "human"
+  },
+  "settings.backup.category.programs": {
+    "message": "Programs",
+    "srcHash": "393d2ffcb959",
     "origin": "human"
   },
   "home.programs.filterA11y": {
@@ -7419,6 +7854,11 @@
     "srcHash": "0cf5a52580c1",
     "origin": "human"
   },
+  "settings.formClips.emptyBody": {
+    "message": "Record one from any exercise's Form clips tab.",
+    "srcHash": "01867ab6bc67",
+    "origin": "human"
+  },
   "session.formvideosheet.str14": {
     "message": "Recording failed",
     "srcHash": "f139f83daff1",
@@ -7442,6 +7882,16 @@
   "components.nutrition.badge.restHint": {
     "message": "Recovery day — a bit lower to balance your training days. Your weekly average is unchanged.",
     "srcHash": "ebe0c700c844",
+    "origin": "human"
+  },
+  "settings.keyStatus.refresh": {
+    "message": "Refresh",
+    "srcHash": "b422c551272f",
+    "origin": "human"
+  },
+  "settings.keyStatus.remaining": {
+    "message": "Remaining limit",
+    "srcHash": "2d82ecfa5249",
     "origin": "human"
   },
   "settings.reminders.timeA11y": {
@@ -7519,6 +7969,11 @@
     "srcHash": "27525b337cf3",
     "origin": "human"
   },
+  "settings.formClips.deleteHint": {
+    "message": "Removes this clip from your device",
+    "srcHash": "5077d25254cf",
+    "origin": "human"
+  },
   "app.program.id.reorder-hint": {
     "message": "Reorders workout day",
     "srcHash": "333c62db20ce",
@@ -7567,6 +8022,11 @@
   "settings.feedback.bugA11y": {
     "message": "Report a bug",
     "srcHash": "833e5336d37d",
+    "origin": "human"
+  },
+  "settings.feedback.reportBug": {
+    "message": "Report Bug",
+    "srcHash": "5df0300b07df",
     "origin": "human"
   },
   "feedback.description.a11y": {
@@ -7782,6 +8242,11 @@
   "settings.restNotifications.infoA11y": {
     "message": "Rest Timer Notifications. Tap for more info",
     "srcHash": "5561f6a85166",
+    "origin": "human"
+  },
+  "settings.backup.category.restTimer": {
+    "message": "Rest timer settings",
+    "srcHash": "b4bc31d1c049",
     "origin": "human"
   },
   "settings.advancedSets.restPause.title": {
@@ -8329,6 +8794,11 @@
     "srcHash": "2b325edfb2db",
     "origin": "human"
   },
+  "settings.backup.selectAll": {
+    "message": "Select all",
+    "srcHash": "5fb742afb5b5",
+    "origin": "human"
+  },
   "settings.backup.selectAllA11y": {
     "message": "Select all backup categories",
     "srcHash": "9f060475e2cd",
@@ -8489,6 +8959,11 @@
     "srcHash": "6e71df763a91",
     "origin": "human"
   },
+  "settings.frequencyGoal.set": {
+    "message": "Set a goal",
+    "srcHash": "2020792e088c",
+    "origin": "human"
+  },
   "app.exercise.id.set-goal-a11y": {
     "message": "Set a strength goal for this exercise",
     "srcHash": "0748f1255237",
@@ -8637,6 +9112,11 @@
   "tabs.settings.header": {
     "message": "Settings",
     "srcHash": "df377f5e6727",
+    "origin": "human"
+  },
+  "settings.formClips.setupPhotos": {
+    "message": "Setup photos: {size} MB across {count} photos",
+    "srcHash": "2548f3ecfc37",
     "origin": "human"
   },
   "components.session.detail.share-overlay.share": {
@@ -8797,6 +9277,11 @@
   "components.nutrition.coach.infoOnly": {
     "message": "Showing TDEE info only this week.",
     "srcHash": "cb4c9cc18b97",
+    "origin": "human"
+  },
+  "settings.frequencyGoal.description": {
+    "message": "Shown on the home screen to track workouts completed vs. your target each week.",
+    "srcHash": "4715fb491187",
     "origin": "human"
   },
   "components.onboarding.recommendError.skip": {
@@ -9369,6 +9854,11 @@
     "srcHash": "64c02eb8e837",
     "origin": "human"
   },
+  "settings.keyStatus.note": {
+    "message": "These figures are scoped to this key, not your whole OpenRouter account. Account-wide credits require a management key, which this app never holds.",
+    "srcHash": "e50ce79b997f",
+    "origin": "human"
+  },
   "settingsHandlers.import.backupTooLarge": {
     "message": "This backup file is too large to process safely.",
     "srcHash": "97df8d2242ba",
@@ -9467,6 +9957,11 @@
   "settings.sharing.toggleAppendA11y": {
     "message": "Toggle appending promo to Strava description",
     "srcHash": "19934d91c8fd",
+    "origin": "human"
+  },
+  "settings.autoBackup.toggleA11y": {
+    "message": "Toggle auto-backup after workouts",
+    "srcHash": "461901bc639d",
     "origin": "human"
   },
   "settings.sharing.togglePromoA11y": {
@@ -9719,6 +10214,11 @@
     "srcHash": "5e287e87f4b6",
     "origin": "human"
   },
+  "settings.keyStatus.amountUnavailable": {
+    "message": "Unavailable",
+    "srcHash": "e688c90ad13b",
+    "origin": "human"
+  },
   "home.quickAdd.undo": {
     "message": "Undo",
     "srcHash": "1867e1946181",
@@ -9804,9 +10304,19 @@
     "srcHash": "452c44b906a1",
     "origin": "human"
   },
+  "settings.keyStatus.month": {
+    "message": "Used this month",
+    "srcHash": "707e5abd2cc3",
+    "origin": "human"
+  },
   "settings.trainingDayMacros.daysPerWeekHint": {
     "message": "Used to keep your weekly calorie average exactly equal to your base target.",
     "srcHash": "5d117804262b",
+    "origin": "human"
+  },
+  "settings.keyStatus.today": {
+    "message": "Used today",
+    "srcHash": "2e673d71050f",
     "origin": "human"
   },
   "app.program.create.validation-days": {
@@ -9849,6 +10359,11 @@
     "srcHash": "ee8f0ac76f91",
     "origin": "human"
   },
+  "settings.formClips.video": {
+    "message": "video",
+    "srcHash": "682b0f370a9f",
+    "origin": "human"
+  },
   "session.groupcardheader.dynamic2": {
     "message": "View {0} details",
     "srcHash": "785a0cf58655",
@@ -9857,6 +10372,11 @@
   "components.session.summary.achievements.more-a11y": {
     "message": "View {extraCount} more achievements",
     "srcHash": "f9ff948c9e25",
+    "origin": "human"
+  },
+  "settings.autoBackup.viewA11y": {
+    "message": "View all backups",
+    "srcHash": "635f1282f3a1",
     "origin": "human"
   },
   "home.recent.viewAll": {
@@ -9874,6 +10394,11 @@
     "srcHash": "4d79ddacc171",
     "origin": "human"
   },
+  "settings.autoBackup.viewBackups": {
+    "message": "View Backups",
+    "srcHash": "2041197bda63",
+    "origin": "human"
+  },
   "session.setupphotosheet.str4": {
     "message": "View current photo",
     "srcHash": "61d54fdf07f0",
@@ -9887,6 +10412,11 @@
   "components.session.summary.footer.details": {
     "message": "View Details",
     "srcHash": "b4be18591079",
+    "origin": "human"
+  },
+  "settings.feedback.errorsA11y": {
+    "message": "View error log, {count, plural, one {# error} other {# errors}}",
+    "srcHash": "a478952359d2",
     "origin": "human"
   },
   "components.nutrition.header.mealTemplatesA11y": {
@@ -9910,8 +10440,8 @@
     "origin": "human"
   },
   "settings.about.releaseNotesA11y": {
-    "message": "View release notes, current version {appVersion}",
-    "srcHash": "9eb1bf3b434a",
+    "message": "View release notes, current version {version}",
+    "srcHash": "5939fcad0f4a",
     "origin": "human"
   },
   "home.recent.workoutA11y": {
@@ -10034,6 +10564,16 @@
     "srcHash": "8af7712c2d87",
     "origin": "human"
   },
+  "settings.frequencyGoal.title": {
+    "message": "Weekly Training Goal",
+    "srcHash": "653cc7b2bb37",
+    "origin": "human"
+  },
+  "settings.frequencyGoal.valueA11y": {
+    "message": "Weekly training goal: {value, plural, one {# day} other {# days}}",
+    "srcHash": "06eb9b593c1d",
+    "origin": "human"
+  },
   "components.muscleVolume.weeklyTrend": {
     "message": "Weekly Trend",
     "srcHash": "c581e22f6b53",
@@ -10117,6 +10657,11 @@
   "components.nutrition.coach.stable": {
     "message": "Weight stable — no change suggested.",
     "srcHash": "00c73c6580c2",
+    "origin": "human"
+  },
+  "settings.units.weightStepA11y": {
+    "message": "Weight step {step} {unit, select, lb {pounds} kg {kilograms} other {kilograms}}",
+    "srcHash": "9876d52e12e6",
     "origin": "human"
   },
   "components.progress.bodyCards.weightTrend": {
@@ -10259,6 +10804,16 @@
     "srcHash": "1c40ad7ab6b9",
     "origin": "human"
   },
+  "settings.backup.category.workoutHistory": {
+    "message": "Workout session history",
+    "srcHash": "d29fb33fedaf",
+    "origin": "human"
+  },
+  "settings.backup.category.workoutTemplates": {
+    "message": "Workout templates",
+    "srcHash": "bcb0f8d54ba1",
+    "origin": "human"
+  },
   "tabs.workouts.toolsA11y": {
     "message": "Workout tools",
     "srcHash": "067a9d6f5108",
@@ -10304,14 +10859,14 @@
     "srcHash": "692058b12cce",
     "origin": "human"
   },
-  "tabs.workouts.title": {
-    "message": "Workouts",
-    "srcHash": "8a28cbd69e41",
-    "origin": "human"
-  },
   "tabs.workouts.header": {
     "message": "Workouts",
     "srcHash": "2a256debc51d",
+    "origin": "human"
+  },
+  "tabs.workouts.title": {
+    "message": "Workouts",
+    "srcHash": "8a28cbd69e41",
     "origin": "human"
   },
   "components.weeklySummary.workouts": {
@@ -10345,8 +10900,8 @@
     "origin": "human"
   },
   "settings.reminders.scheduleHint": {
-    "message": "You'll be reminded at {reminderTime} on days with scheduled workouts",
-    "srcHash": "441e03e48b4c",
+    "message": "You'll be reminded at {time} on days with scheduled workouts",
+    "srcHash": "177d8751c666",
     "origin": "human"
   },
   "components.exercise.progression.next": {
@@ -10417,11 +10972,6 @@
   "components.nutrition.coach.explainerWeight": {
     "message": "Your trend weight is an exponentially-weighted moving average (EWMA) of your daily weigh-ins. This smooths out water-weight fluctuations so that one heavy day doesn't distort your estimate.",
     "srcHash": "87eeaff10e47",
-    "origin": "human"
-  },
-  "settings.formClips.deleteAllMessage": {
-    "message": "Delete {count, plural, one {# clip} other {# clips}}? This permanently removes them from this device. This cannot be undone.",
-    "srcHash": "f81081a70568",
     "origin": "human"
   }
 }

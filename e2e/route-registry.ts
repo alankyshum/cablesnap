@@ -61,7 +61,6 @@ export const SETTINGS_SCREENS: Screen[] = [
   { name: "Gym Profiles Settings", path: "/settings/gym-profiles" },
   { name: "Import Backup Settings", path: "/settings/import-backup" },
   { name: "Import Workouts Settings", path: "/settings/import-workouts" },
-  { name: "Language Settings", path: "/settings/language" },
   { name: "Macro Coach Settings", path: "/settings/macro-coach" },
   { name: "Training Day Macros Settings", path: "/settings/training-day-macros" },
 ];

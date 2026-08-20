@@ -28,6 +28,7 @@ const SUPPORTED_LOCALES = ["en-US", "en-GB", "zh-TW", "zh-CN"] as const;
 // Explicit key exceptions for intentionally Latin-only strings.
 const REVIEWED_LATIN_ALLOWLIST = new Set([
   "settings.integrations.strava", "settings.about.version",
+  "settings.formClips.sizeMegabytes", "settings.formClips.sizeKilobytes",
   "strava", "cablesnap", "mev", "mrv", "json", "amrap", "pr", "pb", "1rm", "kg", "ml", "oz", "fl",
 ]);
 // Reviewed Latin tokens which are proper nouns, acronyms, or measurement units,

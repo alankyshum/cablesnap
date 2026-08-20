@@ -14,24 +14,21 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: components/session/FormLibraryTab.tsx:600
-#~ msgid "session.formlibrarytab.dynamic1"
-#~ msgstr "Clip from {date}{status, select, selected {, selected} not-selected {, not selected} none {}}"
+#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
+msgid "floatingTabBar.tabs.exercises"
+msgstr "floatingTabBar.tabs.exercises"
 
 #. js-lingui-explicit-id
-#: components/session/FormLibraryTab.tsx:599
-#~ msgid "session.formlibrarytab.dynamic1-not-selected"
-#~ msgstr "Clip from {dateStr}, not selected"
+#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
+msgid "settings.language.a11y"
+msgstr "Open language settings"
 
 #. js-lingui-explicit-id
-#: components/session/FormLibraryTab.tsx:598
-#~ msgid "session.formlibrarytab.dynamic1-selected"
-#~ msgstr "Clip from {dateStr}, selected"
-
-#. js-lingui-explicit-id
-#: components/settings/FormClipsManageSheet.tsx:116
-#~ msgid "settings.formClips.deleteAllMessage"
-#~ msgstr "Delete {count, plural, one {# clip} other {# clips}}? This permanently removes them from this device. This cannot be undone."
+#: components/settings/KeyStatusCard.tsx:38
+#: components/settings/KeyStatusCard.tsx:39
+#: components/settings/KeyStatusCard.tsx:40
+#~ msgid "settings.keyStatus.unavailableAmount"
+#~ msgstr "Unavailable"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: n.side
@@ -96,7 +93,7 @@ msgstr "{0, plural, one {# workout} other {# workouts}}"
 #. placeholder {1}: formatDuration(s.duration_seconds)
 #. placeholder {2}: s.set_count
 #. placeholder {2}: t.set_count
-#: components/progress/WorkoutCards.tsx:119
+#: components/progress/WorkoutCards.tsx:109
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17715
 msgid "components.progress.workoutCards.sessionSummary"
 msgstr "{0} · {1} · {2} sets"
@@ -141,7 +138,7 @@ msgstr "{0} · {1} sets · {2} reps"
 #. js-lingui-explicit-id
 #. placeholder {0}: nextWorkout.program.name
 #. placeholder {0}: x.program.name
-#: components/home/HomeBanners.tsx:103
+#: components/home/HomeBanners.tsx:104
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.nextProgram"
 msgstr "{0} · Tap to start"
@@ -149,7 +146,7 @@ msgstr "{0} · Tap to start"
 #. js-lingui-explicit-id
 #. placeholder {0}: nextWorkout.program.name
 #. placeholder {0}: x.program.name
-#: components/home/HomeBanners.tsx:111
+#: components/home/HomeBanners.tsx:112
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.schedule"
 msgstr "{0} (Schedule active)"
@@ -259,7 +256,7 @@ msgstr "{0} days"
 #. js-lingui-explicit-id
 #. placeholder {0}: l.daysTracked
 #. placeholder {0}: thisWeek.daysTracked
-#: components/progress/NutritionCards.tsx:143
+#: components/progress/NutritionCards.tsx:136
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.daysTracked"
 msgstr "{0} days tracked"
@@ -267,7 +264,7 @@ msgstr "{0} days tracked"
 #. js-lingui-explicit-id
 #. placeholder {0}: C.daysTracked
 #. placeholder {0}: lastWeek.daysTracked
-#: components/progress/NutritionCards.tsx:153
+#: components/progress/NutritionCards.tsx:146
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.lastDaysTracked"
 msgstr "{0} days tracked"
@@ -294,7 +291,7 @@ msgstr "{0} exercises"
 #. js-lingui-explicit-id
 #. placeholder {0}: todaySchedule.exercise_count
 #. placeholder {0}: u.exercise_count
-#: components/home/HomeBanners.tsx:57
+#: components/home/HomeBanners.tsx:58
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.todayExercises"
 msgstr "{0} exercises · Tap to start"
@@ -338,7 +335,7 @@ msgstr "{0} mount"
 #. placeholder {0}: e.onTargetDays
 #. placeholder {1}: adherence.trackedDays
 #. placeholder {1}: e.trackedDays
-#: components/progress/NutritionCards.tsx:217
+#: components/progress/NutritionCards.tsx:210
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.onTargetDays"
 msgstr "{0} of {1} tracked days on target"
@@ -645,11 +642,26 @@ msgid "components.achievements.moreToReach"
 msgstr "{achievementsFromCurrent} / {achievementsNeeded} more achievements to reach"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:151
+msgid "settings.backup.categoryInFileA11y"
+msgstr "{category}, {countLabel} in file"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: p?"\ud83d\udd25":"\ud83c\udfaf"
 #: components/home/AdherenceBar.tsx:27
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16691
 msgid "home.adherence.progress"
 msgstr "{completed} of {target} this week {symbol}"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:166
+msgid "settings.formClips.clipCount"
+msgstr "{count, plural, one {# clip} other {# clips}}"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:170
+msgid "settings.formClips.exerciseCount"
+msgstr "{count, plural, one {# exercise} other {# exercises}}"
 
 #. js-lingui-explicit-id
 #: app/settings/gym-profiles.tsx:469
@@ -662,6 +674,11 @@ msgstr "{count, plural, one {# marker} other {# markers}}"
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18253
 msgid "settings.importWorkouts.exercisesCreated"
 msgstr "{count, plural, one {# new exercise created} other {# new exercises created}}"
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:134
+msgid "settings.backup.recordCount"
+msgstr "{count, plural, one {# record} other {# records}}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: G.filteredTotal
@@ -724,7 +741,7 @@ msgstr "{count} {count, plural, one {achievement} other {achievements}} unlocked
 #. js-lingui-explicit-id
 #. placeholder {0}: e.currentStreak
 #. placeholder {1}: 1===e.currentStreak?"day":"days"
-#: components/progress/NutritionCards.tsx:235
+#: components/progress/NutritionCards.tsx:228
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.currentStreakValue"
 msgstr "{count} {count, plural, one {day} other {days}}"
@@ -732,7 +749,7 @@ msgstr "{count} {count, plural, one {day} other {days}}"
 #. js-lingui-explicit-id
 #. placeholder {0}: e.longestStreak
 #. placeholder {1}: 1===e.longestStreak?"day":"days"
-#: components/progress/NutritionCards.tsx:244
+#: components/progress/NutritionCards.tsx:237
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.longestStreakValue"
 msgstr "{count} {count, plural, one {day} other {days}}"
@@ -839,7 +856,7 @@ msgstr "{day}: {status, select, completed {completed} scheduled {scheduled} rest
 #: components/program/WeeklySchedule.tsx:74
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18036
 msgid "components.program.weekly-schedule.day-a11y"
-msgstr "{day}: {schedule, select, rest {Rest day} assigned {{template}}}"
+msgstr "{day}: {template}"
 
 #. js-lingui-explicit-id
 #: components/program/WeeklySchedule.tsx:75
@@ -856,13 +873,13 @@ msgid "app.program.id.meta"
 msgstr "{days, plural, one {# day} other {# days}} · {cycles, plural, one {# cycle} other {# cycles}} completed"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:59
+#: components/progress/BodyCards.tsx:58
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.delta"
 msgstr "{deltaLabel} since previous"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:57
+#: components/progress/BodyCards.tsx:56
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.deltaA11y"
 msgstr "{deltaLabel} since previous entry"
@@ -880,7 +897,7 @@ msgstr "{direction, select, up {up} down {down}} {percent} from last week"
 #. placeholder {0}: Math.abs(e)
 #. placeholder {1}: Math.abs(calDeltaPct)
 #. placeholder {1}: Math.abs(t)
-#: components/progress/NutritionCards.tsx:106
+#: components/progress/NutritionCards.tsx:99
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.deltaA11y"
 msgstr "{direction} by {0} calories ({1}%)"
@@ -1064,7 +1081,7 @@ msgstr "{name}{custom}, {category}, {equipment}, Difficulty: {difficulty}"
 #: components/history/TemplateFilterSheet.tsx:107
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18012
 msgid "history.templateFilter.optionA11y"
-msgstr "{0}{1}, {2} sessions{3}"
+msgstr "{name}{deleted, select, true { (deleted)} false {}}, {count} sessions{selected, select, true {, selected} false {}}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: h.MUSCLE_LABELS[e]
@@ -1072,7 +1089,7 @@ msgstr "{0}{1}, {2} sessions{3}"
 #: components/history/MuscleGroupFilterSheet.tsx:105
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18013
 msgid "history.muscleFilter.optionA11y"
-msgstr "{0}{1}"
+msgstr "{name}{selected, select, true {, selected} false {}}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: e.name
@@ -1094,7 +1111,7 @@ msgid "components.progress.records.bestWeightedA11y"
 msgstr "{name}{variant}{weight}{e1rm}, {sessions}"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:212
+#: components/progress/NutritionCards.tsx:205
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.adherenceA11y"
 msgstr "{pct}% of tracked days on target"
@@ -1178,10 +1195,40 @@ msgid "components.progress.strengthLevels.rowA11y"
 msgstr "{rowLabel}"
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:271
+msgid "settings.formClips.durationSeconds"
+msgstr "{seconds}s"
+
+#. js-lingui-explicit-id
+#: components/settings/CSVExportCard.tsx:49
+msgid "settings.csv.counts"
+msgstr "{sessions, plural, one {# session} other {# sessions}}, {entries, plural, one {# nutrition entry} other {# nutrition entries}}"
+
+#. js-lingui-explicit-id
+#: components/settings/CSVExportCard.tsx:47
+msgid "settings.csv.countsA11y"
+msgstr "{sessions, plural, one {# workout session} other {# workout sessions}}, {entries, plural, one {# nutrition entry} other {# nutrition entries}}"
+
+#. js-lingui-explicit-id
 #: components/session/BodyweightModifierChip.tsx:53
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18111
 msgid "session.bodyweightmodifierchip.dynamic1"
 msgstr "{setPrefix}{a11y}"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:276
+msgid "settings.formClips.sizeKilobytes"
+msgstr "{size} KB"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:275
+msgid "settings.formClips.sizeMegabytes"
+msgstr "{size} MB"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:84
+msgid "settings.formClips.storage"
+msgstr "{size} MB across {count} clips"
 
 #. js-lingui-explicit-id
 #: components/home/StatsRow.tsx:20
@@ -1193,7 +1240,7 @@ msgstr "{streak} week streak"
 #. placeholder {0}: _.y.toFixed(1)
 #. placeholder {1}: t.length
 #. placeholder {2}: 1===t.length?"":"s"
-#: components/progress/TrendCards.tsx:59
+#: components/progress/TrendCards.tsx:58
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.chartA11y"
 msgstr "{title}: latest value {latest}, {count} {count, plural, one {session} other {sessions}}"
@@ -1209,6 +1256,16 @@ msgstr "{trainingDays} out of {daysInMonth} days trained"
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18158
 msgid "session.bodyweightmodifiersheet.dynamic3"
 msgstr "{UNICODE_MINUS}{v}"
+
+#. js-lingui-explicit-id
+#: components/settings/HydrationCard.tsx:161
+msgid "settings.hydration.unitLabel"
+msgstr "{unit, select, ml {ml} fl_oz {fl oz} other {ml}}"
+
+#. js-lingui-explicit-id
+#: components/settings/FrequencyGoalPicker.tsx:61
+msgid "settings.frequencyGoal.value"
+msgstr "{value, plural, one {# day} other {# days}} / week"
 
 #. js-lingui-explicit-id
 #: components/exercise/NumericStepper.tsx:49
@@ -1261,7 +1318,7 @@ msgid "app.exercise.id.add-pinned-note"
 msgstr "+ Add pinned note"
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:58
+#: components/share/StravaShareCardPromo.tsx:59
 msgid "share.strava.addPromo"
 msgstr "+ Add promo caption"
 
@@ -1331,19 +1388,19 @@ msgstr "−30s"
 #. js-lingui-explicit-id
 #. placeholder {0}: active.name
 #. placeholder {0}: t.name
-#: components/home/HomeBanners.tsx:41
+#: components/home/HomeBanners.tsx:42
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.active"
 msgstr "⏱ Active Workout: {0}"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:228
+#: components/progress/BodyCards.tsx:224
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.sevenDayAverage"
 msgstr "● 7-day avg"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:225
+#: components/progress/BodyCards.tsx:221
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.actual"
 msgstr "● Actual"
@@ -1362,7 +1419,7 @@ msgstr "⚠ Estimates become less accurate above 12 reps"
 #. js-lingui-explicit-id
 #. placeholder {0}: todaySchedule.template_name
 #. placeholder {0}: u.template_name
-#: components/home/HomeBanners.tsx:73
+#: components/home/HomeBanners.tsx:74
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.completed"
 msgstr "✅ Completed: {0}"
@@ -1397,7 +1454,7 @@ msgstr "1=5\n"
 "3=10"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:222
+#: components/progress/NutritionSegment.tsx:217
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.period12A11y"
 msgstr "12W period"
@@ -1427,29 +1484,29 @@ msgid "app.tools.index.rmCalculator"
 msgstr "1RM Calculator"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:30
+#: components/settings/CSVExportCard.tsx:31
 msgid "settings.csv.range30"
 msgstr "30 days"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:202
+#: components/progress/NutritionSegment.tsx:197
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.period4A11y"
 msgstr "4W period"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:29
+#: components/settings/CSVExportCard.tsx:30
 msgid "settings.csv.range7"
 msgstr "7 days"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:212
+#: components/progress/NutritionSegment.tsx:207
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.period8A11y"
 msgstr "8W period"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:31
+#: components/settings/CSVExportCard.tsx:32
 msgid "settings.csv.range90"
 msgstr "90 days"
 
@@ -1471,7 +1528,7 @@ msgid "settings.macroCoach.quickQuestionTitle"
 msgstr "A quick question"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:371
+#: app/(tabs)/settings.tsx:374
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.about"
 msgstr "About"
@@ -1517,6 +1574,11 @@ msgid "app.progress.achievements.title"
 msgstr "Achievements"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:59
+msgid "settings.backup.category.achievements"
+msgstr "Achievements"
+
+#. js-lingui-explicit-id
 #: components/home/ProgramsList.tsx:125
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16714
 msgid "home.programs.active"
@@ -1537,7 +1599,7 @@ msgid "components.profile.activity.levelValueA11y"
 msgstr "Activity level: {0}"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:290
+#: app/(tabs)/settings.tsx:293
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.adaptiveMacroCoach"
 msgstr "Adaptive Macro Coach"
@@ -1582,6 +1644,11 @@ msgid "session.pinnedexercisenoteeditor.str1"
 msgstr "Add a pinned note…"
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:28
+msgid "settings.keyStatus.missing"
+msgstr "Add an OpenRouter key to view its usage."
+
+#. js-lingui-explicit-id
 #: app/template/create.tsx:90
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18275
 msgid "app.template.create.minimum-exercise"
@@ -1599,7 +1666,7 @@ msgid "settings.gymProfiles.addStack"
 msgstr "Add cable stack"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:48
+#: app/(tabs)/_layout.tsx:57
 msgid "tabs.exercises.addA11y"
 msgstr "Add custom exercise"
 
@@ -1664,13 +1731,13 @@ msgid "session.sessionlistfooter.str1"
 msgstr "Add exercise to workout"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:293
+#: components/progress/BodyCards.tsx:289
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.addMeasurement"
 msgstr "Add First Measurement"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:65
+#: app/(tabs)/_layout.tsx:74
 msgid "tabs.nutrition.addA11y"
 msgstr "Add food"
 
@@ -1723,12 +1790,12 @@ msgid "body.photos.addA11y"
 msgstr "Add progress photo"
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:55
+#: components/share/StravaShareCardPromo.tsx:56
 msgid "share.strava.addPromoA11y"
 msgstr "Add promo caption"
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:72
+#: components/share/StravaShareCardPromo.tsx:73
 msgid "share.strava.captionPlaceholder"
 msgstr "Add promo caption..."
 
@@ -1822,7 +1889,7 @@ msgid "feedback.description.crashPlaceholder"
 msgstr "Additional context..."
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:205
+#: components/progress/NutritionCards.tsx:198
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.adherence"
 msgstr "Adherence"
@@ -1858,7 +1925,7 @@ msgid "app.onboarding.setup.advanced"
 msgstr "Advanced"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:256
+#: app/(tabs)/settings.tsx:259
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.advancedSetTypes"
 msgstr "Advanced Set Types"
@@ -1874,10 +1941,15 @@ msgid "settings.advancedSets.intro"
 msgstr "Advanced set types let you log structured multi-burst sets as a single parent with ordered mini-sets. Each mini-set records its own reps, optional weight, and rest duration."
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:407
+#: app/(tabs)/settings.tsx:410
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.license"
 msgstr "AGPL-3.0 License"
+
+#. js-lingui-explicit-id
+#: components/floating-tab-bar/TabButton.tsx:34
+msgid "floatingTabBar.tabs.aiCoach"
+msgstr "AI Coach"
 
 #. js-lingui-explicit-id
 #: components/home/ProgramsList.tsx:87
@@ -1886,7 +1958,7 @@ msgid "home.programs.all"
 msgstr "All"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:32
+#: components/settings/CSVExportCard.tsx:33
 msgid "settings.csv.rangeAll"
 msgstr "All"
 
@@ -1927,7 +1999,7 @@ msgstr "Already on Strava"
 #. js-lingui-explicit-id
 #: components/nutrition/WaterAmountSheet.tsx:77
 msgid "components.nutrition.water.amount"
-msgstr "Amount ({0})"
+msgstr "Amount ({unit, select, ml {ml} oz {fl oz}})"
 
 #. js-lingui-explicit-id
 #: components/timer/TimerBody.tsx:30
@@ -1959,17 +2031,22 @@ msgid "home.quickAdd.logHint"
 msgstr "Announces result after logging"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:58
+msgid "settings.backup.category.appPreferences"
+msgstr "App preferences"
+
+#. js-lingui-explicit-id
 #: components/settings/AppearanceCard.tsx:25
 msgid "settings.appearance.title"
 msgstr "Appearance"
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:119
+#: components/settings/ShareSettingsCard.tsx:120
 msgid "settings.sharing.appendPromoHint"
 msgstr "Append promo caption to Strava activity description"
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:116
+#: components/settings/ShareSettingsCard.tsx:117
 msgid "settings.sharing.appendPromo"
 msgstr "Append Promo to Strava"
 
@@ -2093,6 +2170,26 @@ msgid "settings.appearance.autoHint"
 msgstr "Auto follows your device system setting."
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:131
+msgid "settings.autoBackup.title"
+msgstr "Auto-Backup"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:143
+msgid "settings.autoBackup.label"
+msgstr "Auto-Backup"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:138
+msgid "settings.autoBackup.infoA11y"
+msgstr "Auto-Backup. Tap for more info"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:161
+msgid "settings.autoBackup.tooltip"
+msgstr "Automatically saves your data after each workout."
+
+#. js-lingui-explicit-id
 #: components/settings/IntegrationsCard.tsx:92
 msgid "settings.integrations.connectHint"
 msgstr "Automatically upload completed workouts to your Strava account."
@@ -2130,7 +2227,7 @@ msgid "components.weeklySummary.avgPerSession"
 msgstr "Avg per session"
 
 #. js-lingui-explicit-id
-#: components/progress/TrendCards.tsx:137
+#: components/progress/TrendCards.tsx:124
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.avgRpe"
 msgstr "Avg RPE per Session (1–10)"
@@ -2172,6 +2269,11 @@ msgid "app.tools.cableFinder.muscle.back"
 msgstr "Back"
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:112
+msgid "settings.autoBackup.created"
+msgstr "Backup created successfully"
+
+#. js-lingui-explicit-id
 #: app/settings/backups.tsx:104
 msgid "settings.backups.created"
 msgstr "Backup created successfully"
@@ -2182,10 +2284,21 @@ msgid "settings.backups.deleted"
 msgstr "Backup deleted"
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:114
+#: components/settings/AutoBackupSection.tsx:117
+msgid "settings.autoBackup.failed"
+msgstr "Backup failed"
+
+#. js-lingui-explicit-id
 #: app/settings/backups.tsx:107
 #: app/settings/backups.tsx:110
 msgid "settings.backups.failed"
 msgstr "Backup failed"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:215
+msgid "settings.autoBackup.backupNow"
+msgstr "Backup Now"
 
 #. js-lingui-explicit-id
 #: app/settings/backups.tsx:211
@@ -2193,7 +2306,12 @@ msgid "settings.backups.create"
 msgstr "Backup Now"
 
 #. js-lingui-explicit-id
-#: app/settings/_layout.tsx:34
+#: components/settings/AutoBackupSection.tsx:200
+msgid "settings.autoBackup.backups"
+msgstr "backups"
+
+#. js-lingui-explicit-id
+#: app/settings/_layout.tsx:35
 #: app/settings/backups.tsx:191
 msgid "settings.backups.title"
 msgstr "Backups"
@@ -2314,7 +2432,7 @@ msgid "components.progress.monthlyReport.bestStreak"
 msgstr "Best streak"
 
 #. js-lingui-explicit-id
-#: components/share/MonthlyShareCard.tsx:89
+#: components/share/MonthlyShareCard.tsx:90
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17758
 msgid "share.monthly.bestStreak"
 msgstr "Best Streak"
@@ -2398,7 +2516,7 @@ msgstr "Body fat percentage goal"
 #. placeholder {0}: t.body_fat
 #. placeholder {1}: e.body_fat_goal
 #. placeholder {1}: settings.body_fat_goal
-#: components/progress/BodyCards.tsx:137
+#: components/progress/BodyCards.tsx:136
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.bodyFatGoal"
 msgstr "Body fat: {0}% → {1}%"
@@ -2421,13 +2539,18 @@ msgid "progress.tabs.bodyA11y"
 msgstr "Body metrics"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:54
+msgid "settings.backup.category.bodyMetrics"
+msgstr "Body metrics"
+
+#. js-lingui-explicit-id
 #: components/progress/MonthlyReportCards.tsx:274
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17759
 msgid "components.progress.monthlyReport.bodyWeight"
 msgstr "Body Weight"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:53
+#: components/settings/CSVExportCard.tsx:54
 msgid "settings.csv.bodyWeight"
 msgstr "Body Weight"
 
@@ -2459,6 +2582,11 @@ msgstr "Both options give you weekly insight into your calorie needs. Neither is
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17990
 msgid "feedback.title.placeholder"
 msgstr "Brief summary of the issue"
+
+#. js-lingui-explicit-id
+#: components/settings/ImportWorkoutsCard.tsx:46
+msgid "settings.importWorkouts.description"
+msgstr "Bring your history from Strong, Hevy, or FitNotes (.csv)"
 
 #. js-lingui-explicit-id
 #: components/onboarding/recommend-advanced.tsx:48
@@ -2504,13 +2632,13 @@ msgid "settings.gymProfiles.bulkPaste"
 msgstr "Bulk paste"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:412
+#: app/(tabs)/settings.tsx:425
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.buyCoffeeA11y"
 msgstr "Buy me a coffee"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:168
+#: components/progress/NutritionCards.tsx:161
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.carbsShort"
 msgstr "C"
@@ -2539,7 +2667,7 @@ msgid "components.exercise.variant-filter.a11y"
 msgstr "Cable variant filter"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:387
+#: app/(tabs)/settings.tsx:390
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.version"
 msgstr "CableSnap v{version}"
@@ -2559,7 +2687,7 @@ msgid "history.calendar.disabledA11y"
 msgstr "Calendar disabled while filters are active"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:49
+#: components/progress/NutritionCards.tsx:46
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.calorieTrend"
 msgstr "Calorie Trend"
@@ -2567,7 +2695,7 @@ msgstr "Calorie Trend"
 #. js-lingui-explicit-id
 #. placeholder {0}: dailyTotals.length
 #. placeholder {0}: e.length
-#: components/progress/NutritionCards.tsx:44
+#: components/progress/NutritionCards.tsx:41
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.calorieSummary"
 msgstr "Calorie trend: averaging {avgCalories} calories over {0} days"
@@ -2575,7 +2703,7 @@ msgstr "Calorie trend: averaging {avgCalories} calories over {0} days"
 #. js-lingui-explicit-id
 #. placeholder {0}: dailyTotals.length
 #. placeholder {0}: e.length
-#: components/progress/NutritionCards.tsx:43
+#: components/progress/NutritionCards.tsx:40
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.calorieSummaryTarget"
 msgstr "Calorie trend: averaging {avgCalories} calories over {0} days, target is {calorieTarget}"
@@ -2779,7 +2907,10 @@ msgstr "Cancel"
 #: app/settings/gym-profiles.tsx:362
 #: app/settings/import-backup.tsx:114
 #: app/settings/import-workouts.tsx:280
-#: components/settings/ShareSettingsCard.tsx:97
+#: components/settings/BackupCategorySheet.tsx:178
+#: components/settings/FormClipsManageSheet.tsx:95
+#: components/settings/FormClipsManageSheet.tsx:118
+#: components/settings/ShareSettingsCard.tsx:98
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18252
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18253
 msgid "common.cancel"
@@ -2844,6 +2975,11 @@ msgid "components.session.detail.header.cancel-a11y"
 msgstr "Cancel edits"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:176
+msgid "settings.backup.cancelExportA11y"
+msgstr "Cancel export"
+
+#. js-lingui-explicit-id
 #: app/body/goals.tsx:89
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17932
 msgid "body.goals.cancel.a11y"
@@ -2855,6 +2991,11 @@ msgstr "Cancel goal editing"
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18252
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18253
 msgid "common.cancelImportA11y"
+msgstr "Cancel import"
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:175
+msgid "settings.backup.cancelImportA11y"
 msgstr "Cancel import"
 
 #. js-lingui-explicit-id
@@ -2954,7 +3095,7 @@ msgid "components.nutrition.targets.carbsA11y"
 msgstr "Carbs"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:283
+#: components/progress/NutritionCards.tsx:275
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.carbs"
 msgstr "Carbs"
@@ -3008,7 +3149,7 @@ msgid "session.compareview.dynamic4"
 msgstr "Change clip {label}"
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:63
+#: components/exercise/ExerciseChartCard.tsx:62
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.mode"
 msgstr "Chart data mode"
@@ -3053,6 +3194,11 @@ msgid "settings.importWorkouts.chooseFileA11y"
 msgstr "Choose CSV file to import workout history"
 
 #. js-lingui-explicit-id
+#: components/settings/ImportWorkoutsCard.tsx:60
+msgid "settings.importWorkouts.chooseFile"
+msgstr "Choose CSV File…"
+
+#. js-lingui-explicit-id
 #: app/settings/macro-coach.tsx:254
 msgid "settings.macroCoach.chooseModeHeading"
 msgstr "Choose how you'd like to use this"
@@ -3064,10 +3210,20 @@ msgid "body.photos.fromLibraryA11y"
 msgstr "Choose photo from library"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:439
+#: components/ui/dropdown.tsx:43
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.language.caption"
 msgstr "Choose the language used throughout the app."
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:64
+msgid "settings.backup.chooseExport"
+msgstr "Choose what to export"
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:63
+msgid "settings.backup.chooseImport"
+msgstr "Choose what to import"
 
 #. js-lingui-explicit-id
 #: app/settings/macro-coach.tsx:252
@@ -3135,6 +3291,11 @@ msgid "session.pulleypinpickersheet.str8"
 msgstr "Clear"
 
 #. js-lingui-explicit-id
+#: components/settings/FrequencyGoalPicker.tsx:80
+msgid "settings.frequencyGoal.clear"
+msgstr "Clear"
+
+#. js-lingui-explicit-id
 #: components/history/FilterBar.tsx:179
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18011
 msgid "history.filters.clearOneA11y"
@@ -3147,13 +3308,18 @@ msgid "history.filterBar.clearAll"
 msgstr "Clear all"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:125
+msgid "settings.backup.clearAll"
+msgstr "Clear all"
+
+#. js-lingui-explicit-id
 #: app/errors.tsx:51
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17963
 msgid "errors.clear.all"
 msgstr "Clear All"
 
 #. js-lingui-explicit-id
-#: components/settings/BackupCategorySheet.tsx:100
+#: components/settings/BackupCategorySheet.tsx:123
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17881
 msgid "settings.backup.clearAllA11y"
 msgstr "Clear all backup categories"
@@ -3273,7 +3439,7 @@ msgid "components.program.weekly-schedule.clear-a11y"
 msgstr "Clear weekly schedule"
 
 #. js-lingui-explicit-id
-#: components/settings/FrequencyGoalPicker.tsx:75
+#: components/settings/FrequencyGoalPicker.tsx:76
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17768
 msgid "settings.frequencyGoal.clearA11y"
 msgstr "Clear weekly training goal"
@@ -3360,6 +3526,11 @@ msgid "session.setupphotosheet.str5"
 msgstr "Close"
 
 #. js-lingui-explicit-id
+#: components/ui/dropdown.tsx:50
+msgid "common.close"
+msgstr "Close"
+
+#. js-lingui-explicit-id
 #: components/nutrition/MacroCoachCard.tsx:399
 msgid "components.nutrition.coach.close"
 msgstr "Close"
@@ -3387,6 +3558,11 @@ msgstr "Close exercise details"
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18106
 msgid "session.suggestionexplainermodal.str1"
 msgstr "Close explainer"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:151
+msgid "settings.formClips.closeA11y"
+msgstr "Close form clips manage sheet"
 
 #. js-lingui-explicit-id
 #: components/session/PulleyPinPickerSheet.tsx:50
@@ -3424,7 +3600,7 @@ msgid "session.setoptionssheet.str4"
 msgstr "Coach this set"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:287
+#: app/(tabs)/settings.tsx:290
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.coaching"
 msgstr "Coaching"
@@ -3545,7 +3721,7 @@ msgstr "Completed workouts are automatically uploaded to Strava."
 #. js-lingui-explicit-id
 #. placeholder {0}: todaySchedule.template_name
 #. placeholder {0}: u.template_name
-#: components/home/HomeBanners.tsx:67
+#: components/home/HomeBanners.tsx:68
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.completedA11y"
 msgstr "Completed: {0}. Tap to train again."
@@ -3660,8 +3836,8 @@ msgid "components.progress.calendarDayDetail.loadError"
 msgstr "Could not load workout details"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:221
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:221
 msgid "settingsHandlers.csv.pickerFailure"
 msgstr "Could not open file picker"
 
@@ -3689,6 +3865,16 @@ msgid "settings.reminders.testFailed"
 msgstr "Could not send test notification"
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:129
+msgid "settings.formClips.deleteAllFailedTitle"
+msgstr "Couldn't delete all clips"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:105
+msgid "settings.formClips.deleteFailedTitle"
+msgstr "Couldn't delete clip"
+
+#. js-lingui-explicit-id
 #: components/settings/ReminderSection.tsx:80
 msgid "settings.reminders.disableFailed"
 msgstr "Couldn't disable reminders. Try again later."
@@ -3704,7 +3890,7 @@ msgid "settings.restNotifications.enableFailed"
 msgstr "Couldn't enable rest notifications. Try again later."
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:60
+#: components/progress/NutritionSegment.tsx:59
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.loadError"
 msgstr "Couldn't load nutrition data"
@@ -3786,6 +3972,11 @@ msgstr "Create"
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16714
 msgid "home.programs.create"
 msgstr "Create"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:212
+msgid "settings.autoBackup.createA11y"
+msgstr "Create a backup now"
 
 #. js-lingui-explicit-id
 #: app/settings/backups.tsx:208
@@ -3886,7 +4077,7 @@ msgid "home.templates.empty"
 msgstr "Create your first workout template"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:41
+#: components/settings/CSVExportCard.tsx:42
 msgid "settings.csv.title"
 msgstr "CSV Export"
 
@@ -3923,7 +4114,7 @@ msgid "history.streak.current"
 msgstr "current streak"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:230
+#: components/progress/NutritionCards.tsx:223
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.currentStreak"
 msgstr "Current Streak"
@@ -3937,7 +4128,7 @@ msgstr "Current streak (days)"
 #. js-lingui-explicit-id
 #. placeholder {0}: adherence.currentStreak
 #. placeholder {0}: e.currentStreak
-#: components/progress/NutritionCards.tsx:233
+#: components/progress/NutritionCards.tsx:226
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.currentStreakA11y"
 msgstr "Current streak: {0} days"
@@ -3955,7 +4146,7 @@ msgid "components.progress.calendarStreaks.summaryA11y"
 msgstr "Current training streak: {currentStreak} days. Longest streak: {longestStreak} days"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:34
+#: components/progress/BodyCards.tsx:33
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.currentWeight"
 msgstr "Current Weight"
@@ -3963,7 +4154,7 @@ msgstr "Current Weight"
 #. js-lingui-explicit-id
 #. placeholder {0}: (0,b.toDisplay)(e.weight,n)
 #. placeholder {0}: toDisplay(latest.weight, unit)
-#: components/progress/BodyCards.tsx:47
+#: components/progress/BodyCards.tsx:46
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.currentWeightA11y"
 msgstr "Current weight {0} {unit}"
@@ -4040,7 +4231,7 @@ msgstr "Cut short"
 #: components/settings/HydrationCard.tsx:171
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17767
 msgid "settings.hydration.dailyGoal"
-msgstr "Daily goal ({unit, select, ml {ml} fl_oz {fl oz}})"
+msgstr "Daily goal ({unit, select, ml {ml} fl_oz {fl oz} other {ml}})"
 
 #. js-lingui-explicit-id
 #: components/settings/HydrationCard.tsx:174
@@ -4060,16 +4251,21 @@ msgid "settings.importBackup.data"
 msgstr "Data"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:335
+#: app/(tabs)/settings.tsx:338
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.dataBackup"
 msgstr "Data & Backup"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:90
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:90
 msgid "settingsHandlers.export.success"
 msgstr "Data exported successfully"
+
+#. js-lingui-explicit-id
+#: components/settings/DataManagementCard.tsx:37
+msgid "settings.data.title"
+msgstr "Data Management"
 
 #. js-lingui-explicit-id
 #: components/photos/PhotoMetaModal.tsx:68
@@ -4108,22 +4304,22 @@ msgid "history.filters.dateRange"
 msgstr "Date Range"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:30
+#: components/settings/CSVExportCard.tsx:31
 msgid "settings.csv.range30A11y"
 msgstr "Date range 30 days"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:29
+#: components/settings/CSVExportCard.tsx:30
 msgid "settings.csv.range7A11y"
 msgstr "Date range 7 days"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:31
+#: components/settings/CSVExportCard.tsx:32
 msgid "settings.csv.range90A11y"
 msgstr "Date range 90 days"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:32
+#: components/settings/CSVExportCard.tsx:33
 msgid "settings.csv.rangeAllA11y"
 msgstr "Date range All"
 
@@ -4147,7 +4343,7 @@ msgstr "Day {day}: {name}"
 #: app/program/create.tsx:131
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18039
 msgid "app.program.create.day-name"
-msgstr "Day {0}: {1}"
+msgstr "Day {day}: {name}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: n+1
@@ -4237,6 +4433,11 @@ msgid "components.timer.configPanel.decreaseA11y"
 msgstr "Decrease {label}"
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:182
+msgid "settings.autoBackup.decreaseA11y"
+msgstr "Decrease backup retention"
+
+#. js-lingui-explicit-id
 #: components/exercise/NumericStepper.tsx:41
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16828
 msgid "components.exercise.numeric-stepper.decrease"
@@ -4262,7 +4463,7 @@ msgid "settings.trainingDayMacros.decreaseBoostA11y"
 msgstr "Decrease training boost"
 
 #. js-lingui-explicit-id
-#: components/settings/FrequencyGoalPicker.tsx:54
+#: components/settings/FrequencyGoalPicker.tsx:55
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17768
 msgid "settings.frequencyGoal.decreaseA11y"
 msgstr "Decrease training days"
@@ -4273,7 +4474,7 @@ msgid "settings.trainingDayMacros.decreaseDaysA11y"
 msgstr "Decrease training days per week"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:105
+#: components/progress/NutritionCards.tsx:98
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.decreased"
 msgstr "decreased"
@@ -4319,6 +4520,16 @@ msgid "components.exercise.goal-progress.delete"
 msgstr "Delete"
 
 #. js-lingui-explicit-id
+#: app/settings/backups.tsx:55
+#: app/settings/backups.tsx:161
+#: app/settings/gym-profiles.tsx:204
+#: app/settings/gym-profiles.tsx:255
+#: app/settings/gym-profiles.tsx:495
+#: components/settings/FormClipsManageSheet.tsx:97
+msgid "common.delete"
+msgstr "Delete"
+
+#. js-lingui-explicit-id
 #: components/session/FormLibraryTab.tsx:478
 msgid "session.formlibrarytab.str10"
 msgstr "Delete"
@@ -4331,15 +4542,6 @@ msgstr "Delete"
 #. js-lingui-explicit-id
 #: components/nutrition/WaterAmountSheet.tsx:108
 msgid "components.nutrition.water.delete"
-msgstr "Delete"
-
-#. js-lingui-explicit-id
-#: app/settings/backups.tsx:55
-#: app/settings/backups.tsx:161
-#: app/settings/gym-profiles.tsx:204
-#: app/settings/gym-profiles.tsx:255
-#: app/settings/gym-profiles.tsx:495
-msgid "common.delete"
 msgstr "Delete"
 
 #. js-lingui-explicit-id
@@ -4373,6 +4575,31 @@ msgid "app.exercise.id.delete-unused"
 msgstr "Delete {0}? This exercise will be removed from the library."
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:116
+msgid "settings.formClips.deleteAllMessage"
+msgstr "Delete {count, plural, one {# clip} other {# clips}}? This permanently removes them from this device. This cannot be undone."
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:120
+msgid "settings.formClips.deleteAllAction"
+msgstr "Delete all"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:211
+msgid "settings.formClips.deleteAllA11y"
+msgstr "Delete all {count} form clips"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:115
+msgid "settings.formClips.deleteAllTitle"
+msgstr "Delete all clips"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:220
+msgid "settings.formClips.deleteAll"
+msgstr "Delete all clips"
+
+#. js-lingui-explicit-id
 #: app/settings/backups.tsx:50
 msgid "settings.backups.deleteTitle"
 msgstr "Delete Backup"
@@ -4403,6 +4630,21 @@ msgstr "Delete clip"
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17896
 msgid "session.formlibrarytab.str17"
 msgstr "Delete clip"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:94
+msgid "settings.formClips.deleteTitle"
+msgstr "Delete clip"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:302
+msgid "settings.formClips.deleteA11y"
+msgstr "Delete clip from {date}"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:94
+msgid "settings.formClips.deleteMessage"
+msgstr "Delete clip from {date}?"
 
 #. js-lingui-explicit-id
 #: components/session/FormLibraryTab.tsx:670
@@ -4532,6 +4774,11 @@ msgid "app.program.create.deleted-template"
 msgstr "Deleted Template"
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:220
+msgid "common.deleting"
+msgstr "Deleting…"
+
+#. js-lingui-explicit-id
 #: components/home/DeloadNudgeCard.tsx:72
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16699
 msgid "home.deload.guidanceA11y"
@@ -4630,7 +4877,7 @@ msgid "session.stackmarkerhint.str1"
 msgstr "Dismiss stack marker hint"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:324
+#: components/progress/BodyCards.tsx:320
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.progressPhotosDescription"
 msgstr "Document your strength journey over time"
@@ -4894,7 +5141,7 @@ msgid "home.templates.edit"
 msgstr "Edit"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:110
+#: components/progress/BodyCards.tsx:109
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.edit"
 msgstr "Edit"
@@ -4944,18 +5191,18 @@ msgid "session.restbreakdownsheet.str8"
 msgstr "Edit adaptive rules…"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:109
+#: components/progress/BodyCards.tsx:108
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.editGoalsA11y"
 msgstr "Edit body goals"
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:106
+#: components/settings/ShareSettingsCard.tsx:107
 msgid "settings.sharing.editCaption"
 msgstr "Edit caption"
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:106
+#: components/settings/ShareSettingsCard.tsx:107
 msgid "settings.sharing.editCaptionOptional"
 msgstr "Edit caption (optional)"
 
@@ -5036,8 +5283,8 @@ msgid "app.program.create.edit-title"
 msgstr "Edit Program"
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:94
-#: components/settings/ShareSettingsCard.tsx:107
+#: components/settings/ShareSettingsCard.tsx:95
+#: components/settings/ShareSettingsCard.tsx:108
 msgid "settings.sharing.editPromoA11y"
 msgstr "Edit promotional caption"
 
@@ -5235,6 +5482,11 @@ msgid "errors.item.a11y"
 msgstr "Error: {error}, {timestamp}{fatal, select, true {, fatal} false {}}"
 
 #. js-lingui-explicit-id
+#: components/settings/FeedbackCard.tsx:63
+msgid "settings.feedback.errors"
+msgstr "Errors ({count})"
+
+#. js-lingui-explicit-id
 #: components/exercise/ExerciseRecordsCard.tsx:83
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17967
 msgid "components.exercise.records.est-1rm"
@@ -5247,7 +5499,7 @@ msgid "app.tools.rm.estOneRm"
 msgstr "Est 1RM"
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:65
+#: components/exercise/ExerciseChartCard.tsx:64
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.est-1rm"
 msgstr "Est. 1RM"
@@ -5328,6 +5580,11 @@ msgid "app.exercise.edit.exercise"
 msgstr "exercise"
 
 #. js-lingui-explicit-id
+#: app/(tabs)/_layout.tsx:50
+msgid "tabs.exercises.header"
+msgstr "exercise"
+
+#. js-lingui-explicit-id
 #: components/session/summary/PacingBreakdownSheet.tsx:121
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17907
 msgid "components.session.summary.pacing-breakdown.exercise"
@@ -5376,19 +5633,18 @@ msgid "components.onboarding.recommendAdvanced.exercises"
 msgstr "exercises"
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/TabButton.tsx:23
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
-msgid "floatingTabBar.tabs.exercises"
-msgstr "Exercises"
-
-#. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:43
-msgid "tabs.exercises.title"
+#: components/settings/BackupCategorySheet.tsx:52
+msgid "settings.backup.category.exercises"
 msgstr "Exercises"
 
 #. js-lingui-explicit-id
 #: app/(tabs)/_layout.tsx:44
-msgid "tabs.exercises.header"
+msgid "tabs.exercises.title"
+msgstr "Exercises"
+
+#. js-lingui-explicit-id
+#: app/(tabs)/_layout.tsx:99
+msgid "tabs.workouts.exercisesA11y"
 msgstr "Exercises"
 
 #. js-lingui-explicit-id
@@ -5428,54 +5684,69 @@ msgid "home.templates.export"
 msgstr "Export"
 
 #. js-lingui-explicit-id
+#: components/settings/DataManagementCard.tsx:50
+msgid "settings.data.exportAll"
+msgstr "Export All Data"
+
+#. js-lingui-explicit-id
 #: components/settings/DataManagementCard.tsx:47
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17787
 msgid "settings.data.exportA11y"
 msgstr "Export all data as JSON"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:54
+#: components/settings/CSVExportCard.tsx:55
 msgid "settings.csv.measurementsA11y"
 msgstr "Export body measurements as CSV"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:53
+#: components/settings/CSVExportCard.tsx:54
 msgid "settings.csv.bodyWeightA11y"
 msgstr "Export body weight as CSV"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:88
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:88
 msgid "settingsHandlers.export.dialogTitle"
 msgstr "Export CableSnap Data"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:92
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:92
 msgid "settingsHandlers.export.failure"
 msgstr "Export failed"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:52
+#: components/settings/CSVExportCard.tsx:53
 msgid "settings.csv.nutritionA11y"
 msgstr "Export nutrition as CSV"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:51
+#: components/settings/BackupCategorySheet.tsx:67
+msgid "settings.backup.exportSelected"
+msgstr "Export Selected"
+
+#. js-lingui-explicit-id
+#: components/settings/CSVExportCard.tsx:52
 msgid "settings.csv.workoutsA11y"
 msgstr "Export workouts as CSV"
+
+#. js-lingui-explicit-id
+#: components/settings/DataManagementCard.tsx:79
+msgid "settings.data.description"
+msgstr "Export your complete CableSnap data as a JSON backup file, or restore from a previous backup. Duplicates are skipped."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: u.BACKUP_TABLE_LABELS[e.table]??e.table
 #. placeholder {1}: e.tableIndex+1
 #. placeholder {2}: e.totalTables
-#: app/(tabs)/_settings-handlers.ts:74
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:74
 msgid "settingsHandlers.export.progress"
-msgstr "Exporting {0}... ({1}/{2})"
+msgstr "Exporting {label}... ({tableIndex}/{totalTables})"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:169
+#: components/progress/NutritionCards.tsx:162
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.fatShort"
 msgstr "F"
@@ -5523,7 +5794,7 @@ msgid "settings.backups.loadFailed"
 msgstr "Failed to load backups"
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:72
+#: components/exercise/ExerciseChartCard.tsx:71
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.error"
 msgstr "Failed to load chart"
@@ -5644,7 +5915,7 @@ msgid "settings.gymProfiles.stackSaveFailed"
 msgstr "Failed to save stack"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:130
+#: app/(tabs)/settings.tsx:133
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.trainingGoal.saveFailure"
 msgstr "Failed to save training goal"
@@ -5669,6 +5940,16 @@ msgstr "Failed to update exercise settings"
 #: app/settings/gym-profiles.tsx:186
 msgid "settings.gymProfiles.updateFailed"
 msgstr "Failed to update gym"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:101
+msgid "settings.autoBackup.retentionFailed"
+msgstr "Failed to update retention"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:87
+msgid "settings.autoBackup.updateFailed"
+msgstr "Failed to update setting"
 
 #. js-lingui-explicit-id
 #: app/settings/gym-profiles.tsx:247
@@ -5705,7 +5986,7 @@ msgid "components.nutrition.targets.fatA11y"
 msgstr "Fat"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:284
+#: components/progress/NutritionCards.tsx:276
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.fat"
 msgstr "Fat"
@@ -5741,23 +6022,33 @@ msgid "feedback.type.feature"
 msgstr "Feature"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:359
+#: components/settings/FeedbackCard.tsx:54
+msgid "settings.feedback.featureRequest"
+msgstr "Feature Request"
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:362
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.feedback"
 msgstr "Feedback & Reports"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:216
+#: components/settings/FeedbackCard.tsx:32
+msgid "settings.feedback.title"
+msgstr "Feedback & Reports"
+
+#. js-lingui-explicit-id
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
-msgid "settingsHandlers.csv.fileTooLarge"
+#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:113
+#: lib/settings-handlers.ts:121
+msgid "settingsHandlers.import.fileTooLarge"
 msgstr "File Too Large"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:113
-#: app/(tabs)/_settings-handlers.ts:121
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
-msgid "settingsHandlers.import.fileTooLarge"
+#: lib/settings-handlers.ts:216
+msgid "settingsHandlers.csv.fileTooLarge"
 msgstr "File Too Large"
 
 #. js-lingui-explicit-id
@@ -5843,6 +6134,12 @@ msgid "app.tools.cableFinder.muscle.forearms"
 msgstr "Forearms"
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:146
+#: components/settings/FormClipsStorageRow.tsx:82
+msgid "settings.formClips.title"
+msgstr "Form clips"
+
+#. js-lingui-explicit-id
 #: components/session/ExerciseDetailDrawer.tsx:142
 msgid "session.exercisedetaildrawer.str5"
 msgstr "Form clips"
@@ -5870,7 +6167,7 @@ msgid "components.nutrition.search.found"
 msgstr "Found: {productName}"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:398
+#: app/(tabs)/settings.tsx:401
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.description"
 msgstr "Free & open-source workout tracker — optimized for cable machines, supports all major exercises."
@@ -5964,13 +6261,13 @@ msgid "components.progress.calendar.todayA11y"
 msgstr "Go to current month"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:111
+#: components/progress/NutritionSegment.tsx:110
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.goToNutrition"
 msgstr "Go to Nutrition"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:110
+#: components/progress/NutritionSegment.tsx:109
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.goToNutritionA11y"
 msgstr "Go to Nutrition tab"
@@ -6000,8 +6297,8 @@ msgid "home.adherence.goalReached"
 msgstr "Goal reached! {completedCount} workouts this week 🔥"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:87
-#: components/progress/BodyCards.tsx:103
+#: components/progress/BodyCards.tsx:86
+#: components/progress/BodyCards.tsx:102
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.goals"
@@ -6049,7 +6346,7 @@ msgid "settings.gymProfiles.nameRequired"
 msgstr "Gym name is required"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:249
+#: app/(tabs)/settings.tsx:252
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.gymProfiles"
 msgstr "Gym Profiles"
@@ -6197,7 +6494,7 @@ msgid "components.nutrition.coach.howComputed"
 msgstr "How this is computed"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:257
+#: app/(tabs)/settings.tsx:260
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.advancedSetTypesCaption"
 msgstr "How to use rest-pause, cluster, and myo-rep sets."
@@ -6268,9 +6565,14 @@ msgid "common.import"
 msgstr "Import"
 
 #. js-lingui-explicit-id
-#: app/settings/_layout.tsx:35
+#: app/settings/_layout.tsx:36
 msgid "settings.importBackup.title"
 msgstr "Import Backup"
+
+#. js-lingui-explicit-id
+#: components/settings/DataManagementCard.tsx:62
+msgid "settings.data.importBackup"
+msgstr "Import CableSnap Backup"
 
 #. js-lingui-explicit-id
 #: app/settings/import-backup.tsx:151
@@ -6299,8 +6601,8 @@ msgid "settings.data.importA11y"
 msgstr "Import data"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:138
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:138
 msgid "settingsHandlers.import.failure"
 msgstr "Import failed"
 
@@ -6317,13 +6619,23 @@ msgid "settings.importWorkouts.progressA11y"
 msgstr "Import progress"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:66
+msgid "settings.backup.importSelected"
+msgstr "Import Selected"
+
+#. js-lingui-explicit-id
 #: components/home/TemplatesList.tsx:82
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16708
 msgid "home.templates.importA11y"
 msgstr "Import template"
 
 #. js-lingui-explicit-id
-#: app/settings/_layout.tsx:33
+#: components/settings/ImportWorkoutsCard.tsx:40
+msgid "settings.importWorkouts.title"
+msgstr "Import Workout History"
+
+#. js-lingui-explicit-id
+#: app/settings/_layout.tsx:34
 msgid "settings.importWorkoutHistory.title"
 msgstr "Import Workout History"
 
@@ -6339,7 +6651,7 @@ msgstr "Imported"
 #: app/settings/import-backup.tsx:319
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18252
 msgid "settings.importBackup.progress"
-msgstr "Importing {label}... ({0}/{1}){rowProgress}"
+msgstr "Importing {label}... ({tableIndex}/{totalTables}){hasRows, select, true { {rowIndex}/{rowCount}} false {}}"
 
 #. js-lingui-explicit-id
 #: app/settings/import-workouts.tsx:315
@@ -6360,6 +6672,11 @@ msgid "feedback.diagnostics.includeA11y"
 msgstr "Include diagnostic data"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:160
+msgid "settings.backup.include"
+msgstr "Include in backup"
+
+#. js-lingui-explicit-id
 #: components/muscle-volume/VolumeLandmarksSheet.tsx:74
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17709
 msgid "components.muscleVolume.increaseA11y"
@@ -6376,6 +6693,11 @@ msgstr "Increase {label}"
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18155
 msgid "components.timer.configPanel.increaseA11y"
 msgstr "Increase {label}"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:194
+msgid "settings.autoBackup.increaseA11y"
+msgstr "Increase backup retention"
 
 #. js-lingui-explicit-id
 #: components/exercise/NumericStepper.tsx:57
@@ -6415,7 +6737,7 @@ msgid "settings.trainingDayMacros.increaseBoostA11y"
 msgstr "Increase training boost"
 
 #. js-lingui-explicit-id
-#: components/settings/FrequencyGoalPicker.tsx:66
+#: components/settings/FrequencyGoalPicker.tsx:67
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17768
 msgid "settings.frequencyGoal.increaseA11y"
 msgstr "Increase training days"
@@ -6438,7 +6760,7 @@ msgid "session.suggestionexplainermodal.str6"
 msgstr "Increase weight and reset reps"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:105
+#: components/progress/NutritionCards.tsx:98
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.increased"
 msgstr "increased"
@@ -6466,7 +6788,7 @@ msgid "app.exercise.id.instructions-mobile"
 msgstr "Instructions"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:320
+#: app/(tabs)/settings.tsx:323
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.integrations"
 msgstr "Integrations"
@@ -6519,8 +6841,8 @@ msgid "app.tools.index.intervalTimer"
 msgstr "Interval Timer"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:133
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:133
 msgid "settingsHandlers.import.invalidBackup"
 msgstr "Invalid Backup"
 
@@ -6531,15 +6853,15 @@ msgid "settings.importBackup.invalidData"
 msgstr "Invalid backup data."
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:212
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
-msgid "settingsHandlers.csv.invalidFile"
+#: lib/settings-handlers.ts:128
+msgid "settingsHandlers.import.invalidFile"
 msgstr "Invalid File"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:128
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
-msgid "settingsHandlers.import.invalidFile"
+#: lib/settings-handlers.ts:212
+msgid "settingsHandlers.csv.invalidFile"
 msgstr "Invalid File"
 
 #. js-lingui-explicit-id
@@ -6576,9 +6898,24 @@ msgid "components.progress.monthlyReport.startTitle"
 msgstr "Just getting started!"
 
 #. js-lingui-explicit-id
-#: components/muscle-volume/VolumeTrendChart.tsx:113
+#: components/settings/AutoBackupSection.tsx:176
+msgid "settings.autoBackup.keepLast"
+msgstr "Keep last"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:174
+msgid "settings.autoBackup.retentionA11y"
+msgstr "Keep last {count} backups"
+
+#. js-lingui-explicit-id
+#: components/muscle-volume/VolumeTrendChart.tsx:92
 msgid "components.muscleVolume.keepTraining"
 msgstr "Keep training to see your trends"
+
+#. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:31
+msgid "settings.keyStatus.unavailable"
+msgstr "Key-scoped usage is unavailable right now."
 
 #. js-lingui-explicit-id
 #: components/session/detail/EditableSetRow.tsx:104
@@ -6599,15 +6936,14 @@ msgid "app.onboarding.setup.kilograms"
 msgstr "Kilograms"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:435
+#: app/(tabs)/settings.tsx:460
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.language"
 msgstr "Language"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:438
-#: app/settings/_layout.tsx:36
-#: app/settings/language.tsx:27
+#: app/(tabs)/settings.tsx:464
+#: app/settings/_layout.tsx:37
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.language.title"
 msgstr "Language"
@@ -6644,9 +6980,24 @@ msgid "history.dateRange.last90"
 msgstr "Last 90 days"
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:48
+msgid "settings.autoBackup.lastDate"
+msgstr "Last backup: {0} at {time}"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:38
+msgid "settings.autoBackup.lastToday"
+msgstr "Last backup: Today at {time}"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:46
+msgid "settings.autoBackup.lastYesterday"
+msgstr "Last backup: Yesterday at {time}"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: e.date
 #. placeholder {0}: measurements.date
-#: components/progress/BodyCards.tsx:281
+#: components/progress/BodyCards.tsx:277
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.lastLogged"
 msgstr "Last logged: {0}"
@@ -6664,7 +7015,7 @@ msgid "components.nutrition.coach.lastWeekFeel"
 msgstr "Last Sunday you set {0} kcal/day. How did the week feel?"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:148
+#: components/progress/NutritionCards.tsx:141
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.lastWeek"
 msgstr "Last Week"
@@ -6676,7 +7027,7 @@ msgid "session.lastnextrow.str4"
 msgstr "Last:"
 
 #. js-lingui-explicit-id
-#: components/progress/TrendCards.tsx:150
+#: components/progress/TrendCards.tsx:137
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.latestAvg"
 msgstr "Latest avg"
@@ -6684,7 +7035,7 @@ msgstr "Latest avg"
 #. js-lingui-explicit-id
 #. placeholder {0}: Math.round(10*(0,u.rpeToRir)(R))/10
 #. placeholder {0}: Math.round(rpeToRir(latestRpe) * 10) / 10
-#: components/progress/TrendCards.tsx:148
+#: components/progress/TrendCards.tsx:135
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.latestRirA11y"
 msgstr "Latest session avg RIR: {0}"
@@ -6830,6 +7181,11 @@ msgid "settings.gymProfiles.loading"
 msgstr "Loading gym profiles…"
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:26
+msgid "settings.keyStatus.loading"
+msgstr "Loading key-scoped usage…"
+
+#. js-lingui-explicit-id
 #: app/body/compare.tsx:67
 msgid "body.compare.loading"
 msgstr "Loading photos..."
@@ -6889,6 +7245,13 @@ msgid "components.progress.monthlyReport.loading"
 msgstr "Loading…"
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:178
+#: components/settings/FormClipsStorageRow.tsx:84
+#: components/settings/FormClipsStorageRow.tsx:87
+msgid "settings.formClips.loading"
+msgstr "Loading…"
+
+#. js-lingui-explicit-id
 #: app/onboarding/welcome.tsx:30
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18033
 msgid "app.onboarding.welcome.privacyA11y"
@@ -6909,7 +7272,7 @@ msgid "components.nutrition.water.logA11y"
 msgstr "Log {0} of water"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:292
+#: components/progress/BodyCards.tsx:288
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.logMeasurementsA11y"
 msgstr "Log body measurements"
@@ -6929,7 +7292,7 @@ msgid "components.nutrition.water.customA11y"
 msgstr "Log custom amount of water"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:293
+#: components/progress/BodyCards.tsx:289
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.logMeasurements"
 msgstr "Log Measurements"
@@ -6946,19 +7309,19 @@ msgid "body.measurements.title"
 msgstr "Log Measurements"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:258
+#: components/progress/BodyCards.tsx:254
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.moreEntries"
 msgstr "Log more entries to see a chart"
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:77
+#: components/exercise/ExerciseChartCard.tsx:76
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.more-data"
 msgstr "Log more sessions to see a trend chart"
 
 #. js-lingui-explicit-id
-#: components/progress/TrendCards.tsx:141
+#: components/progress/TrendCards.tsx:128
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.rpeEmpty"
 msgstr "Log RPE on your sets to see trends here."
@@ -7096,7 +7459,7 @@ msgid "history.streak.longest"
 msgstr "longest streak"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:239
+#: components/progress/NutritionCards.tsx:232
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.longestStreak"
 msgstr "Longest Streak"
@@ -7110,7 +7473,7 @@ msgstr "Longest streak (days)"
 #. js-lingui-explicit-id
 #. placeholder {0}: adherence.longestStreak
 #. placeholder {0}: e.longestStreak
-#: components/progress/NutritionCards.tsx:242
+#: components/progress/NutritionCards.tsx:235
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.longestStreakA11y"
 msgstr "Longest streak: {0} days"
@@ -7165,7 +7528,7 @@ msgid "components.nutrition.targets.title"
 msgstr "Macro Targets"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:279
+#: components/progress/NutritionCards.tsx:271
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.macroTrends"
 msgstr "Macro Trends"
@@ -7177,7 +7540,7 @@ msgstr "Macro Trends"
 #. placeholder {1}: v.avgCarbs
 #. placeholder {2}: latestWeek.avgFat
 #. placeholder {2}: v.avgFat
-#: components/progress/NutritionCards.tsx:274
+#: components/progress/NutritionCards.tsx:266
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.macroSummary"
 msgstr "Macro trends: latest week averages {0}g protein, {1}g carbs, {2}g fat"
@@ -7189,7 +7552,12 @@ msgid "session.suggestionexplainermodal.str8"
 msgstr "Maintain"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:250
+#: components/settings/FormClipsStorageRow.tsx:72
+msgid "settings.formClips.manageA11y"
+msgstr "Manage form clips"
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:253
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.gymProfilesCaption"
 msgstr "Manage gyms, cable stacks, and marker calibrations."
@@ -7303,7 +7671,7 @@ msgid "components.exercise.records.max-reps-weight"
 msgstr "Max Reps"
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:64
+#: components/exercise/ExerciseChartCard.tsx:63
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.max-weight"
 msgstr "Max Weight"
@@ -7389,13 +7757,13 @@ msgid "app.onboarding.setup.measurementUnit"
 msgstr "Measurement Unit"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:276
+#: components/progress/BodyCards.tsx:272
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.measurements"
 msgstr "Measurements"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:54
+#: components/settings/CSVExportCard.tsx:55
 msgid "settings.csv.measurements"
 msgstr "Measurements"
 
@@ -7408,7 +7776,7 @@ msgstr "MEV"
 #. js-lingui-explicit-id
 #: components/muscle-volume/VolumeLandmarksSheet.tsx:208
 msgid "components.muscleVolume.landmarks"
-msgstr "MEV {0} / MRV {1}{2}"
+msgstr "MEV {mev} / MRV {mrv}{custom, select, true { ✎} false {}}"
 
 #. js-lingui-explicit-id
 #: app/tools/cable-finder.tsx:48
@@ -7636,7 +8004,7 @@ msgid "nutrition.template.name.required"
 msgstr "Name is required"
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/CenterButton.tsx:36
+#: components/floating-tab-bar/CenterButton.tsx:38
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2129
 msgid "floatingTabBar.center.navigateHint"
 msgstr "Navigate to workout screen"
@@ -7648,7 +8016,7 @@ msgid "body.measurements.field.neck"
 msgstr "Neck"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:88
+#: components/progress/NutritionCards.tsx:81
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.chartMinimum"
 msgstr "Need at least 2 days of data for chart"
@@ -7775,7 +8143,7 @@ msgstr "Next reps:"
 #. placeholder {0}: x.day.label||x.day.template_name||"workout"
 #. placeholder {1}: nextWorkout.program.name
 #. placeholder {1}: x.program.name
-#: components/home/HomeBanners.tsx:96
+#: components/home/HomeBanners.tsx:97
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.nextA11y"
 msgstr "Next workout: {0} from {1}"
@@ -7789,7 +8157,7 @@ msgstr "Next:"
 #. js-lingui-explicit-id
 #. placeholder {0}: nextWorkout.day.label || nextWorkout.day.template_name || "Workout"
 #. placeholder {0}: x.day.label||x.day.template_name||"Workout"
-#: components/home/HomeBanners.tsx:102
+#: components/home/HomeBanners.tsx:103
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.next"
 msgstr "Next: {0}"
@@ -7817,6 +8185,11 @@ msgid "settings.importBackup.noData"
 msgstr "No backup data provided."
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:29
+msgid "settings.autoBackup.noBackups"
+msgstr "No backups yet"
+
+#. js-lingui-explicit-id
 #: app/settings/backups.tsx:201
 msgid "settings.backups.empty"
 msgstr "No backups yet — your first backup will be created after your next workout."
@@ -7825,6 +8198,11 @@ msgstr "No backups yet — your first backup will be created after your next wor
 #: app/settings/gym-profiles.tsx:449
 msgid "settings.gymProfiles.noStacks"
 msgstr "No cable stacks yet."
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:183
+msgid "settings.formClips.emptyTitle"
+msgstr "No clips recorded yet"
 
 #. js-lingui-explicit-id
 #: components/session/FormLibraryTab.tsx:506
@@ -7855,14 +8233,14 @@ msgid "home.programs.noCurated"
 msgstr "No curated programs available. Future CableSnap updates may add more."
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:77
+#: components/exercise/ExerciseChartCard.tsx:76
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.empty"
 msgstr "No data to chart yet"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:80
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:80
 msgid "settingsHandlers.export.noData"
 msgstr "No data to export"
 
@@ -7976,7 +8354,7 @@ msgid "session.exercisedrawerstats.str8"
 msgstr "No history yet. Complete your first set to see stats."
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:140
+#: app/(tabs)/settings.tsx:143
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.import.noCategories"
 msgstr "No importable backup categories found"
@@ -8011,7 +8389,7 @@ msgid "app.program.pick-template.no-match"
 msgstr "No matching templates"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:285
+#: components/progress/BodyCards.tsx:281
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.noMeasurements"
 msgstr "No measurements logged yet"
@@ -8048,13 +8426,18 @@ msgid "feedback.diagnostics.noInteractions"
 msgstr "No recent interactions"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:135
+msgid "settings.backup.noRecords"
+msgstr "No records"
+
+#. js-lingui-explicit-id
 #: app/progress/records.tsx:42
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18046
 msgid "app.progress.records.emptyTitle"
 msgstr "No Records Yet"
 
 #. js-lingui-explicit-id
-#: components/progress/WorkoutCards.tsx:75
+#: components/progress/WorkoutCards.tsx:65
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17715
 msgid "components.progress.workoutCards.noRecords"
 msgstr "No records yet — start lifting!"
@@ -8162,7 +8545,7 @@ msgid "settings.reminders.noSchedule"
 msgstr "No workout schedule set"
 
 #. js-lingui-explicit-id
-#: components/home/HomeBanners.tsx:86
+#: components/home/HomeBanners.tsx:87
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.noWorkout"
 msgstr "No workout scheduled"
@@ -8277,7 +8660,7 @@ msgid "settings.reminders.permissionDenied"
 msgstr "Notification permission is denied. Enable it in your device settings to use reminders."
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:270
+#: app/(tabs)/settings.tsx:273
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.notifications"
 msgstr "Notifications"
@@ -8329,7 +8712,7 @@ msgid "app.tools.rm.repsA11y"
 msgstr "Number of repetitions"
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/TabButton.tsx:24
+#: components/floating-tab-bar/TabButton.tsx:35
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
 msgid "floatingTabBar.tabs.nutrition"
 msgstr "Nutrition"
@@ -8353,17 +8736,22 @@ msgid "app.progress.achievements.nutrition"
 msgstr "Nutrition"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:52
+#: components/settings/BackupCategorySheet.tsx:53
+msgid "settings.backup.category.nutrition"
+msgstr "Nutrition"
+
+#. js-lingui-explicit-id
+#: components/settings/CSVExportCard.tsx:53
 msgid "settings.csv.nutrition"
 msgstr "Nutrition"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:60
+#: app/(tabs)/_layout.tsx:69
 msgid "tabs.nutrition.title"
 msgstr "Nutrition"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:61
+#: app/(tabs)/_layout.tsx:70
 msgid "tabs.nutrition.header"
 msgstr "Nutrition"
 
@@ -8385,13 +8773,13 @@ msgid "settings.sharing.off"
 msgstr "Off"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:296
+#: app/(tabs)/settings.tsx:299
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.macroCoachOff"
 msgstr "Off — tap to set up"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:310
+#: app/(tabs)/settings.tsx:313
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.trainingDayOff"
 msgstr "Off — tap to set up"
@@ -8415,13 +8803,13 @@ msgid "components.exercise.plateau.queued-ok"
 msgstr "OK"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:309
+#: app/(tabs)/settings.tsx:312
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.trainingDayOn"
 msgstr "On — different targets on training vs rest days"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:295
+#: app/(tabs)/settings.tsx:298
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.macroCoachOn"
 msgstr "On — weekly advisory card on Nutrition tab"
@@ -8443,6 +8831,16 @@ msgid "settings.macroCoach.quickQuestionHeading"
 msgstr "One quick question"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:69
+msgid "settings.backup.importHelper"
+msgstr "Only checked categories will be imported. Unchecked categories in your current app data will be left untouched."
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:70
+msgid "settings.backup.exportHelper"
+msgstr "Only checked categories will be included in the backup file."
+
+#. js-lingui-explicit-id
 #: components/exercise/ExerciseRecordsCard.tsx:116
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17967
 msgid "components.exercise.records.rm-a11y"
@@ -8461,13 +8859,13 @@ msgid "home.quickAdd.openActive"
 msgstr "Open active session"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:298
+#: app/(tabs)/settings.tsx:301
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.adaptiveMacroCoachA11y"
 msgstr "Open Adaptive Macro Coach settings"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:258
+#: app/(tabs)/settings.tsx:261
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.advancedSetTypesA11y"
 msgstr "Open advanced set types help"
@@ -8478,7 +8876,7 @@ msgid "settings.reminders.openSettingsA11y"
 msgstr "Open device notification settings"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:251
+#: app/(tabs)/settings.tsx:254
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.training.gymProfilesA11y"
 msgstr "Open gym profiles settings"
@@ -8488,12 +8886,6 @@ msgstr "Open gym profiles settings"
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16873
 msgid "components.nutrition.water.openA11y"
 msgstr "Open hydration day detail"
-
-#. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:440
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
-msgid "settings.language.a11y"
-msgstr "Open language settings"
 
 #. js-lingui-explicit-id
 #: app/feedback.tsx:283
@@ -8543,7 +8935,7 @@ msgid "components.session.summary.footer.strava-hint"
 msgstr "Open this activity on Strava"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:312
+#: app/(tabs)/settings.tsx:315
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.trainingDayMacrosA11y"
 msgstr "Open Training-Day Macro Adjustment settings"
@@ -8555,10 +8947,20 @@ msgid "session.sessionheadertoolbar.str1"
 msgstr "Open workout toolbox"
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:22
+msgid "settings.keyStatus.title"
+msgstr "OpenRouter key status"
+
+#. js-lingui-explicit-id
 #: components/session/summary/PacingCard.tsx:632
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17905
 msgid "components.session.summary.pacing.show-calculation-hint"
 msgstr "Opens a brief explanation of how working time and rest are estimated"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:73
+msgid "settings.formClips.manageHint"
+msgstr "Opens a list of all recorded form clips where you can delete individual or all clips"
 
 #. js-lingui-explicit-id
 #: components/home/QuickAddFab.tsx:34
@@ -8686,7 +9088,7 @@ msgid "history.dayDetail.other"
 msgstr "Other"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:167
+#: components/progress/NutritionCards.tsx:160
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.proteinShort"
 msgstr "P"
@@ -8721,12 +9123,17 @@ msgid "components.nutrition.coach.pauseA11y"
 msgstr "Pause coach for 1 month"
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:212
+msgid "settings.formClips.deleteAllHint"
+msgstr "Permanently removes all clips from this device. This cannot be undone."
+
+#. js-lingui-explicit-id
 #: components/session/FormLibraryTab.tsx:671
 msgid "session.formlibrarytab.str5"
 msgstr "Permanently removes this clip from your device"
 
 #. js-lingui-explicit-id
-#: components/progress/WorkoutCards.tsx:71
+#: components/progress/WorkoutCards.tsx:61
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17715
 msgid "components.progress.workoutCards.personalRecords"
 msgstr "Personal Records"
@@ -8833,6 +9240,11 @@ msgid "app.tools.index.plateCalculator"
 msgstr "Plate Calculator"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:56
+msgid "settings.backup.category.plateCalculator"
+msgstr "Plate calculator settings"
+
+#. js-lingui-explicit-id
 #: components/exercise/PlateauStatusCard.tsx:189
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17970
 msgid "components.exercise.plateau.card-a11y"
@@ -8863,8 +9275,13 @@ msgid "session.compareview.str8"
 msgstr "Play Both"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:212
+#: components/settings/FormClipsManageSheet.tsx:286
+msgid "settings.formClips.playA11y"
+msgstr "Play clip from {date}"
+
+#. js-lingui-explicit-id
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:212
 msgid "settingsHandlers.csv.invalidMessage"
 msgstr "Please select a .csv file exported from your workout app."
 
@@ -8872,6 +9289,12 @@ msgstr "Please select a .csv file exported from your workout app."
 #: components/session/SetupPhotoSheet.tsx:63
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18162
 msgid "session.setupphotosheet.str11"
+msgstr "Please try again."
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:105
+#: components/settings/FormClipsManageSheet.tsx:129
+msgid "settings.formClips.tryAgain"
 msgstr "Please try again."
 
 #. js-lingui-explicit-id
@@ -8898,8 +9321,8 @@ msgid "common.preferNotToSay"
 msgstr "Prefer not to say"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:67
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:67
 msgid "settingsHandlers.export.preparing"
 msgstr "Preparing export..."
 
@@ -8908,7 +9331,7 @@ msgstr "Preparing export..."
 #: components/settings/HydrationCard.tsx:191
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17767
 msgid "settings.hydration.presetA11y"
-msgstr "Preset {0}"
+msgstr "Preset {number}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: e+1
@@ -8916,7 +9339,7 @@ msgstr "Preset {0}"
 #: components/settings/HydrationCard.tsx:188
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17767
 msgid "settings.hydration.preset"
-msgstr "Preset {number} ({unit, select, ml {ml} fl oz {fl oz}})"
+msgstr "Preset {number} ({unit, select, ml {ml} fl_oz {fl oz} other {ml}})"
 
 #. js-lingui-explicit-id
 #: components/settings/HydrationCard.tsx:113
@@ -8978,7 +9401,7 @@ msgid "session.exercisedetaildrawer.str2"
 msgstr "Primary Muscles"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:213
+#: app/(tabs)/settings.tsx:216
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.profile"
 msgstr "Profile"
@@ -8997,7 +9420,7 @@ msgstr "Program"
 #. js-lingui-explicit-id
 #. placeholder {0}: nextWorkout.program.name
 #. placeholder {0}: x.program.name
-#: components/home/HomeBanners.tsx:110
+#: components/home/HomeBanners.tsx:111
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.scheduleA11y"
 msgstr "Program {0}: Schedule active"
@@ -9045,6 +9468,11 @@ msgid "home.programs.title"
 msgstr "Programs"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:55
+msgid "settings.backup.category.programs"
+msgstr "Programs"
+
+#. js-lingui-explicit-id
 #: components/home/ProgramsList.tsx:85
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16714
 msgid "home.programs.filterA11y"
@@ -9057,29 +9485,29 @@ msgid "home.tabs.programsA11y"
 msgstr "Programs tab"
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/TabButton.tsx:26
+#: components/floating-tab-bar/TabButton.tsx:37
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
 msgid "floatingTabBar.tabs.progress"
 msgstr "Progress"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:101
+#: app/(tabs)/_layout.tsx:127
 msgid "tabs.progress.title"
 msgstr "Progress"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:102
+#: app/(tabs)/_layout.tsx:128
 msgid "tabs.progress.header"
 msgstr "Progress"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:314
+#: components/progress/BodyCards.tsx:310
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.progressPhotosA11y"
 msgstr "Progress Photos"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:320
+#: components/progress/BodyCards.tsx:316
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.progressPhotos"
 msgstr "Progress Photos"
@@ -9096,7 +9524,7 @@ msgid "settings.sharing.promoCaption"
 msgstr "Promo Caption"
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:80
+#: components/share/StravaShareCardPromo.tsx:81
 msgid "share.strava.captionInputA11y"
 msgstr "Promo caption input"
 
@@ -9113,7 +9541,7 @@ msgid "components.nutrition.targets.proteinA11y"
 msgstr "Protein"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:282
+#: components/progress/NutritionCards.tsx:274
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.protein"
 msgstr "Protein"
@@ -9137,7 +9565,7 @@ msgid "components.weeklySummary.proteinAvg"
 msgstr "Protein avg"
 
 #. js-lingui-explicit-id
-#: components/share/MonthlyShareCard.tsx:88
+#: components/share/MonthlyShareCard.tsx:89
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17758
 msgid "share.monthly.prs"
 msgstr "PRs"
@@ -9228,7 +9656,7 @@ msgid "history.gtg.toggleA11y"
 msgstr "Quick-add sets for {date}, {exercises} exercises, {sets} sets total. {action, select, collapse {Collapse} expand {Expand}}"
 
 #. js-lingui-explicit-id
-#: components/progress/TrendCards.tsx:184
+#: components/progress/TrendCards.tsx:171
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.ratingsEmpty"
 msgstr "Rate your sessions to see trends here."
@@ -9270,7 +9698,7 @@ msgid "components.progress.records.recentPRs"
 msgstr "Recent PRs"
 
 #. js-lingui-explicit-id
-#: components/progress/WorkoutCards.tsx:111
+#: components/progress/WorkoutCards.tsx:101
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17715
 msgid "components.progress.workoutCards.recentSessions"
 msgstr "Recent Sessions"
@@ -9326,6 +9754,11 @@ msgid "session.formlibrarytab.str1"
 msgstr "Record new form clip"
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:185
+msgid "settings.formClips.emptyBody"
+msgstr "Record one from any exercise's Form clips tab."
+
+#. js-lingui-explicit-id
 #: components/session/FormVideoSheet.tsx:141
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17898
 msgid "session.formvideosheet.str14"
@@ -9355,6 +9788,17 @@ msgid "components.nutrition.badge.restHint"
 msgstr "Recovery day — a bit lower to balance your training days. Your weekly average is unchanged."
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:33
+#: components/settings/KeyStatusCard.tsx:47
+msgid "settings.keyStatus.refresh"
+msgstr "Refresh"
+
+#. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:39
+msgid "settings.keyStatus.remaining"
+msgstr "Remaining limit"
+
+#. js-lingui-explicit-id
 #: components/settings/ReminderSection.tsx:112
 msgid "settings.reminders.timeA11y"
 msgstr "Reminder time"
@@ -9365,7 +9809,7 @@ msgid "settings.reminders.set"
 msgstr "Reminders set for {count, plural, one {# day} other {# days}}"
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:89
+#: components/share/StravaShareCardPromo.tsx:90
 msgid "common.remove"
 msgstr "Remove"
 
@@ -9428,7 +9872,7 @@ msgid "app.template.create.remove-a11y"
 msgstr "Remove {exName}"
 
 #. js-lingui-explicit-id
-#: components/share/StravaShareCardPromo.tsx:87
+#: components/share/StravaShareCardPromo.tsx:88
 msgid "share.strava.removePromoA11y"
 msgstr "Remove promo caption"
 
@@ -9449,6 +9893,11 @@ msgstr "Removes the attachment and mount values from this set"
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18160
 msgid "session.bodyweightgrippickersheet.str2"
 msgstr "Removes the grip type and width values from this set"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:303
+msgid "settings.formClips.deleteHint"
+msgstr "Removes this clip from your device"
 
 #. js-lingui-explicit-id
 #: app/program/[id].tsx:232
@@ -9503,10 +9952,15 @@ msgid "session.formlibrarytab.dynamic3"
 msgstr "Replace clip from {dateStr}"
 
 #. js-lingui-explicit-id
-#: components/settings/FeedbackCard.tsx:40
+#: components/settings/FeedbackCard.tsx:41
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17806
 msgid "settings.feedback.bugA11y"
 msgstr "Report a bug"
+
+#. js-lingui-explicit-id
+#: components/settings/FeedbackCard.tsx:44
+msgid "settings.feedback.reportBug"
+msgstr "Report Bug"
 
 #. js-lingui-explicit-id
 #: app/feedback.tsx:240
@@ -9569,13 +10023,13 @@ msgid "session.miniseteditor.str3"
 msgstr "Reps for next mini-set"
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:60
+#: components/exercise/ExerciseChartCard.tsx:59
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.reps-progression"
 msgstr "Reps Progression"
 
 #. js-lingui-explicit-id
-#: components/settings/FeedbackCard.tsx:50
+#: components/settings/FeedbackCard.tsx:51
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17806
 msgid "settings.feedback.featureA11y"
 msgstr "Request a feature"
@@ -9715,7 +10169,7 @@ msgid "settings.trainingDayMacros.restDay"
 msgstr "Rest day"
 
 #. js-lingui-explicit-id
-#: components/home/HomeBanners.tsx:85
+#: components/home/HomeBanners.tsx:86
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.restDay"
 msgstr "Rest Day"
@@ -9727,7 +10181,7 @@ msgid "components.nutrition.badge.restRecovery"
 msgstr "Rest day · recovery"
 
 #. js-lingui-explicit-id
-#: components/home/HomeBanners.tsx:81
+#: components/home/HomeBanners.tsx:82
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.restDayA11y"
 msgstr "Rest day. No workout scheduled."
@@ -9762,6 +10216,11 @@ msgid "settings.restNotifications.infoA11y"
 msgstr "Rest Timer Notifications. Tap for more info"
 
 #. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:57
+msgid "settings.backup.category.restTimer"
+msgstr "Rest timer settings"
+
+#. js-lingui-explicit-id
 #: app/settings/advanced-sets.tsx:98
 msgid "settings.advancedSets.restPause.title"
 msgstr "Rest-pause"
@@ -9779,7 +10238,7 @@ msgstr "Restore backup from {dateStr}"
 #. js-lingui-explicit-id
 #. placeholder {0}: active.name
 #. placeholder {0}: t.name
-#: components/home/HomeBanners.tsx:38
+#: components/home/HomeBanners.tsx:39
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.resumeA11y"
 msgstr "Resume active workout: {0}"
@@ -9797,7 +10256,7 @@ msgid "components.progress.calendar.retry"
 msgstr "Retry"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:69
+#: components/progress/NutritionSegment.tsx:68
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.retry"
 msgstr "Retry"
@@ -9815,7 +10274,7 @@ msgid "components.exercise.records.retry"
 msgstr "Retry"
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:73
+#: components/exercise/ExerciseChartCard.tsx:72
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.retry"
 msgstr "Retry"
@@ -9862,7 +10321,7 @@ msgid "components.progress.calendar.retryA11y"
 msgstr "Retry loading calendar"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:68
+#: components/progress/NutritionSegment.tsx:67
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.retryA11y"
 msgstr "Retry loading nutrition data"
@@ -9948,7 +10407,7 @@ msgstr "Rope"
 #: components/session/ExerciseGroupCard.tsx:197
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18101
 msgid "session.exercisegroupcard.dynamic1"
-msgstr "Round {0} of {totalRounds}"
+msgstr "Round {round} of {total}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: l.achieved
@@ -10036,7 +10495,7 @@ msgstr "Save"
 
 #. js-lingui-explicit-id
 #: app/settings/macro-coach.tsx:443
-#: components/settings/ShareSettingsCard.tsx:98
+#: components/settings/ShareSettingsCard.tsx:99
 msgid "common.save"
 msgstr "Save"
 
@@ -10410,7 +10869,12 @@ msgid "session.markerpickersheet.str4"
 msgstr "Select a stack above to see markers."
 
 #. js-lingui-explicit-id
-#: components/settings/BackupCategorySheet.tsx:91
+#: components/settings/BackupCategorySheet.tsx:116
+msgid "settings.backup.selectAll"
+msgstr "Select all"
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:114
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17881
 msgid "settings.backup.selectAllA11y"
 msgstr "Select all backup categories"
@@ -10525,7 +10989,7 @@ msgid "session.summary.id.str2"
 msgstr "Session notes"
 
 #. js-lingui-explicit-id
-#: components/progress/TrendCards.tsx:180
+#: components/progress/TrendCards.tsx:167
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17717
 msgid "components.progress.trends.ratings"
 msgstr "Session Ratings (1–5)"
@@ -10567,7 +11031,7 @@ msgid "session.exercisedrawerstats.str11"
 msgstr "Sessions"
 
 #. js-lingui-explicit-id
-#: components/progress/WorkoutCards.tsx:138
+#: components/progress/WorkoutCards.tsx:128
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17715
 msgid "components.progress.workoutCards.sessionsByGym"
 msgstr "Sessions by gym"
@@ -10605,6 +11069,11 @@ msgid "session.formvideosheet.str10"
 msgstr "Set {setNumber}"
 
 #. js-lingui-explicit-id
+#: components/settings/FrequencyGoalPicker.tsx:45
+msgid "settings.frequencyGoal.set"
+msgstr "Set a goal"
+
+#. js-lingui-explicit-id
 #: app/exercise/[id].tsx:118
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17964
 msgid "app.exercise.id.set-goal-a11y"
@@ -10634,7 +11103,7 @@ msgid "settings.gymProfiles.setDefault"
 msgstr "Set as default"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:92
+#: components/progress/BodyCards.tsx:91
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.setGoalsA11y"
 msgstr "Set body goals"
@@ -10664,7 +11133,7 @@ msgid "components.exercise.goal-set-form.set-title"
 msgstr "Set Goal"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:93
+#: components/progress/BodyCards.tsx:92
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.setGoals"
 msgstr "Set Goals"
@@ -10702,7 +11171,7 @@ msgid "session.sessionheadertoolbar.dynamic2"
 msgstr "Set rest to {duration}{selected, select, true {. Currently selected.} false {}}"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:146
+#: components/progress/NutritionSegment.tsx:145
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.setTargets"
 msgstr "Set Targets"
@@ -10720,13 +11189,13 @@ msgid "app.onboarding.setup.title"
 msgstr "Set Up Your Preferences"
 
 #. js-lingui-explicit-id
-#: components/settings/FrequencyGoalPicker.tsx:40
+#: components/settings/FrequencyGoalPicker.tsx:41
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17768
 msgid "settings.frequencyGoal.setA11y"
 msgstr "Set weekly training goal"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:140
+#: components/progress/NutritionSegment.tsx:139
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.setTargetsMessage"
 msgstr "Set your macro targets to see adherence tracking."
@@ -10766,20 +11235,25 @@ msgid "components.muscleVolume.setsPerMuscle"
 msgstr "Sets per Muscle Group"
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/TabButton.tsx:27
+#: components/floating-tab-bar/TabButton.tsx:38
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
 msgid "floatingTabBar.tabs.settings"
 msgstr "Settings"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:108
+#: app/(tabs)/_layout.tsx:134
 msgid "tabs.settings.title"
 msgstr "Settings"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:109
+#: app/(tabs)/_layout.tsx:135
 msgid "tabs.settings.header"
 msgstr "Settings"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:87
+msgid "settings.formClips.setupPhotos"
+msgstr "Setup photos: {size} MB across {count} photos"
 
 #. js-lingui-explicit-id
 #: components/session/detail/SessionDetailShareOverlay.tsx:267
@@ -10967,6 +11441,11 @@ msgid "components.nutrition.coach.infoOnly"
 msgstr "Showing TDEE info only this week."
 
 #. js-lingui-explicit-id
+#: components/settings/FrequencyGoalPicker.tsx:35
+msgid "settings.frequencyGoal.description"
+msgstr "Shown on the home screen to track workouts completed vs. your target each week."
+
+#. js-lingui-explicit-id
 #: components/onboarding/recommend-error-banner.tsx:21
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18030
 msgid "components.onboarding.recommendError.skip"
@@ -11048,7 +11527,7 @@ msgid "components.program.curated-extras.source-a11y"
 msgstr "Source: {0} ({1}). Opens in browser."
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:423
+#: app/(tabs)/settings.tsx:447
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.sponsorA11y"
 msgstr "Sponsor on thanks.dev"
@@ -11125,7 +11604,7 @@ msgid "session.setoptionssheet.dynamic2"
 msgstr "Start Tempo Coach for {currentTempo}. Double tap to begin."
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:105
+#: components/progress/NutritionSegment.tsx:104
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.empty"
 msgstr "Start tracking your meals in the Nutrition tab to see trends here."
@@ -11319,7 +11798,7 @@ msgid "components.progress.workout.switchCalendar"
 msgstr "Switch to calendar view"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:28
+#: components/progress/BodyCards.tsx:27
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.switchToKilograms"
 msgstr "Switch to kilograms"
@@ -11331,7 +11810,7 @@ msgid "components.progress.workout.switchList"
 msgstr "Switch to list view"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:27
+#: components/progress/BodyCards.tsx:26
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.switchToPounds"
 msgstr "Switch to pounds"
@@ -11414,7 +11893,7 @@ msgid "session.lastnextrow.dynamic1"
 msgstr "Tap to refill empty sets from previous session for {exerciseName}"
 
 #. js-lingui-explicit-id
-#: components/home/HomeBanners.tsx:42
+#: components/home/HomeBanners.tsx:43
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.tapResume"
 msgstr "Tap to resume"
@@ -11653,8 +12132,13 @@ msgid "settings.appearance.theme"
 msgstr "Theme"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:113
+#: components/settings/KeyStatusCard.tsx:44
+msgid "settings.keyStatus.note"
+msgstr "These figures are scoped to this key, not your whole OpenRouter account. Account-wide credits require a management key, which this app never holds."
+
+#. js-lingui-explicit-id
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:113
 msgid "settingsHandlers.import.backupTooLarge"
 msgstr "This backup file is too large to process safely."
 
@@ -11665,14 +12149,14 @@ msgid "session.setupphotosheet.str13"
 msgstr "This cannot be undone."
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:216
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:216
 msgid "settingsHandlers.csv.tooLarge"
 msgstr "This CSV file is too large to process safely."
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_settings-handlers.ts:128
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2158
+#: lib/settings-handlers.ts:128
 msgid "settingsHandlers.import.invalidBackupFile"
 msgstr "This file doesn't appear to be a valid CableSnap backup."
 
@@ -11694,7 +12178,7 @@ msgid "home.weeklySummary.title"
 msgstr "This Week"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:138
+#: components/progress/NutritionCards.tsx:131
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.thisWeek"
 msgstr "This Week"
@@ -11758,7 +12242,7 @@ msgstr "Today"
 #. js-lingui-explicit-id
 #. placeholder {0}: todaySchedule.template_name
 #. placeholder {0}: u.template_name
-#: components/home/HomeBanners.tsx:56
+#: components/home/HomeBanners.tsx:57
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.today"
 msgstr "Today: {0}"
@@ -11766,15 +12250,20 @@ msgstr "Today: {0}"
 #. js-lingui-explicit-id
 #. placeholder {0}: todaySchedule.template_name
 #. placeholder {0}: u.template_name
-#: components/home/HomeBanners.tsx:50
+#: components/home/HomeBanners.tsx:51
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.todayA11y"
 msgstr "Today's workout: {0}. Tap to start."
 
 #. js-lingui-explicit-id
-#: components/settings/ShareSettingsCard.tsx:130
+#: components/settings/ShareSettingsCard.tsx:131
 msgid "settings.sharing.toggleAppendA11y"
 msgstr "Toggle appending promo to Strava description"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:152
+msgid "settings.autoBackup.toggleA11y"
+msgstr "Toggle auto-backup after workouts"
 
 #. js-lingui-explicit-id
 #: components/settings/ShareSettingsCard.tsx:70
@@ -11871,7 +12360,7 @@ msgid "session.miniseteditor.str7"
 msgstr "Total: {totalReps}"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionSegment.tsx:133
+#: components/progress/NutritionSegment.tsx:132
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17732
 msgid "components.progress.nutrition.moreDays"
 msgstr "Track for a few more days to see meaningful trends."
@@ -11913,13 +12402,13 @@ msgid "body.photos.empty.title"
 msgstr "Track your transformation"
 
 #. js-lingui-explicit-id
-#: components/home/HomeBanners.tsx:74
+#: components/home/HomeBanners.tsx:75
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16690
 msgid "home.banners.trainAgain"
 msgstr "Train again"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:246
+#: app/(tabs)/settings.tsx:249
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.training"
 msgstr "Training"
@@ -11962,7 +12451,7 @@ msgid "settings.trainingDayMacros.adjustment"
 msgstr "Training-Day Macro Adjustment"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:304
+#: app/(tabs)/settings.tsx:307
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.coaching.trainingDayMacros"
 msgstr "Training-Day Macros"
@@ -12097,6 +12586,13 @@ msgid "feedback.share.failure"
 msgstr "Unable to share"
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:39
+#: components/settings/KeyStatusCard.tsx:40
+#: components/settings/KeyStatusCard.tsx:41
+msgid "settings.keyStatus.amountUnavailable"
+msgstr "Unavailable"
+
+#. js-lingui-explicit-id
 #: components/home/QuickAddSheet.tsx:135
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16723
 msgid "home.quickAdd.undo"
@@ -12125,7 +12621,7 @@ msgid "settings.hydration.unit"
 msgstr "Unit"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:229
+#: app/(tabs)/settings.tsx:232
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.tiles.unitsAppearance"
 msgstr "Units & Appearance"
@@ -12198,9 +12694,19 @@ msgid "components.nutrition.coach.useNumber"
 msgstr "Use this number"
 
 #. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:41
+msgid "settings.keyStatus.month"
+msgstr "Used this month"
+
+#. js-lingui-explicit-id
 #: app/settings/training-day-macros.tsx:232
 msgid "settings.trainingDayMacros.daysPerWeekHint"
 msgstr "Used to keep your weekly calorie average exactly equal to your base target."
+
+#. js-lingui-explicit-id
+#: components/settings/KeyStatusCard.tsx:40
+msgid "settings.keyStatus.today"
+msgstr "Used today"
 
 #. js-lingui-explicit-id
 #: app/program/create.tsx:81
@@ -12253,6 +12759,11 @@ msgid "session.sessionheadertoolbar.str6"
 msgstr "Vibrate on complete"
 
 #. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:294
+msgid "settings.formClips.video"
+msgstr "video"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: e.name
 #. placeholder {0}: group.name
 #: components/session/GroupCardHeader.tsx:186
@@ -12267,6 +12778,11 @@ msgid "components.session.summary.achievements.more-a11y"
 msgstr "View {extraCount} more achievements"
 
 #. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:221
+msgid "settings.autoBackup.viewA11y"
+msgstr "View all backups"
+
+#. js-lingui-explicit-id
 #: components/home/RecentWorkoutsList.tsx:32
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16692
 msgid "home.recent.viewAll"
@@ -12279,10 +12795,15 @@ msgid "home.recent.viewAllA11y"
 msgstr "View all workout history"
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:316
+#: components/progress/BodyCards.tsx:312
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.progressPhotosHint"
 msgstr "View and manage your progress photos"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:224
+msgid "settings.autoBackup.viewBackups"
+msgstr "View Backups"
 
 #. js-lingui-explicit-id
 #: components/session/SetupPhotoSheet.tsx:115
@@ -12301,6 +12822,11 @@ msgstr "View detailed workout breakdown"
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18247
 msgid "components.session.summary.footer.details"
 msgstr "View Details"
+
+#. js-lingui-explicit-id
+#: components/settings/FeedbackCard.tsx:61
+msgid "settings.feedback.errorsA11y"
+msgstr "View error log, {count, plural, one {# error} other {# errors}}"
 
 #. js-lingui-explicit-id
 #: components/nutrition/NutritionListHeader.tsx:207
@@ -12327,7 +12853,7 @@ msgid "components.session.summary.footer.strava"
 msgstr "View on Strava"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:375
+#: app/(tabs)/settings.tsx:378
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.releaseNotesA11y"
 msgstr "View release notes, current version {appVersion}"
@@ -12376,7 +12902,7 @@ msgid "components.weeklySummary.volume"
 msgstr "VOLUME"
 
 #. js-lingui-explicit-id
-#: components/share/MonthlyShareCard.tsx:87
+#: components/share/MonthlyShareCard.tsx:88
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17758
 msgid "share.monthly.volume"
 msgstr "Volume ({unit})"
@@ -12467,7 +12993,7 @@ msgid "settings.trainingDayMacros.weeklyAverage"
 msgstr "Weekly average"
 
 #. js-lingui-explicit-id
-#: components/progress/NutritionCards.tsx:134
+#: components/progress/NutritionCards.tsx:127
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17734
 msgid "components.progress.nutritionCards.weeklyAverages"
 msgstr "Weekly Averages"
@@ -12485,7 +13011,17 @@ msgid "settings.macroCoach.fullModeHint"
 msgstr "Weekly target suggestions + TDEE estimate"
 
 #. js-lingui-explicit-id
-#: components/muscle-volume/VolumeTrendChart.tsx:64
+#: components/settings/FrequencyGoalPicker.tsx:32
+msgid "settings.frequencyGoal.title"
+msgstr "Weekly Training Goal"
+
+#. js-lingui-explicit-id
+#: components/settings/FrequencyGoalPicker.tsx:50
+msgid "settings.frequencyGoal.valueA11y"
+msgstr "Weekly training goal: {value, plural, one {# day} other {# days}}"
+
+#. js-lingui-explicit-id
+#: components/muscle-volume/VolumeTrendChart.tsx:48
 msgid "components.muscleVolume.weeklyTrend"
 msgstr "Weekly Trend"
 
@@ -12575,7 +13111,7 @@ msgid "components.plates.calculator.weightExceedsBar"
 msgstr "Weight must exceed bar weight"
 
 #. js-lingui-explicit-id
-#: components/exercise/ExerciseChartCard.tsx:60
+#: components/exercise/ExerciseChartCard.tsx:59
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17968
 msgid "components.exercise.chart.weight-progression"
 msgstr "Weight Progression"
@@ -12586,8 +13122,13 @@ msgid "components.nutrition.coach.stable"
 msgstr "Weight stable — no change suggested."
 
 #. js-lingui-explicit-id
-#: components/progress/BodyCards.tsx:188
-#: components/progress/BodyCards.tsx:249
+#: components/settings/UnitsCard.tsx:136
+msgid "settings.units.weightStepA11y"
+msgstr "Weight step {step} {unit, select, lb {pounds} kg {kilograms} other {kilograms}}"
+
+#. js-lingui-explicit-id
+#: components/progress/BodyCards.tsx:187
+#: components/progress/BodyCards.tsx:245
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.weightTrend"
@@ -12610,7 +13151,7 @@ msgstr "Weight Unit"
 #. placeholder {0}: toDisplay(latest.weight, unit)
 #. placeholder {1}: (0,b.toDisplay)(e.weight_goal,n)
 #. placeholder {1}: toDisplay(settings.weight_goal, unit)
-#: components/progress/BodyCards.tsx:116
+#: components/progress/BodyCards.tsx:115
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17731
 msgid "components.progress.bodyCards.weightGoal"
 msgstr "Weight: {0} → {1} {unit}"
@@ -12634,7 +13175,7 @@ msgid "app.onboarding.welcome.title"
 msgstr "Welcome to CableSnap"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/settings.tsx:391
+#: app/(tabs)/settings.tsx:394
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17760
 msgid "settings.about.whatsNew"
 msgstr "What's new"
@@ -12771,7 +13312,17 @@ msgid "settings.reminders.title"
 msgstr "Workout Reminders"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:89
+#: components/settings/BackupCategorySheet.tsx:51
+msgid "settings.backup.category.workoutHistory"
+msgstr "Workout session history"
+
+#. js-lingui-explicit-id
+#: components/settings/BackupCategorySheet.tsx:50
+msgid "settings.backup.category.workoutTemplates"
+msgstr "Workout templates"
+
+#. js-lingui-explicit-id
+#: app/(tabs)/_layout.tsx:107
 msgid "tabs.workouts.toolsA11y"
 msgstr "Workout tools"
 
@@ -12788,13 +13339,13 @@ msgid "history.streak.workouts"
 msgstr "workouts"
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/CenterButton.tsx:35
+#: components/floating-tab-bar/CenterButton.tsx:37
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2129
 msgid "floatingTabBar.center.workouts"
 msgstr "Workouts"
 
 #. js-lingui-explicit-id
-#: components/floating-tab-bar/TabButton.tsx:25
+#: components/floating-tab-bar/TabButton.tsx:36
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:2157
 msgid "floatingTabBar.tabs.workouts"
 msgstr "Workouts"
@@ -12806,7 +13357,7 @@ msgid "progress.tabs.workouts"
 msgstr "Workouts"
 
 #. js-lingui-explicit-id
-#: components/share/MonthlyShareCard.tsx:86
+#: components/share/MonthlyShareCard.tsx:87
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17758
 msgid "share.monthly.workouts"
 msgstr "Workouts"
@@ -12818,18 +13369,19 @@ msgid "components.progress.monthlyReport.workouts"
 msgstr "Workouts"
 
 #. js-lingui-explicit-id
-#: components/settings/CSVExportCard.tsx:51
+#: components/settings/CSVExportCard.tsx:52
 msgid "settings.csv.workouts"
 msgstr "Workouts"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:77
-msgid "tabs.workouts.title"
+#: app/(tabs)/_layout.tsx:49
+#: app/(tabs)/_layout.tsx:91
+msgid "tabs.workouts.header"
 msgstr "Workouts"
 
 #. js-lingui-explicit-id
-#: app/(tabs)/_layout.tsx:82
-msgid "tabs.workouts.header"
+#: app/(tabs)/_layout.tsx:86
+msgid "tabs.workouts.title"
 msgstr "Workouts"
 
 #. js-lingui-explicit-id

@@ -36,12 +36,12 @@ function scenarioFor(path: string): string | undefined {
 
 async function selectLocale(page: Page, locale: Locale) {
   // skipOnboarding owns the initial `/` navigation. Reuse that booted SPA and
-  // enter Settings client-side before opening the language screen.
+  // enter Settings client-side before opening the language dropdown.
   const settingsTab = page.getByRole("tab", { name: /Settings|設定|设置/ });
   await expect(settingsTab).toBeVisible({ timeout: 30_000 });
   await settingsTab.click();
   await expect(page.getByTestId("settings-tile-language")).toBeVisible({ timeout: 30_000 });
-  await page.getByTestId("settings-tile-language").click();
+  await page.getByTestId("language-picker-trigger").click();
   await expect(page.getByTestId(`language-option-${locale}`)).toBeVisible({ timeout: 10_000 });
   const option = page.getByTestId(`language-option-${locale}`);
   await option.click();
