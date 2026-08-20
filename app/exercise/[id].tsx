@@ -28,7 +28,7 @@ import {
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
-import type { Attachment, Category, Difficulty } from "../../lib/types";
+import { ATTACHMENT_LABELS, type Attachment, type Category, type Difficulty } from "../../lib/types";
 import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
@@ -91,6 +91,7 @@ function attachmentLabel(attachment: Attachment): string {
     case ATTACHMENT_VALUES[5]: return t({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
     case ATTACHMENT_VALUES[6]: return t({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
   }
+  return ATTACHMENT_LABELS[attachment];
 }
 
 function formatDateLong(ts: number): string {

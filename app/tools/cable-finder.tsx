@@ -12,7 +12,7 @@ import { Chip } from "@/components/ui/chip";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing } from "@/constants/design-tokens";
-import type { MountPosition, Attachment, MuscleGroup } from "@/lib/types";
+import { ATTACHMENT_LABELS, MOUNT_POSITION_LABELS, type MountPosition, type Attachment, type MuscleGroup } from "@/lib/types";
 import { ATTACHMENT_VALUES, MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
 import {
   getCableExercises,
@@ -49,6 +49,7 @@ function mountPositionLabel(position: MountPosition): string {
     case MOUNT_POSITION_VALUES[2]: return t({ id: "app.tools.cableFinder.mount.low", message: "Low" });
     case MOUNT_POSITION_VALUES[3]: return t({ id: "app.tools.cableFinder.mount.floor", message: "Floor" });
   }
+  return MOUNT_POSITION_LABELS[position];
 }
 
 function attachmentLabel(attachment: Attachment): string {
@@ -61,6 +62,7 @@ function attachmentLabel(attachment: Attachment): string {
     case ATTACHMENT_VALUES[5]: return t({ id: "app.tools.cableFinder.attachment.squatHarness", message: "Squat Harness" });
     case ATTACHMENT_VALUES[6]: return t({ id: "app.tools.cableFinder.attachment.carabiner", message: "Carabiner" });
   }
+  return ATTACHMENT_LABELS[attachment];
 }
 
 type Section = {
