@@ -11,6 +11,9 @@
 // app's `com.persoack.cablesnap`) per PLAN-BLD-716.md
 // §"Watch APK distribution (decided per TL-3)".
 
+import java.io.File
+import java.util.Properties
+
 plugins {
   id("com.android.application")
   id("org.jetbrains.kotlin.android")
@@ -33,7 +36,7 @@ android {
   // is prevented by the "Verify APK signature matches committed fingerprint"
   // step in scheduled-release.yml.
   val keystorePropertiesFile = rootProject.file("keystore.properties")
-  val keystoreProperties = java.util.Properties()
+  val keystoreProperties = Properties()
   if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
   }
@@ -48,7 +51,7 @@ android {
       isMinifyEnabled = false
       val releaseKeystore = if (hasReleaseKeystore) {
         val releaseSigningConfig = signingConfigs.maybeCreate("release")
-        val configuredStoreFile = java.io.File(requireNotNull(storeFileProperty))
+        val configuredStoreFile = File(requireNotNull(storeFileProperty))
         releaseSigningConfig.storeFile = if (configuredStoreFile.isAbsolute) {
           configuredStoreFile
         } else {
