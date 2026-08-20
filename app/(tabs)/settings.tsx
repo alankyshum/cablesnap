@@ -52,6 +52,8 @@ import { getEnabled as getMacroCoachEnabled } from '@/lib/db/macro-coach-setting
 import { getEnabled as getTrainingDayMacrosEnabled } from '@/lib/db/training-day-settings';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearImportSession, createImportSession } from '@/lib/import-session';
+import { useLanguage } from '@/lib/language-preference';
+import { LanguageDropdown } from '@/components/ui/dropdown';
 
 /**
  * Extra bottom clearance below the floating tab bar zone, derived from spacing
@@ -71,6 +73,7 @@ export const SETTINGS_SCROLL_EXTRA_BOTTOM = spacing.xxl * 5;
 
 export default function Settings() {
   const colors = useThemeColors();
+  const { language, setLanguage } = useLanguage();
   const router = useRouter();
   const layout = useLayout();
   const tabBarHeight = useFloatingTabBarHeight();
@@ -372,7 +375,7 @@ export default function Settings() {
           <Pressable
             onPress={() => setReleaseNotesVisible(true)}
             accessibilityRole="button"
-            accessibilityLabel={t({ id: 'settings.about.releaseNotesA11y', message: `View release notes, current version ${appVersion}` })}
+            accessibilityLabel={i18n._({ id: 'settings.about.releaseNotesA11y', message: 'View release notes, current version {version}', values: { version: appVersion } })}
             testID="settings-version-row"
             android_ripple={{ color: colors.surfaceVariant }}
             style={({ pressed }) => [
@@ -419,7 +422,7 @@ export default function Settings() {
               <Pressable
                 onPress={() => Linking.openURL('https://buymeacoffee.com/alankyshum')}
                 accessibilityRole="link"
-                accessibilityLabel="Buy me a coffee"
+                accessibilityLabel={t({ id: 'settings.about.buyCoffeeA11y', message: 'Buy me a coffee' })}
                 style={{ minHeight: 48, justifyContent: 'center' }}
               >
                 <Image
@@ -455,13 +458,11 @@ export default function Settings() {
 
         {/* ── 10. Language ── */}
         <SettingsTile colors={colors} title={t({ id: 'settings.tiles.language', message: 'Language' })} testID="settings-tile-language" index={9}>
-          <SettingsLinkRow
-            colors={colors}
-            title={t({ id: 'settings.language.title', message: 'Language' })}
-            caption={t({ id: 'settings.language.caption', message: 'Choose the language used throughout the app.' })}
-            accessibilityLabel={t({ id: 'settings.language.a11y', message: 'Open language settings' })}
-            onPress={() => router.push('/settings/language')}
-          />
+           <LanguageDropdown
+             value={language}
+             onChange={setLanguage}
+             label={t({ id: 'settings.language.title', message: 'Language' })}
+           />
         </SettingsTile>
 
       </Masonry>
