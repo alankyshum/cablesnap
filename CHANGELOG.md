@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - Fixed: GitHub release APKs retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.
+- Added recovery links in Settings and documentation for users on v0.26.100 or v0.26.101 whose in-app update check cannot run.
 
 ## v0.26.102 — 2026-08-19
 <!-- versionCode: 170 -->
