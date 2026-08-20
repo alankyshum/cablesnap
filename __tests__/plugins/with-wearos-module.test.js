@@ -2,6 +2,11 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
+const WEAR_TEMPLATE_BUILD_GRADLE = path.join(
+  __dirname,
+  "../../modules/expo-wearos-bridge/wear-template/build.gradle.kts",
+);
+
 const {
   patchSettingsGradle,
   patchAppBuildGradle,
@@ -312,6 +317,25 @@ describe("patchAppBuildGradle", () => {
     // test catches it.
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toContain("shrinkResources enableShrinkResources.toBoolean()");
+  });
+});
+
+describe("Wear OS template signing", () => {
+  it("keeps production signing and an explicit debug fallback", () => {
+    const template = fs.readFileSync(WEAR_TEMPLATE_BUILD_GRADLE, "utf8");
+
+    expect(template).toMatch(/keystore\.properties/);
+    expect(template).toMatch(/hasReleaseKeystore\s*=\s*!storeFileProperty\.isNullOrBlank\(\)/);
+    expect(template).toMatch(/signingConfigs\.maybeCreate\(\s*["']release["']\s*\)/);
+    expect(template).toMatch(
+      /if\s*\(hasReleaseKeystore\)[\s\S]*?signingConfig\s*=\s*if\s*\(hasReleaseKeystore\)[\s\S]*?releaseKeystore/,
+    );
+    expect(template).toMatch(
+      /signingConfig\s*=\s*if\s*\(hasReleaseKeystore\)[\s\S]*?else\s*\{[\s\S]*?signingConfigs\.getByName\(\s*["']debug["']\s*\)/,
+    );
+    expect(template).not.toMatch(
+      /getByName\(\s*["']release["']\s*\)\s*\{[^{}]*signingConfig\s*=\s*signingConfigs\.getByName\(\s*["']debug["']\s*\)/,
+    );
   });
 });
 

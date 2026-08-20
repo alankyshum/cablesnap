@@ -750,56 +750,56 @@ jobs:
           APKSIGNER="${BUILD_TOOLS_DIR}apksigner"
           echo "Using apksigner: $APKSIGNER"
 
-           EXPECTED_NORM=$(head -1 fdroid/release-cert.sha256 | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
-           if ! echo "$EXPECTED_NORM" | grep -qE '^[0-9A-F]{64}$'; then
-             echo "::error::Expected fingerprint in fdroid/release-cert.sha256 is not a valid 64-char hex SHA-256."
-             exit 1
-           fi
+          EXPECTED_NORM=$(head -1 fdroid/release-cert.sha256 | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+          if ! echo "$EXPECTED_NORM" | grep -qE '^[0-9A-F]{64}$'; then
+            echo "::error::Expected fingerprint in fdroid/release-cert.sha256 is not a valid 64-char hex SHA-256."
+            exit 1
+          fi
 
-           verify_apk_signature() {
-             local apk="$1"
-             local log="$2"
-             if [ ! -s "$apk" ]; then
-               echo "::error::Missing or empty APK: $apk"
-               return 1
-             fi
-             if ! "$APKSIGNER" verify "$apk"; then
-               echo "::error::apksigner verify reports $apk is INVALID."
-               return 1
-             fi
-             "$APKSIGNER" verify --print-certs "$apk" | tee "$log"
-             local actual_list
-             actual_list=$(grep -oE 'certificate SHA-256 digest:[[:space:]]+[0-9a-fA-F:]+' "$log" \
-               | sed -E 's/^certificate SHA-256 digest:[[:space:]]+//' \
-               | tr -d ':[:blank:]' | tr '[:lower:]' '[:upper:]')
-             if [ -z "$actual_list" ]; then
-               echo "::error::Could not parse any SHA-256 certificate digest from $log."
-               return 1
-             fi
-             local unique_count
-             unique_count=$(printf '%s\n' "$actual_list" | sort -u | wc -l | tr -d '[:space:]')
-             if [ "$unique_count" -ne 1 ]; then
-               echo "::error::$apk reports more than one distinct signer fingerprint."
-               printf '%s\n' "$actual_list" | sort -u | sed 's/^/  /'
-               return 1
-             fi
-             local actual_norm
-             actual_norm=$(printf '%s\n' "$actual_list" | sort -u)
-             if ! printf '%s\n' "$actual_norm" | grep -qE '^[0-9A-F]{64}$'; then
-               echo "::error::Parsed signer fingerprint for $apk is not a valid 64-char SHA-256."
-               return 1
-             fi
-             echo "Expected SHA-256: $EXPECTED_NORM"
-             echo "Actual   SHA-256: $actual_norm"
-             if [ "$actual_norm" != "$EXPECTED_NORM" ]; then
-               echo "::error::$apk cert fingerprint does not match fdroid/release-cert.sha256."
-               return 1
-             fi
-             echo "Cert fingerprint verified for $apk: $actual_norm"
-           }
+          verify_apk_signature() {
+            local apk="$1"
+            local log="$2"
+            if [ ! -s "$apk" ]; then
+              echo "::error::Missing or empty APK: $apk"
+              return 1
+            fi
+            if ! "$APKSIGNER" verify "$apk"; then
+              echo "::error::apksigner verify reports $apk is INVALID."
+              return 1
+            fi
+            "$APKSIGNER" verify --print-certs "$apk" | tee "$log"
+            local actual_list
+            actual_list=$(grep -oE 'certificate SHA-256 digest:[[:space:]]+[0-9a-fA-F:]+' "$log" \
+              | sed -E 's/^certificate SHA-256 digest:[[:space:]]+//' \
+              | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
+            if [ -z "$actual_list" ]; then
+              echo "::error::Could not parse any SHA-256 certificate digest from $log."
+              return 1
+            fi
+            local unique_count
+            unique_count=$(printf '%s\n' "$actual_list" | sort -u | wc -l | tr -d '[:space:]')
+            if [ "$unique_count" -ne 1 ]; then
+              echo "::error::$apk reports more than one distinct signer fingerprint."
+              printf '%s\n' "$actual_list" | sort -u | sed 's/^/  /'
+              return 1
+            fi
+            local actual_norm
+            actual_norm=$(printf '%s\n' "$actual_list" | sort -u)
+            if ! printf '%s\n' "$actual_norm" | grep -qE '^[0-9A-F]{64}$'; then
+              echo "::error::Parsed signer fingerprint for $apk is not a valid 64-char SHA-256."
+              return 1
+            fi
+            echo "Expected SHA-256: $EXPECTED_NORM"
+            echo "Actual   SHA-256: $actual_norm"
+            if [ "$actual_norm" != "$EXPECTED_NORM" ]; then
+              echo "::error::$apk cert fingerprint does not match fdroid/release-cert.sha256."
+              return 1
+            fi
+            echo "Cert fingerprint verified for $apk: $actual_norm"
+          }
 
-           verify_apk_signature cablesnap.apk apksigner.log
-           verify_apk_signature cablesnap-wear.apk apksigner-wear.log
+          verify_apk_signature cablesnap.apk apksigner.log
+          verify_apk_signature cablesnap-wear.apk apksigner-wear.log
 
       # --- KVM permission enable (BLD-2290) ---
       #

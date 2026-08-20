@@ -28,44 +28,42 @@ android {
     versionName = "0.1.0"
   }
 
+  // Production signing comes from android/keystore.properties, written by CI.
+  // The debug fallback is deliberate for local development; silent regression
+  // is prevented by the "Verify APK signature matches committed fingerprint"
+  // step in scheduled-release.yml.
+  val keystorePropertiesFile = rootProject.file("keystore.properties")
+  val keystoreProperties = java.util.Properties()
+  if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+  }
+  val storeFileProperty = keystoreProperties.getProperty("storeFile")
+  val storePassword = keystoreProperties.getProperty("storePassword")
+  val keyAlias = keystoreProperties.getProperty("keyAlias")
+  val keyPassword = keystoreProperties.getProperty("keyPassword")
+  val hasReleaseKeystore = !storeFileProperty.isNullOrBlank()
+
   buildTypes {
     getByName("release") {
       isMinifyEnabled = false
-      val keystorePropertiesFile = rootProject.file("keystore.properties")
-      val keystoreProperties = java.util.Properties()
-      if (keystorePropertiesFile.exists()) {
-        keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
-      }
-
-      val storeFileProperty = keystoreProperties.getProperty("storeFile")
-      val storePassword = keystoreProperties.getProperty("storePassword")
-      val keyAlias = keystoreProperties.getProperty("keyAlias")
-      val keyPassword = keystoreProperties.getProperty("keyPassword")
-      val releaseKeystore = signingConfigs.maybeCreate("release")
-      if (
-        !storeFileProperty.isNullOrBlank() &&
-        !storePassword.isNullOrBlank() &&
-        !keyAlias.isNullOrBlank() &&
-        !keyPassword.isNullOrBlank()
-      ) {
-        val configuredStoreFile = java.io.File(storeFileProperty)
+      val releaseKeystore = if (hasReleaseKeystore) {
+        val releaseKeystore = signingConfigs.maybeCreate("release")
+        val configuredStoreFile = java.io.File(requireNotNull(storeFileProperty))
         releaseKeystore.storeFile = if (configuredStoreFile.isAbsolute) {
           configuredStoreFile
         } else {
           // The phone app resolves relative storeFile values from android/app.
           rootProject.file("app").resolve(configuredStoreFile)
         }
-        releaseKeystore.storePassword = storePassword
-        releaseKeystore.keyAlias = keyAlias
-        releaseKeystore.keyPassword = keyPassword
-      }
-      signingConfig = if (
-        !storeFileProperty.isNullOrBlank() &&
-        !storePassword.isNullOrBlank() &&
-        !keyAlias.isNullOrBlank() &&
-        !keyPassword.isNullOrBlank()
-      ) {
+        releaseKeystore.storePassword = requireNotNull(storePassword)
+        releaseKeystore.keyAlias = requireNotNull(keyAlias)
+        releaseKeystore.keyPassword = requireNotNull(keyPassword)
         releaseKeystore
+      } else {
+        null
+      }
+      signingConfig = if (hasReleaseKeystore) {
+        requireNotNull(releaseKeystore)
       } else {
         signingConfigs.getByName("debug")
       }
