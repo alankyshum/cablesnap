@@ -31,10 +31,44 @@ android {
   buildTypes {
     getByName("release") {
       isMinifyEnabled = false
-      // The release build is signed by Play App Signing on Google Play.
-      // Locally and in CI we sign with the same release keystore as the
-      // phone app — see scheduled-release.yml.
-      signingConfig = signingConfigs.getByName("debug")
+      val keystorePropertiesFile = rootProject.file("keystore.properties")
+      val keystoreProperties = java.util.Properties()
+      if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+      }
+
+      val storeFileProperty = keystoreProperties.getProperty("storeFile")
+      val storePassword = keystoreProperties.getProperty("storePassword")
+      val keyAlias = keystoreProperties.getProperty("keyAlias")
+      val keyPassword = keystoreProperties.getProperty("keyPassword")
+      val releaseKeystore = signingConfigs.maybeCreate("release")
+      if (
+        !storeFileProperty.isNullOrBlank() &&
+        !storePassword.isNullOrBlank() &&
+        !keyAlias.isNullOrBlank() &&
+        !keyPassword.isNullOrBlank()
+      ) {
+        val configuredStoreFile = java.io.File(storeFileProperty)
+        releaseKeystore.storeFile = if (configuredStoreFile.isAbsolute) {
+          configuredStoreFile
+        } else {
+          // The phone app resolves relative storeFile values from android/app.
+          rootProject.file("app").resolve(configuredStoreFile)
+        }
+        releaseKeystore.storePassword = storePassword
+        releaseKeystore.keyAlias = keyAlias
+        releaseKeystore.keyPassword = keyPassword
+      }
+      signingConfig = if (
+        !storeFileProperty.isNullOrBlank() &&
+        !storePassword.isNullOrBlank() &&
+        !keyAlias.isNullOrBlank() &&
+        !keyPassword.isNullOrBlank()
+      ) {
+        releaseKeystore
+      } else {
+        signingConfigs.getByName("debug")
+      }
     }
   }
 
