@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.103 — 2026-08-20
+<!-- versionCode: 171 -->
+
 - Added: link to GitHub Releases from the About screen, and documented the F-Droid repo install path.
 - Fixed: GitHub release APKs retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.
 - Added recovery links in Settings and documentation for users on v0.26.100 or v0.26.101 whose in-app update check cannot run.

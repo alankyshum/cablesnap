@@ -10,6 +10,18 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.103",
+    "date": "2026-08-20",
+    "versionCode": 171,
+    "body": "- Added: link to GitHub Releases from the About screen, and documented the F-Droid repo install path.\n- Fixed: GitHub release APKs retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.\n- Added recovery links in Settings and documentation for users on v0.26.100 or v0.26.101 whose in-app update check cannot run."
+  },
+  {
+    "version": "0.26.102",
+    "date": "2026-08-19",
+    "versionCode": 170,
+    "body": "- GitHub release APKs now retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users."
+  },
+  {
     "version": "0.26.101",
     "date": "2026-08-19",
     "versionCode": 169,
