@@ -12944,3 +12944,13 @@ msgstr ""
 #: components/nutrition/MacroCoachCard.tsx:381
 msgid "components.nutrition.coach.explainerWeight"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:400
+msgid "settings.about.releases"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:402
+msgid "settings.about.releasesA11y"
+msgstr ""

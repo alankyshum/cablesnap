@@ -1264,6 +1264,16 @@
     "srcHash": "8e13016f890d",
     "origin": "human"
   },
+  "settings.about.releases": {
+    "message": "GitHub Releases",
+    "srcHash": "717660ea399c",
+    "origin": "human"
+  },
+  "settings.about.releasesA11y": {
+    "message": "Open GitHub Releases",
+    "srcHash": "87156ad62bc6",
+    "origin": "human"
+  },
   "home.programs.all": {
     "message": "All",
     "srcHash": "7173d9505fd9",
