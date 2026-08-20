@@ -1732,6 +1732,8 @@ export type MessageKey =
   | "settings.about.description"
   | "settings.about.license"
   | "settings.about.releaseNotesA11y"
+  | "settings.about.releases"
+  | "settings.about.releasesA11y"
   | "settings.about.sponsorA11y"
   | "settings.about.version"
   | "settings.about.whatsNew"

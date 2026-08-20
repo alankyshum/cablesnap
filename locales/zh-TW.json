@@ -10144,6 +10144,16 @@
     "srcHash": "8e13016f890d",
     "origin": "machine"
   },
+  "settings.about.releases": {
+    "message": "GitHub 發行版本",
+    "srcHash": "717660ea399c",
+    "origin": "machine"
+  },
+  "settings.about.releasesA11y": {
+    "message": "開啟 GitHub 發行版本",
+    "srcHash": "87156ad62bc6",
+    "origin": "machine"
+  },
   "app.exercise.id.attachment.ankleStrap": {
     "message": "腳踝帶",
     "srcHash": "8bba731d66db",

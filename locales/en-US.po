@@ -12949,3 +12949,13 @@ msgstr "Your training data suggests you may benefit from a lighter week. Tap to 
 #: components/nutrition/MacroCoachCard.tsx:381
 msgid "components.nutrition.coach.explainerWeight"
 msgstr "Your trend weight is an exponentially-weighted moving average (EWMA) of your daily weigh-ins. This smooths out water-weight fluctuations so that one heavy day doesn't distort your estimate."
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:400
+msgid "settings.about.releases"
+msgstr "GitHub Releases"
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:402
+msgid "settings.about.releasesA11y"
+msgstr "Open GitHub Releases"
