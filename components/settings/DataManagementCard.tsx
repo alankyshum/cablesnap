@@ -34,7 +34,7 @@ export default function DataManagementCard({
         variant="body"
         style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}
       >
-        Data Management
+        {t({ id: "settings.data.title", message: "Data Management" })}
       </Text>
       <View style={styles.buttonFlow}>
         <Button
@@ -47,7 +47,7 @@ export default function DataManagementCard({
           accessibilityLabel={t({ id: "settings.data.exportA11y", message: "Export all data as JSON" })}
           accessibilityRole="button"
         >
-          Export All Data
+          {t({ id: "settings.data.exportAll", message: "Export All Data" })}
         </Button>
         <Button
           variant="outline"
@@ -59,7 +59,7 @@ export default function DataManagementCard({
           accessibilityLabel={t({ id: "settings.data.importA11y", message: "Import data" })}
           accessibilityRole="button"
         >
-          Import CableSnap Backup
+          {t({ id: "settings.data.importBackup", message: "Import CableSnap Backup" })}
         </Button>
       </View>
       {exportProgress && (
@@ -76,8 +76,7 @@ export default function DataManagementCard({
         variant="caption"
         style={{ color: colors.onSurfaceVariant, marginTop: 8, marginBottom: 16 }}
       >
-        Export your complete CableSnap data as a JSON backup file, or restore from a previous
-        backup. Duplicates are skipped.
+        {t({ id: "settings.data.description", message: "Export your complete CableSnap data as a JSON backup file, or restore from a previous backup. Duplicates are skipped." })}
       </Text>
     </>
   );

@@ -9,6 +9,7 @@ import { getValidSteps, resolveStep } from '@/lib/weightStep';
 import type { ThemeColors } from '@/hooks/useThemeColors';
 import type { useToast } from '@/components/ui/bna-toast';
 import { t } from '@/lib/i18n';
+import { i18n } from '@lingui/core';
 
 type Props = {
   colors: ThemeColors;
@@ -132,7 +133,11 @@ export default function UnitsCard({
             buttons={getValidSteps(weightUnit).map((stepVal) => ({
               value: String(stepVal),
               label: String(stepVal),
-              accessibilityLabel: `Weight step ${stepVal} ${weightUnit === 'lb' ? 'pounds' : 'kilograms'}`,
+              accessibilityLabel: i18n._({
+                id: "settings.units.weightStepA11y",
+                message: "Weight step {step} {unit, select, lb {pounds} kg {kilograms} other {kilograms}}",
+                values: { step: stepVal, unit: weightUnit },
+              }),
             }))}
           />
         </View>

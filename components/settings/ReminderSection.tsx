@@ -89,7 +89,7 @@ export default function ReminderSection({
       {reminders && (
         <>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
-            {t({ id: "settings.reminders.scheduleHint", message: `You'll be reminded at ${reminderTime} on days with scheduled workouts` })}
+            {i18n._({ id: "settings.reminders.scheduleHint", message: "You'll be reminded at {time} on days with scheduled workouts", values: { time: reminderTime } })}
           </Text>
           <View style={styles.row}>
             <Text variant="body" style={{ color: colors.onSurface, marginRight: 12, fontSize: fontSizes.sm }}>{t({ id: "common.time", message: "Time" })}</Text>

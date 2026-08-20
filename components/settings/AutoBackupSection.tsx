@@ -7,7 +7,8 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { fontSizes } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
-import { t } from "@/lib/i18n";
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
 import type { useToast } from "@/components/ui/bna-toast";
 
 const MIN_RETENTION = 1;
@@ -34,7 +35,7 @@ function formatLastBackup(iso: string | null): string {
     date.getDate() === now.getDate();
 
   const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (isToday) return t({ id: "settings.autoBackup.lastToday", message: `Last backup: Today at ${time}` });
+  if (isToday) return i18n._({ id: "settings.autoBackup.lastToday", message: "Last backup: Today at {time}", values: { time } });
 
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -42,9 +43,9 @@ function formatLastBackup(iso: string | null): string {
     date.getFullYear() === yesterday.getFullYear() &&
     date.getMonth() === yesterday.getMonth() &&
     date.getDate() === yesterday.getDate();
-  if (isYesterday) return t({ id: "settings.autoBackup.lastYesterday", message: `Last backup: Yesterday at ${time}` });
+  if (isYesterday) return i18n._({ id: "settings.autoBackup.lastYesterday", message: "Last backup: Yesterday at {time}", values: { time } });
 
-  return t({ id: "settings.autoBackup.lastDate", message: `Last backup: ${date.toLocaleDateString()} at ${time}` });
+  return i18n._({ id: "settings.autoBackup.lastDate", message: "Last backup: {date} at {time}", values: { date: date.toLocaleDateString(), time } });
 }
 
 export default function AutoBackupSection({ colors, toast, bareContent = false }: Props) {
@@ -127,7 +128,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
         variant="body"
         style={{ color: colors.onSurface, fontWeight: "600", fontSize: fontSizes.sm, marginBottom: 8 }}
       >
-        Auto-Backup
+        {t({ id: "settings.autoBackup.title", message: "Auto-Backup" })}
       </Text>
 
       <View style={styles.row}>
@@ -139,9 +140,9 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
         >
           <View style={styles.labelWithIcon}>
             <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
-              Auto-Backup
+              {t({ id: "settings.autoBackup.label", message: "Auto-Backup" })}
             </Text>
-            <Text variant="caption" style={{ color: colors.primary, fontSize: fontSizes.xs, marginLeft: 4 }}>ⓘ</Text>
+            <Text variant="caption" accessibilityElementsHidden importantForAccessibility="no" style={{ color: colors.primary, fontSize: fontSizes.xs, marginLeft: 4 }}>ⓘ</Text>
           </View>
         </Pressable>
         <Switch
@@ -157,7 +158,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
           variant="caption"
           style={[styles.tooltipText, { color: colors.onSurfaceVariant, backgroundColor: colors.surfaceVariant }]}
         >
-          Automatically saves your data after each workout.
+          {t({ id: "settings.autoBackup.tooltip", message: "Automatically saves your data after each workout." })}
         </Text>
       )}
 
@@ -170,9 +171,9 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
       </Text>
 
       {enabled && (
-        <View style={styles.retentionRow} accessibilityLabel={`Keep last ${retention} backups`}>
+        <View style={styles.retentionRow} accessibilityLabel={i18n._({ id: "settings.autoBackup.retentionA11y", message: "Keep last {count} backups", values: { count: retention } })}>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
-            Keep last
+            {t({ id: "settings.autoBackup.keepLast", message: "Keep last" })}
           </Text>
           <Pressable
             onPress={() => retention > MIN_RETENTION && handleRetentionChange(retention - 1)}
@@ -196,7 +197,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
             <MaterialCommunityIcons name="plus" size={16} color={colors.onSurface} />
           </Pressable>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
-            backups
+            {t({ id: "settings.autoBackup.backups", message: "backups" })}
           </Text>
         </View>
       )}
@@ -211,7 +212,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
           accessibilityLabel={t({ id: "settings.autoBackup.createA11y", message: "Create a backup now" })}
           accessibilityRole="button"
         >
-          Backup Now
+          {t({ id: "settings.autoBackup.backupNow", message: "Backup Now" })}
         </Button>
         <Button
           variant="outline"
@@ -220,7 +221,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
           accessibilityLabel={t({ id: "settings.autoBackup.viewA11y", message: "View all backups" })}
           accessibilityRole="button"
         >
-          View Backups
+          {t({ id: "settings.autoBackup.viewBackups", message: "View Backups" })}
         </Button>
       </View>
     </>

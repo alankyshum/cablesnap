@@ -31,7 +31,8 @@ import {
 import type { SetMediaRow } from "@/lib/db/form-clips";
 import { fontSizes, radii } from "@/constants/design-tokens";
 import { FormClipsPlayer } from "@/components/session/FormClipsPlayer";
-import { t } from "@/lib/i18n";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { ClipThumbImage } from "@/components/session/ClipThumbImage";
 
 type Props = {
@@ -90,10 +91,10 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
       month: "short",
       day: "numeric",
     });
-    Alert.alert("Delete clip", `Delete clip from ${dateStr}?`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(i18n._({ id: "settings.formClips.deleteTitle", message: "Delete clip" }), i18n._({ id: "settings.formClips.deleteMessage", message: "Delete clip from {date}?", values: { date: dateStr } }), [
+      { text: i18n._({ id: "common.cancel", message: "Cancel" }), style: "cancel" },
       {
-        text: "Delete",
+        text: i18n._({ id: "common.delete", message: "Delete" }),
         style: "destructive",
         onPress: async () => {
           try {
@@ -101,7 +102,7 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
             await loadData();
             onClipsChanged?.();
           } catch {
-            Alert.alert("Couldn't delete clip", "Please try again.");
+            Alert.alert(i18n._({ id: "settings.formClips.deleteFailedTitle", message: "Couldn't delete clip" }), i18n._({ id: "settings.formClips.tryAgain", message: "Please try again." }));
           }
         },
       },
@@ -111,12 +112,12 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
   const handleDeleteAll = useCallback(async () => {
     const totalCount = groups.reduce((sum, g) => sum + g.clips.length, 0);
     Alert.alert(
-      "Delete all clips",
-      `Delete ${totalCount} clip${totalCount !== 1 ? "s" : ""}? This permanently removes them from this device. This cannot be undone.`,
+      i18n._({ id: "settings.formClips.deleteAllTitle", message: "Delete all clips" }),
+      i18n._({ id: "settings.formClips.deleteAllMessage", message: "Delete {count, plural, one {# clip} other {# clips}}? This permanently removes them from this device. This cannot be undone.", values: { count: totalCount } }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: i18n._({ id: "common.cancel", message: "Cancel" }), style: "cancel" },
         {
-          text: "Delete all",
+          text: i18n._({ id: "settings.formClips.deleteAllAction", message: "Delete all" }),
           style: "destructive",
           onPress: async () => {
             setDeletingAll(true);
@@ -125,7 +126,7 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
               await loadData();
               onClipsChanged?.();
             } catch {
-              Alert.alert("Couldn't delete all clips", "Please try again.");
+              Alert.alert(i18n._({ id: "settings.formClips.deleteAllFailedTitle", message: "Couldn't delete all clips" }), i18n._({ id: "settings.formClips.tryAgain", message: "Please try again." }));
             } finally {
               setDeletingAll(false);
             }
@@ -142,12 +143,12 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.outline }]}>
-        <Text style={[styles.headerTitle, { color: colors.onSurface }]}>Form clips</Text>
+        <Text style={[styles.headerTitle, { color: colors.onSurface }]}>{t({ id: "settings.formClips.title", message: "Form clips" })}</Text>
         <Pressable
           style={styles.closeBtn}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Close form clips manage sheet"
+          accessibilityLabel={t({ id: "settings.formClips.closeA11y", message: "Close form clips manage sheet" })}
           hitSlop={8}
         >
           <MaterialCommunityIcons name="close" size={24} color={colors.onSurface} />
@@ -162,11 +163,11 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
           </Text>
           <Text style={[styles.statDivider, { color: colors.onSurfaceVariant }]}>·</Text>
           <Text style={[styles.statItem, { color: colors.onSurfaceVariant }]}>
-            {allClipCount} clip{allClipCount !== 1 ? "s" : ""}
+            {i18n._({ id: "settings.formClips.clipCount", message: "{count, plural, one {# clip} other {# clips}}", values: { count: allClipCount } })}
           </Text>
           <Text style={[styles.statDivider, { color: colors.onSurfaceVariant }]}>·</Text>
           <Text style={[styles.statItem, { color: colors.onSurfaceVariant }]}>
-            {groups.length} exercise{groups.length !== 1 ? "s" : ""}
+            {i18n._({ id: "settings.formClips.exerciseCount", message: "{count, plural, one {# exercise} other {# exercises}}", values: { count: groups.length } })}
           </Text>
         </View>
       )}
@@ -174,14 +175,14 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
       {/* Clip list */}
       {loading ? (
         <View style={styles.center}>
-          <Text style={{ color: colors.onSurfaceVariant }}>Loading…</Text>
+          <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "settings.formClips.loading", message: "Loading…" })}</Text>
         </View>
       ) : allClipCount === 0 ? (
         <View style={styles.emptyState}>
           <MaterialCommunityIcons name="video-outline" size={40} color={colors.onSurfaceVariant} />
-          <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>No clips recorded yet</Text>
+          <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>{t({ id: "settings.formClips.emptyTitle", message: "No clips recorded yet" })}</Text>
           <Text style={[styles.emptyBody, { color: colors.onSurfaceVariant }]}>
-            Record one from any exercise{"'"}s Form clips tab.
+            {t({ id: "settings.formClips.emptyBody", message: "Record one from any exercise's Form clips tab." })}
           </Text>
         </View>
       ) : (
@@ -207,8 +208,8 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
             onPress={handleDeleteAll}
             disabled={deletingAll}
             accessibilityRole="button"
-            accessibilityLabel={`Delete all ${allClipCount} form clips`}
-            accessibilityHint="Permanently removes all clips from this device. This cannot be undone."
+            accessibilityLabel={i18n._({ id: "settings.formClips.deleteAllA11y", message: "Delete all {count} form clips", values: { count: allClipCount } })}
+            accessibilityHint={i18n._({ id: "settings.formClips.deleteAllHint", message: "Permanently removes all clips from this device. This cannot be undone." })}
           >
             <MaterialCommunityIcons
               name="delete-sweep-outline"
@@ -266,11 +267,13 @@ function ClipRow({ clip, onDelete, onPlay }: ClipRowProps) {
     day: "numeric",
     year: "numeric",
   });
-  const durationStr = clip.duration_ms ? `${Math.round(clip.duration_ms / 1000)}s` : null;
+  const durationStr = clip.duration_ms
+    ? i18n._({ id: "settings.formClips.durationSeconds", message: "{seconds}s", values: { seconds: Math.round(clip.duration_ms / 1000) } })
+    : null;
   const sizeStr = clip.size_bytes
     ? clip.size_bytes > 1024 * 1024
-      ? `${(clip.size_bytes / (1024 * 1024)).toFixed(1)} MB`
-      : `${Math.round(clip.size_bytes / 1024)} KB`
+      ? i18n._({ id: "settings.formClips.sizeMegabytes", message: "{size} MB", values: { size: (clip.size_bytes / (1024 * 1024)).toFixed(1) } })
+      : i18n._({ id: "settings.formClips.sizeKilobytes", message: "{size} KB", values: { size: Math.round(clip.size_bytes / 1024) } })
     : null;
 
   return (
@@ -280,7 +283,7 @@ function ClipRow({ clip, onDelete, onPlay }: ClipRowProps) {
         style={[styles.clipThumb, { backgroundColor: colors.surfaceVariant }]}
         onPress={() => onPlay(clip)}
         accessibilityRole="button"
-        accessibilityLabel={`Play clip from ${dateStr}`}
+        accessibilityLabel={i18n._({ id: "settings.formClips.playA11y", message: "Play clip from {date}", values: { date: dateStr } })}
       >
         <ClipThumbImage setId={clip.id} relPath={clip.rel_path} iconSize={20} />
       </Pressable>
@@ -288,7 +291,7 @@ function ClipRow({ clip, onDelete, onPlay }: ClipRowProps) {
       <View style={styles.clipMeta}>
         <Text style={[styles.clipDate, { color: colors.onSurface }]}>{dateStr}</Text>
         <Text style={[styles.clipSub, { color: colors.onSurfaceVariant }]}>
-          {[durationStr, sizeStr].filter(Boolean).join(" · ") || "video"}
+          {[durationStr, sizeStr].filter(Boolean).join(" · ") || t({ id: "settings.formClips.video", message: "video" })}
         </Text>
       </View>
       {/* Delete */}
@@ -296,7 +299,7 @@ function ClipRow({ clip, onDelete, onPlay }: ClipRowProps) {
         style={styles.clipDeleteBtn}
         onPress={() => onDelete(clip)}
         accessibilityRole="button"
-        accessibilityLabel={`Delete clip from ${dateStr}`}
+         accessibilityLabel={i18n._({ id: "settings.formClips.deleteA11y", message: "Delete clip from {date}", values: { date: dateStr } })}
          accessibilityHint={t({ id: "settings.formClips.deleteHint", message: "Removes this clip from your device" })}
         hitSlop={8}
       >

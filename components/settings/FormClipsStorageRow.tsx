@@ -13,7 +13,8 @@ import { Text } from "@/components/ui/text";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { getStorageStats } from "@/lib/media/form-clips";
-import { t } from "@/lib/i18n";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { getSetupPhotoStats } from "@/lib/media/setup-photos";
 import { fontSizes } from "@/constants/design-tokens";
 import { FormClipsManageSheet } from "./FormClipsManageSheet";
@@ -80,10 +81,10 @@ export function FormClipsStorageRow({ onClipsChanged }: Props) {
         <View style={styles.info}>
            <Text style={[styles.label, { color: colors.onSurface }]}>{t({ id: "settings.formClips.title", message: "Form clips" })}</Text>
           <Text style={[styles.sub, { color: colors.onSurfaceVariant }]}>
-            {stats === null ? "Loading…" : `${clipMb} MB across ${clipCount} clip${clipCount !== 1 ? "s" : ""}`}
+            {stats === null ? t({ id: "settings.formClips.loading", message: "Loading…" }) : i18n._({ id: "settings.formClips.storage", message: "{size} MB across {count} clips", values: { size: clipMb, count: clipCount } })}
           </Text>
           <Text style={[styles.sub, { color: colors.onSurfaceVariant }]}>
-            {stats === null ? "Loading…" : `Setup photos: ${setupMb} MB across ${setupCount} photo${setupCount !== 1 ? "s" : ""}`}
+            {stats === null ? t({ id: "settings.formClips.loading", message: "Loading…" }) : i18n._({ id: "settings.formClips.setupPhotos", message: "Setup photos: {size} MB across {count} photos", values: { size: setupMb, count: setupCount } })}
           </Text>
         </View>
         <MaterialCommunityIcons

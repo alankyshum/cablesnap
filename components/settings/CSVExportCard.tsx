@@ -10,6 +10,7 @@ import { getCSVCounts } from "@/lib/db";
 import { sinceForRange, useCSVExport } from "@/hooks/useCSVExport";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import { useLingui } from "@lingui/react/macro";
+import { i18n } from "@lingui/core";
 
 type Props = {
   colors: ThemeColors;
@@ -43,9 +44,9 @@ export default function CSVExportCard({ colors, bareContent = false }: Props) {
       <Text
         variant="caption"
         style={{ color: colors.onSurfaceVariant, marginBottom: 12, marginTop: 8 }}
-        accessibilityLabel={`${counts.sessions} workout sessions, ${counts.entries} nutrition entries`}
+        accessibilityLabel={i18n._({ id: "settings.csv.countsA11y", message: "{sessions, plural, one {# workout session} other {# workout sessions}}, {entries, plural, one {# nutrition entry} other {# nutrition entries}}", values: counts })}
       >
-        {counts.sessions} session{counts.sessions !== 1 ? "s" : ""}, {counts.entries} entr{counts.entries !== 1 ? "ies" : "y"}
+        {i18n._({ id: "settings.csv.counts", message: "{sessions, plural, one {# session} other {# sessions}}, {entries, plural, one {# nutrition entry} other {# nutrition entries}}", values: counts })}
       </Text>
       <View style={styles.buttonFlow}>
         <Button variant="outline" size="sm" icon={FileOutput} onPress={() => exportCSV("workouts", range)} loading={loading} disabled={loading} accessibilityLabel={t({ id: "settings.csv.workoutsA11y", message: "Export workouts as CSV" })}>{t({ id: "settings.csv.workouts", message: "Workouts" })}</Button>

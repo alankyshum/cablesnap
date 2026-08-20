@@ -75,6 +75,7 @@ export default function ShareSettingsCard({ colors, bareContent = false }: Props
         <View style={{ marginTop: spacing.sm }}>
           {editing ? (
             <View>
+              {/* Stable data default: this caption is persisted/sent to Strava, so it must not be localized. */}
               <TextInput
                 value={draftCaption}
                 onChangeText={(t) => setDraftCaption(t.slice(0, 200))}

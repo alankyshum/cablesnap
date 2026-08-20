@@ -6,6 +6,7 @@ import { Bug, Lightbulb, List } from 'lucide-react-native';
 import { fontSizes } from '@/constants/design-tokens';
 import type { ThemeColors } from '@/hooks/useThemeColors';
 import { t } from '@lingui/core/macro';
+import { i18n } from '@lingui/core';
 
 type Props = {
   colors: ThemeColors;
@@ -28,7 +29,7 @@ export default function FeedbackCard({ colors, count, onBug, onFeature, onErrors
           variant="body"
           style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}
         >
-          Feedback &amp; Reports
+          {t({ id: "settings.feedback.title", message: "Feedback & Reports" })}
         </Text>
       )}
       <View style={styles.buttonFlow}>
@@ -40,7 +41,7 @@ export default function FeedbackCard({ colors, count, onBug, onFeature, onErrors
           accessibilityLabel={t({ id: "settings.feedback.bugA11y", message: "Report a bug" })}
           style={{ minHeight: 44 }}
         >
-          Report Bug
+          {t({ id: "settings.feedback.reportBug", message: "Report Bug" })}
         </Button>
         <Button
           variant="outline"
@@ -50,16 +51,16 @@ export default function FeedbackCard({ colors, count, onBug, onFeature, onErrors
           accessibilityLabel={t({ id: "settings.feedback.featureA11y", message: "Request a feature" })}
           style={{ minHeight: 44 }}
         >
-          Feature Request
+          {t({ id: "settings.feedback.featureRequest", message: "Feature Request" })}
         </Button>
         <Button
           variant="outline"
           size="sm"
           icon={List}
           onPress={onErrors}
-          accessibilityLabel={`View error log, ${count} ${count === 1 ? 'error' : 'errors'}`}
+          accessibilityLabel={i18n._({ id: "settings.feedback.errorsA11y", message: "View error log, {count, plural, one {# error} other {# errors}}", values: { count } })}
           style={{ minHeight: 44 }}
-        >{`Errors (${count})`}</Button>
+        >{i18n._({ id: "settings.feedback.errors", message: "Errors ({count})", values: { count } })}</Button>
       </View>
     </>
   );

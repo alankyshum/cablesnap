@@ -37,13 +37,13 @@ export default function ImportWorkoutsCard({
         variant="body"
         style={{ color: colors.onSurface, fontWeight: "600", fontSize: fontSizes.sm, marginBottom: spacing.sm }}
       >
-        Import Workout History
+        {t({ id: "settings.importWorkouts.title", message: "Import Workout History" })}
       </Text>
       <Text
         variant="caption"
         style={{ color: colors.onSurfaceVariant, marginBottom: spacing.md }}
       >
-        Bring your history from Strong, Hevy, or FitNotes (.csv)
+        {t({ id: "settings.importWorkouts.description", message: "Bring your history from Strong, Hevy, or FitNotes (.csv)" })}
       </Text>
       <View style={styles.buttonFlow}>
         <Button
@@ -57,7 +57,7 @@ export default function ImportWorkoutsCard({
           accessibilityLabel={t({ id: "settings.importWorkouts.chooseFileA11y", message: "Choose CSV file to import workout history" })}
           accessibilityRole="button"
         >
-          Choose CSV File…
+          {t({ id: "settings.importWorkouts.chooseFile", message: "Choose CSV File…" })}
         </Button>
       </View>
     </>

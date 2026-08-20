@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text";
 import { fontSizes } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 type Props = {
   colors: ThemeColors;
@@ -28,10 +29,10 @@ export default function FrequencyGoalPicker({ colors, value, onChange, bareConte
   const content = (
     <>
       <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600", fontSize: fontSizes.sm, marginBottom: 4 }}>
-        Weekly Training Goal
+        {t({ id: "settings.frequencyGoal.title", message: "Weekly Training Goal" })}
       </Text>
       <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
-        Shown on the home screen to track workouts completed vs. your target each week.
+        {t({ id: "settings.frequencyGoal.description", message: "Shown on the home screen to track workouts completed vs. your target each week." })}
       </Text>
       {value == null ? (
         <Pressable
@@ -41,12 +42,12 @@ export default function FrequencyGoalPicker({ colors, value, onChange, bareConte
           style={[styles.setButton, { borderColor: colors.primary }]}
         >
           <Text variant="body" style={{ color: colors.primary, fontWeight: "600", fontSize: fontSizes.sm }}>
-            Set a goal
+            {t({ id: "settings.frequencyGoal.set", message: "Set a goal" })}
           </Text>
         </Pressable>
       ) : (
         <View style={styles.stepperRow}>
-          <View style={styles.stepper} accessibilityLabel={`Weekly training goal: ${value} days`}>
+          <View style={styles.stepper} accessibilityLabel={i18n._({ id: "settings.frequencyGoal.valueA11y", message: "Weekly training goal: {value, plural, one {# day} other {# days}}", values: { value } })}>
             <Pressable
               onPress={() => canDecrement && onChange(value - 1)}
               disabled={!canDecrement}
@@ -57,7 +58,7 @@ export default function FrequencyGoalPicker({ colors, value, onChange, bareConte
               <MaterialCommunityIcons name="minus" size={20} color={colors.onSurface} />
             </Pressable>
             <Text variant="body" style={[styles.stepValue, { color: colors.onSurface }]}>
-              {value} {value === 1 ? "day" : "days"} / week
+              {i18n._({ id: "settings.frequencyGoal.value", message: "{value, plural, one {# day} other {# days}} / week", values: { value } })}
             </Text>
             <Pressable
               onPress={() => canIncrement && onChange(value + 1)}
@@ -76,7 +77,7 @@ export default function FrequencyGoalPicker({ colors, value, onChange, bareConte
             style={styles.clearButton}
           >
             <Text variant="caption" style={{ color: colors.primary }}>
-              Clear
+              {t({ id: "settings.frequencyGoal.clear", message: "Clear" })}
             </Text>
           </Pressable>
         </View>

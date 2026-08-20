@@ -29,7 +29,7 @@ export default function IntegrationsCard({
   stravaAthlete, setStravaAthlete, stravaLoading, setStravaLoading,
   bareContent = false,
 }: Props) {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   if (Platform.OS === "web") return null;
 
   const content = (
@@ -43,7 +43,7 @@ export default function IntegrationsCard({
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
               <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>{t({ id: "settings.integrations.strava", message: "Strava" })}</Text>
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "settings.integrations.connectedAs", message: `Connected as ${stravaAthlete}` })}</Text>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{i18n._({ id: "settings.integrations.connectedAs", message: "Connected as {athlete}", values: { athlete: stravaAthlete } })}</Text>
             </View>
             <Button
               variant="outline"
@@ -57,7 +57,7 @@ export default function IntegrationsCard({
               loading={stravaLoading}
               disabled={stravaLoading}
               accessibilityRole="button"
-              accessibilityLabel={t({ id: "settings.integrations.disconnectA11y", message: `Disconnect Strava account (${stravaAthlete})` })}
+              accessibilityLabel={i18n._({ id: "settings.integrations.disconnectA11y", message: "Disconnect Strava account ({athlete})", values: { athlete: stravaAthlete } })}
             >
               {t({ id: "settings.integrations.disconnect", message: "Disconnect" })}
             </Button>
