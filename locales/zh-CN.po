@@ -1945,12 +1945,6 @@ msgid "app.exercise.id.attachment.ankleStrap"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/tools/cable-finder.tsx:58
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18277
-msgid "app.tools.cableFinder.attachment.ankleStrap"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: components/home/QuickAddSheet.tsx:272
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:16723
 msgid "home.quickAdd.logHint"
@@ -2206,12 +2200,6 @@ msgstr ""
 #: components/plates/PlateCalculatorContent.tsx:172
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18121
 msgid "components.plates.calculator.bar"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: app/tools/cable-finder.tsx:60
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18277
-msgid "app.tools.cableFinder.attachment.bar"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -2931,12 +2919,6 @@ msgstr ""
 #: app/exercise/[id].tsx:92
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17964
 msgid "app.exercise.id.attachment.carabiner"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: app/tools/cable-finder.tsx:62
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18277
-msgid "app.tools.cableFinder.attachment.carabiner"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -6078,12 +6060,6 @@ msgstr ""
 #: app/exercise/[id].tsx:86
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17964
 msgid "app.exercise.id.attachment.handle"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: app/tools/cable-finder.tsx:56
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18277
-msgid "app.tools.cableFinder.attachment.handle"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -9921,21 +9897,9 @@ msgid "app.exercise.id.attachment.ringHandle"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: app/tools/cable-finder.tsx:57
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18277
-msgid "app.tools.cableFinder.attachment.ringHandle"
-msgstr ""
-
-#. js-lingui-explicit-id
 #: app/exercise/[id].tsx:89
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17964
 msgid "app.exercise.id.attachment.rope"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: app/tools/cable-finder.tsx:59
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18277
-msgid "app.tools.cableFinder.attachment.rope"
 msgstr ""
 
 #. js-lingui-explicit-id
@@ -11052,12 +11016,6 @@ msgstr ""
 #: app/exercise/[id].tsx:91
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17964
 msgid "app.exercise.id.attachment.squatHarness"
-msgstr ""
-
-#. js-lingui-explicit-id
-#: app/tools/cable-finder.tsx:61
-#: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:18277
-msgid "app.tools.cableFinder.attachment.squatHarness"
 msgstr ""
 
 #. js-lingui-explicit-id
