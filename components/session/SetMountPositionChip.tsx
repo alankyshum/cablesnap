@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -34,7 +37,7 @@ function SetMountPositionChipInner({ mount }: SetMountPositionChipProps) {
     <View
       style={[styles.chip, { backgroundColor: colors.surfaceVariant }]}
       accessible
-      accessibilityLabel={`Mount: ${label}`}
+      accessibilityLabel={t({ id: "session.setmountpositionchip.dynamic1", message: `Mount: ${label}` })}
     >
       <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>
         {`Mount: ${label}`}

@@ -8,6 +8,7 @@ import { fontSizes } from "@/constants/design-tokens";
 import { connectStrava, disconnect as disconnectStrava, getStravaSupportAction, getStravaUserMessage } from "@/lib/strava";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { useToast } from "@/components/ui/bna-toast";
+import { useLingui } from "@lingui/react/macro";
 
 type Props = {
   colors: ThemeColors;
@@ -28,39 +29,40 @@ export default function IntegrationsCard({
   stravaAthlete, setStravaAthlete, stravaLoading, setStravaLoading,
   bareContent = false,
 }: Props) {
+  const { t } = useLingui();
   if (Platform.OS === "web") return null;
 
   const content = (
     <>
       {!bareContent && (
-        <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Integrations</Text>
+        <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>{t({ id: "settings.integrations.title", message: "Integrations" })}</Text>
       )}
 
       {stravaAthlete ? (
         <View>
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
-              <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>Strava</Text>
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Connected as {stravaAthlete}</Text>
+              <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>{t({ id: "settings.integrations.strava", message: "Strava" })}</Text>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "settings.integrations.connectedAs", message: `Connected as ${stravaAthlete}` })}</Text>
             </View>
             <Button
               variant="outline"
               size="sm"
               onPress={async () => {
                 setStravaLoading(true);
-                try { await disconnectStrava(); setStravaAthlete(null); toast.success("Strava disconnected"); }
-                catch { toast.error("Failed to disconnect Strava"); }
+                 try { await disconnectStrava(); setStravaAthlete(null); toast.success(t({ id: "settings.integrations.disconnected", message: "Strava disconnected" })); }
+                 catch { toast.error(t({ id: "settings.integrations.disconnectFailed", message: "Failed to disconnect Strava" })); }
                 finally { setStravaLoading(false); }
               }}
               loading={stravaLoading}
               disabled={stravaLoading}
               accessibilityRole="button"
-              accessibilityLabel={`Disconnect Strava account (${stravaAthlete})`}
+              accessibilityLabel={t({ id: "settings.integrations.disconnectA11y", message: `Disconnect Strava account (${stravaAthlete})` })}
             >
-              Disconnect
+              {t({ id: "settings.integrations.disconnect", message: "Disconnect" })}
             </Button>
           </View>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>Completed workouts are automatically uploaded to Strava.</Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>{t({ id: "settings.integrations.connectedHint", message: "Completed workouts are automatically uploaded to Strava." })}</Text>
         </View>
       ) : (
         <View>
@@ -72,7 +74,7 @@ export default function IntegrationsCard({
               setStravaLoading(true);
               try {
                 const result = await connectStrava();
-                if (result) { setStravaAthlete(result.athleteName); toast.success("Connected to Strava!"); }
+                 if (result) { setStravaAthlete(result.athleteName); toast.success(t({ id: "settings.integrations.connected", message: "Connected to Strava!" })); }
               } catch (err) {
                 if (__DEV__) {
                   console.warn("Strava connect failed:", err);
@@ -83,11 +85,11 @@ export default function IntegrationsCard({
             loading={stravaLoading}
             disabled={stravaLoading}
             accessibilityRole="button"
-            accessibilityLabel="Connect your Strava account"
+            accessibilityLabel={t({ id: "settings.integrations.connectA11y", message: "Connect your Strava account" })}
           >
-            Connect Strava
+            {t({ id: "settings.integrations.connect", message: "Connect Strava" })}
           </Button>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>Automatically upload completed workouts to your Strava account.</Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>{t({ id: "settings.integrations.connectHint", message: "Automatically upload completed workouts to your Strava account." })}</Text>
         </View>
       )}
     </>

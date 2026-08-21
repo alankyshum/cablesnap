@@ -53,6 +53,7 @@ type BottomSheetContentProps = {
   headerHeight: number;
   /** Bottom safe-area inset for home indicator clearance. */
   safeBottomPadding: number;
+  disableContentScroll: boolean;
 };
 
 // Component for the bottom sheet content
@@ -69,6 +70,7 @@ const BottomSheetContent = ({
   scrollY,
   headerHeight,
   safeBottomPadding,
+  disableContentScroll,
 }: BottomSheetContentProps) => {
   // Track scroll offset in a shared value so the pan gesture worklet can read it.
   const handleScroll = (event: { nativeEvent: { contentOffset: { y: number } } }) => {
@@ -142,7 +144,7 @@ const BottomSheetContent = ({
           scrollable frame expands when the sheet is dragged higher. The inner
           ScrollView (from RNGH for native gesture coordination) fills it. */}
       <Animated.View style={[liveContentHeight, { flexShrink: 0 }]}>
-        <ScrollView
+        {disableContentScroll ? children : <ScrollView
           style={{ flex: 1 }}
            contentContainerStyle={{ padding: spacing.base, paddingBottom: spacing.xl + spacing.base + safeBottomPadding }}
           keyboardShouldPersistTaps='handled'
@@ -151,7 +153,7 @@ const BottomSheetContent = ({
           scrollEventThrottle={16}
         >
           {children}
-        </ScrollView>
+        </ScrollView>}
       </Animated.View>
     </Animated.View>
   );
@@ -166,6 +168,7 @@ type BottomSheetProps = {
   title?: string;
   style?: ViewStyle;
   disablePanGesture?: boolean;
+  disableContentScroll?: boolean;
 };
 
 export function BottomSheet({
@@ -177,6 +180,7 @@ export function BottomSheet({
   title,
   style,
   disablePanGesture = false,
+  disableContentScroll = false,
 }: BottomSheetProps) {
   const cardColor = useColor('card');
   // Use mutedForeground for handle pill — ensures ≥3:1 contrast against card background (WCAG AA for non-text UI)
@@ -406,6 +410,7 @@ export function BottomSheet({
               scrollY={scrollY}
               headerHeight={headerHeight}
               safeBottomPadding={safeBottomPadding}
+              disableContentScroll={disableContentScroll}
             />
           ) : (
             <GestureDetector gesture={composedGesture}>
@@ -421,6 +426,7 @@ export function BottomSheet({
                 scrollY={scrollY}
                 headerHeight={headerHeight}
                 safeBottomPadding={safeBottomPadding}
+                disableContentScroll={disableContentScroll}
               />
             </GestureDetector>
           )}

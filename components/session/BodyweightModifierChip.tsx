@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React, { memo } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -47,8 +50,8 @@ export const BodyweightModifierChip = memo(function BodyweightModifierChip({
         { borderColor: colors.outline, backgroundColor: "transparent" },
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`${setPrefix}${a11y}`}
-      accessibilityHint="Double tap to change the load modifier. Long press to reset to bodyweight only."
+      accessibilityLabel={t({ id: "session.bodyweightmodifierchip.dynamic1", message: `${setPrefix}${a11y}` })}
+      accessibilityHint={t({ id: "session.bodyweightmodifierchip.str1", message: "Double tap to change the load modifier. Long press to reset to bodyweight only." })}
     >
       <Text
         style={[

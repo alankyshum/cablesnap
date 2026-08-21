@@ -25,6 +25,30 @@ marker) at release time.
  - **Centered calendar workout dots** — The date indicator dots on the workout history calendar are now precisely centered within each day cell, fixing a slight left-bias misalignment visible on mobile. ([BLD-3643](/BLD/issues/BLD-3643))
  - **Tritanopia-safe heatmap luminance ramp** — Implements a tritanopia-safe luminance ramp for the workout-history heatmap, keeping all frequency cells perceptually distinct. ([BLD-3877](/BLD/issues/BLD-3877))
 
+## v0.26.104 — 2026-08-20
+<!-- versionCode: 172 -->
+
+- Fixed Wear OS release builds shipping with a debug signing certificate; release APKs now use the production signing key.
+
+## v0.26.103 — 2026-08-20
+<!-- versionCode: 171 -->
+
+- Added: link to GitHub Releases from the About screen, and documented the F-Droid repo install path.
+- Fixed: GitHub release APKs retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.
+- Added recovery links in Settings and documentation for users on v0.26.100 or v0.26.101 whose in-app update check cannot run.
+
+## v0.26.102 — 2026-08-19
+<!-- versionCode: 170 -->
+
+- GitHub release APKs now retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.
+
+## v0.26.101 — 2026-08-19
+<!-- versionCode: 169 -->
+
+- The new AI Coach tab lets you chat with an AI fitness coach that can consult your workout, exercise, and nutrition history on-device. Bring your own OpenRouter API key, choose your model, and keep your key on this device while requests go directly to OpenRouter.
+- Exercises are now available from the top-right icons on the Workouts screen; AI Coach now occupies their place in the tab bar.
+- In-app language selection is now available in Settings for English (US), English (UK), Traditional Chinese (Taiwan), and Simplified Chinese, defaulting to en-US. The Chinese catalogs are machine-translated beta content and have not yet received native-speaker review.
+
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->
 
@@ -251,6 +275,7 @@ marker) at release time.
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
+
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->

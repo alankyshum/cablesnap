@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { StyleSheet, View, FlatList, Pressable } from "react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import { Text } from "@/components/ui/text";
@@ -131,11 +133,11 @@ function HistoryScreen() {
             />
 
             <SearchBar
-              placeholder="Search workouts"
+              placeholder={t({ id: "history.search.placeholder", message: "Search workouts" })}
               value={h.query}
               onChangeText={h.onSearch}
               containerStyle={[styles.search, { backgroundColor: colors.surface }]}
-              accessibilityLabel="Search workout history"
+              accessibilityLabel={t({ id: "history.search.a11y", message: "Search workout history" })}
             />
 
             <FilterBar
@@ -152,9 +154,9 @@ function HistoryScreen() {
               <Text
                 variant="caption"
                 style={[styles.filterCaption, { color: colors.onSurfaceVariant }]}
-                accessibilityLabel="Calendar disabled while filters are active"
+                accessibilityLabel={t({ id: "history.calendar.disabledA11y", message: "Calendar disabled while filters are active" })}
               >
-                Filters active — tap &quot;Clear all&quot; to use calendar
+                {t({ id: "history.filters.active", message: 'Filters active — tap "Clear all" to use calendar' })}
               </Text>
             )}
 
@@ -200,7 +202,7 @@ function HistoryScreen() {
             )}
 
             {(!h.useFilterMode && (h.selected || h.query.trim())) && (
-              <Chip icon={<Icon name={X} size={16} />} onPress={h.clearFilter} style={styles.chip} accessibilityLabel="Clear filter">
+               <Chip icon={<Icon name={X} size={16} />} onPress={h.clearFilter} style={styles.chip} accessibilityLabel={t({ id: "history.filters.clearA11y", message: "Clear filter" })}>
                 {h.query.trim()
                   ? `Search: ${h.query}`
                   : `${new Date(h.year, h.month, Number(h.selected!.split("-")[2])).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`}
@@ -211,9 +213,9 @@ function HistoryScreen() {
               <Text
                 variant="caption"
                 style={[styles.resultCount, { color: colors.onSurfaceVariant }]}
-                accessibilityLabel={`${h.filteredTotal} sessions match these filters`}
+                 accessibilityLabel={t({ id: "history.filters.resultCountA11y", message: `${h.filteredTotal} sessions match these filters` })}
               >
-                {h.filteredTotal} {h.filteredTotal === 1 ? "session" : "sessions"}
+                {i18n._({ id: "history.filters.resultCount", message: "{count, plural, one {# session} other {# sessions}}", values: { count: h.filteredTotal } })}
               </Text>
             )}
           </>
@@ -225,11 +227,11 @@ function HistoryScreen() {
               <Pressable
                 onPress={h.clearAllFilters}
                 style={[styles.clearFiltersButton, { backgroundColor: colors.primary }]}
-                accessibilityLabel="Clear filters"
+                 accessibilityLabel={t({ id: "history.empty.clearFiltersA11y", message: "Clear filters" })}
                 accessibilityRole="button"
               >
                 <Text variant="body" style={{ color: colors.onPrimary, fontWeight: "600" }}>
-                  Clear filters
+                   {t({ id: "history.empty.clearFilters", message: "Clear filters" })}
                 </Text>
               </Pressable>
             )}

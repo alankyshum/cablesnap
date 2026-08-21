@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * SetTimerCell — BLD-1235
  *
@@ -78,7 +81,7 @@ export function SetTimerCell({
           style={[styles.timerDisplay, { color: colors.primary }]}
           accessibilityRole="timer"
           accessibilityLiveRegion="polite"
-          accessibilityLabel={`Timer: ${formatDurationDisplay(displaySeconds)}`}
+          accessibilityLabel={t({ id: "session.settimercell.dynamic1", message: `Timer: ${formatDurationDisplay(displaySeconds)}` })}
         >
           {formatDurationDisplay(displaySeconds)}
         </Text>

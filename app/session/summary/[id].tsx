@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, Share, StyleSheet, View, FlatList } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
@@ -147,7 +150,7 @@ function Summary() {
       <>
         <Stack.Screen options={{ title: "Summary", headerLeft: () => null, headerBackVisible: false }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text>
+          <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "session.summary.id.str3", message: "Loading..." })}</Text>
         </View>
       </>
     );
@@ -286,7 +289,7 @@ function SummaryHeader({ colors, session, duration, durationSpokenText, complete
     <>
       <View style={styles.header}>
         <MaterialCommunityIcons name="check-circle" size={48} color={colors.primary} />
-        <Text variant="heading" style={[styles.title, { color: colors.onBackground }]} accessibilityRole="header">Workout Complete!</Text>
+        <Text variant="heading" style={[styles.title, { color: colors.onBackground }]} accessibilityRole="header">{t({ id: "session.summary.id.str4", message: "Workout Complete!" })}</Text>
         <Text variant="body" style={{ color: colors.onSurfaceVariant }} numberOfLines={1} ellipsizeMode="tail">{session.name}</Text>
         {session.edited_at != null && (
           <View style={{ marginTop: 4 }}>
@@ -295,29 +298,29 @@ function SummaryHeader({ colors, session, duration, durationSpokenText, complete
         )}
       </View>
       <View style={styles.stats}>
-        <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={`Duration: ${durationSpokenText}`}>
+        <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={t({ id: "session.summary.id.dynamic1", message: `Duration: ${durationSpokenText}` })}>
           <CardContent style={styles.statInner}>
             <Text variant="heading" style={{ color: colors.primary }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{duration}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1}>Duration</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1}>{t({ id: "session.summary.id.str5", message: "Duration" })}</Text>
           </CardContent>
         </Card>
         <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={setsBreakdown ? `${completedCount} sets: ${setsBreakdown}` : `${completedCount} sets completed`}>
           <CardContent style={styles.statInner}>
             <Text variant="heading" style={{ color: colors.primary }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{completedCount}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1}>Sets</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1}>{t({ id: "session.summary.id.str6", message: "Sets" })}</Text>
           </CardContent>
         </Card>
-        <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={`Total volume: ${volumeDisplay.toLocaleString()} ${unit}`}>
+        <Card style={StyleSheet.flatten([styles.stat, { backgroundColor: colors.surface }])} accessibilityLabel={t({ id: "session.summary.id.dynamic2", message: `Total volume: ${volumeDisplay.toLocaleString()} ${unit}` })}>
           <CardContent style={styles.statInner}>
             <Text variant="heading" style={{ color: colors.primary }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{volumeDisplay.toLocaleString()}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }} numberOfLines={2}>Volume ({unit})</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }} numberOfLines={2}>{t({ id: "session.summary.id.str7", message: `Volume (${unit})` })}</Text>
           </CardContent>
         </Card>
       </View>
       {session.completed_at && (
         <Card style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}>
           <CardContent style={{ alignItems: "center" }}>
-            <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12, fontWeight: "600" }}>How was your workout?</Text>
+            <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12, fontWeight: "600" }}>{t({ id: "session.summary.id.str8", message: "How was your workout?" })}</Text>
             <RatingWidget value={rating} onChange={onRatingChange} size="large" />
           </CardContent>
         </Card>
@@ -327,13 +330,13 @@ function SummaryHeader({ colors, session, duration, durationSpokenText, complete
           <CardContent>
             <View style={styles.notesHeader}>
               <MaterialCommunityIcons name="note-edit-outline" size={20} color={colors.primary} />
-              <Text variant="subtitle" style={{ color: colors.onSurface, marginLeft: 8, flex: 1 }}>Session notes</Text>
+              <Text variant="subtitle" style={{ color: colors.onSurface, marginLeft: 8, flex: 1 }}>{t({ id: "session.summary.id.str9", message: "Session notes" })}</Text>
             </View>
             <Input
               type="textarea"
               variant="outline"
               rows={5}
-              placeholder="Add notes about this workout..."
+              placeholder={t({ id: "session.summary.id.str1", message: "Add notes about this workout..." })}
               placeholderTextColor={colors.onSurfaceVariant}
               value={notesText}
               onChangeText={(t) => setNotesText(t.slice(0, 500))}
@@ -341,7 +344,7 @@ function SummaryHeader({ colors, session, duration, durationSpokenText, complete
               maxLength={500}
               textAlignVertical="top"
               inputStyle={{ ...styles.notesInput, color: colors.onSurface }}
-              accessibilityLabel="Session notes"
+              accessibilityLabel={t({ id: "session.summary.id.str2", message: "Session notes" })}
             />
             <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "right", marginTop: 4 }}>{notesText.length}/500</Text>
           </CardContent>

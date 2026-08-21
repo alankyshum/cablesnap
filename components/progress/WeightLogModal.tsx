@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type WeightLogModalProps = {
   visible: boolean;
@@ -49,42 +50,42 @@ export default function WeightLogModal({
             variant="title"
             style={{ color: colors.onSurface, marginBottom: 8 }}
           >
-            Log Weight
+            {t({ id: "components.progress.weightLog.title", message: "Log Weight" })}
           </Text>
           <Text
             variant="caption"
             style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}
-            accessibilityLabel="Optional. Use this for strength-relative-to-bodyweight tracking — never as a goal."
+            accessibilityLabel={t({ id: "components.progress.weightLog.noteA11y", message: "Optional. Use this for strength-relative-to-bodyweight tracking — never as a goal." })}
           >
-            Optional. Use this for strength-relative-to-bodyweight tracking — never as a goal.
+            {t({ id: "components.progress.weightLog.note", message: "Optional. Use this for strength-relative-to-bodyweight tracking — never as a goal." })}
           </Text>
 
           <Input
-            label={`Weight (${unit})`}
+            label={`${t({ id: "components.progress.weightLog.weight", message: "Weight" })} (${unit})`}
             value={logWeight}
             onChangeText={setLogWeight}
             keyboardType="numeric"
             variant="outline"
             containerStyle={styles.input}
-            accessibilityLabel={`Weight in ${unit}`}
+            accessibilityLabel={t({ id: "components.progress.weightLog.weightUnitA11y", message: `Weight in ${unit}` })}
           />
 
           <Input
-            label="Date (YYYY-MM-DD)"
+            label={t({ id: "components.progress.weightLog.date", message: "Date (YYYY-MM-DD)" })}
             value={logDate}
             onChangeText={setLogDate}
             variant="outline"
             containerStyle={styles.input}
-            accessibilityLabel="Date for weight entry"
+            accessibilityLabel={t({ id: "components.progress.weightLog.dateA11y", message: "Date for weight entry" })}
           />
 
           <Input
-            label="Notes (optional)"
+            label={t({ id: "components.progress.weightLog.notes", message: "Notes (optional)" })}
             value={logNotes}
             onChangeText={setLogNotes}
             variant="outline"
             containerStyle={styles.input}
-            accessibilityLabel="Optional notes"
+            accessibilityLabel={t({ id: "components.progress.weightLog.notesA11y", message: "Optional notes" })}
           />
 
           <View style={styles.modalButtons}>
@@ -92,8 +93,8 @@ export default function WeightLogModal({
               variant="outline"
               onPress={onClose}
               style={{ flex: 1, marginRight: 8 }}
-              accessibilityLabel="Cancel weight log"
-              label="Cancel"
+              accessibilityLabel={t({ id: "components.progress.weightLog.cancelA11y", message: "Cancel weight log" })}
+              label={t({ id: "components.progress.weightLog.cancel", message: "Cancel" })}
             />
             <Button
               variant="default"
@@ -101,8 +102,8 @@ export default function WeightLogModal({
               loading={saving}
               disabled={saving || !logWeight}
               style={{ flex: 1 }}
-              accessibilityLabel="Save weight entry"
-              label="Save"
+              accessibilityLabel={t({ id: "components.progress.weightLog.saveA11y", message: "Save weight entry" })}
+              label={t({ id: "components.progress.weightLog.save", message: "Save" })}
             />
           </View>
         </View>
