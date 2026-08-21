@@ -1264,16 +1264,6 @@
     "srcHash": "8e13016f890d",
     "origin": "human"
   },
-  "settings.about.releases": {
-    "message": "GitHub Releases",
-    "srcHash": "717660ea399c",
-    "origin": "human"
-  },
-  "settings.about.releasesA11y": {
-    "message": "Open GitHub Releases",
-    "srcHash": "87156ad62bc6",
-    "origin": "human"
-  },
   "home.programs.all": {
     "message": "All",
     "srcHash": "7173d9505fd9",
@@ -10429,9 +10419,709 @@
     "srcHash": "87eeaff10e47",
     "origin": "human"
   },
+  "settings.about.releases": {
+    "message": "GitHub Releases",
+    "srcHash": "717660ea399c",
+    "origin": "human"
+  },
+  "settings.about.releasesA11y": {
+    "message": "Open GitHub Releases",
+    "srcHash": "87156ad62bc6",
+    "origin": "human"
+  },
+  "floatingTabBar.tabs.aiCoach": {
+    "message": "AI Coach",
+    "srcHash": "07cacebdf686",
+    "origin": "human"
+  },
+  "tabs.workouts.exercisesA11y": {
+    "message": "Exercises",
+    "srcHash": "fe34e979251c",
+    "origin": "human"
+  },
   "settings.formClips.deleteAllMessage": {
     "message": "Delete {count, plural, one {# clip} other {# clips}}? This permanently removes them from this device. This cannot be undone.",
     "srcHash": "f81081a70568",
+    "origin": "human"
+  },
+  "common.deleting": {
+    "message": "Deleting…",
+    "srcHash": "517d142eca23",
+    "origin": "human"
+  },
+  "common.retry": {
+    "message": "Retry",
+    "srcHash": "2f3eac393010",
+    "origin": "human"
+  },
+  "components.bodyProfile.loadFailed": {
+    "message": "Could not load profile",
+    "srcHash": "ce78629867e2",
+    "origin": "human"
+  },
+  "components.bodyProfile.loading": {
+    "message": "Loading profile…",
+    "srcHash": "857b4c386b47",
+    "origin": "human"
+  },
+  "components.bodyProfile.retryA11y": {
+    "message": "Retry loading profile",
+    "srcHash": "d5c12c556ee2",
+    "origin": "human"
+  },
+  "components.bodyProfile.title": {
+    "message": "Body Profile",
+    "srcHash": "69375aee8c2b",
+    "origin": "human"
+  },
+  "components.foodSearch.onlineResults": {
+    "message": "Online Results",
+    "srcHash": "577a691392f8",
+    "origin": "human"
+  },
+  "components.foodSearch.placeholder": {
+    "message": "Search foods...",
+    "srcHash": "03095e442c31",
+    "origin": "human"
+  },
+  "components.foodSearch.scanBarcodeA11y": {
+    "message": "Scan barcode",
+    "srcHash": "2ecc26280ffe",
+    "origin": "human"
+  },
+  "components.foodSearch.searchA11y": {
+    "message": "Search foods",
+    "srcHash": "5f1f2e59a253",
+    "origin": "human"
+  },
+  "components.manualFood.calories": {
+    "message": "Calories",
+    "srcHash": "4412579538e8",
+    "origin": "human"
+  },
+  "components.manualFood.closeA11y": {
+    "message": "Close manual entry",
+    "srcHash": "bacec535974c",
+    "origin": "human"
+  },
+  "components.manualFood.foodName": {
+    "message": "Food name",
+    "srcHash": "d7a01cce5008",
+    "origin": "human"
+  },
+  "components.manualFood.log": {
+    "message": "Log Food",
+    "srcHash": "443602116200",
+    "origin": "human"
+  },
+  "components.manualFood.logA11y": {
+    "message": "Log manual entry",
+    "srcHash": "8213f600b325",
+    "origin": "human"
+  },
+  "components.manualFood.open": {
+    "message": "Manual Entry",
+    "srcHash": "7b846f5d353e",
+    "origin": "human"
+  },
+  "components.manualFood.openA11y": {
+    "message": "Manual entry",
+    "srcHash": "157f7bc8060e",
+    "origin": "human"
+  },
+  "components.manualFood.removeFavoriteA11y": {
+    "message": "Remove manual entry from favorites",
+    "srcHash": "db185b51853f",
+    "origin": "human"
+  },
+  "components.manualFood.saveFavorite": {
+    "message": "Save as favorite",
+    "srcHash": "add06334b39d",
+    "origin": "human"
+  },
+  "components.manualFood.saveFavoriteA11y": {
+    "message": "Save manual entry as favorite",
+    "srcHash": "342804af19d9",
+    "origin": "human"
+  },
+  "components.manualFood.servingSize": {
+    "message": "Serving size",
+    "srcHash": "f47384963113",
+    "origin": "human"
+  },
+  "components.manualFood.title": {
+    "message": "Manual Food Entry",
+    "srcHash": "ae5b083ba9a9",
+    "origin": "human"
+  },
+  "components.shareSheet.achievement": {
+    "message": "Share Achievement Recap",
+    "srcHash": "ae248b4d4195",
+    "origin": "human"
+  },
+  "components.shareSheet.achievementHint": {
+    "message": "Generate an achievement recap card image",
+    "srcHash": "83598287d9c8",
+    "origin": "human"
+  },
+  "components.shareSheet.connectStrava": {
+    "message": "Connect Strava",
+    "srcHash": "f2188c061544",
+    "origin": "human"
+  },
+  "components.shareSheet.connectStravaHint": {
+    "message": "Open settings to connect Strava",
+    "srcHash": "2c412234d38e",
+    "origin": "human"
+  },
+  "components.shareSheet.image": {
+    "message": "Share as Image",
+    "srcHash": "7a5cf7e4a528",
+    "origin": "human"
+  },
+  "components.shareSheet.imageHint": {
+    "message": "Generate a workout card image",
+    "srcHash": "2f0bd98084dd",
+    "origin": "human"
+  },
+  "components.shareSheet.stravaImage": {
+    "message": "Share Strava Image",
+    "srcHash": "017005e341d6",
+    "origin": "human"
+  },
+  "components.shareSheet.stravaImageHint": {
+    "message": "Generate a Strava workout card image",
+    "srcHash": "bed934f5271d",
+    "origin": "human"
+  },
+  "components.shareSheet.syncStrava": {
+    "message": "Sync to Strava",
+    "srcHash": "74e0b5b522ed",
+    "origin": "human"
+  },
+  "components.shareSheet.syncStravaHint": {
+    "message": "Upload workout activity data directly to Strava",
+    "srcHash": "cdfa42029656",
+    "origin": "human"
+  },
+  "components.shareSheet.text": {
+    "message": "Share as Text",
+    "srcHash": "ef1b0d866131",
+    "origin": "human"
+  },
+  "components.shareSheet.textHint": {
+    "message": "Copy workout summary as text",
+    "srcHash": "495523f4976a",
+    "origin": "human"
+  },
+  "components.shareSheet.title": {
+    "message": "Share Workout",
+    "srcHash": "f01674ac06fc",
+    "origin": "human"
+  },
+  "exerciseTutorialLink.copyLink": {
+    "message": "Copy this link to search manually:\n\n{url}",
+    "srcHash": "46e8639af69e",
+    "origin": "human"
+  },
+  "exerciseTutorialLink.openBrowserFailed": {
+    "message": "Couldn't open browser",
+    "srcHash": "2f2b665d6484",
+    "origin": "human"
+  },
+  "insights.balance.accessibilityLabel": {
+    "message": "{title}. Tap to view muscle volume details.",
+    "srcHash": "748ae6a28528",
+    "origin": "human"
+  },
+  "insights.balance.mixed": {
+    "message": "{underCount} below target, {overCount} above cap this week.",
+    "srcHash": "d00b797dbbc2",
+    "origin": "human"
+  },
+  "insights.balance.overMany": {
+    "message": "{count} muscles are above this week's cap",
+    "srcHash": "edacb87fc3d3",
+    "origin": "human"
+  },
+  "insights.balance.overOne": {
+    "message": "1 muscle is above this week's cap",
+    "srcHash": "5daea65eef83",
+    "origin": "human"
+  },
+  "insights.balance.underMany": {
+    "message": "{count} muscles are below this week's target",
+    "srcHash": "5613bec29313",
+    "origin": "human"
+  },
+  "insights.balance.underOne": {
+    "message": "1 muscle is below this week's target",
+    "srcHash": "ac6a0d6c952d",
+    "origin": "human"
+  },
+  "insights.consistency.accessibilityLabel": {
+    "message": "Training insight: {title}",
+    "srcHash": "1890fa59bf66",
+    "origin": "human"
+  },
+  "insights.consistency.title": {
+    "message": "{count} workouts this week — your best in {weeks} weeks!",
+    "srcHash": "8b5446f15f01",
+    "origin": "human"
+  },
+  "insights.goal.accessibilityLabel": {
+    "message": "Training insight: {title}. Tap to view details.",
+    "srcHash": "837b4d0e9c6a",
+    "origin": "human"
+  },
+  "insights.goal.title": {
+    "message": "You're {progressPct}% of the way to your {exerciseName} goal!",
+    "srcHash": "ca66ce07c035",
+    "origin": "human"
+  },
+  "insights.muscle.fullBody": {
+    "message": "full body",
+    "srcHash": "5caec90081ac",
+    "origin": "human"
+  },
+  "insights.returning.accessibilityLabel": {
+    "message": "Training insight: {title}",
+    "srcHash": "ce7433afd491",
+    "origin": "human"
+  },
+  "insights.returning.title": {
+    "message": "Welcome back! You crushed it today.",
+    "srcHash": "0321d163b20e",
+    "origin": "human"
+  },
+  "insights.strength.accessibilityLabel": {
+    "message": "Training insight: {title}. Tap to view details.",
+    "srcHash": "8ecb00012518",
+    "origin": "human"
+  },
+  "insights.strength.title": {
+    "message": "Your {exerciseName} is up {delta}kg this month",
+    "srcHash": "6a24a5c46f66",
+    "origin": "human"
+  },
+  "insights.volume.accessibilityLabel": {
+    "message": "Training insight: {title}. Tap to view details.",
+    "srcHash": "15506102905d",
+    "origin": "human"
+  },
+  "insights.volume.title": {
+    "message": "Training volume up {pct}% vs last month",
+    "srcHash": "a36f4ec0ebb3",
+    "origin": "human"
+  },
+  "notifications.channel.restComplete": {
+    "message": "Rest complete",
+    "srcHash": "1d21d63c1b87",
+    "origin": "human"
+  },
+  "notifications.channel.restCue": {
+    "message": "Rest pre-end cue",
+    "srcHash": "229c530e97b9",
+    "origin": "human"
+  },
+  "notifications.channel.restOngoing": {
+    "message": "Rest timer (ongoing)",
+    "srcHash": "fabead1d8b2b",
+    "origin": "human"
+  },
+  "notifications.complete.lastSet": {
+    "message": "Last set complete",
+    "srcHash": "86fd87a30c79",
+    "origin": "human"
+  },
+  "notifications.complete.nextSet": {
+    "message": "Time for your next set.",
+    "srcHash": "0ab17991dd7d",
+    "origin": "human"
+  },
+  "notifications.complete.title": {
+    "message": "Rest complete",
+    "srcHash": "407b43bb45fe",
+    "origin": "human"
+  },
+  "notifications.live.resting": {
+    "message": "Resting…",
+    "srcHash": "c46915a134f1",
+    "origin": "human"
+  },
+  "notifications.live.title": {
+    "message": "Resting · {time} remaining",
+    "srcHash": "89637c00573b",
+    "origin": "human"
+  },
+  "notifications.preEnd.next": {
+    "message": "Next: {preview}",
+    "srcHash": "8f1c45255092",
+    "origin": "human"
+  },
+  "notifications.preEnd.nextSet": {
+    "message": "Next set in {seconds}s",
+    "srcHash": "33a5ce29c259",
+    "origin": "human"
+  },
+  "notifications.preEnd.title": {
+    "message": "Rest ending in {seconds}s",
+    "srcHash": "af14dee7c1ef",
+    "origin": "human"
+  },
+  "notifications.preEnd.workoutEnding": {
+    "message": "Workout ending in {seconds}s",
+    "srcHash": "20baa3b02790",
+    "origin": "human"
+  },
+  "notifications.preview.bodyweight": {
+    "message": "{exerciseName} — bodyweight × {reps}",
+    "srcHash": "9e0954117e18",
+    "origin": "human"
+  },
+  "notifications.preview.distance": {
+    "message": "{exerciseName} — {distance}",
+    "srcHash": "c5630bdf1011",
+    "origin": "human"
+  },
+  "notifications.preview.duration": {
+    "message": "{exerciseName} — {duration}",
+    "srcHash": "66f59d34ebc2",
+    "origin": "human"
+  },
+  "notifications.preview.kilometers": {
+    "message": "{value} km",
+    "srcHash": "fb0641830834",
+    "origin": "human"
+  },
+  "notifications.preview.meters": {
+    "message": "{value} m",
+    "srcHash": "f0efb1e18905",
+    "origin": "human"
+  },
+  "notifications.preview.weighted": {
+    "message": "{exerciseName} — {weight} {unit} × {reps}",
+    "srcHash": "602fbc460a12",
+    "origin": "human"
+  },
+  "notifications.reminder.body": {
+    "message": "{template} is scheduled for today",
+    "srcHash": "d9a004962985",
+    "origin": "human"
+  },
+  "notifications.reminder.title": {
+    "message": "Time to train!",
+    "srcHash": "0a590f6908a5",
+    "origin": "human"
+  },
+  "notifications.response.templateMissing": {
+    "message": "Scheduled template no longer exists",
+    "srcHash": "eb5716a57806",
+    "origin": "human"
+  },
+  "notifications.test.body": {
+    "message": "Notifications are working. You're all set!",
+    "srcHash": "5e274f528aba",
+    "origin": "human"
+  },
+  "notifications.test.title": {
+    "message": "CableSnap test 🔔",
+    "srcHash": "7b71bcf60254",
+    "origin": "human"
+  },
+  "settings.autoBackup.createA11y": {
+    "message": "Create a backup now",
+    "srcHash": "3861b8c2fce5",
+    "origin": "human"
+  },
+  "settings.autoBackup.created": {
+    "message": "Backup created successfully",
+    "srcHash": "2482a7bc4784",
+    "origin": "human"
+  },
+  "settings.autoBackup.decreaseA11y": {
+    "message": "Decrease backup retention",
+    "srcHash": "7dac1c316ceb",
+    "origin": "human"
+  },
+  "settings.autoBackup.failed": {
+    "message": "Backup failed",
+    "srcHash": "5ba9485cc7b2",
+    "origin": "human"
+  },
+  "settings.autoBackup.increaseA11y": {
+    "message": "Increase backup retention",
+    "srcHash": "fdf693440d71",
+    "origin": "human"
+  },
+  "settings.autoBackup.infoA11y": {
+    "message": "Auto-Backup. Tap for more info",
+    "srcHash": "bf4e1651e479",
+    "origin": "human"
+  },
+  "settings.autoBackup.lastDate": {
+    "message": "Last backup: {dateText} at {time}",
+    "srcHash": "8284f5efb2dd",
+    "origin": "human"
+  },
+  "settings.autoBackup.lastToday": {
+    "message": "Last backup: Today at {time}",
+    "srcHash": "ef6d1a760156",
+    "origin": "human"
+  },
+  "settings.autoBackup.lastYesterday": {
+    "message": "Last backup: Yesterday at {time}",
+    "srcHash": "4284b84009af",
+    "origin": "human"
+  },
+  "settings.autoBackup.noBackups": {
+    "message": "No backups yet",
+    "srcHash": "75c63571586c",
+    "origin": "human"
+  },
+  "settings.autoBackup.retentionFailed": {
+    "message": "Failed to update retention",
+    "srcHash": "081fa241a4b4",
+    "origin": "human"
+  },
+  "settings.autoBackup.toggleA11y": {
+    "message": "Toggle auto-backup after workouts",
+    "srcHash": "461901bc639d",
+    "origin": "human"
+  },
+  "settings.autoBackup.updateFailed": {
+    "message": "Failed to update setting",
+    "srcHash": "67782859060e",
+    "origin": "human"
+  },
+  "settings.autoBackup.viewA11y": {
+    "message": "View all backups",
+    "srcHash": "635f1282f3a1",
+    "origin": "human"
+  },
+  "settings.formClips.deleteAll": {
+    "message": "Delete all clips",
+    "srcHash": "f7ef8f1b592e",
+    "origin": "human"
+  },
+  "settings.formClips.deleteHint": {
+    "message": "Removes this clip from your device",
+    "srcHash": "5077d25254cf",
+    "origin": "human"
+  },
+  "settings.formClips.manageA11y": {
+    "message": "Manage form clips",
+    "srcHash": "59ad460b32f4",
+    "origin": "human"
+  },
+  "settings.formClips.manageHint": {
+    "message": "Opens a list of all recorded form clips where you can delete individual or all clips",
+    "srcHash": "1a38a45da58b",
+    "origin": "human"
+  },
+  "settings.formClips.title": {
+    "message": "Form clips",
+    "srcHash": "8c6b7e520a70",
+    "origin": "human"
+  },
+  "settings.language.enGB": {
+    "message": "English (UK)",
+    "srcHash": "3201054d7410",
+    "origin": "human"
+  },
+  "settings.language.enUS": {
+    "message": "English (US)",
+    "srcHash": "2d2b8c03b8b6",
+    "origin": "human"
+  },
+  "settings.language.zhCN": {
+    "message": "简体中文",
+    "srcHash": "bbf624832eaa",
+    "origin": "human"
+  },
+  "settings.language.zhTW": {
+    "message": "繁體中文",
+    "srcHash": "49cc2a206c85",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.captureRpe": {
+    "message": "Capture set RPE during workouts",
+    "srcHash": "c28612a45f9d",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.captureRpeA11y": {
+    "message": "Shows effort chips after each set you complete",
+    "srcHash": "b655125493c8",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.captureRpeHint": {
+    "message": "Tap a chip after each set to log how it felt. Powers the smart rest timer and progression suggestions.",
+    "srcHash": "f14aeef8a0a1",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.enableRpeHint": {
+    "message": "Enable \"Capture set RPE\" above to use this setting.",
+    "srcHash": "7b9c918807c7",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.intensityScale": {
+    "message": "Intensity scale",
+    "srcHash": "778e7fefe9c9",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.rirHint": {
+    "message": "RIR = reps left in reserve. RPE = 10 − RIR.",
+    "srcHash": "a80e208d11e0",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.saveIntensityFailed": {
+    "message": "Failed to save intensity scale setting",
+    "srcHash": "36a991b785a1",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.savePulleyFailed": {
+    "message": "Failed to save pulley pin tracking setting",
+    "srcHash": "96bb5a40b573",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.saveRpeFailed": {
+    "message": "Failed to save RPE capture setting",
+    "srcHash": "2c6b77961f76",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.trackPulley": {
+    "message": "Track pulley pin position",
+    "srcHash": "e26c4f0c55b6",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.trackPulleyA11y": {
+    "message": "Show or hide the pulley pin chip on cable exercise sets",
+    "srcHash": "7aacae763248",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.trackPulleyHint": {
+    "message": "Show a pin-number chip on cable sets to log which pulley pin you used.",
+    "srcHash": "d1465246e903",
+    "origin": "human"
+  },
+  "settings.units.measurements": {
+    "message": "Measurements",
+    "srcHash": "f5760e8bbd96",
+    "origin": "human"
+  },
+  "settings.units.saveUnitFailed": {
+    "message": "Could not save unit",
+    "srcHash": "d30374b8bd51",
+    "origin": "human"
+  },
+  "settings.units.saveWeightStepFailed": {
+    "message": "Could not save weight step setting",
+    "srcHash": "e2d5c1d90c10",
+    "origin": "human"
+  },
+  "settings.units.title": {
+    "message": "Units",
+    "srcHash": "68aecbd99beb",
+    "origin": "human"
+  },
+  "settings.units.weight": {
+    "message": "Weight",
+    "srcHash": "a54504946498",
+    "origin": "human"
+  },
+  "settings.units.weightStep": {
+    "message": "Weight step",
+    "srcHash": "a262bbec57ec",
+    "origin": "human"
+  },
+  "settings.units.weightStepHint": {
+    "message": "Input step granularity for exercises. Applies to new sessions.",
+    "srcHash": "7ee8f1e039b9",
+    "origin": "human"
+  },
+  "share.achievement.more": {
+    "message": "+{extraCount} more",
+    "srcHash": "4d147e061d8e",
+    "origin": "human"
+  },
+  "share.achievement.unlocked": {
+    "message": "{achievementCount} {achievementCount, plural, one {Achievement} other {Achievements}} Unlocked!",
+    "srcHash": "bada375e3db9",
+    "origin": "human"
+  },
+  "share.exercises.more": {
+    "message": "and {remaining} more",
+    "srcHash": "7eb6caecd9c7",
+    "origin": "human"
+  },
+  "share.exercises.newPrs": {
+    "message": "🏆 New PRs",
+    "srcHash": "7f875fc27a9b",
+    "origin": "human"
+  },
+  "share.exercises.title": {
+    "message": "Exercises",
+    "srcHash": "a3cce693f041",
+    "origin": "human"
+  },
+  "share.stats.duration": {
+    "message": "Duration",
+    "srcHash": "48dea83849a4",
+    "origin": "human"
+  },
+  "share.stats.sets": {
+    "message": "Sets",
+    "srcHash": "1f42d6b75dd2",
+    "origin": "human"
+  },
+  "share.stats.volume": {
+    "message": "Volume ({unit})",
+    "srcHash": "0bcf00bb62dc",
+    "origin": "human"
+  },
+  "stravaError.appInactive": {
+    "message": "Strava app access is inactive. Please contact support.",
+    "srcHash": "6f562a18c437",
+    "origin": "human"
+  },
+  "stravaError.config": {
+    "message": "Strava isn't set up correctly. Please contact support.",
+    "srcHash": "c2da5de7f117",
+    "origin": "human"
+  },
+  "stravaError.connectionExpired": {
+    "message": "Connection expired. Please try again.",
+    "srcHash": "ed163b8c6ebd",
+    "origin": "human"
+  },
+  "stravaError.getHelp": {
+    "message": "Get help",
+    "srcHash": "a7c8f02d8bd1",
+    "origin": "human"
+  },
+  "stravaError.localRead": {
+    "message": "Failed to read workout data. Please try again.",
+    "srcHash": "657bd0694ae3",
+    "origin": "human"
+  },
+  "stravaError.network": {
+    "message": "Check your internet and try again.",
+    "srcHash": "9798814d02a4",
+    "origin": "human"
+  },
+  "stravaError.rateLimit": {
+    "message": "Too many requests. Please wait a moment and try again.",
+    "srcHash": "f6c3624e0daf",
+    "origin": "human"
+  },
+  "stravaError.server": {
+    "message": "Strava is having trouble right now. Please try again soon.",
+    "srcHash": "4f0870f7221f",
+    "origin": "human"
+  },
+  "stravaError.unknown": {
+    "message": "Something went wrong connecting to Strava. Please try again.",
+    "srcHash": "24375bf260f1",
     "origin": "human"
   }
 }

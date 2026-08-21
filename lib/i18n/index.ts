@@ -1,5 +1,6 @@
 import "./polyfills";
 import { i18n } from "@lingui/core";
+import { compileMessage } from "@lingui/message-utils/compileMessage";
 import enUS from "../../locales/en-US.json";
 import enGB from "../../locales/en-GB.json";
 import zhTW from "../../locales/zh-TW.json";
@@ -24,12 +25,17 @@ export const catalogs: Partial<Record<SupportedLocale, Catalog>> = {
 };
 
 /** Translate non-React copy using the currently activated Lingui instance. */
-export function t(descriptor: { id: string; message: string }): string {
+export function t(
+  descriptor: { id: string; message: string },
+  values?: Record<string, string | number>,
+): string {
   try {
-    return i18n._(descriptor);
+    return i18n._({ ...descriptor, values });
   } catch (error) {
     if (__DEV__) console.warn("Failed to translate message:", descriptor.id, error);
-    return descriptor.message;
+    return values
+      ? descriptor.message.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? `{${key}}`))
+      : descriptor.message;
   }
 }
 
@@ -49,4 +55,7 @@ export function initializeI18n(locale?: SupportedLocale): SupportedLocale {
 // Expo Router evaluates screen option modules before the provider component
 // mounts. Establish the fallback locale at module load so macro calls in those
 // options never execute against an uninitialised Lingui instance.
+// Production builds do not include Lingui's runtime compiler; catalogs contain
+// raw ICU strings, so install the compiler before any catalog activation.
+i18n.setMessagesCompiler(compileMessage);
 activateLocale("en-US");

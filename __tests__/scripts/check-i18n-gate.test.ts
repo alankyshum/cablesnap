@@ -9,6 +9,7 @@ import {
   runI18nGateCheck,
   checkConditionalMessages,
   checkScriptPurity,
+  checkSourceCatalogCompleteness,
 } from "../../scripts/check-i18n-gate";
 import fs from "node:fs";
 import os from "node:os";
@@ -118,6 +119,46 @@ describe("source conditional-message gate", () => {
 
   it("does not flag simple template interpolation", () => {
     expect(scan('import { t } from "@lingui/core/macro"; t({ id: "a", message: `Hello ${name}` });')).toEqual([]);
+  });
+});
+
+describe("source catalog completeness gate", () => {
+  it("reports ids from macro, runtime facade, wrapped macro, and Trans calls", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "i18n-completeness-"));
+    fs.mkdirSync(path.join(root, "app"));
+    fs.writeFileSync(path.join(root, "app", "fixture.tsx"), [
+      'import { t } from "@lingui/core/macro";',
+      'import { t as runtimeT } from "@/lib/i18n";',
+      'import { t as linguiT } from "@lingui/core/macro";',
+      'import { Trans } from "@lingui/react/macro";',
+      'const wrappedT = (descriptor: { id: string; message: string }) =>',
+      '  (linguiT as unknown as (value: typeof descriptor) => string)(descriptor);',
+      't({ id: "missing.call", message: "Missing" });',
+      'const nested = <Text>{runtimeT({',
+      '  id: "common.retry",',
+      '  message: "Retry",',
+      '})}</Text>;',
+      'wrappedT({ id: "stravaError.network", message: "Check your internet and try again." });',
+      '<Trans id="missing.trans">Missing</Trans>;',
+    ].join("\n"));
+    const violations = checkSourceCatalogCompleteness({
+      "present.call": makeCatalogEntry("present.call", "Present", "Present"),
+    }, root);
+    expect(violations.map(violation => violation.key)).toEqual([
+      "common.retry", "missing.call", "missing.trans", "stravaError.network",
+    ]);
+  });
+
+  it("fails closed on genuinely dynamic ids instead of silently skipping them", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "i18n-dynamic-id-"));
+    fs.mkdirSync(path.join(root, "app"));
+    fs.writeFileSync(path.join(root, "app", "fixture.ts"), [
+      'import { t } from "@/lib/i18n";',
+      't({ id: dynamicId, message: "Dynamic" });',
+    ].join("\n"));
+    expect(checkSourceCatalogCompleteness({}, root).map(violation => violation.class)).toEqual([
+      "I18N_DYNAMIC_ID",
+    ]);
   });
 });
 

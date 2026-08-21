@@ -12954,3 +12954,690 @@ msgstr ""
 #: app/(tabs)/settings.tsx:402
 msgid "settings.about.releasesA11y"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:219
+msgid "common.deleting"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/BodyProfileCard.tsx:48
+msgid "common.retry"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/BodyProfileCard.tsx:47
+msgid "components.bodyProfile.loadFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/BodyProfileCard.tsx:33
+msgid "components.bodyProfile.loading"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/BodyProfileCard.tsx:48
+msgid "components.bodyProfile.retryA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/BodyProfileCard.tsx:61
+msgid "components.bodyProfile.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/InlineFoodSearch.tsx:46
+msgid "components.foodSearch.onlineResults"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/InlineFoodSearch.tsx:57
+msgid "components.foodSearch.placeholder"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/InlineFoodSearch.tsx:51
+msgid "components.foodSearch.scanBarcodeA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/InlineFoodSearch.tsx:57
+msgid "components.foodSearch.searchA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:40
+msgid "components.manualFood.calories"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:25
+msgid "components.manualFood.closeA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:32
+msgid "components.manualFood.foodName"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:88
+msgid "components.manualFood.log"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:85
+msgid "components.manualFood.logA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:26
+msgid "components.manualFood.open"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:25
+msgid "components.manualFood.openA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:68
+msgid "components.manualFood.removeFavoriteA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:72
+msgid "components.manualFood.saveFavorite"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:68
+msgid "components.manualFood.saveFavoriteA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:57
+msgid "components.manualFood.servingSize"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:30
+msgid "components.manualFood.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:198
+msgid "components.shareSheet.achievement"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:199
+msgid "components.shareSheet.achievementHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:165
+msgid "components.shareSheet.connectStrava"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:169
+msgid "components.shareSheet.connectStravaHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:153
+msgid "components.shareSheet.image"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:154
+msgid "components.shareSheet.imageHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:165
+msgid "components.shareSheet.stravaImage"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:168
+msgid "components.shareSheet.stravaImageHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:186
+msgid "components.shareSheet.syncStrava"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:187
+msgid "components.shareSheet.syncStravaHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:143
+msgid "components.shareSheet.text"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:144
+msgid "components.shareSheet.textHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:139
+msgid "components.shareSheet.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/exercise-tutorial-link.ts:90
+msgid "exerciseTutorialLink.copyLink"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/exercise-tutorial-link.ts:88
+msgid "exerciseTutorialLink.openBrowserFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:324
+msgid "insights.balance.accessibilityLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:313
+msgid "insights.balance.mixed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:310
+msgid "insights.balance.overMany"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:309
+msgid "insights.balance.overOne"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:306
+msgid "insights.balance.underMany"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:305
+msgid "insights.balance.underOne"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:250
+msgid "insights.consistency.accessibilityLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:243
+msgid "insights.consistency.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:115
+msgid "insights.goal.accessibilityLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:106
+msgid "insights.goal.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:283
+msgid "insights.muscle.fullBody"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:273
+msgid "insights.returning.accessibilityLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:267
+msgid "insights.returning.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:148
+msgid "insights.strength.accessibilityLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:139
+msgid "insights.strength.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:177
+msgid "insights.volume.accessibilityLabel"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:171
+msgid "insights.volume.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:212
+msgid "notifications.channel.restComplete"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:200
+msgid "notifications.channel.restCue"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:193
+msgid "notifications.channel.restOngoing"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:588
+msgid "notifications.complete.lastSet"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:592
+msgid "notifications.complete.nextSet"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:598
+msgid "notifications.complete.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:327
+msgid "notifications.live.resting"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:333
+msgid "notifications.live.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:259
+msgid "notifications.preEnd.next"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:262
+msgid "notifications.preEnd.nextSet"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:269
+msgid "notifications.preEnd.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:255
+msgid "notifications.preEnd.workoutEnding"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:168
+msgid "notifications.preview.bodyweight"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:149
+msgid "notifications.preview.distance"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:139
+msgid "notifications.preview.duration"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:146
+msgid "notifications.preview.kilometers"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:147
+msgid "notifications.preview.meters"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:175
+msgid "notifications.preview.weighted"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:414
+msgid "notifications.reminder.body"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:412
+msgid "notifications.reminder.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:491
+msgid "notifications.response.templateMissing"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:451
+msgid "notifications.test.body"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:450
+msgid "notifications.test.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:211
+msgid "settings.autoBackup.createA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:111
+msgid "settings.autoBackup.created"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:181
+msgid "settings.autoBackup.decreaseA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:113
+#: components/settings/AutoBackupSection.tsx:116
+msgid "settings.autoBackup.failed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:193
+msgid "settings.autoBackup.increaseA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:137
+msgid "settings.autoBackup.infoA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:47
+msgid "settings.autoBackup.lastDate"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:37
+msgid "settings.autoBackup.lastToday"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:45
+msgid "settings.autoBackup.lastYesterday"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:28
+msgid "settings.autoBackup.noBackups"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:100
+msgid "settings.autoBackup.retentionFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:151
+msgid "settings.autoBackup.toggleA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:86
+msgid "settings.autoBackup.updateFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:220
+msgid "settings.autoBackup.viewA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:219
+msgid "settings.formClips.deleteAll"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:300
+msgid "settings.formClips.deleteHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:71
+msgid "settings.formClips.manageA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:72
+msgid "settings.formClips.manageHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:81
+msgid "settings.formClips.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/settings/language.tsx:14
+msgid "settings.language.enGB"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/settings/language.tsx:13
+msgid "settings.language.enUS"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/settings/language.tsx:16
+msgid "settings.language.zhCN"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: app/settings/language.tsx:15
+msgid "settings.language.zhTW"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:107
+#: components/settings/SessionPreferencesCard.tsx:117
+msgid "settings.sessionPreferences.captureRpe"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:119
+msgid "settings.sessionPreferences.captureRpeA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:110
+msgid "settings.sessionPreferences.captureRpeHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:136
+msgid "settings.sessionPreferences.enableRpeHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:131
+#: components/settings/SessionPreferencesCard.tsx:141
+msgid "settings.sessionPreferences.intensityScale"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:135
+msgid "settings.sessionPreferences.rirHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:72
+msgid "settings.sessionPreferences.saveIntensityFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:79
+msgid "settings.sessionPreferences.savePulleyFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:59
+msgid "settings.sessionPreferences.saveRpeFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:88
+#: components/settings/SessionPreferencesCard.tsx:97
+msgid "settings.sessionPreferences.trackPulley"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:99
+msgid "settings.sessionPreferences.trackPulleyA11y"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:91
+msgid "settings.sessionPreferences.trackPulleyHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:98
+msgid "settings.units.measurements"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:86
+#: components/settings/UnitsCard.tsx:109
+msgid "settings.units.saveUnitFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:57
+msgid "settings.units.saveWeightStepFailed"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:67
+msgid "settings.units.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:71
+msgid "settings.units.weight"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:122
+msgid "settings.units.weightStep"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:125
+msgid "settings.units.weightStepHint"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/share/AchievementRecapCard.tsx:121
+msgid "share.achievement.more"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/share/AchievementRecapCard.tsx:81
+msgid "share.achievement.unlocked"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardExercises.tsx:103
+msgid "share.exercises.more"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardExercises.tsx:39
+msgid "share.exercises.newPrs"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardExercises.tsx:70
+msgid "share.exercises.title"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardStats.tsx:33
+msgid "share.stats.duration"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardStats.tsx:44
+msgid "share.stats.sets"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardStats.tsx:55
+msgid "share.stats.volume"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:78
+msgid "stravaError.appInactive"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:76
+msgid "stravaError.config"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:68
+msgid "stravaError.connectionExpired"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:125
+msgid "stravaError.getHelp"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:80
+msgid "stravaError.localRead"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:70
+#: lib/strava-error.ts:87
+msgid "stravaError.network"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:72
+msgid "stravaError.rateLimit"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:74
+msgid "stravaError.server"
+msgstr ""
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:83
+#: lib/strava-error.ts:89
+msgid "stravaError.unknown"
+msgstr ""

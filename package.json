@@ -55,6 +55,7 @@
     "@gorhom/bottom-sheet": "^5.2.9",
     "@openrouter/ai-sdk-provider": "1.5.4",
     "@lingui/core": "6.6.0",
+    "@lingui/message-utils": "6.6.0",
     "@lingui/react": "6.6.0",
     "@quidone/react-native-wheel-picker": "^1.6.4",
     "@react-native-community/netinfo": "11.5.2",

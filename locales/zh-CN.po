@@ -12954,3 +12954,692 @@ msgstr ""
 #: app/(tabs)/settings.tsx:402
 msgid "settings.about.releasesA11y"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:219
+msgid "common.deleting"
+msgstr "删除中..."
+
+#. js-lingui-explicit-id
+#: components/BodyProfileCard.tsx:48
+msgid "common.retry"
+msgstr "重试"
+
+#. js-lingui-explicit-id
+#: components/BodyProfileCard.tsx:47
+msgid "components.bodyProfile.loadFailed"
+msgstr "无法载入个人资料"
+
+#. js-lingui-explicit-id
+#: components/BodyProfileCard.tsx:33
+msgid "components.bodyProfile.loading"
+msgstr "正在载入个人资料…"
+
+#. js-lingui-explicit-id
+#: components/BodyProfileCard.tsx:48
+msgid "components.bodyProfile.retryA11y"
+msgstr "重新载入个人资料"
+
+#. js-lingui-explicit-id
+#: components/BodyProfileCard.tsx:61
+msgid "components.bodyProfile.title"
+msgstr "身体概况"
+
+#. js-lingui-explicit-id
+#: components/InlineFoodSearch.tsx:46
+msgid "components.foodSearch.onlineResults"
+msgstr "线上结果"
+
+#. js-lingui-explicit-id
+#: components/InlineFoodSearch.tsx:57
+msgid "components.foodSearch.placeholder"
+msgstr "搜寻食物..."
+
+#. js-lingui-explicit-id
+#: components/InlineFoodSearch.tsx:51
+msgid "components.foodSearch.scanBarcodeA11y"
+msgstr "扫描条码"
+
+#. js-lingui-explicit-id
+#: components/InlineFoodSearch.tsx:57
+msgid "components.foodSearch.searchA11y"
+msgstr "搜寻食物"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:40
+msgid "components.manualFood.calories"
+msgstr "卡路里"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:25
+msgid "components.manualFood.closeA11y"
+msgstr "关闭手动输入"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:32
+msgid "components.manualFood.foodName"
+msgstr "食物名称"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:88
+msgid "components.manualFood.log"
+msgstr "记录食物"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:85
+msgid "components.manualFood.logA11y"
+msgstr "手动记录"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:26
+msgid "components.manualFood.open"
+msgstr "手动输入"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:25
+msgid "components.manualFood.openA11y"
+msgstr "手动输入"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:68
+msgid "components.manualFood.removeFavoriteA11y"
+msgstr "从最爱清单中移除手动输入"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:72
+msgid "components.manualFood.saveFavorite"
+msgstr "设为最爱"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:68
+msgid "components.manualFood.saveFavoriteA11y"
+msgstr "将手动输入设为最爱"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:57
+msgid "components.manualFood.servingSize"
+msgstr "份量"
+
+#. js-lingui-explicit-id
+#: components/ManualFoodEntry.tsx:30
+msgid "components.manualFood.title"
+msgstr "手动食物输入"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:198
+msgid "components.shareSheet.achievement"
+msgstr "分享成就摘要"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:199
+msgid "components.shareSheet.achievementHint"
+msgstr "生成成就概要卡片图像"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:165
+msgid "components.shareSheet.connectStrava"
+msgstr "连接Strava"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:169
+msgid "components.shareSheet.connectStravaHint"
+msgstr "开启设定以连接Strava"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:153
+msgid "components.shareSheet.image"
+msgstr "以图片形式分享"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:154
+msgid "components.shareSheet.imageHint"
+msgstr "生成训练卡图片"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:165
+msgid "components.shareSheet.stravaImage"
+msgstr "分享Strava图片"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:168
+msgid "components.shareSheet.stravaImageHint"
+msgstr "生成Strava训练卡片图片"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:186
+msgid "components.shareSheet.syncStrava"
+msgstr "同步至Strava"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:187
+msgid "components.shareSheet.syncStravaHint"
+msgstr "直接将训练活动数据上传至Strava"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:143
+msgid "components.shareSheet.text"
+msgstr "以文字分享"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:144
+msgid "components.shareSheet.textHint"
+msgstr "复制工作训练摘要为文字"
+
+#. js-lingui-explicit-id
+#: components/ShareSheet.tsx:139
+msgid "components.shareSheet.title"
+msgstr "分享训练"
+
+#. js-lingui-explicit-id
+#: lib/exercise-tutorial-link.ts:90
+msgid "exerciseTutorialLink.copyLink"
+msgstr "复制此连结以手动搜寻：\n"
+"\n"
+"{url}"
+
+#. js-lingui-explicit-id
+#: lib/exercise-tutorial-link.ts:88
+msgid "exerciseTutorialLink.openBrowserFailed"
+msgstr "无法打开浏览器"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:324
+msgid "insights.balance.accessibilityLabel"
+msgstr "{title}. 按下以查看肌肉体积细节。"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:313
+msgid "insights.balance.mixed"
+msgstr "本周{underCount}次未达目标，{overCount}次超出上限。"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:310
+msgid "insights.balance.overMany"
+msgstr "{count}块肌肉超过了本周的上限"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:309
+msgid "insights.balance.overOne"
+msgstr "这周的上限有一个肌肉超过了"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:306
+msgid "insights.balance.underMany"
+msgstr "{count}块肌肉未达本周目标"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:305
+msgid "insights.balance.underOne"
+msgstr "本周目标以下的肌肉有1组"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:250
+msgid "insights.consistency.accessibilityLabel"
+msgstr "训练洞察：{title}"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:243
+msgid "insights.consistency.title"
+msgstr "{count}次训练，本周 — 你连续{weeks}周表现最佳！"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:115
+msgid "insights.goal.accessibilityLabel"
+msgstr "训练洞察：{title}。点击查看详细资讯。"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:106
+msgid "insights.goal.title"
+msgstr "你离你的{exerciseName}目标还剩{progressPct}%！"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:283
+msgid "insights.muscle.fullBody"
+msgstr "全身"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:273
+msgid "insights.returning.accessibilityLabel"
+msgstr "训练洞察：{title}"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:267
+msgid "insights.returning.title"
+msgstr "欢迎回来！你今天表现得非常出色。"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:148
+msgid "insights.strength.accessibilityLabel"
+msgstr "训练洞察：{title}。点击查看详细资讯。"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:139
+msgid "insights.strength.title"
+msgstr "本月您的{exerciseName}增加了{delta}公斤"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:177
+msgid "insights.volume.accessibilityLabel"
+msgstr "训练洞察：{title}。点击查看详细资讯。"
+
+#. js-lingui-explicit-id
+#: lib/insights.ts:171
+msgid "insights.volume.title"
+msgstr "训练量增加 {pct}% 与上个月比较"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:212
+msgid "notifications.channel.restComplete"
+msgstr "休息完成"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:200
+msgid "notifications.channel.restCue"
+msgstr "休息前提示"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:193
+msgid "notifications.channel.restOngoing"
+msgstr "休息计时器（持续中）"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:588
+msgid "notifications.complete.lastSet"
+msgstr "最后一组完成"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:592
+msgid "notifications.complete.nextSet"
+msgstr "轮到你做下一组了。"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:598
+msgid "notifications.complete.title"
+msgstr "休息完成"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:327
+msgid "notifications.live.resting"
+msgstr "休息中..."
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:333
+msgid "notifications.live.title"
+msgstr "休息中 · {time} 剩余"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:259
+msgid "notifications.preEnd.next"
+msgstr "下一个：{preview}"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:262
+msgid "notifications.preEnd.nextSet"
+msgstr "下一组在{seconds}s后"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:269
+msgid "notifications.preEnd.title"
+msgstr "休息 {seconds}s 即将结束"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:255
+msgid "notifications.preEnd.workoutEnding"
+msgstr "训练结束倒计时{seconds}s"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:168
+msgid "notifications.preview.bodyweight"
+msgstr "{exerciseName} — 重量训练 × {reps}"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:149
+msgid "notifications.preview.distance"
+msgstr "{exerciseName} — {distance}"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:139
+msgid "notifications.preview.duration"
+msgstr "{exerciseName} — {duration}"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:146
+msgid "notifications.preview.kilometers"
+msgstr "{value} 公里"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:147
+msgid "notifications.preview.meters"
+msgstr "{value} 米"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:175
+msgid "notifications.preview.weighted"
+msgstr "{exerciseName} — {weight} {unit} × {reps}"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:414
+msgid "notifications.reminder.body"
+msgstr "{template} 预定今天进行"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:412
+msgid "notifications.reminder.title"
+msgstr "训练时间到了！"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:491
+msgid "notifications.response.templateMissing"
+msgstr "预定的模板已不存在"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:451
+msgid "notifications.test.body"
+msgstr "通知正常运作。一切就绪！"
+
+#. js-lingui-explicit-id
+#: lib/notifications.ts:450
+msgid "notifications.test.title"
+msgstr "CableSnap测试 🔔"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:211
+msgid "settings.autoBackup.createA11y"
+msgstr "立即创建备份"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:111
+msgid "settings.autoBackup.created"
+msgstr "备份成功建立"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:181
+msgid "settings.autoBackup.decreaseA11y"
+msgstr "减少备份保留时间"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:113
+#: components/settings/AutoBackupSection.tsx:116
+msgid "settings.autoBackup.failed"
+msgstr "备份失败"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:193
+msgid "settings.autoBackup.increaseA11y"
+msgstr "增加备份保留时间"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:137
+msgid "settings.autoBackup.infoA11y"
+msgstr "自动备份。点击以获取更多资讯"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:47
+msgid "settings.autoBackup.lastDate"
+msgstr "最后备份：{dateText} {time}"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:37
+msgid "settings.autoBackup.lastToday"
+msgstr "最后备份：今天 {time}"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:45
+msgid "settings.autoBackup.lastYesterday"
+msgstr "最后备份：昨天 {time}"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:28
+msgid "settings.autoBackup.noBackups"
+msgstr "尚未备份"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:100
+msgid "settings.autoBackup.retentionFailed"
+msgstr "更新保留失败"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:151
+msgid "settings.autoBackup.toggleA11y"
+msgstr "运动后开关自动备份"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:86
+msgid "settings.autoBackup.updateFailed"
+msgstr "更新设定失败"
+
+#. js-lingui-explicit-id
+#: components/settings/AutoBackupSection.tsx:220
+msgid "settings.autoBackup.viewA11y"
+msgstr "查看所有备份"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:219
+msgid "settings.formClips.deleteAll"
+msgstr "删除所有影片"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsManageSheet.tsx:300
+msgid "settings.formClips.deleteHint"
+msgstr "从您的装置中移除此片段"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:71
+msgid "settings.formClips.manageA11y"
+msgstr "管理表单片段"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:72
+msgid "settings.formClips.manageHint"
+msgstr "开启所有已录制的动作片段清单，您可以删除单个或全部片段"
+
+#. js-lingui-explicit-id
+#: components/settings/FormClipsStorageRow.tsx:81
+msgid "settings.formClips.title"
+msgstr "姿势片段"
+
+#. js-lingui-explicit-id
+#: app/settings/language.tsx:14
+msgid "settings.language.enGB"
+msgstr "英国 英语"
+
+#. js-lingui-explicit-id
+#: app/settings/language.tsx:13
+msgid "settings.language.enUS"
+msgstr "美国英语"
+
+#. js-lingui-explicit-id
+#: app/settings/language.tsx:16
+msgid "settings.language.zhCN"
+msgstr "简体中文"
+
+#. js-lingui-explicit-id
+#: app/settings/language.tsx:15
+msgid "settings.language.zhTW"
+msgstr "繁体中文"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:107
+#: components/settings/SessionPreferencesCard.tsx:117
+msgid "settings.sessionPreferences.captureRpe"
+msgstr "记录训练中的组数RPE"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:119
+msgid "settings.sessionPreferences.captureRpeA11y"
+msgstr "完成每组后显示努力芯片"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:110
+msgid "settings.sessionPreferences.captureRpeHint"
+msgstr "每组结束后点选芯片记录感受。驱动智能休息计时器和进步建议。"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:136
+msgid "settings.sessionPreferences.enableRpeHint"
+msgstr "启用上方的「捕捉组数RPE」以使用此设定。"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:131
+#: components/settings/SessionPreferencesCard.tsx:141
+msgid "settings.sessionPreferences.intensityScale"
+msgstr "强度刻度"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:135
+msgid "settings.sessionPreferences.rirHint"
+msgstr "RIR = 剩余可做次数。RPE = 10 - RIR。"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:72
+msgid "settings.sessionPreferences.saveIntensityFailed"
+msgstr "保存强度比例设定失败"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:79
+msgid "settings.sessionPreferences.savePulleyFailed"
+msgstr "滑轮轨迹设定储存失败"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:59
+msgid "settings.sessionPreferences.saveRpeFailed"
+msgstr "RPE捕获设定储存失败"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:88
+#: components/settings/SessionPreferencesCard.tsx:97
+msgid "settings.sessionPreferences.trackPulley"
+msgstr "记录滑轮轴心位置"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:99
+msgid "settings.sessionPreferences.trackPulleyA11y"
+msgstr "显示或隐藏缆绳训练组中的滑轮插销标签"
+
+#. js-lingui-explicit-id
+#: components/settings/SessionPreferencesCard.tsx:91
+msgid "settings.sessionPreferences.trackPulleyHint"
+msgstr "在缆索组数上显示一个针码贴纸，用于记录您使用了哪个滑轮针码。"
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:98
+msgid "settings.units.measurements"
+msgstr "测量"
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:86
+#: components/settings/UnitsCard.tsx:109
+msgid "settings.units.saveUnitFailed"
+msgstr "无法储存单位"
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:57
+msgid "settings.units.saveWeightStepFailed"
+msgstr "无法储存重量步骤设定"
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:67
+msgid "settings.units.title"
+msgstr "单位"
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:71
+msgid "settings.units.weight"
+msgstr "重量"
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:122
+msgid "settings.units.weightStep"
+msgstr "重量步骤"
+
+#. js-lingui-explicit-id
+#: components/settings/UnitsCard.tsx:125
+msgid "settings.units.weightStepHint"
+msgstr "输入运动的步长细度。适用于新会话。"
+
+#. js-lingui-explicit-id
+#: components/share/AchievementRecapCard.tsx:121
+msgid "share.achievement.more"
+msgstr "+{extraCount} 更多"
+
+#. js-lingui-explicit-id
+#: components/share/AchievementRecapCard.tsx:81
+msgid "share.achievement.unlocked"
+msgstr "{achievementCount} {achievementCount, plural, one {成就} other {成就}} 解锁！"
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardExercises.tsx:103
+msgid "share.exercises.more"
+msgstr "和{remaining}更多"
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardExercises.tsx:39
+msgid "share.exercises.newPrs"
+msgstr "🏆 新PR"
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardExercises.tsx:70
+msgid "share.exercises.title"
+msgstr "运动"
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardStats.tsx:33
+msgid "share.stats.duration"
+msgstr "时间"
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardStats.tsx:44
+msgid "share.stats.sets"
+msgstr "组数"
+
+#. js-lingui-explicit-id
+#: components/share/ShareCardStats.tsx:55
+msgid "share.stats.volume"
+msgstr "音量 ({unit})"
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:78
+msgid "stravaError.appInactive"
+msgstr "Strava应用程式存取已停用。请联系支援。"
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:76
+msgid "stravaError.config"
+msgstr "Strava设定不正确。请联系支援。"
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:68
+msgid "stravaError.connectionExpired"
+msgstr "连线已过期。请再试一次。"
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:125
+msgid "stravaError.getHelp"
+msgstr "获得帮助"
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:80
+msgid "stravaError.localRead"
+msgstr "无法读取训练数据。请再试一次。"
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:70
+#: lib/strava-error.ts:87
+msgid "stravaError.network"
+msgstr "检查您的网路连线并再试一次。"
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:72
+msgid "stravaError.rateLimit"
+msgstr "请求过多。请稍后再试。"
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:74
+msgid "stravaError.server"
+msgstr "Strava 目前遇到问题。请稍后再试。"
+
+#. js-lingui-explicit-id
+#: lib/strava-error.ts:83
+#: lib/strava-error.ts:89
+msgid "stravaError.unknown"
+msgstr "与Strava连线时发生错误。请再试一次。"

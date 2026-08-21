@@ -78,7 +78,10 @@ export default function AchievementRecapCard({
         numberOfLines={1}
         ellipsizeMode="tail"
       >
-         {t({ id: "share.achievement.unlocked", message: `${achievements.length} Achievement${achievements.length > 1 ? "s" : ""} Unlocked!` })}
+         {t(
+           { id: "share.achievement.unlocked", message: "{achievementCount} {achievementCount, plural, one {Achievement} other {Achievements}} Unlocked!" },
+           { achievementCount: achievements.length },
+         )}
       </Text>
 
       <View style={styles.divider} />
@@ -118,7 +121,7 @@ export default function AchievementRecapCard({
             style={[styles.overflowText, { color: colors.onSurfaceVariant }]}
             testID="achievement-recap-overflow"
           >
-             {t({ id: "share.achievement.more", message: `+${extraCount} more` })}
+             {t({ id: "share.achievement.more", message: "+{extraCount} more" }, { extraCount })}
           </Text>
         )}
       </View>

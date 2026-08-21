@@ -22,6 +22,7 @@ export type ViolationClass =
   | "I18N_PLACEHOLDER_MISMATCH"
   | "I18N_UNTRANSLATED_ICU_BRANCH"
   | "I18N_CONDITIONAL_MESSAGE"
+  | "I18N_DYNAMIC_ID"
   | "I18N_WRONG_SCRIPT";
 
 const SUPPORTED_LOCALES = ["en-US", "en-GB", "zh-TW", "zh-CN"] as const;
@@ -34,7 +35,7 @@ const REVIEWED_LATIN_ALLOWLIST = new Set([
 // rather than English UI words. This is intentionally separate from the
 // key-level Latin-only allowlist because it applies inside ICU branch prose.
 const ICU_KEYWORDS = new Set(["one", "other", "zero", "two", "few", "many", "true", "false", "select", "plural", "offset"]);
-const PLACEHOLDER_ONLY_RE = /^(?:\s*(?:\{[^{}]+\}|[\s,():+./%-])+\s*)$/;
+const PLACEHOLDER_ONLY_RE = /^(?:\s*(?:\{[^{}]+\}|[\s,():+./%×–—-])+\s*)$/;
 const CJK_RE = /[\u3400-\u9fff]/;
 
 function placeholderNames(message: string): Set<string> {
@@ -221,17 +222,19 @@ function hasForbiddenMessageExpression(node: t.Node): boolean {
 
 function sourceFiles(root: string): string[] {
   const result: string[] = [];
-  for (const directory of ["app", "components", "lib", "hooks"]) {
-    const visit = (dir: string) => {
-      if (!fs.existsSync(dir)) return;
-      for (const name of fs.readdirSync(dir)) {
-        const file = path.join(dir, name);
-        if (fs.statSync(file).isDirectory()) visit(file);
-        else if (/\.(ts|tsx)$/.test(name)) result.push(file);
-      }
-    };
-    visit(path.join(root, directory));
-  }
+  const excludedDirectories = new Set([
+    ".git", "node_modules", "dist", "e2e", "__tests__", "__test__", "__fixtures__", "__mocks__",
+  ]);
+  const visit = (dir: string) => {
+    if (!fs.existsSync(dir)) return;
+    for (const name of fs.readdirSync(dir)) {
+      if (excludedDirectories.has(name)) continue;
+      const file = path.join(dir, name);
+      if (fs.statSync(file).isDirectory()) visit(file);
+      else if (/\.(ts|tsx)$/.test(name) && !/\.(test|spec)\.(ts|tsx)$/.test(name)) result.push(file);
+    }
+  };
+  visit(root);
   return result;
 }
 
@@ -279,6 +282,148 @@ function checkSourceFile(file: string): I18nViolation[] {
   return violations;
 }
 
+/**
+ * Collect the literal ids that Lingui can reach from application source.
+ * This deliberately mirrors the macro forms used by the app rather than
+ * scraping arbitrary `id` properties (which are commonly database ids).
+ * Non-literal ids are not catalogable and are left to Lingui's own checks.
+ */
+function scanSourceMessages(root: string): { ids: Set<string>; dynamic: I18nViolation[] } {
+  const ids = new Set<string>();
+  const dynamic: I18nViolation[] = [];
+  for (const file of sourceFiles(root)) {
+    const code = fs.readFileSync(file, "utf8");
+    const ast = parse(code, { sourceType: "module", plugins: ["typescript", "jsx"] });
+    const tBindings = new Set<string>();
+    const transBindings = new Set<string>();
+    const useLinguiBindings = new Set<string>();
+    const i18nBindings = new Set<string>();
+    const forwardingCalls = new Set<t.CallExpression>();
+    const unwrapCallee = (node: t.Expression | t.V8IntrinsicIdentifier): t.Expression | t.V8IntrinsicIdentifier => {
+      let current = node;
+      while (current.type === "TSAsExpression" || current.type === "TSTypeAssertion" || current.type === "TypeCastExpression") current = current.expression;
+      return current;
+    };
+    const isTranslatorCallee = (node: t.Expression | t.V8IntrinsicIdentifier): boolean => {
+      const callee = unwrapCallee(node);
+      if (callee.type === "Identifier" && tBindings.has(callee.name)) return true;
+      return callee.type === "MemberExpression" && !callee.computed &&
+        callee.object.type === "Identifier" && i18nBindings.has(callee.object.name) &&
+        callee.property.type === "Identifier" && callee.property.name === "_";
+    };
+    const importedName = (specifier: t.ImportSpecifier): string =>
+      specifier.imported.type === "Identifier" ? specifier.imported.name : specifier.imported.value;
+
+    // First identify imports. The app intentionally has both Lingui macro calls
+    // and a runtime `t` facade in lib/i18n; both produce runtime message lookups.
+    traverse(ast, {
+      ImportDeclaration(importPath) {
+        const source = importPath.node.source.value;
+        for (const specifier of importPath.node.specifiers) {
+          if (specifier.type !== "ImportSpecifier") continue;
+          const imported = importedName(specifier);
+          if (source === "@lingui/core/macro" && imported === "t") tBindings.add(specifier.local.name);
+          if (source === "@lingui/react/macro" && imported === "Trans") transBindings.add(specifier.local.name);
+          if (source === "@lingui/react/macro" && imported === "useLingui") useLinguiBindings.add(specifier.local.name);
+          if (source === "@lingui/core" && imported === "i18n") i18nBindings.add(specifier.local.name);
+          if ((source === "@/lib/i18n" || /(?:^|\/)lib\/i18n(?:\/index)?$/.test(source)) && imported === "t") tBindings.add(specifier.local.name);
+        }
+      },
+      VariableDeclarator(variablePath) {
+        const init = variablePath.node.init;
+        const id = variablePath.node.id;
+        if (id.type !== "ObjectPattern" || init?.type !== "CallExpression" || init.callee.type !== "Identifier" || !useLinguiBindings.has(init.callee.name)) return;
+        for (const property of id.properties) {
+          if (property.type !== "ObjectProperty" || property.value.type !== "Identifier") continue;
+          const imported = property.key.type === "Identifier" ? property.key.name : property.key.type === "StringLiteral" ? property.key.value : "";
+          if (imported === "t") tBindings.add(property.value.name);
+          if (imported === "i18n") i18nBindings.add(property.value.name);
+        }
+      },
+    });
+
+    // Some non-React modules wrap the macro/runtime translator to provide a
+    // defensive fallback. Discover those facades from their forwarding call
+    // instead of hardcoding wrapper names or files.
+    let changed = true;
+    while (changed) {
+      changed = false;
+      traverse(ast, {
+        CallExpression(callPath) {
+          if (!isTranslatorCallee(callPath.node.callee)) return;
+          const argument = callPath.node.arguments[0];
+          const functionPath = callPath.getFunctionParent();
+          if (!functionPath) return;
+          const parameter = functionPath.node.params[0];
+          if (parameter?.type !== "Identifier") return;
+          const forwardsParameter = argument?.type === "Identifier" && argument.name === parameter.name;
+          const spreadsParameter = argument?.type === "ObjectExpression" && argument.properties.some(property =>
+            property.type === "SpreadElement" && property.argument.type === "Identifier" && property.argument.name === parameter.name
+          );
+          if (!forwardsParameter && !spreadsParameter) return;
+          const parent = functionPath.parentPath;
+          const wrapperName = functionPath.node.type === "FunctionDeclaration"
+            ? functionPath.node.id?.name
+            : parent?.isVariableDeclarator() && parent.node.id.type === "Identifier"
+              ? parent.node.id.name
+              : undefined;
+          if (wrapperName && !tBindings.has(wrapperName)) {
+            tBindings.add(wrapperName);
+            changed = true;
+          }
+          if (wrapperName) forwardingCalls.add(callPath.node);
+        },
+      });
+    }
+
+    traverse(ast, {
+      CallExpression(callPath) {
+        if (forwardingCalls.has(callPath.node) || !isTranslatorCallee(callPath.node.callee)) return;
+        const argument = callPath.node.arguments[0];
+        if (!argument || argument.type !== "ObjectExpression") {
+          dynamic.push({
+            class: "I18N_DYNAMIC_ID",
+            message: `${file}:${callPath.node.loc?.start.line ?? 1}: translation call has a non-static descriptor`,
+          });
+          return;
+        }
+        const id = argument.properties.find(property => property.type === "ObjectProperty" && ((property.key.type === "Identifier" && property.key.name === "id") || (property.key.type === "StringLiteral" && property.key.value === "id")));
+        if (id?.type !== "ObjectProperty" || id.value.type !== "StringLiteral") {
+          dynamic.push({
+            class: "I18N_DYNAMIC_ID",
+            message: `${file}:${callPath.node.loc?.start.line ?? 1}: translation call has a non-literal id`,
+          });
+          return;
+        }
+        ids.add(id.value.value);
+      },
+      JSXOpeningElement(elementPath) {
+        const name = elementPath.node.name;
+        if (name.type !== "JSXIdentifier" || !transBindings.has(name.name)) return;
+        const id = elementPath.node.attributes.find(attribute => attribute.type === "JSXAttribute" && attribute.name.name === "id");
+        if (id?.type === "JSXAttribute" && id.value?.type === "StringLiteral") ids.add(id.value.value);
+        else dynamic.push({
+          class: "I18N_DYNAMIC_ID",
+          message: `${file}:${elementPath.node.loc?.start.line ?? 1}: Trans has a missing or non-literal id`,
+        });
+      },
+    });
+  }
+  return { ids, dynamic };
+}
+
+export function sourceMessageIds(root: string): Set<string> {
+  return scanSourceMessages(root).ids;
+}
+
+export function checkSourceCatalogCompleteness(source: Catalog, root: string): I18nViolation[] {
+  const scan = scanSourceMessages(root);
+  return [...scan.dynamic, ...[...scan.ids]
+    .filter(id => !(id in source))
+    .sort()
+    .map(key => ({ class: "I18N_MISSING_KEY" as const, key, message: `${key}: source message id is missing from locales/en-US.json` }))];
+}
+
 export function checkConditionalMessages(root: string): I18nViolation[] {
   return sourceFiles(root).flatMap(checkSourceFile);
 }
@@ -301,6 +446,7 @@ export function runI18nGateCheck(input: {
 }): CheckResult {
   const violations = [
     ...(input.sourceRoot ? checkConditionalMessages(input.sourceRoot) : []),
+    ...(input.sourceRoot ? checkSourceCatalogCompleteness(input.source, input.sourceRoot) : []),
     ...checkCatalog(input.source, input.enGB, { full: false, inherited: input.source }),
     ...checkCatalog(input.source, input.zhTW, { full: true, locale: "zh-TW" }),
     // zh-CN is generated deterministically from zh-TW; checking content in the

@@ -10433,5 +10433,695 @@
     "message": "刪除 {count, plural, one {# 個影片} other {# 個影片}}？這將永久從此裝置中刪除它們。此操作無法撤銷。",
     "srcHash": "f81081a70568",
     "origin": "machine"
+  },
+  "floatingTabBar.tabs.aiCoach": {
+    "message": "AI 教練",
+    "srcHash": "07cacebdf686",
+    "origin": "machine"
+  },
+  "tabs.workouts.exercisesA11y": {
+    "message": "動作",
+    "srcHash": "fe34e979251c",
+    "origin": "machine"
+  },
+  "common.deleting": {
+    "message": "刪除中...",
+    "srcHash": "517d142eca23",
+    "origin": "machine"
+  },
+  "common.retry": {
+    "message": "重試",
+    "srcHash": "2f3eac393010",
+    "origin": "machine"
+  },
+  "components.bodyProfile.loadFailed": {
+    "message": "無法載入個人資料",
+    "srcHash": "ce78629867e2",
+    "origin": "machine"
+  },
+  "components.bodyProfile.loading": {
+    "message": "正在載入個人資料…",
+    "srcHash": "857b4c386b47",
+    "origin": "machine"
+  },
+  "components.bodyProfile.retryA11y": {
+    "message": "重新載入個人資料",
+    "srcHash": "d5c12c556ee2",
+    "origin": "machine"
+  },
+  "components.bodyProfile.title": {
+    "message": "身體概況",
+    "srcHash": "69375aee8c2b",
+    "origin": "machine"
+  },
+  "components.foodSearch.onlineResults": {
+    "message": "線上結果",
+    "srcHash": "577a691392f8",
+    "origin": "machine"
+  },
+  "components.foodSearch.placeholder": {
+    "message": "搜尋食物...",
+    "srcHash": "03095e442c31",
+    "origin": "machine"
+  },
+  "components.foodSearch.scanBarcodeA11y": {
+    "message": "掃描條碼",
+    "srcHash": "2ecc26280ffe",
+    "origin": "machine"
+  },
+  "components.foodSearch.searchA11y": {
+    "message": "搜尋食物",
+    "srcHash": "5f1f2e59a253",
+    "origin": "machine"
+  },
+  "components.manualFood.calories": {
+    "message": "卡路里",
+    "srcHash": "4412579538e8",
+    "origin": "machine"
+  },
+  "components.manualFood.closeA11y": {
+    "message": "關閉手動輸入",
+    "srcHash": "bacec535974c",
+    "origin": "machine"
+  },
+  "components.manualFood.foodName": {
+    "message": "食物名稱",
+    "srcHash": "d7a01cce5008",
+    "origin": "machine"
+  },
+  "components.manualFood.log": {
+    "message": "記錄食物",
+    "srcHash": "443602116200",
+    "origin": "machine"
+  },
+  "components.manualFood.logA11y": {
+    "message": "手動記錄",
+    "srcHash": "8213f600b325",
+    "origin": "machine"
+  },
+  "components.manualFood.open": {
+    "message": "手動輸入",
+    "srcHash": "7b846f5d353e",
+    "origin": "machine"
+  },
+  "components.manualFood.openA11y": {
+    "message": "手動輸入",
+    "srcHash": "157f7bc8060e",
+    "origin": "machine"
+  },
+  "components.manualFood.removeFavoriteA11y": {
+    "message": "從最愛清單中移除手動輸入",
+    "srcHash": "db185b51853f",
+    "origin": "machine"
+  },
+  "components.manualFood.saveFavorite": {
+    "message": "設為最愛",
+    "srcHash": "add06334b39d",
+    "origin": "machine"
+  },
+  "components.manualFood.saveFavoriteA11y": {
+    "message": "將手動輸入設為最愛",
+    "srcHash": "342804af19d9",
+    "origin": "machine"
+  },
+  "components.manualFood.servingSize": {
+    "message": "份量",
+    "srcHash": "f47384963113",
+    "origin": "machine"
+  },
+  "components.manualFood.title": {
+    "message": "手動食物輸入",
+    "srcHash": "ae5b083ba9a9",
+    "origin": "machine"
+  },
+  "components.shareSheet.achievement": {
+    "message": "分享成就摘要",
+    "srcHash": "ae248b4d4195",
+    "origin": "machine"
+  },
+  "components.shareSheet.achievementHint": {
+    "message": "生成成就概要卡片圖像",
+    "srcHash": "83598287d9c8",
+    "origin": "machine"
+  },
+  "components.shareSheet.connectStrava": {
+    "message": "連接Strava",
+    "srcHash": "f2188c061544",
+    "origin": "machine"
+  },
+  "components.shareSheet.connectStravaHint": {
+    "message": "開啟設定以連接Strava",
+    "srcHash": "2c412234d38e",
+    "origin": "machine"
+  },
+  "components.shareSheet.image": {
+    "message": "以圖片形式分享",
+    "srcHash": "7a5cf7e4a528",
+    "origin": "machine"
+  },
+  "components.shareSheet.imageHint": {
+    "message": "生成訓練卡圖片",
+    "srcHash": "2f0bd98084dd",
+    "origin": "machine"
+  },
+  "components.shareSheet.stravaImage": {
+    "message": "分享Strava圖片",
+    "srcHash": "017005e341d6",
+    "origin": "machine"
+  },
+  "components.shareSheet.stravaImageHint": {
+    "message": "生成Strava訓練卡片圖片",
+    "srcHash": "bed934f5271d",
+    "origin": "machine"
+  },
+  "components.shareSheet.syncStrava": {
+    "message": "同步至Strava",
+    "srcHash": "74e0b5b522ed",
+    "origin": "machine"
+  },
+  "components.shareSheet.syncStravaHint": {
+    "message": "直接將訓練活動數據上傳至Strava",
+    "srcHash": "cdfa42029656",
+    "origin": "machine"
+  },
+  "components.shareSheet.text": {
+    "message": "以文字分享",
+    "srcHash": "ef1b0d866131",
+    "origin": "machine"
+  },
+  "components.shareSheet.textHint": {
+    "message": "複製工作訓練摘要為文字",
+    "srcHash": "495523f4976a",
+    "origin": "machine"
+  },
+  "components.shareSheet.title": {
+    "message": "分享訓練",
+    "srcHash": "f01674ac06fc",
+    "origin": "machine"
+  },
+  "exerciseTutorialLink.copyLink": {
+    "message": "複製此連結以手動搜尋：\n\n{url}",
+    "srcHash": "46e8639af69e",
+    "origin": "machine"
+  },
+  "exerciseTutorialLink.openBrowserFailed": {
+    "message": "無法打開瀏覽器",
+    "srcHash": "2f2b665d6484",
+    "origin": "machine"
+  },
+  "insights.balance.accessibilityLabel": {
+    "message": "{title}. 按下以查看肌肉體積細節。",
+    "srcHash": "748ae6a28528",
+    "origin": "machine"
+  },
+  "insights.balance.mixed": {
+    "message": "本週{underCount}次未達目標，{overCount}次超出上限。",
+    "srcHash": "d00b797dbbc2",
+    "origin": "machine"
+  },
+  "insights.balance.overMany": {
+    "message": "{count}塊肌肉超過了本週的上限",
+    "srcHash": "edacb87fc3d3",
+    "origin": "machine"
+  },
+  "insights.balance.overOne": {
+    "message": "這週的上限有一個肌肉超過了",
+    "srcHash": "5daea65eef83",
+    "origin": "machine"
+  },
+  "insights.balance.underMany": {
+    "message": "{count}塊肌肉未達本週目標",
+    "srcHash": "5613bec29313",
+    "origin": "machine"
+  },
+  "insights.balance.underOne": {
+    "message": "本週目標以下的肌肉有1組",
+    "srcHash": "ac6a0d6c952d",
+    "origin": "machine"
+  },
+  "insights.consistency.accessibilityLabel": {
+    "message": "訓練洞察：{title}",
+    "srcHash": "1890fa59bf66",
+    "origin": "machine"
+  },
+  "insights.consistency.title": {
+    "message": "{count}次訓練，本週 — 你連續{weeks}週表現最佳！",
+    "srcHash": "8b5446f15f01",
+    "origin": "machine"
+  },
+  "insights.goal.accessibilityLabel": {
+    "message": "訓練洞察：{title}。點擊查看詳細資訊。",
+    "srcHash": "837b4d0e9c6a",
+    "origin": "machine"
+  },
+  "insights.goal.title": {
+    "message": "你離你的{exerciseName}目標還剩{progressPct}%！",
+    "srcHash": "ca66ce07c035",
+    "origin": "machine"
+  },
+  "insights.muscle.fullBody": {
+    "message": "全身",
+    "srcHash": "5caec90081ac",
+    "origin": "machine"
+  },
+  "insights.returning.accessibilityLabel": {
+    "message": "訓練洞察：{title}",
+    "srcHash": "ce7433afd491",
+    "origin": "machine"
+  },
+  "insights.returning.title": {
+    "message": "歡迎回來！你今天表現得非常出色。",
+    "srcHash": "0321d163b20e",
+    "origin": "machine"
+  },
+  "insights.strength.accessibilityLabel": {
+    "message": "訓練洞察：{title}。點擊查看詳細資訊。",
+    "srcHash": "8ecb00012518",
+    "origin": "machine"
+  },
+  "insights.strength.title": {
+    "message": "本月您的{exerciseName}增加了{delta}公斤",
+    "srcHash": "6a24a5c46f66",
+    "origin": "machine"
+  },
+  "insights.volume.accessibilityLabel": {
+    "message": "訓練洞察：{title}。點擊查看詳細資訊。",
+    "srcHash": "15506102905d",
+    "origin": "machine"
+  },
+  "insights.volume.title": {
+    "message": "訓練量增加 {pct}% 與上個月比較",
+    "srcHash": "a36f4ec0ebb3",
+    "origin": "machine"
+  },
+  "notifications.channel.restComplete": {
+    "message": "休息完成",
+    "srcHash": "1d21d63c1b87",
+    "origin": "machine"
+  },
+  "notifications.channel.restCue": {
+    "message": "休息前提示",
+    "srcHash": "229c530e97b9",
+    "origin": "machine"
+  },
+  "notifications.channel.restOngoing": {
+    "message": "休息計時器（持續中）",
+    "srcHash": "fabead1d8b2b",
+    "origin": "machine"
+  },
+  "notifications.complete.lastSet": {
+    "message": "最後一組完成",
+    "srcHash": "86fd87a30c79",
+    "origin": "machine"
+  },
+  "notifications.complete.nextSet": {
+    "message": "輪到你做下一組了。",
+    "srcHash": "0ab17991dd7d",
+    "origin": "machine"
+  },
+  "notifications.complete.title": {
+    "message": "休息完成",
+    "srcHash": "407b43bb45fe",
+    "origin": "machine"
+  },
+  "notifications.live.resting": {
+    "message": "休息中...",
+    "srcHash": "c46915a134f1",
+    "origin": "machine"
+  },
+  "notifications.live.title": {
+    "message": "休息中 · {time} 剩餘",
+    "srcHash": "89637c00573b",
+    "origin": "machine"
+  },
+  "notifications.preEnd.next": {
+    "message": "下一個：{preview}",
+    "srcHash": "8f1c45255092",
+    "origin": "machine"
+  },
+  "notifications.preEnd.nextSet": {
+    "message": "下一組在{seconds}s後",
+    "srcHash": "33a5ce29c259",
+    "origin": "machine"
+  },
+  "notifications.preEnd.title": {
+    "message": "休息 {seconds}s 即將結束",
+    "srcHash": "af14dee7c1ef",
+    "origin": "machine"
+  },
+  "notifications.preEnd.workoutEnding": {
+    "message": "訓練結束倒計時{seconds}s",
+    "srcHash": "20baa3b02790",
+    "origin": "machine"
+  },
+  "notifications.preview.bodyweight": {
+    "message": "{exerciseName} — 重量訓練 × {reps}",
+    "srcHash": "9e0954117e18",
+    "origin": "machine"
+  },
+  "notifications.preview.distance": {
+    "message": "{exerciseName} — {distance}",
+    "srcHash": "c5630bdf1011",
+    "origin": "machine"
+  },
+  "notifications.preview.duration": {
+    "message": "{exerciseName} — {duration}",
+    "srcHash": "66f59d34ebc2",
+    "origin": "machine"
+  },
+  "notifications.preview.kilometers": {
+    "message": "{value} 公里",
+    "srcHash": "fb0641830834",
+    "origin": "machine"
+  },
+  "notifications.preview.meters": {
+    "message": "{value} 米",
+    "srcHash": "f0efb1e18905",
+    "origin": "machine"
+  },
+  "notifications.preview.weighted": {
+    "message": "{exerciseName} — {weight} {unit} × {reps}",
+    "srcHash": "602fbc460a12",
+    "origin": "machine"
+  },
+  "notifications.reminder.body": {
+    "message": "{template} 預定今天進行",
+    "srcHash": "d9a004962985",
+    "origin": "machine"
+  },
+  "notifications.reminder.title": {
+    "message": "訓練時間到了！",
+    "srcHash": "0a590f6908a5",
+    "origin": "machine"
+  },
+  "notifications.response.templateMissing": {
+    "message": "預定的模板已不存在",
+    "srcHash": "eb5716a57806",
+    "origin": "machine"
+  },
+  "notifications.test.body": {
+    "message": "通知正常運作。一切就緒！",
+    "srcHash": "5e274f528aba",
+    "origin": "machine"
+  },
+  "notifications.test.title": {
+    "message": "CableSnap測試 🔔",
+    "srcHash": "7b71bcf60254",
+    "origin": "machine"
+  },
+  "settings.autoBackup.createA11y": {
+    "message": "立即創建備份",
+    "srcHash": "3861b8c2fce5",
+    "origin": "machine"
+  },
+  "settings.autoBackup.created": {
+    "message": "備份成功建立",
+    "srcHash": "2482a7bc4784",
+    "origin": "machine"
+  },
+  "settings.autoBackup.decreaseA11y": {
+    "message": "減少備份保留時間",
+    "srcHash": "7dac1c316ceb",
+    "origin": "machine"
+  },
+  "settings.autoBackup.failed": {
+    "message": "備份失敗",
+    "srcHash": "5ba9485cc7b2",
+    "origin": "machine"
+  },
+  "settings.autoBackup.increaseA11y": {
+    "message": "增加備份保留時間",
+    "srcHash": "fdf693440d71",
+    "origin": "machine"
+  },
+  "settings.autoBackup.infoA11y": {
+    "message": "自動備份。點擊以獲取更多資訊",
+    "srcHash": "bf4e1651e479",
+    "origin": "machine"
+  },
+  "settings.autoBackup.lastDate": {
+    "message": "最後備份：{dateText} {time}",
+    "srcHash": "8284f5efb2dd",
+    "origin": "machine"
+  },
+  "settings.autoBackup.lastToday": {
+    "message": "最後備份：今天 {time}",
+    "srcHash": "ef6d1a760156",
+    "origin": "machine"
+  },
+  "settings.autoBackup.lastYesterday": {
+    "message": "最後備份：昨天 {time}",
+    "srcHash": "4284b84009af",
+    "origin": "machine"
+  },
+  "settings.autoBackup.noBackups": {
+    "message": "尚未備份",
+    "srcHash": "75c63571586c",
+    "origin": "machine"
+  },
+  "settings.autoBackup.retentionFailed": {
+    "message": "更新保留失敗",
+    "srcHash": "081fa241a4b4",
+    "origin": "machine"
+  },
+  "settings.autoBackup.toggleA11y": {
+    "message": "運動後開關自動備份",
+    "srcHash": "461901bc639d",
+    "origin": "machine"
+  },
+  "settings.autoBackup.updateFailed": {
+    "message": "更新設定失敗",
+    "srcHash": "67782859060e",
+    "origin": "machine"
+  },
+  "settings.autoBackup.viewA11y": {
+    "message": "查看所有備份",
+    "srcHash": "635f1282f3a1",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteAll": {
+    "message": "刪除所有影片",
+    "srcHash": "f7ef8f1b592e",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteHint": {
+    "message": "從您的裝置中移除此片段",
+    "srcHash": "5077d25254cf",
+    "origin": "machine"
+  },
+  "settings.formClips.manageA11y": {
+    "message": "管理表單片段",
+    "srcHash": "59ad460b32f4",
+    "origin": "machine"
+  },
+  "settings.formClips.manageHint": {
+    "message": "開啟所有已錄製的動作片段清單，您可以刪除單個或全部片段",
+    "srcHash": "1a38a45da58b",
+    "origin": "machine"
+  },
+  "settings.formClips.title": {
+    "message": "姿勢片段",
+    "srcHash": "8c6b7e520a70",
+    "origin": "machine"
+  },
+  "settings.language.enGB": {
+    "message": "英國 英語",
+    "srcHash": "3201054d7410",
+    "origin": "machine"
+  },
+  "settings.language.enUS": {
+    "message": "美國英語",
+    "srcHash": "2d2b8c03b8b6",
+    "origin": "machine"
+  },
+  "settings.language.zhCN": {
+    "message": "簡體中文",
+    "srcHash": "bbf624832eaa",
+    "origin": "machine"
+  },
+  "settings.language.zhTW": {
+    "message": "繁體中文",
+    "srcHash": "49cc2a206c85",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.captureRpe": {
+    "message": "記錄訓練中的組數RPE",
+    "srcHash": "c28612a45f9d",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.captureRpeA11y": {
+    "message": "完成每組後顯示努力芯片",
+    "srcHash": "b655125493c8",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.captureRpeHint": {
+    "message": "每組結束後點選芯片記錄感受。驅動智能休息計時器和進步建議。",
+    "srcHash": "f14aeef8a0a1",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.enableRpeHint": {
+    "message": "啟用上方的「捕捉組數RPE」以使用此設定。",
+    "srcHash": "7b9c918807c7",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.intensityScale": {
+    "message": "強度刻度",
+    "srcHash": "778e7fefe9c9",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.rirHint": {
+    "message": "RIR = 剩餘可做次數。RPE = 10 - RIR。",
+    "srcHash": "a80e208d11e0",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.saveIntensityFailed": {
+    "message": "保存強度比例設定失敗",
+    "srcHash": "36a991b785a1",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.savePulleyFailed": {
+    "message": "滑輪軌跡設定儲存失敗",
+    "srcHash": "96bb5a40b573",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.saveRpeFailed": {
+    "message": "RPE捕獲設定儲存失敗",
+    "srcHash": "2c6b77961f76",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.trackPulley": {
+    "message": "記錄滑輪軸心位置",
+    "srcHash": "e26c4f0c55b6",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.trackPulleyA11y": {
+    "message": "顯示或隱藏纜繩訓練組中的滑輪插銷標籤",
+    "srcHash": "7aacae763248",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.trackPulleyHint": {
+    "message": "在纜索組數上顯示一個針碼貼紙，用於記錄您使用了哪個滑輪針碼。",
+    "srcHash": "d1465246e903",
+    "origin": "machine"
+  },
+  "settings.units.measurements": {
+    "message": "測量",
+    "srcHash": "f5760e8bbd96",
+    "origin": "machine"
+  },
+  "settings.units.saveUnitFailed": {
+    "message": "無法儲存單位",
+    "srcHash": "d30374b8bd51",
+    "origin": "machine"
+  },
+  "settings.units.saveWeightStepFailed": {
+    "message": "無法儲存重量步驟設定",
+    "srcHash": "e2d5c1d90c10",
+    "origin": "machine"
+  },
+  "settings.units.title": {
+    "message": "單位",
+    "srcHash": "68aecbd99beb",
+    "origin": "machine"
+  },
+  "settings.units.weight": {
+    "message": "重量",
+    "srcHash": "a54504946498",
+    "origin": "machine"
+  },
+  "settings.units.weightStep": {
+    "message": "重量步驟",
+    "srcHash": "a262bbec57ec",
+    "origin": "machine"
+  },
+  "settings.units.weightStepHint": {
+    "message": "輸入運動的步長細度。適用於新會話。",
+    "srcHash": "7ee8f1e039b9",
+    "origin": "machine"
+  },
+  "share.achievement.more": {
+    "message": "+{extraCount} 更多",
+    "srcHash": "4d147e061d8e",
+    "origin": "machine"
+  },
+  "share.achievement.unlocked": {
+    "message": "{achievementCount} {achievementCount, plural, one {成就} other {成就}} 解鎖！",
+    "srcHash": "bada375e3db9",
+    "origin": "machine"
+  },
+  "share.exercises.more": {
+    "message": "和{remaining}更多",
+    "srcHash": "7eb6caecd9c7",
+    "origin": "machine"
+  },
+  "share.exercises.newPrs": {
+    "message": "🏆 新PR",
+    "srcHash": "7f875fc27a9b",
+    "origin": "machine"
+  },
+  "share.exercises.title": {
+    "message": "運動",
+    "srcHash": "a3cce693f041",
+    "origin": "machine"
+  },
+  "share.stats.duration": {
+    "message": "時間",
+    "srcHash": "48dea83849a4",
+    "origin": "machine"
+  },
+  "share.stats.sets": {
+    "message": "組數",
+    "srcHash": "1f42d6b75dd2",
+    "origin": "machine"
+  },
+  "share.stats.volume": {
+    "message": "音量 ({unit})",
+    "srcHash": "0bcf00bb62dc",
+    "origin": "machine"
+  },
+  "stravaError.appInactive": {
+    "message": "Strava應用程式存取已停用。請聯繫支援。",
+    "srcHash": "6f562a18c437",
+    "origin": "machine"
+  },
+  "stravaError.config": {
+    "message": "Strava設定不正確。請聯繫支援。",
+    "srcHash": "c2da5de7f117",
+    "origin": "machine"
+  },
+  "stravaError.connectionExpired": {
+    "message": "連線已過期。請再試一次。",
+    "srcHash": "ed163b8c6ebd",
+    "origin": "machine"
+  },
+  "stravaError.getHelp": {
+    "message": "獲得幫助",
+    "srcHash": "a7c8f02d8bd1",
+    "origin": "machine"
+  },
+  "stravaError.localRead": {
+    "message": "無法讀取訓練數據。請再試一次。",
+    "srcHash": "657bd0694ae3",
+    "origin": "machine"
+  },
+  "stravaError.network": {
+    "message": "檢查您的網路連線並再試一次。",
+    "srcHash": "9798814d02a4",
+    "origin": "machine"
+  },
+  "stravaError.rateLimit": {
+    "message": "請求過多。請稍後再試。",
+    "srcHash": "f6c3624e0daf",
+    "origin": "machine"
+  },
+  "stravaError.server": {
+    "message": "Strava 目前遇到問題。請稍後再試。",
+    "srcHash": "4f0870f7221f",
+    "origin": "machine"
+  },
+  "stravaError.unknown": {
+    "message": "與Strava連線時發生錯誤。請再試一次。",
+    "srcHash": "24375bf260f1",
+    "origin": "machine"
   }
 }
