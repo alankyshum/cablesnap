@@ -115,7 +115,7 @@ msgstr ""
 #: components/progress/CalendarDayDetail.tsx:132
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17720
 msgid "components.progress.calendarDayDetail.sessionSummary"
-msgstr ""
+msgstr "{0} · {1} {2, plural, one {個動作} other {個動作}} · {3} {4, plural, one {組} other {組}}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: (0,c.formatDuration)(s.duration_seconds)
@@ -8887,7 +8887,7 @@ msgstr ""
 #: components/settings/HydrationCard.tsx:188
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17767
 msgid "settings.hydration.preset"
-msgstr ""
+msgstr "預設值 {number} ({unit, select, ml {ml} fl_oz {液量盎司}})"
 
 #. js-lingui-explicit-id
 #: components/settings/HydrationCard.tsx:113

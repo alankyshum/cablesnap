@@ -185,7 +185,7 @@ export default function HydrationCard({ colors, toast, bareContent = false }: Pr
       {[0, 1, 2].map((i) => (
         <View key={`preset-${i}`} style={styles.row}>
           <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-            {i18n._({ id: "settings.hydration.preset", message: "Preset {number} ({unit, select, ml {ml} fl oz {fl oz}})", values: { number: i + 1, unit } })}
+            {i18n._({ id: "settings.hydration.preset", message: "Preset {number} ({unit, select, ml {ml} fl_oz {fl oz}})", values: { number: i + 1, unit } })}
           </Text>
           <TextInput
              accessibilityLabel={i18n._({ id: "settings.hydration.presetA11y", message: "Preset {number}", values: { number: i + 1 } })}

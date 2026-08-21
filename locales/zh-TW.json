@@ -40,7 +40,7 @@
     "origin": "machine"
   },
   "components.progress.calendarDayDetail.sessionSummary": {
-    "message": "{0} · {1} {2, plural, 一 {exercise} 其他 {exercises}} · {3} {4, plural, 一 {set} 其他 {sets}}",
+    "message": "{0} · {1} {2, plural, one {個動作} other {個動作}} · {3} {4, plural, one {組} other {組}}",
     "srcHash": "718282445ed6",
     "origin": "machine"
   },
@@ -6855,8 +6855,8 @@
     "origin": "machine"
   },
   "settings.hydration.preset": {
-    "message": "預設值 {number} ({unit, select, ml {ml} fl oz {液量盎司}})",
-    "srcHash": "d2f7139c776e",
+    "message": "預設值 {number} ({unit, select, ml {ml} fl_oz {液量盎司}})",
+    "srcHash": "a8379470affb",
     "origin": "machine"
   },
   "settings.hydration.presetPositive": {

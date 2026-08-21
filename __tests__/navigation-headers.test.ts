@@ -81,7 +81,7 @@ describe("Navigation tab configuration stays in lockstep", () => {
   it("registers the AI Coach route and title", () => {
     const tabLayout = read("app/(tabs)/_layout.tsx");
     expect(tabLayout).toContain('name="ai-coach"');
-    expect(tabLayout).toContain('title: "AI Coach"');
+     expect(tabLayout).toContain('id: "floatingTabBar.tabs.aiCoach"');
   });
 
   it("resolves the AI Coach label without the macro default message", () => {

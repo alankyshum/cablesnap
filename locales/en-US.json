@@ -7055,8 +7055,8 @@
     "origin": "human"
   },
   "settings.hydration.preset": {
-    "message": "Preset {number} ({unit, select, ml {ml} fl oz {fl oz}})",
-    "srcHash": "d2f7139c776e",
+    "message": "Preset {number} ({unit, select, ml {ml} fl_oz {fl oz}})",
+    "srcHash": "a8379470affb",
     "origin": "human"
   },
   "settings.hydration.presetPositive": {

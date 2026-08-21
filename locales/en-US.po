@@ -8892,7 +8892,7 @@ msgstr "Preset {0}"
 #: components/settings/HydrationCard.tsx:188
 #: dist/_expo/static/js/web/index-2ddbe264b08376cf651beb0e4dea35f5.js:17767
 msgid "settings.hydration.preset"
-msgstr "Preset {number} ({unit, select, ml {ml} fl oz {fl oz}})"
+msgstr "Preset {number} ({unit, select, ml {ml} fl_oz {fl oz}})"
 
 #. js-lingui-explicit-id
 #: components/settings/HydrationCard.tsx:113
