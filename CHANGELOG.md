@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.105 — 2026-08-21
+<!-- versionCode: 173 -->
+
 - Fixed text that showed raw placeholders instead of real values. Most visibly, the Settings About row now displays the actual version number instead of “CableSnap v{version}”; this also fixes interpolated text throughout the app in release builds.
 - Fixed labels that showed internal identifiers instead of translated text, including the AI Coach tab.
 - Improved the update prompt so release notes render as formatted text with proper headings and bullets, hidden internal markers, and scrolling for longer notes.
