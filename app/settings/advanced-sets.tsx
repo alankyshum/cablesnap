@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing, fontSizes } from "@/constants/design-tokens";
+import { useLingui } from "@lingui/react/macro";
 
 /** Height (px) of the bottom fade gradient hinting at scrollable content below the fold. */
 const BOTTOM_FADE_HEIGHT = 40;
@@ -66,21 +67,21 @@ export const ADVANCED_SET_HELP_ENTRIES = [
     setType: "rest_pause" as const,
     title: "Rest-pause",
     description:
-      "Rest 10–20 seconds mid-set, then continue with the same load until your target total reps. Each burst is logged as a mini-set.",
+        "Rest 10–20 seconds mid-set, then continue with the same load until your target total reps. Each burst is logged as a mini-set.",
     example: "Example: 8 reps, rest 15 s, 3 reps, rest 15 s, 2 reps → parent shows 13 reps.",
   },
   {
     setType: "cluster" as const,
     title: "Cluster",
     description:
-      "Rest 30–60 seconds between mini-sets to maintain a heavy load across all reps. Each cluster is logged separately.",
+        "Rest 30–60 seconds between mini-sets to maintain a heavy load across all reps. Each cluster is logged separately.",
     example: "Example: 5 reps @ 100 kg, rest 45 s, 5 reps @ 100 kg, rest 45 s, 4 reps @ 95 kg.",
   },
   {
     setType: "myo_reps" as const,
     title: "Myo-reps",
     description:
-      "An activation set of 10–20 reps followed by short 5-second rests for additional small clusters of 3–5 reps.",
+        "An activation set of 10–20 reps followed by short 5-second rests for additional small clusters of 3–5 reps.",
     example: "Example: 15-rep activation, then 5, 5, 4, 3 — each mini-cluster logged as its own segment.",
   },
 ] as const;
@@ -88,6 +89,29 @@ export const ADVANCED_SET_HELP_ENTRIES = [
 export default function AdvancedSetsHelpScreen() {
   const colors = useThemeColors();
   const layout = useLayout();
+  const { t } = useLingui();
+  const intro = t({ id: "settings.advancedSets.intro", message: "Advanced set types let you log structured multi-burst sets as a single parent with ordered mini-sets. Each mini-set records its own reps, optional weight, and rest duration." });
+  const footer = t({ id: "settings.advancedSets.footer", message: "Each parent set supports up to 8 mini-sets. To log more than 8 bursts, use a separate set." });
+  const helpEntries = [
+    {
+      setType: "rest_pause" as const,
+      title: t({ id: "settings.advancedSets.restPause.title", message: "Rest-pause" }),
+      description: t({ id: "settings.advancedSets.restPause.description", message: "Rest 10–20 seconds mid-set, then continue with the same load until your target total reps. Each burst is logged as a mini-set." }),
+      example: t({ id: "settings.advancedSets.restPause.example", message: "Example: 8 reps, rest 15 s, 3 reps, rest 15 s, 2 reps → parent shows 13 reps." }),
+    },
+    {
+      setType: "cluster" as const,
+      title: t({ id: "settings.advancedSets.cluster.title", message: "Cluster" }),
+      description: t({ id: "settings.advancedSets.cluster.description", message: "Rest 30–60 seconds between mini-sets to maintain a heavy load across all reps. Each cluster is logged separately." }),
+      example: t({ id: "settings.advancedSets.cluster.example", message: "Example: 5 reps @ 100 kg, rest 45 s, 5 reps @ 100 kg, rest 45 s, 4 reps @ 95 kg." }),
+    },
+    {
+      setType: "myo_reps" as const,
+      title: t({ id: "settings.advancedSets.myoReps.title", message: "Myo-reps" }),
+      description: t({ id: "settings.advancedSets.myoReps.description", message: "An activation set of 10–20 reps followed by short 5-second rests for additional small clusters of 3–5 reps." }),
+      example: t({ id: "settings.advancedSets.myoReps.example", message: "Example: 15-rep activation, then 5, 5, 4, 3 — each mini-cluster logged as its own segment." }),
+    },
+  ];
 
   // Scroll-affordance state: track viewport vs. content height and scroll
   // offset so the bottom fade hints that more content exists below the fold
@@ -143,13 +167,13 @@ export default function AdvancedSetsHelpScreen() {
         onLayout={onLayout}
         onContentSizeChange={onContentSizeChange}
       >
-        <Stack.Screen options={{ title: "Advanced Set Types" }} />
+         <Stack.Screen options={{ title: t({ id: "settings.advancedSets.title", message: "Advanced Set Types" }) }} />
 
         <Text variant="body" style={[styles.intro, { color: colors.onSurface }]}>
-          {ADVANCED_SET_INTRO}
+          {intro}
         </Text>
 
-        {ADVANCED_SET_HELP_ENTRIES.map((entry, index) => (
+        {helpEntries.map((entry, index) => (
           <View key={entry.setType}>
             {index > 0 && <Separator style={styles.separator} />}
             <Card style={styles.card}>
@@ -169,7 +193,7 @@ export default function AdvancedSetsHelpScreen() {
         ))}
 
         <Text variant="caption" style={[styles.note, { color: colors.onSurfaceVariant }]}>
-          {ADVANCED_SET_FOOTER}
+          {footer}
         </Text>
       </ScrollView>
 

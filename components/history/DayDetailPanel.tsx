@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/format";
@@ -42,10 +43,10 @@ export default function DayDetailPanel({
         dayDetailSessions.map((s) => (
           <Pressable key={s.id} onPress={() => router.push(`/session/detail/${s.id}`)} accessibilityRole="button"
             style={[styles.item, { backgroundColor: colors.surface }]}
-            accessibilityLabel={`${s.name || "Untitled workout"}, ${formatDuration(s.duration_seconds)}, ${s.set_count} sets`}>
+            accessibilityLabel={t({ id: "history.dayDetail.sessionA11y", message: `${s.name || "Untitled workout"}, ${formatDuration(s.duration_seconds)}, ${s.set_count} sets` })}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text variant="body" numberOfLines={1} style={{ color: colors.onSurface }}>{s.name || "Untitled workout"}</Text>
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{formatDuration(s.duration_seconds)} · {s.set_count} sets</Text>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "history.dayDetail.sessionSummary", message: `${formatDuration(s.duration_seconds)} · ${s.set_count} sets` })}</Text>
               <SessionPacingLabel session={s} colors={colors} />
             </View>
             {s.rating != null && s.rating > 0 && <RatingWidget value={s.rating} readOnly size="small" />}
@@ -53,9 +54,9 @@ export default function DayDetailPanel({
           </Pressable>
         ))
       ) : isSelectedDayFuture && selectedDayScheduleEntry ? (
-        <Text variant="body" style={{ color: colors.onSurfaceVariant }}>Scheduled: {selectedDayScheduleEntry.template_name}</Text>
+        <Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "history.dayDetail.scheduled", message: `Scheduled: ${selectedDayScheduleEntry.template_name}` })}</Text>
       ) : (
-        <Text variant="body" style={{ color: colors.onSurfaceVariant }}>Rest day</Text>
+        <Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "history.dayDetail.restDay", message: "Rest day" })}</Text>
       )}
     </View>
   );
@@ -87,7 +88,7 @@ function SessionPacingLabel({
 
   return (
     <Text variant="caption" style={{ color: colors.onSurfaceVariant }} numberOfLines={1}>
-      {"Working"} {formatPacingTime(pacing.working)} · {"Rest"} {formatPacingTime(pacing.rest)} · {"Other"} {formatPacingTime(pacing.other)}
+       {t({ id: "history.dayDetail.working", message: "Working" })} {formatPacingTime(pacing.working)} · {t({ id: "history.dayDetail.rest", message: "Rest" })} {formatPacingTime(pacing.rest)} · {t({ id: "history.dayDetail.other", message: "Other" })} {formatPacingTime(pacing.other)}
     </Text>
   );
 }

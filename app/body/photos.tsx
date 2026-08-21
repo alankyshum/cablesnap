@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -39,9 +41,9 @@ export default function PhotosScreen() {
       <SafeAreaView style={styles.container} edges={["bottom"]}>
         <EmptyState
           icon="camera-plus-outline"
-          title="Track your transformation"
-          subtitle="Take your first progress photo to start tracking your visual changes over time."
-          action={{ label: "Take First Photo", onPress: handleTakePhoto }}
+           title={t({ id: "body.photos.empty.title", message: "Track your transformation" })}
+           subtitle={t({ id: "body.photos.empty.subtitle", message: "Take your first progress photo to start tracking your visual changes over time." })}
+           action={{ label: t({ id: "body.photos.empty.action", message: "Take First Photo" }), onPress: handleTakePhoto }}
         />
         <PrivacyModal visible={privacyModal} onDismiss={dismissPrivacy} />
       </SafeAreaView>
@@ -79,18 +81,18 @@ export default function PhotosScreen() {
           visible
           icon={fabOpen ? "close" : "plus"}
           actions={[
-            { icon: "camera", label: "Take Photo", onPress: handleTakePhoto, accessibilityLabel: "Take progress photo" },
-            { icon: "image", label: "From Library", onPress: handlePickImage, accessibilityLabel: "Choose photo from library" },
+             { icon: "camera", label: t({ id: "body.photos.takePhoto", message: "Take Photo" }), onPress: handleTakePhoto, accessibilityLabel: t({ id: "body.photos.takePhotoA11y", message: "Take progress photo" }) },
+             { icon: "image", label: t({ id: "body.photos.fromLibrary", message: "From Library" }), onPress: handlePickImage, accessibilityLabel: t({ id: "body.photos.fromLibraryA11y", message: "Choose photo from library" }) },
           ]}
           onStateChange={({ open }) => setFabOpen(open)}
           fabStyle={{ backgroundColor: colors.primary }}
           color={colors.onPrimary}
-          accessibilityLabel="Add progress photo"
+           accessibilityLabel={t({ id: "body.photos.addA11y", message: "Add progress photo" })}
         />
       )}
       {compareMode && selectedIds.length === 2 && (
         <View style={styles.compareBar}>
-          <Button variant="default" onPress={handleCompare} style={{ flex: 1 }} accessibilityLabel="Compare photos" accessibilityRole="button" label="Compare" />
+           <Button variant="default" onPress={handleCompare} style={{ flex: 1 }} accessibilityLabel={t({ id: "body.photos.compareA11y", message: "Compare photos" })} accessibilityRole="button" label={t({ id: "body.photos.compare", message: "Compare" })} />
         </View>
       )}
       <PhotoMetaModal
@@ -111,7 +113,7 @@ export default function PhotosScreen() {
       {saving && !metaModal && (
         <View style={styles.savingOverlay}>
           <View style={[styles.savingBox, { backgroundColor: colors.surface }]}>
-            <Text variant="body" style={{ color: colors.onSurface }}>Saving photo...</Text>
+             <Text variant="body" style={{ color: colors.onSurface }}><Trans id="body.photos.saving">Saving photo...</Trans></Text>
           </View>
         </View>
       )}

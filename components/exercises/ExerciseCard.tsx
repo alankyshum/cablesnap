@@ -9,6 +9,8 @@ import {
 import { semantic, DIFFICULTY_COLORS } from "../../constants/theme";
 import { radii } from "../../constants/design-tokens";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 export interface ExerciseCardProps {
   item: Exercise;
@@ -30,7 +32,7 @@ export function ExerciseCard({ item, selected, onPress, colors, mc }: ExerciseCa
         selected && { backgroundColor: colors.primaryContainer },
         pressed && { opacity: 0.7 },
       ]}
-      accessibilityLabel={`${item.name}${item.is_custom ? ", Custom" : ""}, ${CATEGORY_LABELS[item.category]}, ${item.equipment}, Difficulty: ${diff}`}
+      accessibilityLabel={i18n._({ id: "components.exercises.card.a11y", message: "{name}{custom}, {category}, {equipment}, Difficulty: {difficulty}", values: { name: item.name, custom: item.is_custom ? ", Custom" : "", category: CATEGORY_LABELS[item.category], equipment: item.equipment, difficulty: diff } })}
       accessibilityRole="button"
     >
       <View style={styles.cardInner}>
@@ -40,7 +42,7 @@ export function ExerciseCard({ item, selected, onPress, colors, mc }: ExerciseCa
           </Text>
           {item.is_custom && (
             <View style={[styles.customBadge, { backgroundColor: colors.tertiaryContainer }]}>
-              <Text style={[styles.customBadgeText, { color: colors.onSurface }]}>Custom</Text>
+              <Text style={[styles.customBadgeText, { color: colors.onSurface }]}>{t({ id: "components.exercises.card.custom", message: "Custom" })}</Text>
             </View>
           )}
         </View>

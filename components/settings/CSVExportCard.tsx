@@ -9,13 +9,7 @@ import { fontSizes } from "@/constants/design-tokens";
 import { getCSVCounts } from "@/lib/db";
 import { sinceForRange, useCSVExport } from "@/hooks/useCSVExport";
 import type { ThemeColors } from "@/hooks/useThemeColors";
-
-const RANGE_BUTTONS = [
-  { value: "7", label: "7 days", accessibilityLabel: "Date range 7 days" },
-  { value: "30", label: "30 days", accessibilityLabel: "Date range 30 days" },
-  { value: "90", label: "90 days", accessibilityLabel: "Date range 90 days" },
-  { value: "all", label: "All", accessibilityLabel: "Date range All" },
-];
+import { useLingui } from "@lingui/react/macro";
 
 type Props = {
   colors: ThemeColors;
@@ -30,6 +24,13 @@ export default function CSVExportCard({ colors, bareContent = false }: Props) {
   const [range, setRange] = useState("30");
   const [counts, setCounts] = useState({ sessions: 0, entries: 0 });
   const { loading, exportCSV } = useCSVExport();
+  const { t } = useLingui();
+  const rangeButtons = [
+    { value: "7", label: t({ id: "settings.csv.range7", message: "7 days" }), accessibilityLabel: t({ id: "settings.csv.range7A11y", message: "Date range 7 days" }) },
+    { value: "30", label: t({ id: "settings.csv.range30", message: "30 days" }), accessibilityLabel: t({ id: "settings.csv.range30A11y", message: "Date range 30 days" }) },
+    { value: "90", label: t({ id: "settings.csv.range90", message: "90 days" }), accessibilityLabel: t({ id: "settings.csv.range90A11y", message: "Date range 90 days" }) },
+    { value: "all", label: t({ id: "settings.csv.rangeAll", message: "All" }), accessibilityLabel: t({ id: "settings.csv.rangeAllA11y", message: "Date range All" }) },
+  ];
 
   useEffect(() => {
     getCSVCounts(sinceForRange(range)).then(setCounts);
@@ -37,8 +38,8 @@ export default function CSVExportCard({ colors, bareContent = false }: Props) {
 
   const content = (
     <>
-      <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>CSV Export</Text>
-      <SegmentedControl value={range} onValueChange={setRange} buttons={RANGE_BUTTONS} style={styles.segment} />
+      <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>{t({ id: "settings.csv.title", message: "CSV Export" })}</Text>
+      <SegmentedControl value={range} onValueChange={setRange} buttons={rangeButtons} style={styles.segment} />
       <Text
         variant="caption"
         style={{ color: colors.onSurfaceVariant, marginBottom: 12, marginTop: 8 }}
@@ -47,10 +48,10 @@ export default function CSVExportCard({ colors, bareContent = false }: Props) {
         {counts.sessions} session{counts.sessions !== 1 ? "s" : ""}, {counts.entries} entr{counts.entries !== 1 ? "ies" : "y"}
       </Text>
       <View style={styles.buttonFlow}>
-        <Button variant="outline" size="sm" icon={FileOutput} onPress={() => exportCSV("workouts", range)} loading={loading} disabled={loading} accessibilityLabel="Export workouts as CSV">Workouts</Button>
-        <Button variant="outline" size="sm" icon={Apple} onPress={() => exportCSV("nutrition", range)} loading={loading} disabled={loading} accessibilityLabel="Export nutrition as CSV">Nutrition</Button>
-        <Button variant="outline" size="sm" icon={Scale} onPress={() => exportCSV("bodyWeight", range)} loading={loading} disabled={loading} accessibilityLabel="Export body weight as CSV">Body Weight</Button>
-        <Button variant="outline" size="sm" icon={User} onPress={() => exportCSV("bodyMeasurements", range)} loading={loading} disabled={loading} accessibilityLabel="Export body measurements as CSV">Measurements</Button>
+        <Button variant="outline" size="sm" icon={FileOutput} onPress={() => exportCSV("workouts", range)} loading={loading} disabled={loading} accessibilityLabel={t({ id: "settings.csv.workoutsA11y", message: "Export workouts as CSV" })}>{t({ id: "settings.csv.workouts", message: "Workouts" })}</Button>
+        <Button variant="outline" size="sm" icon={Apple} onPress={() => exportCSV("nutrition", range)} loading={loading} disabled={loading} accessibilityLabel={t({ id: "settings.csv.nutritionA11y", message: "Export nutrition as CSV" })}>{t({ id: "settings.csv.nutrition", message: "Nutrition" })}</Button>
+        <Button variant="outline" size="sm" icon={Scale} onPress={() => exportCSV("bodyWeight", range)} loading={loading} disabled={loading} accessibilityLabel={t({ id: "settings.csv.bodyWeightA11y", message: "Export body weight as CSV" })}>{t({ id: "settings.csv.bodyWeight", message: "Body Weight" })}</Button>
+        <Button variant="outline" size="sm" icon={User} onPress={() => exportCSV("bodyMeasurements", range)} loading={loading} disabled={loading} accessibilityLabel={t({ id: "settings.csv.measurementsA11y", message: "Export body measurements as CSV" })}>{t({ id: "settings.csv.measurements", message: "Measurements" })}</Button>
       </View>
     </>
   );
