@@ -21,6 +21,11 @@ sidecar emission. The `publish-release` skill prepends a new section (with
 marker) at release time.
 
 ## Unreleased
+
+_No user-facing changes yet._
+
+## v0.26.106 — 2026-08-21
+<!-- versionCode: 174 -->
 - Keep cable setup labels in sync when switching app language.
 
 _No user-facing changes yet._

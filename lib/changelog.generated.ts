@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.106",
+    "date": "2026-08-21",
+    "versionCode": 174,
+    "body": "- Keep cable setup labels in sync when switching app language.\n\n_No user-facing changes yet._"
+  },
+  {
     "version": "0.26.105",
     "date": "2026-08-21",
     "versionCode": 173,
