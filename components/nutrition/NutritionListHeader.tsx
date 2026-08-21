@@ -206,7 +206,7 @@ export function NutritionListHeader({
               onPress={onMealTemplates}
                accessibilityLabel={t({ id: 'components.nutrition.header.mealTemplatesA11y', message: 'View meal templates' })}
               accessibilityRole="link"
-              style={[styles.linkRow, { marginTop: 4 }]}
+              style={styles.linkRow}
             >
               <Text variant="caption" style={{ color: colors.primary }}>
                 <Trans id="components.nutrition.header.mealTemplates">Meal Templates</Trans>

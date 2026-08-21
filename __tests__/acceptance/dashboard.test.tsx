@@ -173,6 +173,13 @@ jest.mock('../../lib/db', () => ({
   getBodySettings: jest.fn().mockResolvedValue(null),
   getAppSetting: jest.fn().mockResolvedValue(null),
   getMuscleVolumeForWeek: jest.fn().mockResolvedValue([]),
+  getShareSettings: jest.fn().mockResolvedValue({
+    promo_caption_enabled: 0,
+    promo_caption: "",
+    strava_description_enabled: 0
+  }),
+  saveShareSettings: jest.fn().mockResolvedValue(undefined),
+  getEffectivePromoCaption: jest.fn().mockResolvedValue(""),
 }))
 
 const mockGetPrograms = jest.fn().mockResolvedValue([program1])

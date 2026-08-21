@@ -321,6 +321,9 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   legendCell: {
+    // BLD-4061: use minWidth instead of fixed width so the 2-char "3+" label
+    // is never clipped. paddingHorizontal gives the label breathing room inside
+    // each swatch; height stays 18 so the ramp looks visually consistent.
     minWidth: 18,
     height: 18,
     paddingHorizontal: 3,
