@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { fontSizes } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   colors: ThemeColors;
@@ -36,7 +37,7 @@ export default function FrequencyGoalPicker({ colors, value, onChange, bareConte
         <Pressable
           onPress={() => onChange(3)}
           accessibilityRole="button"
-          accessibilityLabel="Set weekly training goal"
+          accessibilityLabel={t({ id: "settings.frequencyGoal.setA11y", message: "Set weekly training goal" })}
           style={[styles.setButton, { borderColor: colors.primary }]}
         >
           <Text variant="body" style={{ color: colors.primary, fontWeight: "600", fontSize: fontSizes.sm }}>
@@ -50,7 +51,7 @@ export default function FrequencyGoalPicker({ colors, value, onChange, bareConte
               onPress={() => canDecrement && onChange(value - 1)}
               disabled={!canDecrement}
               accessibilityRole="button"
-              accessibilityLabel="Decrease training days"
+              accessibilityLabel={t({ id: "settings.frequencyGoal.decreaseA11y", message: "Decrease training days" })}
               style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: canDecrement ? 1 : 0.35 }]}
             >
               <MaterialCommunityIcons name="minus" size={20} color={colors.onSurface} />
@@ -62,7 +63,7 @@ export default function FrequencyGoalPicker({ colors, value, onChange, bareConte
               onPress={() => canIncrement && onChange(value + 1)}
               disabled={!canIncrement}
               accessibilityRole="button"
-              accessibilityLabel="Increase training days"
+              accessibilityLabel={t({ id: "settings.frequencyGoal.increaseA11y", message: "Increase training days" })}
               style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: canIncrement ? 1 : 0.35 }]}
             >
               <MaterialCommunityIcons name="plus" size={20} color={colors.onSurface} />
@@ -71,7 +72,7 @@ export default function FrequencyGoalPicker({ colors, value, onChange, bareConte
           <Pressable
             onPress={() => onChange(null)}
             accessibilityRole="button"
-            accessibilityLabel="Clear weekly training goal"
+            accessibilityLabel={t({ id: "settings.frequencyGoal.clearA11y", message: "Clear weekly training goal" })}
             style={styles.clearButton}
           >
             <Text variant="caption" style={{ color: colors.primary }}>

@@ -1,3 +1,5 @@
+import { i18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
 import React, { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Check } from "lucide-react-native";
@@ -58,18 +60,18 @@ export function MuscleGroupFilterSheet({
     <BottomSheet
       isVisible={isVisible}
       onClose={onClose}
-      title="Filter by muscle group"
+       title={t({ id: "history.muscleFilter.title", message: "Filter by muscle group" })}
       snapPoints={[0.6, 0.9]}
     >
       <View style={styles.header}>
         <Pressable
           onPress={handleClear}
           style={styles.clearButton}
-          accessibilityLabel="Clear muscle group filter"
+           accessibilityLabel={t({ id: "history.muscleFilter.clearA11y", message: "Clear muscle group filter" })}
           accessibilityRole="button"
         >
           <Text variant="body" style={{ color: colors.primary }}>
-            Clear
+             {t({ id: "history.muscleFilter.clear", message: "Clear" })}
           </Text>
         </Pressable>
       </View>
@@ -78,7 +80,7 @@ export function MuscleGroupFilterSheet({
         {regions.length === 0 ? (
           <View style={styles.empty}>
             <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-              No muscle groups in your history yet
+               {t({ id: "history.muscleFilter.empty", message: "No muscle groups in your history yet" })}
             </Text>
           </View>
         ) : (
@@ -100,9 +102,7 @@ export function MuscleGroupFilterSheet({
                       styles.row,
                       isSelected && { backgroundColor: colors.primaryContainer },
                     ]}
-                    accessibilityLabel={`${MUSCLE_LABELS[m]}${
-                      isSelected ? ", selected" : ""
-                    }`}
+                    accessibilityLabel={i18n._({ id: "history.muscleFilter.optionA11y", message: "{name}{selected, select, true {, selected} false {}}", values: { name: MUSCLE_LABELS[m], selected: isSelected ? "true" : "false" } })}
                     accessibilityRole="button"
                     accessibilityState={{ selected: isSelected }}
                   >

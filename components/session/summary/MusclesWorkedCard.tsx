@@ -6,6 +6,7 @@ import { MuscleMap } from "@/components/MuscleMap";
 import { MUSCLE_LABELS } from "@/lib/types";
 import type { MuscleGroup } from "@/lib/types";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 import { useProfileGender } from "@/lib/useProfileGender";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
@@ -27,7 +28,7 @@ function MusclesWorkedCardInner({ primaryMuscles, secondaryMuscles, colors }: Pr
   return (
     <Card
       style={StyleSheet.flatten([styles.section, { backgroundColor: colors.surface }])}
-      accessibilityLabel={`Muscles worked: ${muscleNames}`}
+      accessibilityLabel={t({ id: "components.session.summary.muscles-worked.a11y", message: `Muscles worked: ${muscleNames}` })}
     >
       <CardContent>
         <View style={styles.sectionHeader}>

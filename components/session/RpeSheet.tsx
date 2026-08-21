@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * RpeSheet — precise RPE/RIR picker for the RPE chip strip (BLD-1110).
  * BLD-2701: Mode-aware — RIR mode shows descending 4.0→0.0 steps.
@@ -195,14 +198,14 @@ export function RpeSheet({
           <Button
             variant="ghost"
             onPress={handleClear}
-            label="Clear"
-            accessibilityLabel="Clear intensity"
+            label={t({ id: "session.rpesheet.str1", message: "Clear" })}
+            accessibilityLabel={t({ id: "session.rpesheet.str2", message: "Clear intensity" })}
           />
           <Button
             variant="ghost"
             onPress={() => sheetRef.current?.close()}
-            label="Cancel"
-            accessibilityLabel="Cancel"
+            label={t({ id: "session.rpesheet.str3", message: "Cancel" })}
+            accessibilityLabel={t({ id: "session.rpesheet.str4", message: "Cancel" })}
           />
         </View>
       </BottomSheetView>

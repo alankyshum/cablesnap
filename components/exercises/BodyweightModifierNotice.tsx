@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes, radii } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
 
 /**
  * BLD-541 AC-23: v1 user-trust microcopy.
@@ -17,14 +18,15 @@ import { fontSizes, radii } from "@/constants/design-tokens";
  *
  * The exact wording is plan-locked; do not paraphrase.
  */
-export const BW_MODIFIER_VOLUME_NOTICE =
-  "Weighted-bodyweight modifier is tracked as a PR dimension but does not yet contribute to weekly/monthly volume totals.";
+export function BW_MODIFIER_VOLUME_NOTICE() {
+  return t({ id: "components.exercises.bodyweight-modifier.notice", message: "Weighted-bodyweight modifier is tracked as a PR dimension but does not yet contribute to weekly/monthly volume totals." });
+}
 
 export function BodyweightModifierNotice({ colors }: { colors: ThemeColors }) {
   return (
     <View
       testID="bw-modifier-volume-notice"
-      accessibilityLabel={BW_MODIFIER_VOLUME_NOTICE}
+      accessibilityLabel={BW_MODIFIER_VOLUME_NOTICE()}
       accessibilityRole="text"
       style={[
         styles.notice,
@@ -38,7 +40,7 @@ export function BodyweightModifierNotice({ colors }: { colors: ThemeColors }) {
         variant="body"
         style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm, lineHeight: 18 }}
       >
-        {BW_MODIFIER_VOLUME_NOTICE}
+        {BW_MODIFIER_VOLUME_NOTICE()}
       </Text>
     </View>
   );

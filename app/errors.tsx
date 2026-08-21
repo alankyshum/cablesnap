@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View, FlatList } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -36,7 +38,7 @@ export default function Errors() {
   const handleClear = useCallback(async () => {
     await clearErrorLog();
     setErrors([]);
-    toast.success("Error log cleared");
+    toast.success(t({ id: "errors.clear.success", message: "Error log cleared" }));
   }, [toast]);
 
   // Set header action
@@ -45,8 +47,8 @@ export default function Errors() {
       nav.setOptions({
         headerRight: () =>
           errors.length > 0 ? (
-            <Button variant="ghost" onPress={handleClear} textStyle={{ color: colors.error }} accessibilityLabel="Clear all errors">
-              Clear All
+            <Button variant="ghost" onPress={handleClear} textStyle={{ color: colors.error }} accessibilityLabel={t({ id: "errors.clear.allA11y", message: "Clear all errors" })}>
+              {t({ id: "errors.clear.all", message: "Clear All" })}
             </Button>
           ) : null,
       });
@@ -74,7 +76,7 @@ export default function Errors() {
           variant="subtitle"
           style={{ color: colors.onBackground, marginTop: 16 }}
         >
-          No errors recorded
+          {t({ id: "errors.empty", message: "No errors recorded" })}
         </Text>
       </View>
     );
@@ -89,7 +91,7 @@ export default function Errors() {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => toggle(item.id)}
-            accessibilityLabel={`Error: ${item.message}, ${fmt(item.timestamp)}${item.fatal ? ", fatal" : ""}`}
+             accessibilityLabel={i18n._({ id: "errors.item.a11y", message: `Error: {error}, {timestamp}{fatal, select, true {, fatal} false {}}`, values: { error: item.message, timestamp: fmt(item.timestamp), fatal: item.fatal } })}
             accessibilityRole="button"
           >
             <Card
@@ -108,7 +110,7 @@ export default function Errors() {
                       compact
                       style={{ backgroundColor: colors.errorContainer }}
                     >
-                      FATAL
+                       {t({ id: "errors.fatal", message: "FATAL" })}
                     </Chip>
                   )}
                 </View>

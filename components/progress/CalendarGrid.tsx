@@ -7,6 +7,7 @@ import {
   dateToISO,
 } from "@/lib/db/calendar";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   year: number;
@@ -57,10 +58,10 @@ export default function CalendarGrid({
     isGtgOnly: boolean
   ) => {
     const prefix = `${monthName(month)} ${day}`;
-    if (isFuture) return `${prefix}, future date`;
-    if (hasWorkout) return `${prefix}, workout completed`;
-    if (isGtgOnly) return `${prefix}, GTG sets logged`;
-    return `${prefix}, no workout`;
+     if (isFuture) return t({ id: "components.progress.calendarGrid.futureDate", message: `${prefix}, future date` });
+     if (hasWorkout) return t({ id: "components.progress.calendarGrid.workoutCompleted", message: `${prefix}, workout completed` });
+     if (isGtgOnly) return t({ id: "components.progress.calendarGrid.gtgLogged", message: `${prefix}, GTG sets logged` });
+     return t({ id: "components.progress.calendarGrid.noWorkout", message: `${prefix}, no workout` });
   };
 
   return (

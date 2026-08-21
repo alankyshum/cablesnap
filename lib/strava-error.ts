@@ -1,4 +1,18 @@
 import { Linking } from "react-native";
+import { t as linguiT } from "@lingui/core/macro";
+
+type TranslationDescriptor = { id: string; message: string };
+type TranslationValues = Record<string, string | number>;
+
+function t(descriptor: TranslationDescriptor, values?: TranslationValues): string {
+  try {
+    return (linguiT as unknown as (descriptor: TranslationDescriptor, values?: TranslationValues) => string)(descriptor, values);
+  } catch {
+    return values
+      ? descriptor.message.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? `{${key}}`))
+      : descriptor.message;
+  }
+}
 
 // ---- Error classification ----
 
@@ -51,28 +65,28 @@ export function getStravaUserMessage(err: unknown): string {
     switch (err.code) {
       case "auth_expired":
       case "auth_revoked":
-        return "Connection expired. Please try again.";
+        return t({ id: "stravaError.connectionExpired", message: "Connection expired. Please try again." });
       case "network":
-        return "Check your internet and try again.";
+        return t({ id: "stravaError.network", message: "Check your internet and try again." });
       case "rate_limit":
-        return "Too many requests. Please wait a moment and try again.";
+        return t({ id: "stravaError.rateLimit", message: "Too many requests. Please wait a moment and try again." });
       case "server":
-        return "Strava is having trouble right now. Please try again soon.";
+        return t({ id: "stravaError.server", message: "Strava is having trouble right now. Please try again soon." });
       case "config":
-        return "Strava isn't set up correctly. Please contact support.";
+        return t({ id: "stravaError.config", message: "Strava isn't set up correctly. Please contact support." });
       case "app_inactive":
-        return "Strava app access is inactive. Please contact support.";
+        return t({ id: "stravaError.appInactive", message: "Strava app access is inactive. Please contact support." });
       case "local_read":
-        return "Failed to read workout data. Please try again.";
+        return t({ id: "stravaError.localRead", message: "Failed to read workout data. Please try again." });
       case "unknown":
       default:
-        return "Something went wrong connecting to Strava. Please try again.";
+        return t({ id: "stravaError.unknown", message: "Something went wrong connecting to Strava. Please try again." });
     }
   }
   if (isNetworkError(err)) {
-    return "Check your internet and try again.";
+    return t({ id: "stravaError.network", message: "Check your internet and try again." });
   }
-  return "Something went wrong connecting to Strava. Please try again.";
+  return t({ id: "stravaError.unknown", message: "Something went wrong connecting to Strava. Please try again." });
 }
 
 // Public URL users can open when Strava errors are unactionable in-app
@@ -108,7 +122,7 @@ export function getStravaSupportAction(
   const isAppInactive = err instanceof StravaError && err.code === "app_inactive";
   if (isConfig || isUnknown || isAppInactive) {
     return {
-      label: "Get help",
+      label: t({ id: "stravaError.getHelp", message: "Get help" }),
       onPress: () => {
         void Linking.openURL(STRAVA_SUPPORT_URL).catch((linkErr) => {
           // Do not cascade a second error toast, but log so repeated

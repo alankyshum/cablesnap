@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -29,7 +32,7 @@ function SetGripTypeChipInner({ gripType }: SetGripTypeChipProps) {
     <View
       style={[styles.chip, { backgroundColor: colors.surfaceVariant }]}
       accessible
-      accessibilityLabel={`Grip: ${label}`}
+      accessibilityLabel={t({ id: "session.setgriptypechip.dynamic1", message: `Grip: ${label}` })}
     >
       <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>
         {`Grip: ${label}`}
