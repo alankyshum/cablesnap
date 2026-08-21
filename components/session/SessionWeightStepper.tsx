@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * SessionWeightStepper — compact full-width footer-row −/+ stepper for
  * plain numeric-weight (Case C) set rows.
@@ -20,8 +23,8 @@
  *    combined height ≤ 96 dp (plan §UX Design "Case C + RPE footer-merge rule").
  *
  * A11y:
- *  - "−" → accessibilityLabel="Decrease by {step}"
- *  - "+" → accessibilityLabel="Increase by {step}"
+ *  - "−" → accessibilityLabel={t({ id: "session.sessionweightstepper.str1", message: "Decrease by {step}" })}
+ *  - "+" → accessibilityLabel={t({ id: "session.sessionweightstepper.str2", message: "Increase by {step}" })}
  *  - accessibilityState.disabled when at min/max
  *
  * Haptics:
@@ -112,7 +115,7 @@ export const SessionWeightStepper = memo(function SessionWeightStepper({
         disabled={atMin}
         hitSlop={{ top: 10, bottom: 10, left: 12, right: 6 }}
         accessibilityRole="button"
-        accessibilityLabel={`Decrease by ${step}`}
+        accessibilityLabel={t({ id: "session.sessionweightstepper.dynamic1", message: `Decrease by ${step}` })}
         accessibilityState={{ disabled: atMin }}
         testID={testID ? `${testID}-decrement` : undefined}
         style={[
@@ -143,7 +146,7 @@ export const SessionWeightStepper = memo(function SessionWeightStepper({
         disabled={atMax}
         hitSlop={{ top: 10, bottom: 10, left: 6, right: 12 }}
         accessibilityRole="button"
-        accessibilityLabel={`Increase by ${step}`}
+        accessibilityLabel={t({ id: "session.sessionweightstepper.dynamic2", message: `Increase by ${step}` })}
         accessibilityState={{ disabled: atMax }}
         testID={testID ? `${testID}-increment` : undefined}
         style={[

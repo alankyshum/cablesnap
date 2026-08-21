@@ -10,6 +10,7 @@ import { RMCalculatorContent } from "./rm";
 import { TimerContent } from "./timer";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { logError } from "../../lib/errors";
+import { t } from "@lingui/core/macro";
 
 export default function ToolsHub() {
   const colors = useThemeColors();
@@ -18,7 +19,7 @@ export default function ToolsHub() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Workout Tools" }} />
+       <Stack.Screen options={{ title: t({ id: "app.tools.index.title", message: "Workout Tools" }) }} />
       <ScrollView
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={{ padding: layout.horizontalPadding, paddingVertical: 24, gap: 24 }}
@@ -26,20 +27,20 @@ export default function ToolsHub() {
       >
         <ToolLinkCard
           icon="cable-data"
-          title="Cable Setup Finder"
-          description="Find exercises by mount position and attachment"
+           title={t({ id: "app.tools.index.cableFinder", message: "Cable Setup Finder" })}
+           description={t({ id: "app.tools.index.cableFinderDescription", message: "Find exercises by mount position and attachment" })}
           onPress={() => router.push("/tools/cable-finder")}
         />
 
-        <ToolCard icon="timer-outline" title="Interval Timer">
+         <ToolCard icon="timer-outline" title={t({ id: "app.tools.index.intervalTimer", message: "Interval Timer" })}>
           <TimerContent />
         </ToolCard>
 
-        <ToolCard icon="arm-flex" title="1RM Calculator">
+         <ToolCard icon="arm-flex" title={t({ id: "app.tools.index.rmCalculator", message: "1RM Calculator" })}>
           <RMCalculatorContent />
         </ToolCard>
 
-        <ToolCard icon="weight" title="Plate Calculator">
+         <ToolCard icon="weight" title={t({ id: "app.tools.index.plateCalculator", message: "Plate Calculator" })}>
           <PlateCalculatorContent />
         </ToolCard>
       </ScrollView>
@@ -136,15 +137,15 @@ class ToolErrorBoundary extends React.Component<BoundaryProps, BoundaryState> {
       return (
         <View style={styles.errorContainer}>
           <Text style={{ textAlign: "center", opacity: 0.6 }}>
-            {this.props.name} failed to load.
+             {this.props.name} {t({ id: "app.tools.index.loadError", message: "failed to load." })}
           </Text>
           <Pressable
             onPress={this.handleRetry}
             accessibilityRole="button"
-            accessibilityLabel={`Retry loading ${this.props.name}`}
+             accessibilityLabel={t({ id: "app.tools.index.retryLoading", message: `Retry loading ${this.props.name}` })}
             style={styles.retryButton}
           >
-            <Text style={{ textAlign: "center", fontWeight: "600" }}>Tap to retry</Text>
+             <Text style={{ textAlign: "center", fontWeight: "600" }}>{t({ id: "app.tools.index.retry", message: "Tap to retry" })}</Text>
           </Pressable>
         </View>
       );

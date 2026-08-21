@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import React, { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/button";
@@ -58,7 +60,7 @@ export function ProgramsList({ colors, programs, dayCounts, onPress, onDelete, o
             ? undefined
             : { borderWidth: 1, borderColor: colors.outline }
         }
-        accessibilityLabel={`${label} programs filter${selected ? ", selected" : ""}`}
+         accessibilityLabel={i18n._({ id: "home.programs.filterOptionA11y", message: "{label} programs filter{selected, select, true {, selected} false {}}", values: { label, selected } })}
         accessibilityRole="button"
         accessibilityState={{ selected }}
       >
@@ -70,9 +72,9 @@ export function ProgramsList({ colors, programs, dayCounts, onPress, onDelete, o
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text variant="subtitle" style={{ color: colors.onBackground }}>Programs</Text>
-        <Button variant="ghost" size="sm" onPress={() => router.push("/program/create")} accessibilityLabel="Create new program">
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><MaterialCommunityIcons name="plus" size={16} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: fontSizes.sm }}>Create</Text></View>
+        <Text variant="subtitle" style={{ color: colors.onBackground }}>{t({ id: "home.programs.title", message: "Programs" })}</Text>
+        <Button variant="ghost" size="sm" onPress={() => router.push("/program/create")} accessibilityLabel={t({ id: "home.programs.createA11y", message: "Create new program" })}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><MaterialCommunityIcons name="plus" size={16} color={colors.primary} /><Text style={{ color: colors.primary, fontSize: fontSizes.sm }}>{t({ id: "home.programs.create", message: "Create" })}</Text></View>
         </Button>
       </View>
 
@@ -80,11 +82,11 @@ export function ProgramsList({ colors, programs, dayCounts, onPress, onDelete, o
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.chipRow}
-        accessibilityLabel="Programs filter"
+        accessibilityLabel={t({ id: "home.programs.filterA11y", message: "Programs filter" })}
       >
-        {renderChip("all", "All")}
-        {renderChip("curated", "Curated")}
-        {renderChip("mine", "Mine")}
+        {renderChip("all", t({ id: "home.programs.all", message: "All" }))}
+        {renderChip("curated", t({ id: "home.programs.curated", message: "Curated" }))}
+        {renderChip("mine", t({ id: "home.programs.mine", message: "Mine" }))}
       </ScrollView>
 
       {filtered.length === 0 ? (
@@ -94,25 +96,25 @@ export function ProgramsList({ colors, programs, dayCounts, onPress, onDelete, o
             <Text
               style={{ color: colors.onSurfaceVariant }}
               accessibilityRole="text"
-              accessibilityLabel="No curated programs available. Future CableSnap updates may add more."
+              accessibilityLabel={t({ id: "home.programs.noCuratedA11y", message: "No curated programs available. Future CableSnap updates may add more." })}
             >
-              No curated programs available. Future CableSnap updates may add more.
+              {t({ id: "home.programs.noCurated", message: "No curated programs available. Future CableSnap updates may add more." })}
             </Text>
           ) : filter === "mine" ? (
             <>
               <Text
                 style={{ color: colors.onSurfaceVariant }}
                 accessibilityRole="text"
-                accessibilityLabel="No programs yet. Create your first program."
+                accessibilityLabel={t({ id: "home.programs.emptyA11y", message: "No programs yet. Create your first program." })}
               >
-                Create your first program
+                {t({ id: "home.programs.first", message: "Create your first program" })}
               </Text>
-              <Button variant="outline" onPress={() => router.push("/program/create")} style={styles.emptyBtn} accessibilityLabel="Create your first program" label="Create Program" />
+              <Button variant="outline" onPress={() => router.push("/program/create")} style={styles.emptyBtn} accessibilityLabel={t({ id: "home.programs.firstA11y", message: "Create your first program" })} label={t({ id: "home.programs.createProgram", message: "Create Program" })} />
             </>
           ) : (
             <>
-              <Text style={{ color: colors.onSurfaceVariant }} accessibilityRole="text" accessibilityLabel="No programs yet. Create your first program.">Create your first program</Text>
-              <Button variant="outline" onPress={() => router.push("/program/create")} style={styles.emptyBtn} accessibilityLabel="Create your first program" label="Create Program" />
+              <Text style={{ color: colors.onSurfaceVariant }} accessibilityRole="text" accessibilityLabel={t({ id: "home.programs.emptyA11y", message: "No programs yet. Create your first program." })}>{t({ id: "home.programs.first", message: "Create your first program" })}</Text>
+              <Button variant="outline" onPress={() => router.push("/program/create")} style={styles.emptyBtn} accessibilityLabel={t({ id: "home.programs.firstA11y", message: "Create your first program" })} label={t({ id: "home.programs.createProgram", message: "Create Program" })} />
             </>
           )}
         </View>
@@ -120,28 +122,28 @@ export function ProgramsList({ colors, programs, dayCounts, onPress, onDelete, o
         <Masonry gap={12}>
           {filtered.map((item) => {
             const badges: { label: string; type: "active" | "starter" | "recommended" }[] = [];
-            if (item.is_active) badges.push({ label: "ACTIVE", type: "active" });
+            if (item.is_active) badges.push({ label: t({ id: "home.programs.active", message: "ACTIVE" }), type: "active" });
             const isPreseeded = item.is_starter || item.is_curated;
             const metaBadges: MetaBadge[] = [
-              isPreseeded ? difficultyBadge("intermediate") : { icon: "signal-cellular-2", label: "Custom" },
-              { icon: "calendar-blank-outline", label: `${dayCounts[item.id] ?? 0} days` },
+              isPreseeded ? difficultyBadge("intermediate") : { icon: "signal-cellular-2", label: t({ id: "home.programs.custom", message: "Custom" }) },
+              { icon: "calendar-blank-outline", label: t({ id: "home.programs.dayCount", message: `${dayCounts[item.id] ?? 0} days` }) },
             ];
-            if (item.is_starter) metaBadges.push({ icon: "star-outline", label: "Starter" });
-            if (item.is_curated) metaBadges.push({ icon: "bookmark-outline", label: "Curated" });
+            if (item.is_starter) metaBadges.push({ icon: "star-outline", label: t({ id: "home.programs.starter", message: "Starter" }) });
+            if (item.is_curated) metaBadges.push({ icon: "bookmark-outline", label: t({ id: "home.programs.curated", message: "Curated" }) });
             // BLD-1001: curated programs are undeletable in v1 (matches starter
             // behavior). Users hide them via the `Mine` filter chip above.
             const menuItems: FlowCardMenuItem[] = isPreseeded
-              ? [{ label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) }]
+              ? [{ label: t({ id: "home.programs.duplicate", message: "Duplicate" }), icon: "content-copy", onPress: () => onOptions(item) }]
               : [
-                  { label: "Duplicate", icon: "content-copy", onPress: () => onOptions(item) },
-                  { label: "Delete", icon: "trash-can-outline", onPress: () => onDelete(item), destructive: true },
+                  { label: t({ id: "home.programs.duplicate", message: "Duplicate" }), icon: "content-copy", onPress: () => onOptions(item) },
+                  { label: t({ id: "home.programs.delete", message: "Delete" }), icon: "trash-can-outline", onPress: () => onDelete(item), destructive: true },
                 ];
             const kindLabel = item.is_curated ? "Curated program" : item.is_starter ? "Starter program" : "Program";
             const descSuffix = item.description ? `. ${item.description}` : "";
             return (
               <FlowCard key={item.id} name={item.name} onPress={() => onPress(item.id)}
-                accessibilityLabel={`${kindLabel}: ${item.name}, ${dayCounts[item.id] ?? 0} days${item.is_active ? ", active" : ""}${descSuffix}`}
-                accessibilityHint="Long press for options"
+                accessibilityLabel={i18n._({ id: "home.programs.itemA11y", message: "{kind}: {name}, {days} days{active, select, true {, active} false {}}{description}", values: { kind: kindLabel, name: item.name, days: dayCounts[item.id] ?? 0, active: item.is_active, description: descSuffix } })}
+                accessibilityHint={t({ id: "home.programs.optionsHint", message: "Long press for options" })}
                 badges={badges} meta={metaBadges}
                 menuItems={menuItems} />
             );

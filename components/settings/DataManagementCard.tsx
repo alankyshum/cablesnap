@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Upload } from 'lucide-react-native';
 import { fontSizes } from '@/constants/design-tokens';
 import type { ThemeColors } from '@/hooks/useThemeColors';
+import { t } from '@lingui/core/macro';
 
 type Props = {
   colors: ThemeColors;
@@ -43,7 +44,7 @@ export default function DataManagementCard({
           onPress={onExport}
           loading={loading}
           disabled={loading}
-          accessibilityLabel="Export all data as JSON"
+          accessibilityLabel={t({ id: "settings.data.exportA11y", message: "Export all data as JSON" })}
           accessibilityRole="button"
         >
           Export All Data
@@ -55,7 +56,7 @@ export default function DataManagementCard({
           onPress={onImport}
           loading={loading}
           disabled={loading}
-          accessibilityLabel="Import data"
+          accessibilityLabel={t({ id: "settings.data.importA11y", message: "Import data" })}
           accessibilityRole="button"
         >
           Import CableSnap Backup

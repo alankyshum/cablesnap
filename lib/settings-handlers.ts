@@ -12,6 +12,8 @@ import {
 import type { BackupCategoryName, BackupTableName, ExportProgress } from '@/lib/db';
 import type { useToast } from '@/components/ui/bna-toast';
 import { createImportSession } from '@/lib/import-session';
+import { i18n } from '@lingui/core';
+import { t } from '@lingui/core/macro';
 
 function dateStamp(): string {
   return new Date().toISOString().slice(0, 10);
@@ -62,20 +64,20 @@ export async function handleExport(
   selectedCategories?: BackupCategoryName[],
 ) {
   setLoading(true);
-  setExportProgress('Preparing export...');
+   setExportProgress(t({ id: 'settingsHandlers.export.preparing', message: 'Preparing export...' }));
   try {
     const data = await exportAllData({ selectedCategories }, (progress: ExportProgress) => {
       if (progress.table === 'done') {
         setExportProgress(null);
       } else {
         setExportProgress(
-          `Exporting ${BACKUP_TABLE_LABELS[progress.table as BackupTableName] ?? progress.table}... (${progress.tableIndex + 1}/${progress.totalTables})`,
+           i18n._({ id: 'settingsHandlers.export.progress', message: 'Exporting {label}... ({tableIndex}/{totalTables})', values: { label: BACKUP_TABLE_LABELS[progress.table as BackupTableName] ?? progress.table, tableIndex: progress.tableIndex + 1, totalTables: progress.totalTables } }),
         );
       }
     });
     const totalRecords = Object.values(data.counts).reduce((a, b) => a + b, 0);
     if (totalRecords === 0) {
-      toast.info('No data to export');
+       toast.info(t({ id: 'settingsHandlers.export.noData', message: 'No data to export' }));
       return;
     }
     const json = JSON.stringify(data, null, 2);
@@ -83,11 +85,11 @@ export async function handleExport(
     await file.write(json);
     await Sharing.shareAsync(file.uri, {
       mimeType: 'application/json',
-      dialogTitle: 'Export CableSnap Data',
+       dialogTitle: t({ id: 'settingsHandlers.export.dialogTitle', message: 'Export CableSnap Data' }),
     });
-    toast.success('Data exported successfully');
+     toast.success(t({ id: 'settingsHandlers.export.success', message: 'Data exported successfully' }));
   } catch {
-    toast.error('Export failed');
+     toast.error(t({ id: 'settingsHandlers.export.failure', message: 'Export failed' }));
   } finally {
     setLoading(false);
     setExportProgress(null);
@@ -108,7 +110,7 @@ export async function pickImportBackup({ toast, setLoading }: Pick<Deps, 'toast'
     if (result.canceled || !result.assets?.length) return null;
     const asset = result.assets[0];
     if (asset.size && asset.size > 50 * 1024 * 1024) {
-      Alert.alert('File Too Large', 'This backup file is too large to process safely.');
+       Alert.alert(t({ id: 'settingsHandlers.import.fileTooLarge', message: 'File Too Large' }), t({ id: 'settingsHandlers.import.backupTooLarge', message: 'This backup file is too large to process safely.' }));
       return null;
     }
     setLoading(true);
@@ -116,24 +118,24 @@ export async function pickImportBackup({ toast, setLoading }: Pick<Deps, 'toast'
     const raw = await file.text();
     const sizeError = validateBackupFileSize(raw.length);
     if (sizeError) {
-      Alert.alert('File Too Large', sizeError.message);
+       Alert.alert(t({ id: 'settingsHandlers.import.fileTooLarge', message: 'File Too Large' }), sizeError.message);
       return null;
     }
     let data: Record<string, unknown>;
     try {
       data = JSON.parse(raw);
     } catch {
-      Alert.alert('Invalid File', "This file doesn't appear to be a valid CableSnap backup.");
+       Alert.alert(t({ id: 'settingsHandlers.import.invalidFile', message: 'Invalid File' }), t({ id: 'settingsHandlers.import.invalidBackupFile', message: "This file doesn't appear to be a valid CableSnap backup." }));
       return null;
     }
     const validationError = validateBackupData(data);
     if (validationError) {
-      Alert.alert('Invalid Backup', validationError.message);
+       Alert.alert(t({ id: 'settingsHandlers.import.invalidBackup', message: 'Invalid Backup' }), validationError.message);
       return null;
     }
     return { raw, data };
   } catch {
-    toast.error('Import failed');
+     toast.error(t({ id: 'settingsHandlers.import.failure', message: 'Import failed' }));
     return null;
   } finally {
     setLoading(false);
@@ -207,16 +209,16 @@ export async function pickImportWorkoutsCsv({
 
     // Validate extension/size
     if (asset.name && !asset.name.toLowerCase().endsWith('.csv')) {
-      Alert.alert('Invalid File', 'Please select a .csv file exported from your workout app.');
+       Alert.alert(t({ id: 'settingsHandlers.csv.invalidFile', message: 'Invalid File' }), t({ id: 'settingsHandlers.csv.invalidMessage', message: 'Please select a .csv file exported from your workout app.' }));
       return null;
     }
     if (asset.size && asset.size > 50 * 1024 * 1024) {
-      Alert.alert('File Too Large', 'This CSV file is too large to process safely.');
+       Alert.alert(t({ id: 'settingsHandlers.csv.fileTooLarge', message: 'File Too Large' }), t({ id: 'settingsHandlers.csv.tooLarge', message: 'This CSV file is too large to process safely.' }));
       return null;
     }
     return asset.uri;
   } catch {
-    toast.error('Could not open file picker');
+     toast.error(t({ id: 'settingsHandlers.csv.pickerFailure', message: 'Could not open file picker' }));
     return null;
   }
 }
