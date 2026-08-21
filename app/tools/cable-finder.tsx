@@ -72,7 +72,8 @@ function buildSections(exercises: CableExercise[]): Section[] {
 }
 
 export default function CableSetupFinder() {
-  useLingui();
+  const { i18n: linguiI18n } = useLingui();
+  const locale = linguiI18n.locale;
   const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
@@ -100,7 +101,10 @@ export default function CableSetupFinder() {
     });
   }, [mountFilter, attachmentFilter]);
 
-  const sections = useMemo(() => buildSections(exercises), [exercises]);
+  const sections = useMemo(() => {
+    void locale;
+    return buildSections(exercises);
+  }, [exercises, locale]);
 
   const toggleMount = useCallback(
     (pos: MountPosition) => {
@@ -141,7 +145,9 @@ export default function CableSetupFinder() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: CableExercise }) => (
+    ({ item }: { item: CableExercise }) => {
+      void locale;
+      return (
       <Pressable
         style={[styles.exerciseRow, { borderBottomColor: colors.outline }]}
         onPress={() => handleExercisePress(item.id)}
@@ -169,14 +175,17 @@ export default function CableSetupFinder() {
           )}
         </View>
       </Pressable>
-    ),
-    [colors, handleExercisePress]
+      );
+    },
+    [colors, handleExercisePress, locale]
   );
 
   const keyExtractor = useCallback((item: CableExercise) => item.id, []);
 
   const listHeader = useMemo(
-    () => (
+    () => {
+      void locale;
+      return (
       <View style={styles.filtersContainer}>
         {/* Mount Position */}
         <View>
@@ -236,7 +245,8 @@ export default function CableSetupFinder() {
           </View>
         )}
       </View>
-    ),
+      );
+    },
     [
       mountFilter,
       attachmentFilter,
@@ -244,6 +254,7 @@ export default function CableSetupFinder() {
       colors,
       toggleMount,
       toggleAttachment,
+      locale,
     ]
   );
 
