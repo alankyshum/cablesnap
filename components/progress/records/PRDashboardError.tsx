@@ -4,6 +4,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   error: string;
@@ -28,14 +29,13 @@ export default function PRDashboardError({ error, onRetry }: Props) {
         variant="subtitle"
         style={[styles.title, { color: colors.onSurface }]}
       >
-        Couldn&apos;t load your records
+         {t({ id: "components.progress.records.errorTitle", message: "Couldn't load your records" })}
       </Text>
       <Text
         variant="body"
         style={[styles.subtitle, { color: colors.onSurfaceVariant }]}
       >
-        Something went wrong while loading your personal records. Please try
-        again.
+         {t({ id: "components.progress.records.errorBody", message: "Something went wrong while loading your personal records. Please try again." })}
       </Text>
       <Text
         variant="caption"
@@ -48,9 +48,9 @@ export default function PRDashboardError({ error, onRetry }: Props) {
         variant="default"
         onPress={onRetry}
         style={styles.button}
-        accessibilityLabel="Retry loading records"
+         accessibilityLabel={t({ id: "components.progress.records.retryA11y", message: "Retry loading records" })}
       >
-        Retry
+         {t({ id: "components.progress.records.retry", message: "Retry" })}
       </Button>
     </View>
   );

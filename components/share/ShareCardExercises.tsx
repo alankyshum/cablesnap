@@ -5,6 +5,7 @@ import { spacing } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { ShareCardExercise, ShareCardPR } from "../ShareCard";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@/lib/i18n";
 
 type Props = {
   exercises: ShareCardExercise[];
@@ -35,7 +36,7 @@ export function ShareCardExercises({
             <Text
               style={[styles.prTitle, { color: colors.onPrimaryContainer }]}
             >
-              🏆 New PRs
+              {t({ id: "share.exercises.newPrs", message: "🏆 New PRs" })}
             </Text>
           </View>
           {prs.map((pr, i) => (
@@ -66,7 +67,7 @@ export function ShareCardExercises({
               { color: colors.onSurfaceVariant },
             ]}
           >
-            Exercises
+            {t({ id: "share.exercises.title", message: "Exercises" })}
           </Text>
           {displayExercises.map((ex, i) => (
             <View key={i} style={styles.exerciseRow}>
@@ -99,7 +100,7 @@ export function ShareCardExercises({
                 { color: colors.onSurfaceVariant },
               ]}
             >
-              and {remaining} more
+              {t({ id: "share.exercises.more", message: `and ${remaining} more` })}
             </Text>
           )}
         </View>

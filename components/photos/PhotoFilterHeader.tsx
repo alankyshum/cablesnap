@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -38,10 +40,10 @@ export default function PhotoFilterHeader({
             selected={!poseFilter}
             onPress={() => onPoseChange(undefined)}
             style={styles.chip}
-            accessibilityLabel="All poses filter"
+             accessibilityLabel={t({ id: "components.photos.filter.allA11y", message: "All poses filter" })}
             accessibilityRole="checkbox"
           >
-            All
+             <Trans id="components.photos.filter.all">All</Trans>
           </Chip>
           {poseOptions.map((p) => (
             <Chip
@@ -59,9 +61,9 @@ export default function PhotoFilterHeader({
         <TouchableOpacity
           onPress={onToggleCompare}
           disabled={total < 2 && !compareMode}
-          accessibilityLabel="Compare photos"
+           accessibilityLabel={t({ id: "components.photos.filter.compareA11y", message: "Compare photos" })}
           accessibilityRole="button"
-          accessibilityHint={total < 2 ? "Need at least 2 photos to compare" : "Select two photos to compare side by side"}
+           accessibilityHint={total < 2 ? t({ id: "components.photos.filter.needTwo", message: "Need at least 2 photos to compare" }) : t({ id: "components.photos.filter.selectTwo", message: "Select two photos to compare side by side" })}
           hitSlop={8}
           style={{ padding: 8 }}
         >
@@ -76,7 +78,7 @@ export default function PhotoFilterHeader({
           <Button
             variant="ghost"
             onPress={onCancelCompare}
-            label="Cancel"
+             label={t({ id: "components.photos.filter.cancel", message: "Cancel" })}
           />
         </View>
       )}

@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * BLD-1028: Inline editor for the pinned per-exercise note.
  *
@@ -37,7 +40,7 @@ export function PinnedExerciseNoteEditor({
         type="textarea"
         variant="outline"
         rows={4}
-        placeholder="Add a pinned note…"
+        placeholder={t({ id: "session.pinnedexercisenoteeditor.str1", message: "Add a pinned note…" })}
         placeholderTextColor={colors.onSurfaceVariant}
         value={value}
         onChangeText={(v) => onDraftChange(exerciseId, v)}
@@ -45,7 +48,7 @@ export function PinnedExerciseNoteEditor({
         maxLength={MAX_LENGTH}
         textAlignVertical="top"
         inputStyle={{ ...styles.input, color: colors.onSurface }}
-        accessibilityLabel={`Edit pinned note for ${exerciseName}`}
+        accessibilityLabel={t({ id: "session.pinnedexercisenoteeditor.dynamic1", message: `Edit pinned note for ${exerciseName}` })}
       />
       <Text
         variant="caption"

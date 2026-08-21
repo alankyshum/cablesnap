@@ -2,13 +2,12 @@ import React, { useMemo } from "react";
 import { View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { CardContent } from "@/components/ui/card";
-import { CartesianChart, Line } from "victory-native";
-import { matchFont } from "@shopify/react-native-skia";
-import { ChartGate } from "@/components/ui/ChartGate";
+import { LineChart } from "@/components/charts";
 import type { MuscleGroup } from "../../lib/types";
 import { MUSCLE_LABELS } from "../../lib/types";
 import type { TrendRow } from "../../hooks/useMuscleVolume";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { Trans } from "@lingui/react/macro";
 
 type Props = {
   selected: MuscleGroup | null;
@@ -20,19 +19,6 @@ type Props = {
   colors: ThemeColors;
 };
 
-// Resolve a small font for axis tick labels. matchFont gracefully falls back to
-// the system default when the requested family is not available — sufficient
-// for plain numeric/short-string ticks, and avoids bundling a custom font.
-function useAxisFont() {
-  return useMemo(() => {
-    try {
-      return matchFont({ fontFamily: "System", fontSize: 10 });
-    } catch {
-      return null;
-    }
-  }, []);
-}
-
 export default function VolumeTrendChart({
   selected,
   trend,
@@ -41,7 +27,6 @@ export default function VolumeTrendChart({
   reduced,
   colors,
 }: Props) {
-  const axisFont = useAxisFont();
   const data = useMemo(
     () => trend.map((t) => ({ week: t.week, sets: t.sets })),
     [trend]
@@ -60,45 +45,40 @@ export default function VolumeTrendChart({
   return (
     <CardContent>
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 4 }}>
-        {selected ? `${MUSCLE_LABELS[selected]} — 8 Week Trend` : "Weekly Trend"}
+         {selected ? `${MUSCLE_LABELS[selected]} — 8 Week Trend` : <Trans id="components.muscleVolume.weeklyTrend">Weekly Trend</Trans>}
       </Text>
       {hasEnoughTrend ? (
-        <View style={chartContainerStyle} testID="volume-trend-chart">
-          <ChartGate>
-            <CartesianChart
-              data={data}
-              xKey="week"
-              yKeys={["sets"]}
-              domainPadding={{ left: 16, right: 16, top: 12, bottom: 8 }}
-              xAxis={{
-                font: axisFont,
-                tickCount: xTickCount,
-                labelColor: colors.onSurfaceVariant,
-                lineColor: colors.outlineVariant,
-                labelOffset: 4,
-              }}
-              yAxis={[
-                {
-                  font: axisFont,
-                  tickCount: 4,
-                  labelColor: colors.onSurfaceVariant,
-                  lineColor: colors.outlineVariant,
-                  // Sets are always whole numbers — round and drop fractional ticks.
-                  formatYLabel: (v) => `${Math.round(Number(v))}`,
-                  labelOffset: 4,
-                },
-              ]}
-            >
-              {({ points }) => (
-                <Line
-                  points={points.sets}
-                  color={colors.primary}
-                  strokeWidth={2}
-                  curveType={reduced ? "linear" : "natural"}
-                />
-              )}
-            </CartesianChart>
-          </ChartGate>
+        <View style={chartContainerStyle}>
+          <LineChart
+            labels={data.map((point) => point.week)}
+            series={[{
+              key: "sets",
+              values: data.map((point) => point.sets),
+              color: colors.primary,
+              strokeWidth: 2,
+              curve: reduced ? "linear" : "natural",
+              showPoints: false,
+            }]}
+            {...(chartWidth != null ? { width: chartWidth } : {})}
+            padding={{ left: 16, right: 16, top: 12, bottom: 8 }}
+            height={180}
+            xAxis={{
+              tickCount: xTickCount,
+              labelColor: colors.onSurfaceVariant,
+              lineColor: colors.outlineVariant,
+              labelOffset: 4,
+              fontSize: 10,
+            }}
+            yAxis={{
+              tickCount: 4,
+              labelColor: colors.onSurfaceVariant,
+              lineColor: colors.outlineVariant,
+              labelOffset: 4,
+              fontSize: 10,
+              formatLabel: (v) => `${Math.round(Number(v))}`,
+            }}
+            testID="volume-trend-chart"
+          />
         </View>
       ) : (
         <Text
@@ -109,7 +89,7 @@ export default function VolumeTrendChart({
             padding: 24,
           }}
         >
-          Keep training to see your trends
+           <Trans id="components.muscleVolume.keepTraining">Keep training to see your trends</Trans>
         </Text>
       )}
     </CardContent>

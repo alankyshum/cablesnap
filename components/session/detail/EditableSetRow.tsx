@@ -5,6 +5,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 import { intensityUnitLabel, rirToRpe } from "@/lib/intensity";
 import type { IntensityMode } from "@/lib/intensity";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   setNumber: number;
@@ -100,7 +101,7 @@ export function EditableSetRow({
           keyboardType="decimal-pad"
           defaultValue={weight == null ? "" : String(weight)}
           onEndEditing={(e) => onChangeWeight(parseNum(e.nativeEvent.text))}
-          placeholder="kg"
+          placeholder={t({ id: "components.session.detail.editable-set-row.kg", message: "kg" })}
           placeholderTextColor={colors.onSurfaceVariant}
           returnKeyType="done"
         />
@@ -110,7 +111,7 @@ export function EditableSetRow({
           keyboardType="number-pad"
           defaultValue={reps == null ? "" : String(reps)}
           onEndEditing={(e) => onChangeReps(parseNum(e.nativeEvent.text))}
-          placeholder="reps"
+          placeholder={t({ id: "components.session.detail.editable-set-row.reps", message: "reps" })}
           placeholderTextColor={colors.onSurfaceVariant}
           returnKeyType="done"
         />

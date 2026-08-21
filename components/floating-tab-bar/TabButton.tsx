@@ -1,27 +1,42 @@
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { Pressable, StyleSheet } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Animated from "react-native-reanimated";
 import { fontSizes } from "@/constants/design-tokens";
 import { HandleIcon } from "./HandleIcon";
+import { useAnimatedPress } from "@/lib/animations/hooks";
+import * as Haptics from "expo-haptics";
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-const TAB_ICONS: Record<string, IconName> = {
-  exercises: "format-list-bulleted",
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+export const TAB_ICONS: Record<string, IconName> = {
+  "ai-coach": "robot",
   nutrition: "food-apple",
   index: "arm-flex",
   progress: "chart-line",
   settings: "cog",
 };
 
-const TAB_LABELS: Record<string, string> = {
-  exercises: "Exercises",
+export const TAB_LABELS: Record<string, string> = {
+  "ai-coach": "AI Coach",
   nutrition: "Nutrition",
   index: "Workouts",
   progress: "Progress",
   settings: "Settings",
 };
+
+function getTabLabels(): Record<string, string> {
+  return {
+    "ai-coach": t({ id: "floatingTabBar.tabs.aiCoach", message: "AI Coach" }),
+    nutrition: t({ id: "floatingTabBar.tabs.nutrition", message: "Nutrition" }),
+    index: t({ id: "floatingTabBar.tabs.workouts", message: "Workouts" }),
+    progress: t({ id: "floatingTabBar.tabs.progress", message: "Progress" }),
+    settings: t({ id: "floatingTabBar.tabs.settings", message: "Settings" }),
+  };
+}
 
 type TabButtonProps = {
   routeName: string;
@@ -39,17 +54,20 @@ export function TabButton({
   inactiveColor,
 }: TabButtonProps) {
   const icon = TAB_ICONS[routeName] ?? "help-circle";
-  const label = TAB_LABELS[routeName] ?? routeName;
+  const label = getTabLabels()[routeName] ?? routeName;
   const color = focused ? activeColor : inactiveColor;
   const isWorkouts = routeName === "index";
+  const { animatedStyle, onPressIn, onPressOut } = useAnimatedPress({ haptic: false });
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
+      onPressIn={() => { onPressIn(); Haptics.selectionAsync(); }}
+      onPressOut={onPressOut}
       accessibilityRole="tab"
       accessibilityLabel={label}
       accessibilityState={{ selected: focused }}
-      style={tabStyles.button}
+      style={[tabStyles.button, animatedStyle as unknown as import('react-native').ViewStyle]}
     >
       {isWorkouts ? (
         <HandleIcon size={28} color={color} />
@@ -62,7 +80,7 @@ export function TabButton({
       >
         {label}
       </Animated.Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

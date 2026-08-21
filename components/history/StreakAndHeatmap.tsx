@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -27,29 +29,29 @@ export default function StreakAndHeatmap({
     <>
       <Card style={{ ...styles.streakCard, backgroundColor: colors.surface }}>
         <CardContent style={styles.streakRow}>
-          <View style={styles.streakItem} accessibilityLabel={`Current streak: ${currentStreak} weeks`}>
+          <View style={styles.streakItem} accessibilityLabel={t({ id: "history.streak.currentA11y", message: `Current streak: ${currentStreak} weeks` })}>
             <Icon name={Flame} size={20} color={colors.primary} />
             <Text variant="subtitle" style={{ color: colors.onSurface }}>{currentStreak}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>current streak</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>{t({ id: "history.streak.current", message: "current streak" })}</Text>
           </View>
-          <View style={styles.streakItem} accessibilityLabel={`Longest streak: ${longestStreak} weeks`}>
+          <View style={styles.streakItem} accessibilityLabel={t({ id: "history.streak.longestA11y", message: `Longest streak: ${longestStreak} weeks` })}>
             <Icon name={Trophy} size={20} color={colors.primary} />
             <Text variant="subtitle" style={{ color: colors.onSurface }}>{longestStreak}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>longest streak</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>{t({ id: "history.streak.longest", message: "longest streak" })}</Text>
           </View>
-          <View style={styles.streakItem} accessibilityLabel={`Total workouts: ${totalWorkouts}`}>
+          <View style={styles.streakItem} accessibilityLabel={t({ id: "history.streak.totalA11y", message: `Total workouts: ${totalWorkouts}` })}>
             <Icon name={Dumbbell} size={20} color={colors.primary} />
             <Text variant="subtitle" style={{ color: colors.onSurface }}>{totalWorkouts}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>workouts</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>{t({ id: "history.streak.workouts", message: "workouts" })}</Text>
           </View>
         </CardContent>
       </Card>
 
       <View style={styles.heatmapSection}>
-        <Pressable onPress={() => setHeatmapExpanded(!heatmapExpanded)} accessibilityRole="button" accessibilityLabel={`Last 16 Weeks, ${heatmapExpanded ? "collapse" : "expand"}`}
+        <Pressable onPress={() => setHeatmapExpanded(!heatmapExpanded)} accessibilityRole="button" accessibilityLabel={i18n._({ id: "history.heatmap.toggleA11y", message: "Last 16 Weeks, {action, select, collapse {collapse} expand {expand}}", values: { action: heatmapExpanded ? "collapse" : "expand" } })}
           style={styles.heatmapHeader}
           accessibilityState={{ expanded: heatmapExpanded }}>
-          <Text variant="subtitle" style={{ color: colors.onBackground }}>Last 16 Weeks</Text>
+          <Text variant="subtitle" style={{ color: colors.onBackground }}>{t({ id: "history.heatmap.last16Weeks", message: "Last 16 Weeks" })}</Text>
           <Icon name={heatmapExpanded ? ChevronUp : ChevronDown} size={20} color={colors.onSurfaceVariant} />
         </Pressable>
         {heatmapExpanded && (
@@ -57,7 +59,7 @@ export default function StreakAndHeatmap({
             <View style={styles.heatmapLoading}><ActivityIndicator size="small" color={colors.primary} /></View>
           ) : heatmapError ? (
             <View style={styles.heatmapLoading}>
-              <Text variant="caption" style={{ color: colors.error }}>Unable to load heatmap data. Pull down to retry.</Text>
+              <Text variant="caption" style={{ color: colors.error }}>{t({ id: "history.heatmap.loadFailure", message: "Unable to load heatmap data. Pull down to retry." })}</Text>
             </View>
           ) : (
             <WorkoutHeatmap data={heatmapData} weeks={16} onDayPress={onDayPress} totalAllTime={totalWorkouts} />

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * BLD-938 — FilterBar for the history screen.
  *
@@ -56,7 +57,7 @@ export function FilterBar({
   const templateLabel = useMemo<string | null>(() => {
     if (filters.templateId === null) return null;
     const opt = templateOptions.find((o) => o.template_id === filters.templateId);
-    if (!opt) return "Template";
+    if (!opt) return t({ id: "history.filters.template", message: "Template" });
     return opt.is_deleted ? `${opt.template_name} (deleted)` : opt.template_name;
   }, [filters.templateId, templateOptions]);
 
@@ -89,7 +90,7 @@ export function FilterBar({
         style={styles.scroll}
       >
         <FilterChip
-          label="Template"
+          label={t({ id: "history.filters.template", message: "Template" })}
           selectedLabel={templateLabel}
           onPress={onOpenTemplateSheet}
           onClear={() => onClearOne("templateId")}
@@ -97,7 +98,7 @@ export function FilterBar({
           testID="history-filter-chip-template"
         />
         <FilterChip
-          label="Muscle Group"
+          label={t({ id: "history.filters.muscleGroup", message: "Muscle Group" })}
           selectedLabel={muscleGroupLabel}
           onPress={onOpenMuscleGroupSheet}
           onClear={() => onClearOne("muscleGroup")}
@@ -105,7 +106,7 @@ export function FilterBar({
           testID="history-filter-chip-muscle"
         />
         <FilterChip
-          label="Date Range"
+          label={t({ id: "history.filters.dateRange", message: "Date Range" })}
           selectedLabel={datePresetLabel}
           onPress={onOpenDateRangeSheet}
           onClear={() => onClearOne("datePreset")}
@@ -117,13 +118,13 @@ export function FilterBar({
       {anyActive && (
         <Pressable
           onPress={onClearAll}
-          accessibilityLabel="Clear all filters"
+          accessibilityLabel={t({ id: "history.filterBar.clearAllA11y", message: "Clear all filters" })}
           accessibilityRole="button"
           style={styles.clearAll}
           testID="history-filter-clear-all"
         >
           <Text variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
-            Clear all
+            {t({ id: "history.filterBar.clearAll", message: "Clear all" })}
           </Text>
         </Pressable>
       )}
@@ -175,7 +176,7 @@ function FilterChip({ label, selectedLabel, onPress, onClear, colors, testID }: 
       {active ? (
         <Pressable
           onPress={onClear}
-          accessibilityLabel={`Clear ${label} filter`}
+          accessibilityLabel={t({ id: "history.filters.clearOneA11y", message: `Clear ${label} filter` })}
           accessibilityRole="button"
           hitSlop={8}
           style={styles.dismissBtn}

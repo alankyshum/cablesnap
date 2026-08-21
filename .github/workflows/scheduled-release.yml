@@ -41,10 +41,10 @@ jobs:
   release:
     name: Check, build & release
     runs-on: ubuntu-latest
-    # BLD-2290: hard cap so a wedged QEMU can never burn ~90 min again.
-    # Happy-path is ~30–35 min (build + two emulator attempts); 60 min leaves
-    # headroom while still bounding any hang.
-    timeout-minutes: 60
+    # BLD-2290: hard cap so a wedged QEMU cannot run without a bound. The two
+    # isolated native builds need about 69 min end-to-end; 90 min leaves roughly
+    # 30% headroom for runner variance while still bounding any hang.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with:
@@ -315,6 +315,47 @@ jobs:
           fi
           echo "Wrote $SIDECAR ($(wc -c < "$SIDECAR") bytes)"
 
+      - name: Resolve signing migration boundary and README
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.next_version.outputs.version }}"
+          python3 - "$VERSION" <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          marker_path = Path("fdroid/signing-migration.json")
+          readme_path = Path("README.md")
+          try:
+              marker = json.loads(marker_path.read_text())
+              boundary = marker["boundaryTag"]
+          except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+              raise SystemExit(f"signing migration marker is missing or unparseable: {exc}")
+          if boundary is not None and (not isinstance(boundary, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", boundary)):
+              raise SystemExit("signing migration marker boundaryTag must be null or a release tag like v0.27.0")
+
+          pending = "boundary release pending — see release notes"
+          start = "<!-- SIGNING_MIGRATION_NOTICE_START -->"
+          end = "<!-- SIGNING_MIGRATION_NOTICE_END -->"
+          readme = readme_path.read_text()
+          if readme.count(start) != 1 or readme.count(end) != 1:
+              raise SystemExit("README signing migration notice markers are missing or duplicated")
+          if boundary is None:
+              if "${{ inputs.republish_current }}" == "true":
+                  raise SystemExit("signing migration boundary is unset; republish mode cannot establish the boundary release")
+              if readme.count(pending) != 1:
+                  raise SystemExit("README signing migration pending notice is missing or duplicated")
+              boundary = f"v{sys.argv[1]}"
+              marker_path.write_text(json.dumps({"boundaryTag": boundary}) + "\n")
+              readme_path.write_text(readme.replace(pending, boundary))
+          else:
+              if pending in readme or readme.count(boundary) != 1:
+                  raise SystemExit("README signing migration notice is out of sync with fdroid/signing-migration.json")
+          print(f"Signing migration boundary: {boundary}")
+          PY
+
       # --- Build APK BEFORE creating release (immutable releases block later uploads) ---
 
       - name: Set up JDK 17
@@ -347,10 +388,12 @@ jobs:
             patchFdroidLibrarySources,
           } = require('./plugins/with-wearos-module');
           patchFdroidExpoDependencies(process.cwd());
-          patchFdroidLibrarySources(process.cwd());
+          // Prebuild has already generated module BuildConfig/source outputs;
+          // sanitize their sources without deleting those outputs.
+          patchFdroidLibrarySources(process.cwd(), { removeGeneratedArtifacts: false });
           NODE
 
-      - name: Generate native project
+      - name: Generate native project (F-Droid)
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
           CABLESNAP_FDROID: "1"
@@ -375,7 +418,10 @@ jobs:
             patchFdroidAndroidGradleTree,
           } = require('./plugins/with-wearos-module');
           patchFdroidExpoDependencies(process.cwd());
-          patchFdroidLibrarySources(process.cwd());
+          patchFdroidLibrarySources(process.cwd(), {
+            removeGeneratedArtifacts: false,
+            rewriteSources: false,
+          });
           // Run after prebuild has materialised every generated Android
           // library script. The config plugin's dangerous-mod hook can run
           // before some Expo scripts are copied into the native project.
@@ -462,6 +508,12 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          for secret_name in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!secret_name}" ]; then
+              echo "::error::$secret_name is empty — configure the release-signing secret before releasing."
+              exit 1
+            fi
+          done
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
           if [ ! -s android/app/release.keystore ]; then
             echo "::error::Decoded release.keystore is empty — check ANDROID_KEYSTORE_BASE64 secret."
@@ -476,7 +528,7 @@ jobs:
           chmod 600 android/keystore.properties android/app/release.keystore
           echo "Wrote android/keystore.properties (storeFile=release.keystore, alias=$ANDROID_KEY_ALIAS)"
 
-      - name: Build APK
+      - name: Build F-Droid APK
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         env:
           CABLESNAP_FDROID: "1"
@@ -502,7 +554,7 @@ jobs:
            # invocation creates a combined task graph, allowing Play release
            # library artifacts to satisfy releaseFdroid matchingFallbacks.
            # Keeping the F-Droid graph isolated is required for DEX purity.
-           ./gradlew --refresh-dependencies --no-build-cache :app:assembleReleaseFdroid
+           ./gradlew --refresh-dependencies --no-build-cache --no-daemon :app:assembleReleaseFdroid
            # Preserve the clean F-Droid APK before the Play invocation can
            # reuse or overwrite app/build outputs.
            cp app/build/outputs/apk/releaseFdroid/app-releaseFdroid.apk ../cablesnap-fdroid.apk
@@ -515,20 +567,151 @@ jobs:
              ./gradlew :app:dependencies --configuration releaseFdroidRuntimeClasspath || true
              exit 1
            fi
-           rm -rf app/build
-           ./gradlew :app:assembleRelease :wear:assembleRelease
+           cd ..
+           echo "Built F-Droid artifact:"
+           ls -lh cablesnap-fdroid.apk
+
+      # F-Droid sanitization destructively rewrites node_modules. Restore the
+      # pristine dependency tree before the Play prebuild; the Play channel is
+      # actually stamped by createExpoConfig during the Gradle invocation.
+      - name: Restore pristine dependencies for GitHub / Play
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          rm -rf node_modules
+          npm ci
+          GUARD_FILE="node_modules/@expo/config-plugins/build/utils/history.js"
+          if [ ! -f "$GUARD_FILE" ]; then
+            echo "::warning::Corrupt npm cache detected — $GUARD_FILE missing after restore npm ci. Purging @expo/config-plugins from npm cache and reinstalling."
+            npm cache ls @expo/config-plugins 2>/dev/null || true
+            npm cache clean --force
+            rm -rf node_modules
+            npm ci
+            if [ ! -f "$GUARD_FILE" ]; then
+              echo "::error::$GUARD_FILE still missing after cache purge + reinstall. Upstream tarball may be broken."
+              exit 1
+            fi
+          fi
+          node - <<'NODE'
+          const fs = require('fs');
+          for (const name of ['expo-notifications', 'expo-application']) {
+            const config = JSON.parse(fs.readFileSync(`node_modules/${name}/expo-module.config.json`, 'utf8'));
+            if (!config.platforms || !config.platforms.includes('android')) {
+              throw new Error(`${name} is still missing Android from expo-module.config.json`);
+            }
+            const pkg = JSON.parse(fs.readFileSync(`node_modules/${name}/package.json`, 'utf8'));
+            if (pkg.expo?.autolinking?.exclude?.includes(name)) {
+              throw new Error(`${name} remains excluded from autolinking in package.json`);
+            }
+          }
+          NODE
+
+      # The second clean prebuild resets the android/ tree before the Play
+      # build. Its createExpoConfig Gradle task will stamp the GitHub channel
+      # using the environment of the later Gradle invocation.
+      - name: Generate native project (GitHub / Play)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          # Deliberately omitted: CABLESNAP_FDROID must be unset for this
+          # prebuild, not merely set to "0", so app.config.ts takes its Play
+          # / GitHub path.
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx expo prebuild --clean --platform android
+
+      - name: Boost Gradle JVM heap (GitHub / Play)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          PROPS=android/gradle.properties
+          if grep -q '^org.gradle.jvmargs=' "$PROPS"; then
+            sed -i 's|^org.gradle.jvmargs=.*|org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m|' "$PROPS"
+          else
+            echo 'org.gradle.jvmargs=-Xmx6144m -XX:MaxMetaspaceSize=1024m' >> "$PROPS"
+          fi
+          grep '^org.gradle.jvmargs=' "$PROPS"
+
+      # Every --clean prebuild deletes android/keystore.properties and the
+      # keystore. Rewrite both after the Play prebuild and immediately before
+      # its Gradle invocation, just as for the F-Droid build above.
+      - name: Decode release keystore and write keystore.properties (GitHub / Play)
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for secret_name in ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!secret_name}" ]; then
+              echo "::error::$secret_name is empty — configure the release-signing secret before releasing."
+              exit 1
+            fi
+          done
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          if [ ! -s android/app/release.keystore ]; then
+            echo "::error::Decoded release.keystore is empty — check ANDROID_KEYSTORE_BASE64 secret."
+            exit 1
+          fi
+          cat > android/keystore.properties <<PROPS
+          storeFile=release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          PROPS
+          chmod 600 android/keystore.properties android/app/release.keystore
+          test -s android/keystore.properties
+          echo "Wrote android/keystore.properties (storeFile=release.keystore, alias=$ANDROID_KEY_ALIAS)"
+
+      - name: Build GitHub / Play APKs
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        env:
+          # Deliberately omitted: the Play APK must embed distributionChannel
+          # "github" and use the normal dependency graph.
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd android
+          test -s keystore.properties
+          # The clean prebuild and npm ci above provide phase isolation. Reuse
+          # Gradle's downloaded dependency cache instead of forcing a second
+          # full network re-resolution; keep daemon isolation for channel safety.
+          ./gradlew --no-daemon :app:assembleRelease :wear:assembleRelease
           cd ..
-          # Phone APK (Play / `release` build type) — the canonical
-          # `cablesnap.apk` retained for the existing Play Store /
-          # GitHub-Release pipeline.
+          # Keep the existing Play / GitHub release asset names unchanged.
           cp android/app/build/outputs/apk/release/app-release.apk cablesnap.apk
-           # Phone APK (`releaseFdroid` build type) was copied immediately
-           # after its isolated Gradle invocation above.
-          # Watch APK — Wear OS 4 standalone artifact; Play-only (F-Droid
-          # rejects GMS).
           cp android/wear/build/outputs/apk/release/wear-release.apk cablesnap-wear.apk
           echo "Built artifacts:"
           ls -lh cablesnap.apk cablesnap-fdroid.apk cablesnap-wear.apk
+
+      - name: Verify embedded distribution channels
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          verify_channel() {
+            local apk="$1"
+            local expected="$2"
+            local config actual
+            config=$(unzip -p "$apk" assets/app.config)
+            if command -v jq >/dev/null 2>&1; then
+              actual=$(printf '%s' "$config" | jq -r '.extra.distributionChannel // empty')
+            else
+              actual=$(CONFIG_JSON="$config" python3 -c 'import json, os; print(json.loads(os.environ["CONFIG_JSON"]).get("extra", {}).get("distributionChannel", ""))')
+            fi
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::$apk embeds distributionChannel=$actual; expected $expected"
+              exit 1
+            fi
+            echo "$apk embeds distributionChannel=$expected"
+          }
+          verify_channel cablesnap.apk github
+          verify_channel cablesnap-fdroid.apk fdroid
 
       - name: AC10b — verify F-Droid APK contains no proprietary SUSS classes
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
@@ -548,6 +731,25 @@ jobs:
           fi
           echo "AC10b OK — F-Droid APK contains none of the four SUSS prefixes."
 
+      - name: AC10c — verify Play APK contains proprietary and Expo native classes
+        if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
+        run: |
+          set -euo pipefail
+          GMS_FIREBASE_HITS=$(unzip -p cablesnap.apk 'classes*.dex' 2>/dev/null | strings \
+            | grep -oE 'com/google/android/gms|com/google/firebase' | sort -u || true)
+          NOTIFICATIONS_HITS=$(unzip -p cablesnap.apk 'classes*.dex' 2>/dev/null | strings \
+            | grep -oE 'expo/modules/notifications' | sort -u || true)
+          APPLICATION_HITS=$(unzip -p cablesnap.apk 'classes*.dex' 2>/dev/null | strings \
+            | grep -oE 'expo/modules/application' | sort -u || true)
+          if [ -z "$GMS_FIREBASE_HITS" ] || [ -z "$NOTIFICATIONS_HITS" ] || [ -z "$APPLICATION_HITS" ]; then
+            echo "::error::AC10c violated — cablesnap.apk is missing expected Play native classes (GMS/Firebase and/or Expo notifications/application)."
+            echo "GMS/Firebase matches: ${GMS_FIREBASE_HITS:-<none>}"
+            echo "Expo notifications matches: ${NOTIFICATIONS_HITS:-<none>}"
+            echo "Expo application matches: ${APPLICATION_HITS:-<none>}"
+            exit 1
+          fi
+          echo "AC10c OK — Play APK contains GMS/Firebase and Expo notifications/application classes."
+
       - name: Verify APK signature matches committed fingerprint
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         run: |
@@ -560,61 +762,57 @@ jobs:
           APKSIGNER="${BUILD_TOOLS_DIR}apksigner"
           echo "Using apksigner: $APKSIGNER"
 
-          # Strict signature validity check first — fail fast on bad signing,
-          # before we even look at the fingerprint.
-          if ! "$APKSIGNER" verify cablesnap.apk; then
-            echo "::error::apksigner verify reports the APK signature is INVALID."
-            exit 1
-          fi
-
-          # Dump certs for inspection and fingerprint extraction.
-          "$APKSIGNER" verify --print-certs cablesnap.apk | tee apksigner.log
-
-          # Extract every SHA-256 certificate digest from apksigner output.
-          # Format varies by build-tools version:
-          #   build-tools <= 33: "Signer #1 certificate SHA-256 digest: AA:BB:..."
-          #   build-tools >= 34: "V2 Signer: certificate SHA-256 digest: aabb..." (per APK signing scheme)
-          # A single signing key can appear multiple times (once per signing
-          # scheme V1/V2/V3/V4), and all of those entries should share the
-          # same fingerprint. We grep all of them, normalise, and then insist
-          # they are non-empty and unanimous — any divergence means either a
-          # multi-signer APK or a build-tools/format regression.
-          ACTUAL_LIST=$(grep -oE 'certificate SHA-256 digest:[[:space:]]+[0-9a-fA-F:]+' apksigner.log \
-              | sed -E 's/^certificate SHA-256 digest:[[:space:]]+//' \
-              | tr -d ':[:blank:]' \
-              | tr '[:lower:]' '[:upper:]')
-          if [ -z "$ACTUAL_LIST" ]; then
-            echo "::error::Could not parse any SHA-256 certificate digest from apksigner output."
-            exit 1
-          fi
-          UNIQUE_COUNT=$(echo "$ACTUAL_LIST" | sort -u | wc -l)
-          if [ "$UNIQUE_COUNT" -ne 1 ]; then
-            echo "::error::APK reports more than one distinct signer fingerprint — refusing to publish."
-            echo "::error::Distinct SHA-256 values seen:"
-            echo "$ACTUAL_LIST" | sort -u | sed 's/^/  /'
-            exit 1
-          fi
-          ACTUAL_NORM=$(echo "$ACTUAL_LIST" | head -1)
           EXPECTED_NORM=$(head -1 fdroid/release-cert.sha256 | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')
-
-          # Guardrail: both values must be exactly 64 hex chars (SHA-256).
           if ! echo "$EXPECTED_NORM" | grep -qE '^[0-9A-F]{64}$'; then
             echo "::error::Expected fingerprint in fdroid/release-cert.sha256 is not a valid 64-char hex SHA-256."
             exit 1
           fi
-          if ! echo "$ACTUAL_NORM" | grep -qE '^[0-9A-F]{64}$'; then
-            echo "::error::Parsed signer fingerprint is not a valid 64-char hex SHA-256."
-            exit 1
-          fi
 
-          echo "Expected SHA-256: $EXPECTED_NORM"
-          echo "Actual   SHA-256: $ACTUAL_NORM"
-          if [ "$ACTUAL_NORM" != "$EXPECTED_NORM" ]; then
-            echo "::error::APK cert fingerprint does not match fdroid/release-cert.sha256."
-            echo "::error::Either the wrong keystore secret was injected, or the signing key was rotated (requires a deliberate fingerprint update)."
-            exit 1
-          fi
-          echo "Cert fingerprint verified: $ACTUAL_NORM"
+          verify_apk_signature() {
+            local apk="$1"
+            local log="$2"
+            if [ ! -s "$apk" ]; then
+              echo "::error::Missing or empty APK: $apk"
+              return 1
+            fi
+            if ! "$APKSIGNER" verify "$apk"; then
+              echo "::error::apksigner verify reports $apk is INVALID."
+              return 1
+            fi
+            "$APKSIGNER" verify --print-certs "$apk" | tee "$log"
+            local actual_list
+            # Preserve newlines: sort -u/unique_count depend on one digest per line.
+            actual_list=$(grep -oE 'certificate SHA-256 digest:[[:space:]]+[0-9a-fA-F:]+' "$log" \
+              | sed -E 's/^certificate SHA-256 digest:[[:space:]]+//' \
+              | tr -d ':[:blank:]' | tr '[:lower:]' '[:upper:]')
+            if [ -z "$actual_list" ]; then
+              echo "::error::Could not parse any SHA-256 certificate digest from $log."
+              return 1
+            fi
+            local unique_count
+            unique_count=$(printf '%s\n' "$actual_list" | sort -u | wc -l | tr -d '[:space:]')
+            if [ "$unique_count" -ne 1 ]; then
+              echo "::error::$apk reports more than one distinct signer fingerprint."
+              printf '%s\n' "$actual_list" | sort -u | sed 's/^/  /'
+              return 1
+            fi
+            local actual_norm
+            actual_norm=$(printf '%s\n' "$actual_list" | sort -u)
+            if ! printf '%s\n' "$actual_norm" | grep -qE '^[0-9A-F]{64}$'; then
+              echo "::error::Parsed signer fingerprint for $apk is not a valid 64-char SHA-256."
+              return 1
+            fi
+            echo "Expected SHA-256: $EXPECTED_NORM"
+            echo "Actual   SHA-256: $actual_norm"
+            if [ "$actual_norm" != "$EXPECTED_NORM" ]; then
+              echo "::error::$apk cert fingerprint does not match fdroid/release-cert.sha256."
+              return 1
+            fi
+            echo "Cert fingerprint verified for $apk: $actual_norm"
+          }
+
+          verify_apk_signature cablesnap.apk apksigner.log
+          verify_apk_signature cablesnap-wear.apk apksigner-wear.log
 
       # --- KVM permission enable (BLD-2290) ---
       #
@@ -789,7 +987,8 @@ jobs:
             git add package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml \
               CHANGELOG.md \
               lib/changelog.generated.ts \
-              fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/
+              fdroid/metadata/com.persoack.cablesnap/en-US/changelogs/ \
+              fdroid/signing-migration.json README.md
           }
 
           stage_paths
@@ -824,6 +1023,38 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             bash scripts/release-apply-bump.sh "$VERSION" "$VCODE"
+            python3 - "$VERSION" <<'PY'
+            import json
+            import re
+            import sys
+            from pathlib import Path
+
+            marker_path = Path("fdroid/signing-migration.json")
+            readme_path = Path("README.md")
+            try:
+                marker = json.loads(marker_path.read_text())
+                boundary = marker["boundaryTag"]
+            except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+                raise SystemExit(f"signing migration marker is missing or unparseable: {exc}")
+            if boundary is not None and (not isinstance(boundary, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", boundary)):
+                raise SystemExit("signing migration marker boundaryTag must be null or a release tag like v0.27.0")
+
+            pending = "boundary release pending — see release notes"
+            start = "<!-- SIGNING_MIGRATION_NOTICE_START -->"
+            end = "<!-- SIGNING_MIGRATION_NOTICE_END -->"
+            readme = readme_path.read_text()
+            if readme.count(start) != 1 or readme.count(end) != 1:
+                raise SystemExit("README signing migration notice markers are missing or duplicated")
+            if boundary is None:
+                boundary = f"v{sys.argv[1]}"
+                if readme.count(pending) != 1:
+                    raise SystemExit("README signing migration pending notice is missing or duplicated")
+                marker_path.write_text(json.dumps({"boundaryTag": boundary}) + "\n")
+                readme_path.write_text(readme.replace(pending, boundary))
+            elif pending in readme or readme.count(boundary) != 1:
+                raise SystemExit("README signing migration notice is out of sync with fdroid/signing-migration.json")
+            print(f"Signing migration boundary: {boundary}")
+          PY
             stage_paths
             if git diff --cached --quiet; then
               echo "::notice::No staged delta after regenerate — concurrent merge already shipped v$VERSION? exiting."
@@ -868,6 +1099,21 @@ jobs:
             echo "::error::CHANGELOG.md has an empty body for v$VERSION — refusing to ship."
             exit 1
           fi
+          MARKER=$(python3 - <<'PY'
+          import json
+          import re
+          import sys
+          try:
+              value = json.load(open("fdroid/signing-migration.json"))["boundaryTag"]
+          except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as exc:
+              print(f"signing migration marker is missing or unparseable: {exc}", file=sys.stderr)
+              raise SystemExit(1)
+          if not isinstance(value, str) or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", value):
+              print("signing migration marker boundaryTag must be a release tag like v0.27.0", file=sys.stderr)
+              raise SystemExit(1)
+          print(value)
+          PY
+          )
           {
             echo 'notes<<NOTES_EOF'
             echo "## What's New"
@@ -881,9 +1127,17 @@ jobs:
             echo "https://alankyshum.github.io/cablesnap/repo"
             echo '```'
             echo ""
+             echo "The self-hosted F-Droid repo serves the production Play-flavor APK, which includes Google Play Services, Firebase, and ML Kit. For the GMS-free build, use the official F-Droid listing (https://f-droid.org/packages/com.persoack.cablesnap/) or the \`cablesnap-fdroid.apk\` release asset."
+             echo ""
+             if [ "v$VERSION" = "$MARKER" ]; then
+               echo "### One-time self-hosted-repo reinstall warning"
+               echo ""
+               echo "This boundary release changes the self-hosted F-Droid repo signing key from the debug certificate to the production certificate. Users of that repo on this release must export a backup first, then uninstall and reinstall CableSnap once; Android will not update the app in place across this signing change, and uninstalling can delete local data."
+               echo ""
+             fi
             echo "## Wear OS companion (Play Store only)"
             echo ""
-            echo "The Wear OS companion APK (\`cablesnap-wear.apk\`) is distributed via the Play Store only — F-Droid's Inclusion Criteria reject the GMS Wearable dependency the watch app needs. The F-Droid build of CableSnap (\`cablesnap-fdroid.apk\`) is fully functional on its own; the watch APK is an optional companion."
+            echo "The Wear OS companion APK (\`cablesnap-wear.apk\`) is distributed via the Play Store only — F-Droid's Inclusion Criteria reject the GMS Wearable dependency the watch app needs. The GMS-free \`cablesnap-fdroid.apk\` build is fully functional on its own; the watch APK is an optional companion."
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
 
@@ -916,12 +1170,11 @@ jobs:
         run: |
           # All three artifacts are attached to the same GitHub Release:
           #   cablesnap.apk          — Play-flavor phone APK (canonical)
-          #   cablesnap-fdroid.apk   — F-Droid-flavor phone APK (GMS-free)
+          #   cablesnap-fdroid.apk   — GMS-free phone APK for official F-Droid
           #   cablesnap-wear.apk     — Wear OS 4+ companion APK (Play-only)
-          # The auto-fdroid workflow keys off cablesnap.apk presence to
-          # decide whether to refresh the F-Droid repo; the actual F-Droid
-          # repo build pulls cablesnap-fdroid.apk per
-          # `.github/workflows/fdroid-release.yml`.
+          # The self-hosted F-Droid repo refresh keys off cablesnap.apk and
+          # publishes that Play-flavor APK; the GMS-free build remains
+          # available as cablesnap-fdroid.apk for official F-Droid users.
           VERSION="${{ steps.next_version.outputs.version }}"
 
           # BLD-2316 (IDEMPOTENT CREATE): a concurrent Scheduled Release run can

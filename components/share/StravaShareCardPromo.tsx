@@ -3,6 +3,8 @@ import { StyleSheet, View, TextInput, Pressable } from "react-native";
 import { Text } from "@/components/ui/text";
 import { spacing, fontSizes } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { GITHUB_REPO_URL } from "@/constants/github";
+import { useLingui } from "@lingui/react/macro";
 
 type Props = {
   caption: string;
@@ -22,6 +24,7 @@ export function StravaShareCardPromo({
   onCaptionBlur,
 }: Props) {
   const colors = useThemeColors();
+  const { t } = useLingui();
 
   if (!interactive) {
     if (!enabled) return null;
@@ -32,10 +35,10 @@ export function StravaShareCardPromo({
           numberOfLines={1}
           ellipsizeMode="tail"
         >
-          {caption || "Tracked with CableSnap · https://github.com/alankyshum/cablesnap"}
+          {caption || `Tracked with CableSnap · ${GITHUB_REPO_URL}`}
         </Text>
         <Text style={[styles.url, { color: colors.onSurfaceVariant }]}>
-          https://github.com/alankyshum/cablesnap
+          {GITHUB_REPO_URL}
         </Text>
       </View>
     );
@@ -50,10 +53,10 @@ export function StravaShareCardPromo({
           style={[styles.addAffordance, { borderColor: colors.outlineVariant }]}
           testID="strava-promo-add-affordance"
           accessibilityRole="button"
-          accessibilityLabel="Add promo caption"
+           accessibilityLabel={t({ id: "share.strava.addPromoA11y", message: "Add promo caption" })}
         >
           <Text style={[styles.addText, { color: colors.primary }]}>
-            + Add promo caption
+             {t({ id: "share.strava.addPromo", message: "+ Add promo caption" })}
           </Text>
         </Pressable>
       </View>
@@ -67,7 +70,7 @@ export function StravaShareCardPromo({
           value={caption}
           onChangeText={(t) => onCaptionChange?.(t.slice(0, 200))}
           onBlur={onCaptionBlur}
-          placeholder="Add promo caption..."
+           placeholder={t({ id: "share.strava.captionPlaceholder", message: "Add promo caption..." })}
           placeholderTextColor={colors.onSurfaceVariant}
           maxLength={200}
           style={[
@@ -75,20 +78,20 @@ export function StravaShareCardPromo({
             { color: colors.onSurface, borderColor: colors.outline },
           ]}
           testID="strava-promo-caption-input"
-          accessibilityLabel="Promo caption input"
+           accessibilityLabel={t({ id: "share.strava.captionInputA11y", message: "Promo caption input" })}
         />
         <Pressable
           onPress={() => onToggleEnabled?.(false)}
           style={styles.disableBtn}
           testID="strava-promo-disable-btn"
           accessibilityRole="button"
-          accessibilityLabel="Remove promo caption"
+           accessibilityLabel={t({ id: "share.strava.removePromoA11y", message: "Remove promo caption" })}
         >
-          <Text style={[styles.disableText, { color: colors.error }]}>Remove</Text>
+           <Text style={[styles.disableText, { color: colors.error }]}>{t({ id: "common.remove", message: "Remove" })}</Text>
         </Pressable>
       </View>
       <Text style={[styles.url, { color: colors.onSurfaceVariant }]}>
-        https://github.com/alankyshum/cablesnap
+        {GITHUB_REPO_URL}
       </Text>
     </View>
   );

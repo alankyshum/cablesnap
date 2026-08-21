@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * BLD-1028: Backfill suggestion chip.
  *
@@ -43,14 +46,12 @@ export function BackfillNoteSuggestion({
     <View style={[styles.container, { backgroundColor: colors.surfaceVariant, borderColor: colors.outlineVariant }]}>
       <View style={styles.headerRow}>
         <MaterialCommunityIcons name="lightbulb-on-outline" size={16} color={colors.primary} />
-        <Text style={[styles.headerText, { color: colors.primary }]}>
-          Session note from {dateLabel}
-        </Text>
+        <Text style={[styles.headerText, { color: colors.primary }]}>{t({ id: "session.backfillnotesuggestion.str1", message: `Session note from ${dateLabel}` })}</Text>
       </View>
       <Text
         style={[styles.candidateText, { color: colors.onSurfaceVariant }]}
         numberOfLines={2}
-        accessibilityLabel={`Previous session note for ${exerciseName}: ${candidateText}`}
+        accessibilityLabel={t({ id: "session.backfillnotesuggestion.dynamic1", message: `Previous session note for ${exerciseName}: ${candidateText}` })}
       >
         {candidateText}
       </Text>
@@ -59,7 +60,7 @@ export function BackfillNoteSuggestion({
           variant="ghost"
           size="sm"
           onPress={() => onCopy(exerciseId, candidateText)}
-          accessibilityLabel={`Pin this note for ${exerciseName}`}
+          accessibilityLabel={t({ id: "session.backfillnotesuggestion.dynamic2", message: `Pin this note for ${exerciseName}` })}
         >
           <Text style={{ color: colors.primary, fontSize: fontSizes.sm, fontWeight: "600" }}>
             📌 Pin note
@@ -69,11 +70,9 @@ export function BackfillNoteSuggestion({
           variant="ghost"
           size="sm"
           onPress={() => onDismiss(exerciseId)}
-          accessibilityLabel={`Dismiss note suggestion for ${exerciseName}`}
+          accessibilityLabel={t({ id: "session.backfillnotesuggestion.dynamic3", message: `Dismiss note suggestion for ${exerciseName}` })}
         >
-          <Text style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
-            Dismiss
-          </Text>
+          <Text style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>{t({ id: "session.backfillnotesuggestion.str2", message: "Dismiss" })}</Text>
         </Button>
       </View>
     </View>

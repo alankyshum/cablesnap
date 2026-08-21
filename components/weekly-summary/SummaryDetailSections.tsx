@@ -11,6 +11,9 @@ import { formatDuration } from "@/lib/format";
 import { toDisplay } from "@/lib/units";
 import { formatNumber } from "@/hooks/useWeeklySummary";
 import { fontSizes } from "@/constants/design-tokens";
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
+import { plural } from "@lingui/core/macro";
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -71,29 +74,29 @@ export function SummaryDetailSections({
         variant="subtitle"
         style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
       >
-        WORKOUTS
+        <Trans id="components.weeklySummary.workouts">WORKOUTS</Trans>
       </Text>
       {workouts.scheduledCount !== null ? (
         <StatRow
-          label="Completed"
+          label={t({ id: "components.weeklySummary.completed", message: "Completed" })}
           value={`${workouts.sessionCount} of ${workouts.scheduledCount} scheduled (${Math.round((workouts.sessionCount / workouts.scheduledCount) * 100)}%)`}
           colors={colors}
         />
       ) : (
         <StatRow
-          label="Completed"
-          value={`${workouts.sessionCount} workout${workouts.sessionCount !== 1 ? "s" : ""}`}
+          label={t({ id: "components.weeklySummary.completed", message: "Completed" })}
+           value={t({ id: "components.weeklySummary.workoutCount", message: plural(workouts.sessionCount, { one: "# workout", other: "# workouts" }) })}
           colors={colors}
         />
       )}
       <StatRow
-        label="Total duration"
+        label={t({ id: "components.weeklySummary.totalDuration", message: "Total duration" })}
         value={formatDuration(workouts.totalDurationSeconds)}
         colors={colors}
       />
       {workouts.sessionCount > 0 && (
         <StatRow
-          label="Avg session"
+          label={t({ id: "components.weeklySummary.avgSession", message: "Avg session" })}
           value={formatDuration(
             Math.round(workouts.totalDurationSeconds / workouts.sessionCount)
           )}
@@ -107,16 +110,16 @@ export function SummaryDetailSections({
         variant="subtitle"
         style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
       >
-        VOLUME
+        <Trans id="components.weeklySummary.volume">VOLUME</Trans>
       </Text>
       <StatRow
-        label="Total"
+        label={t({ id: "components.weeklySummary.total", message: "Total" })}
         value={`${formatNumber(Math.round(toDisplay(workouts.totalVolume, unit)))} ${unit}${volChange ? `  ▲ ${volChange} vs last` : ""}`}
         colors={colors}
       />
       {workouts.sessionCount > 0 && (
         <StatRow
-          label="Avg per session"
+          label={t({ id: "components.weeklySummary.avgPerSession", message: "Avg per session" })}
           value={`${formatNumber(Math.round(toDisplay(workouts.totalVolume / workouts.sessionCount, unit)))} ${unit}`}
           colors={colors}
         />
@@ -126,7 +129,7 @@ export function SummaryDetailSections({
           variant="caption"
           style={{ color: colors.onSurfaceVariant, fontStyle: "italic", marginTop: 4 }}
         >
-          Volume tracks weighted exercises only
+          <Trans id="components.weeklySummary.weightedOnly">Volume tracks weighted exercises only</Trans>
         </Text>
       )}
 
@@ -138,7 +141,7 @@ export function SummaryDetailSections({
             variant="subtitle"
             style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
           >
-            PERSONAL RECORDS
+            <Trans id="components.weeklySummary.personalRecords">PERSONAL RECORDS</Trans>
           </Text>
           {prs.map((pr) => {
             const w = toDisplay(pr.newMax, unit);
@@ -175,20 +178,20 @@ export function SummaryDetailSections({
             variant="subtitle"
             style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
           >
-            NUTRITION ({nutrition.daysTracked}/7 days tracked)
+            <Trans id="components.weeklySummary.nutrition">NUTRITION ({nutrition.daysTracked}/7 days tracked)</Trans>
           </Text>
           <StatRow
-            label="Avg calories"
+            label={t({ id: "components.weeklySummary.avgCalories", message: "Avg calories" })}
             value={`${formatNumber(nutrition.avgCalories)} / ${formatNumber(nutrition.calorieTarget)} target`}
             colors={colors}
           />
           <StatRow
-            label={`Protein avg`}
+            label={t({ id: "components.weeklySummary.proteinAvg", message: "Protein avg" })}
             value={`${nutrition.avgProtein}g / ${nutrition.proteinTarget}g target${nutrition.avgProtein >= nutrition.proteinTarget ? " ✓" : ""}`}
             colors={colors}
           />
           <StatRow
-            label="Days on target"
+            label={t({ id: "components.weeklySummary.daysOnTarget", message: "Days on target" })}
             value={`${nutrition.daysOnTarget}/${nutrition.daysTracked}`}
             colors={colors}
           />
@@ -203,18 +206,18 @@ export function SummaryDetailSections({
             variant="subtitle"
             style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
           >
-            BODY
+            <Trans id="components.weeklySummary.body">BODY</Trans>
           </Text>
           {body.entryCount === 1 ? (
             <StatRow
-              label="Weight"
+              label={t({ id: "components.weeklySummary.weight", message: "Weight" })}
               value={`${toDisplay(body.startWeight!, unit)} ${unit}`}
               colors={colors}
             />
           ) : (
             <>
               <StatRow
-                label="Weight"
+                label={t({ id: "components.weeklySummary.weight", message: "Weight" })}
                 value={(() => {
                   const s = toDisplay(body.startWeight!, unit);
                   const e = toDisplay(body.endWeight!, unit);
@@ -229,7 +232,7 @@ export function SummaryDetailSections({
                   variant="caption"
                   style={{ color: colors.onSurfaceVariant, fontStyle: "italic", marginTop: 2 }}
                 >
-                  (3-day rolling avg)
+                  <Trans id="components.weeklySummary.rollingAverage">(3-day rolling avg)</Trans>
                 </Text>
               )}
             </>
@@ -245,14 +248,14 @@ export function SummaryDetailSections({
             variant="subtitle"
             style={[styles.sectionLabel, { color: colors.onSurfaceVariant }]}
           >
-            STREAK
+            <Trans id="components.weeklySummary.streak">STREAK</Trans>
           </Text>
           <View style={styles.streakRow}>
             <Text
               variant="body"
               style={{ color: colors.onSurface }}
             >
-              Current: {streak} week{streak !== 1 ? "s" : ""}  🔥
+               {t({ id: "components.weeklySummary.currentStreak", message: `Current: ${plural(streak, { one: "# week", other: "# weeks" })} 🔥` })}
             </Text>
           </View>
           {weekOffset === 0 && (
@@ -260,7 +263,7 @@ export function SummaryDetailSections({
               variant="caption"
               style={{ color: colors.onSurfaceVariant, fontStyle: "italic", marginTop: 2 }}
             >
-              (current week in progress)
+              <Trans id="components.weeklySummary.currentWeek">(current week in progress)</Trans>
             </Text>
           )}
         </>
@@ -272,11 +275,11 @@ export function SummaryDetailSections({
           variant="outline"
           icon={Share2}
           onPress={handleShare}
-          accessibilityLabel="Share weekly summary"
-          accessibilityHint="Share your weekly training summary as text"
+          accessibilityLabel={t({ id: "components.weeklySummary.shareA11y", message: "Share weekly summary" })}
+          accessibilityHint={t({ id: "components.weeklySummary.shareHint", message: "Share your weekly training summary as text" })}
           style={{ marginTop: 16 }}
         >
-          Share Summary
+          <Trans id="components.weeklySummary.share">Share Summary</Trans>
         </Button>
       </View>
     </>

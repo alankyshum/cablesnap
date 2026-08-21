@@ -195,6 +195,12 @@ const RELEASE_FDROID_BUILD_TYPE = `
         }
 `;
 
+// Expo may evaluate config plugins more than once during a single prebuild.
+// Removing a module's generated build directory on every evaluation races
+// Gradle's generated BuildConfig inputs and produces unreadable/missing input
+// errors in compileReleaseKotlin.
+let fdroidPrebuildArtifactsRemoved = false;
+
 // `configurations { ... }` blocks placed at the project script level apply to
 // the whole module. The plan's AC10b is: `unzip -l app-releaseFdroid.apk |
 // grep -c 'com/google/android/gms/wearable' == 0`. We hit that by:
@@ -209,54 +215,54 @@ const RELEASE_FDROID_BUILD_TYPE = `
 // classpath under releaseFdroid never resolves it. The bridge module's own
 // `:expo-wearos-bridge` project is still configured by Gradle (cheap), but
 // no classes from it land in the F-Droid APK.
-const FDROID_EXCLUDES_BLOCK = `
-${FDROID_EXCLUDES_MARKER}
-if (System.getenv("CABLESNAP_FDROID") == "1") {
-    allprojects {
-        configurations.all {
-            exclude group: "com.google.android.gms"
-            exclude group: "com.google.firebase"
-            exclude group: "com.google.mlkit"
-            exclude group: "com.android.installreferrer"
-            exclude module: "camera-mlkit-vision"
-            exclude module: "expo-wearos-bridge"
-            resolutionStrategy.eachDependency { dependency ->
-                if (dependency.requested.group in [
-                    "com.google.android.gms",
-                    "com.google.firebase",
-                    "com.google.mlkit",
-                    "com.android.installreferrer",
-                ]) {
-                    throw new GradleException("F-Droid build rejected proprietary dependency: \${dependency.requested}")
-                }
-            }
-        }
-    }
-}
-`;
-
-// The app's releaseFdroid configuration can consume a library's release
-// variant via matchingFallbacks. Keep the exclusions on the app itself too;
-// project-level exclusions do not reliably propagate across that fallback.
+//
+// SCOPE — variant-scoped, not `allprojects`:
+// A prior iteration (commit 8072156b) placed the excludes inside an
+// `allprojects { configurations.all { exclude … } }` block appended to
+// project-level `android/build.gradle`. That scope also applied the excludes
+// to every Expo library subproject (:expo-camera, :expo-application,
+// :expo-notifications, …), corrupting their OWN R.jar / BuildConfig
+// generation and breaking both the F-Droid AND Play `release` variants
+// (Scheduled Release outage 2026-07-26, BLD-4473). The Scheduled Release
+// workflow exports `CABLESNAP_FDROID=1` across the whole Build APK step —
+// including the Play Gradle invocation — so any runtime `System.getenv`
+// gate reaching into `allprojects` fires for Play too.
+//
+// The correct scope is variant-scoped `:app` configurations only:
+// `releaseFdroidImplementation`, `releaseFdroidCompileClasspath`, and
+// `releaseFdroidRuntimeClasspath`. Library subprojects fall back to `release`
+// via matchingFallbacks (see SUBPROJECT_FILTER_BLOCK below) and are never
+// touched by these excludes, so their own compilation is unaffected. The
+// workflow's post-prebuild `cablesnap:ci:fdroid-final-excludes` step
+// (`.github/workflows/scheduled-release.yml`) re-asserts the app-scoped
+// excludes at Gradle invocation time, and the AC10b DEX-purity gate is the
+// final backstop.
 const FDROID_APP_EXCLUDES_BLOCK = `
 ${FDROID_EXCLUDES_MARKER}:app
 if (System.getenv("CABLESNAP_FDROID") == "1") {
-    configurations.configureEach {
-        exclude group: "com.google.android.gms"
-        exclude group: "com.google.firebase"
-        exclude group: "com.google.mlkit"
-        exclude group: "com.android.installreferrer"
-        exclude module: "camera-mlkit-vision"
-    }
+    // Variant-scoped: matches releaseFdroidImplementation,
+    // releaseFdroidCompileClasspath, releaseFdroidRuntimeClasspath (and
+    // any future *releaseFdroid* configuration AGP synthesises). Safe even
+    // when CABLESNAP_FDROID=1 leaks into a concurrent Play Gradle
+    // invocation — Play's release{Compile,Runtime}Classpath and
+    // releaseImplementation are NOT matched.
     configurations.matching { it.name.toLowerCase().contains("releasefdroid") }.configureEach {
-        // Explicitly bind the excludes to the F-Droid variant. This remains
-        // effective when AGP resolves an Expo library through matchingFallbacks
-        // to its release variant.
         exclude group: "com.google.android.gms"
         exclude group: "com.google.firebase"
         exclude group: "com.google.mlkit"
         exclude group: "com.android.installreferrer"
         exclude module: "camera-mlkit-vision"
+        exclude module: "expo-wearos-bridge"
+        resolutionStrategy.eachDependency { dependency ->
+            if (dependency.requested.group in [
+                "com.google.android.gms",
+                "com.google.firebase",
+                "com.google.mlkit",
+                "com.android.installreferrer",
+            ]) {
+                throw new GradleException("F-Droid build rejected proprietary dependency: \${dependency.requested}")
+            }
+        }
     }
 }
 `;
@@ -265,7 +271,13 @@ function patchAppBuildGradle(contents) {
   let out = contents;
 
   // 1. Inject `releaseFdroid` build type inside `android { buildTypes { ... } }`.
-  if (!out.includes(BUILD_TYPES_MARKER)) {
+  // The official F-Droid React Native template builds the ordinary `release`
+  // variant.  Allow that recipe path to opt out of the app-only variant while
+  // retaining CABLESNAP_FDROID source/dependency sanitisation.
+  if (
+    process.env.CABLESNAP_FDROID_BUILD_TYPE !== "0" &&
+    !out.includes(BUILD_TYPES_MARKER)
+  ) {
     // Anchor on the inner `release { ... }` block within buildTypes. Every
     // Expo-prebuilt app/build.gradle has exactly one. We insert immediately
     // AFTER its closing brace so `initWith release` always resolves to a
@@ -351,27 +363,21 @@ subprojects { subproject ->
 `;
 
 function patchProjectBuildGradle(contents) {
-  let out = contents;
+  // Only injects SUBPROJECT_FILTER_BLOCK. The F-Droid exclude block is
+  // scoped to `:app` via FDROID_APP_EXCLUDES_BLOCK (patchAppBuildGradle);
+  // no `allprojects` / `configurations.all` block is ever appended here.
+  // See BLD-4473 root-cause comment above FDROID_APP_EXCLUDES_BLOCK.
   if (contents.includes(SUBPROJECT_FILTER_MARKER)) {
-    if (
-      contents.includes(FDROID_EXCLUDES_MARKER) ||
-      process.env.CABLESNAP_FDROID !== "1"
-    ) {
-      return contents;
-    }
-    return contents + FDROID_EXCLUDES_BLOCK;
+    return contents;
   }
   // Append at end-of-file. `subprojects { ... }` blocks are
   // order-independent — Gradle accumulates and applies them in the
   // configuration phase before any subproject is evaluated.
+  let out = contents;
   if (!out.endsWith("\n")) {
     out = out + "\n";
   }
-  return (
-    out +
-    (process.env.CABLESNAP_FDROID === "1" ? FDROID_EXCLUDES_BLOCK : "") +
-    SUBPROJECT_FILTER_BLOCK
-  );
+  return out + SUBPROJECT_FILTER_BLOCK;
 }
 
 // ---------------------------------------------------------------------------
@@ -626,7 +632,10 @@ function scrubFdroidLocalMavenMetadata(projectRoot) {
 // class descriptors emitted by Expo's Kotlin sources (and R8 must still parse
 // those descriptors). Replace the optional integrations with no-op FOSS
 // implementations before Gradle compiles the modules.
-function patchFdroidLibrarySources(projectRoot) {
+function patchFdroidLibrarySources(
+  projectRoot,
+  { removeGeneratedArtifacts = true, rewriteSources = true } = {},
+) {
   if (process.env.CABLESNAP_FDROID !== "1") return;
   const sourceRoot = (...parts) => path.join(projectRoot, "node_modules", ...parts);
   const write = (file, contents) => {
@@ -643,17 +652,21 @@ function patchFdroidLibrarySources(projectRoot) {
     "expo-notifications",
     "expo-dev-launcher",
   ]) {
-    const buildDir = sourceRoot(packageName, "android", "build");
-    if (fs.existsSync(buildDir)) fs.rmSync(buildDir, { recursive: true, force: true });
     // Expo publishes a precompiled AAR beside the source module. Removing
     // only its POM/module metadata is insufficient: Gradle can still select
     // the AAR itself, which is the exact source of the surviving ML Kit/GMS
     // classes seen by AC10b.
     const localMavenRepo = sourceRoot(packageName, "local-maven-repo");
-    if (fs.existsSync(localMavenRepo)) {
+    if (removeGeneratedArtifacts && fs.existsSync(localMavenRepo)) {
       fs.rmSync(localMavenRepo, { recursive: true, force: true });
     }
   }
+
+  // The explicit CI pass runs after Expo prebuild has generated Android
+  // module outputs. Source rewriting already happened during config
+  // evaluation; avoid rewriting package/source files while Gradle is about
+  // to fingerprint generated inputs.
+  if (!rewriteSources) return;
 
   const camera = sourceRoot("expo-camera", "android", "src", "main", "java", "expo", "modules", "camera");
   const cameraConfig = sourceRoot("expo-camera", "expo-module.config.json");
@@ -682,6 +695,21 @@ function patchFdroidLibrarySources(projectRoot) {
     if (depth !== 0) return source; // unbalanced; leave as-is
     return source.slice(0, match.index) + replacement + source.slice(i);
   };
+  const replaceKotlinCall = (source, marker, replacement) => {
+    const start = source.indexOf(marker);
+    if (start < 0) return source;
+    const opening = source.indexOf("{", start);
+    if (opening < 0) return source;
+    let depth = 1;
+    let i = opening + 1;
+    while (i < source.length && depth > 0) {
+      const c = source[i++];
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+    }
+    if (depth !== 0) return source;
+    return source.slice(0, start) + replacement + source.slice(i);
+  };
   write(path.join(camera, "analyzers", "BarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
 
 import androidx.camera.core.ImageAnalysis
@@ -692,6 +720,20 @@ import expo.modules.camera.utils.BarCodeScannerResult
 // F-Droid: food barcode scanning is provided by expo-foss-barcode-scanner.
 class BarcodeAnalyzer(formats: List<BarcodeType>, val onComplete: (BarCodeScannerResult) -> Unit) : ImageAnalysis.Analyzer {
   override fun analyze(imageProxy: ImageProxy) { imageProxy.close() }
+}
+
+// Camera preview still uses this helper for image capture; keep it available
+// after removing Expo Camera's ML Kit analyzer implementation.
+fun Array<ImageProxy.PlaneProxy>.toByteArray(): ByteArray {
+  val result = ByteArray(sumOf { it.buffer.remaining() })
+  var offset = 0
+  for (plane in this) {
+    val bytes = ByteArray(plane.buffer.remaining())
+    plane.buffer.get(bytes)
+    bytes.copyInto(result, offset)
+    offset += bytes.size
+  }
+  return result
 }
 `);
   write(path.join(camera, "analyzers", "MLKitBarcodeAnalyzer.kt"), `package expo.modules.camera.analyzers
@@ -714,7 +756,7 @@ object BarCodeScannerResultSerializer {
     putString("data", result.value); putString("raw", result.raw); putInt("type", result.type)
   }
   fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null) =
-    BarCodeScannerResult(0, "", "", Bundle(), emptyList(), 0, 0)
+    BarCodeScannerResult(0, "", "", Bundle(), mutableListOf(), 0, 0)
   fun parseExtraDate(barcode: Any): Bundle = Bundle()
 }
 `);
@@ -742,7 +784,7 @@ object BarCodeScannerResultSerializer {
     putString("data", result.value); putString("raw", result.raw); putInt("type", result.type)
   }
   fun parseBarcodeScanningResult(barcode: Any, inputImage: Any? = null) =
-    BarCodeScannerResult(0, "", "", Bundle(), emptyList(), 0, 0)
+    BarCodeScannerResult(0, "", "", Bundle(), mutableListOf(), 0, 0)
   fun parseExtraDate(barcode: Any): Bundle = Bundle()
 }
 `);
@@ -804,11 +846,13 @@ object BarCodeScannerResultSerializer {
           "fun isMLKitBarcodeScannerAvailable(): Boolean = false");
       }
       if (/CameraViewModule\.kt$/.test(file)) {
-        source = source.replace(
-          /AsyncFunction\("launchScanner"\)\s*\{[\s\S]*?^\s{0,6}\}/m,
+        source = replaceKotlinCall(
+          source,
+          'AsyncFunction("launchScanner")',
           `AsyncFunction("launchScanner") { _: BarcodeSettings, promise: Promise ->
       promise.reject(CameraExceptions.MLKitUnavailableException())
-    }`,
+    }
+`,
         );
       }
       if (source !== original) fs.writeFileSync(file, source, "utf8");
@@ -1078,7 +1122,10 @@ const withWearOsModule = (config) => {
   if (process.env.CABLESNAP_FDROID === "1") {
     const projectRoot = process.cwd();
     patchFdroidExpoDependencies(projectRoot);
-    patchFdroidLibrarySources(projectRoot);
+    patchFdroidLibrarySources(projectRoot, {
+      removeGeneratedArtifacts: !fdroidPrebuildArtifactsRemoved,
+    });
+    fdroidPrebuildArtifactsRemoved = true;
   }
 
   // 1. Patch settings.gradle to register :wear.
@@ -1121,7 +1168,13 @@ const withWearOsModule = (config) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const platformRoot = cfg.modRequest.platformProjectRoot;
       patchFdroidExpoDependencies(projectRoot);
-      patchFdroidLibrarySources(projectRoot);
+      // The early config-evaluation pass already removed publisher artifacts.
+      // Do not delete a freshly generated module build directory while Expo
+      // prebuild is still materializing BuildConfig/source outputs.
+      patchFdroidLibrarySources(projectRoot, {
+        removeGeneratedArtifacts: false,
+        rewriteSources: false,
+      });
       const srcDir = path.join(projectRoot, WEAR_TEMPLATE_RELATIVE);
       const dstDir = path.join(platformRoot, "wear");
       // Wipe stale outputs so a renamed/deleted file in the template does

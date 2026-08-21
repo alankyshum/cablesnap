@@ -1,12 +1,13 @@
 import { StyleSheet, View } from "react-native";
 import { Card } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { CartesianChart, Line } from "victory-native";
-import { ChartGate } from "@/components/ui/ChartGate";
+import { LineChart } from "@/components/charts";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { semantic } from "../../constants/theme";
 import type { DailyNutritionTotal, WeeklyNutritionAverage, NutritionAdherence } from "../../lib/db";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 // ─── Calorie Trend Card ────────────────────────────────────────────
 
@@ -14,7 +15,6 @@ type CalorieTrendCardProps = {
   dailyTotals: DailyNutritionTotal[];
   calorieTarget: number | null;
   chartWidth: number;
-  reducedMotion: boolean;
   style?: object;
 };
 
@@ -22,7 +22,6 @@ export function CalorieTrendCard({
   dailyTotals,
   calorieTarget,
   chartWidth,
-  reducedMotion,
   style,
 }: CalorieTrendCardProps) {
   const colors = useThemeColors();
@@ -38,13 +37,13 @@ export function CalorieTrendCard({
     : 0;
 
   const summaryLabel = calorieTarget
-    ? `Calorie trend: averaging ${avgCalories} calories over ${dailyTotals.length} days, target is ${calorieTarget}`
-    : `Calorie trend: averaging ${avgCalories} calories over ${dailyTotals.length} days`;
+    ? t({ id: "components.progress.nutritionCards.calorieSummaryTarget", message: `Calorie trend: averaging ${avgCalories} calories over ${dailyTotals.length} days, target is ${calorieTarget}` })
+    : t({ id: "components.progress.nutritionCards.calorieSummary", message: `Calorie trend: averaging ${avgCalories} calories over ${dailyTotals.length} days` });
 
   return (
     <Card style={[styles.card, style]}>
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
-        Calorie Trend
+        {t({ id: "components.progress.nutritionCards.calorieTrend", message: "Calorie Trend" })}
       </Text>
       <View
         style={{ width: chartWidth, height: 180 }}
@@ -52,38 +51,34 @@ export function CalorieTrendCard({
         accessibilityLabel={summaryLabel}
       >
         {chartData.length >= 2 ? (
-          <ChartGate>
-            <CartesianChart
-              data={chartData}
-              xKey="x"
-              yKeys={calorieTarget ? ["calories", "target"] : ["calories"]}
-              domainPadding={{ left: 10, right: 10 }}
-            >
-              {({ points }) => (
-                <>
-                  <Line
-                    points={points.calories}
-                    color={colors.primary}
-                    strokeWidth={2}
-                    curveType="natural"
-                    animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
-                  />
-                  {calorieTarget && points.target ? (
-                    <Line
-                      points={points.target}
-                      color={colors.outline}
-                      strokeWidth={1}
-                      curveType="linear"
-                    />
-                  ) : null}
-                </>
-              )}
-            </CartesianChart>
-          </ChartGate>
+          <LineChart
+            labels={dailyTotals.map((d) => d.date)}
+            series={[
+              {
+                key: "calories",
+                values: chartData.map((d) => d.calories),
+                color: colors.primary,
+                strokeWidth: 2,
+                curve: "natural",
+              },
+              ...(calorieTarget !== null
+                ? [{
+                    key: "target",
+                    values: chartData.map((d) => d.target),
+                    color: colors.outline,
+                    strokeWidth: 1,
+                    curve: "linear" as const,
+                  }]
+                : []),
+            ]}
+            padding={{ left: 10, right: 10 }}
+            height={180}
+            width={chartWidth}
+          />
         ) : (
           <View style={styles.chartEmpty}>
             <Text style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-              Need at least 2 days of data for chart
+              {t({ id: "components.progress.nutritionCards.chartMinimum", message: "Need at least 2 days of data for chart" })}
             </Text>
           </View>
         )}
@@ -100,8 +95,8 @@ type WeeklyAveragesCardProps = {
 };
 
 function formatDelta(calDelta: number, calDeltaPct: number): string {
-  const direction = calDelta > 0 ? "increased" : "decreased";
-  return `${direction} by ${Math.abs(calDelta)} calories (${Math.abs(calDeltaPct)}%)`;
+  const direction = calDelta > 0 ? t({ id: "components.progress.nutritionCards.increased", message: "increased" }) : t({ id: "components.progress.nutritionCards.decreased", message: "decreased" });
+  return t({ id: "components.progress.nutritionCards.deltaA11y", message: `${direction} by ${Math.abs(calDelta)} calories (${Math.abs(calDeltaPct)}%)` });
 }
 
 function deltaArrow(calDelta: number): string {
@@ -129,26 +124,26 @@ export function WeeklyAveragesCard({ weeklyAverages, style }: WeeklyAveragesCard
   return (
     <Card style={[styles.card, style]}>
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
-        Weekly Averages
+        {t({ id: "components.progress.nutritionCards.weeklyAverages", message: "Weekly Averages" })}
       </Text>
       <View style={styles.weekCompare}>
         <View style={{ flex: 1 }}>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>This Week</Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "components.progress.nutritionCards.thisWeek", message: "This Week" })}</Text>
           <Text style={{ color: colors.onSurface, fontSize: fontSizes.xl, fontWeight: "600" }}>
             {thisWeek.avgCalories} cal
           </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-            {thisWeek.daysTracked} days tracked
+             {t({ id: "components.progress.nutritionCards.daysTracked", message: `${thisWeek.daysTracked} days tracked` })}
           </Text>
         </View>
         {lastWeek && (
           <View style={{ flex: 1 }}>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Last Week</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "components.progress.nutritionCards.lastWeek", message: "Last Week" })}</Text>
             <Text style={{ color: colors.onSurface, fontSize: fontSizes.xl, fontWeight: "600" }}>
               {lastWeek.avgCalories} cal
             </Text>
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-              {lastWeek.daysTracked} days tracked
+               {t({ id: "components.progress.nutritionCards.lastDaysTracked", message: `${lastWeek.daysTracked} days tracked` })}
             </Text>
           </View>
         )}
@@ -162,9 +157,9 @@ export function WeeklyAveragesCard({ weeklyAverages, style }: WeeklyAveragesCard
         </Text>
       )}
       <View style={[styles.macroRow, { marginTop: 12 }]}>
-        <MacroPill label="P" value={thisWeek.avgProtein} unit="g" color={semantic.protein} />
-        <MacroPill label="C" value={thisWeek.avgCarbs} unit="g" color={semantic.carbs} />
-        <MacroPill label="F" value={thisWeek.avgFat} unit="g" color={semantic.fat} />
+        <MacroPill label={t({ id: "components.progress.nutritionCards.proteinShort", message: "P" })} value={thisWeek.avgProtein} unit="g" color={semantic.protein} />
+        <MacroPill label={t({ id: "components.progress.nutritionCards.carbsShort", message: "C" })} value={thisWeek.avgCarbs} unit="g" color={semantic.carbs} />
+        <MacroPill label={t({ id: "components.progress.nutritionCards.fatShort", message: "F" })} value={thisWeek.avgFat} unit="g" color={semantic.fat} />
       </View>
     </Card>
   );
@@ -200,19 +195,19 @@ export function AdherenceCard({ adherence, style }: AdherenceCardProps) {
     <Card style={[styles.card, style]}>
       <View style={styles.cardHeader}>
         <Text variant="subtitle" style={{ color: colors.onSurface }}>
-          Adherence
+           {t({ id: "components.progress.nutritionCards.adherence", message: "Adherence" })}
         </Text>
         {isPerfect && <Text style={{ fontSize: fontSizes.lg }}>🎯</Text>}
       </View>
 
       <Text
         style={{ color: colors.onSurface, fontSize: fontSizes.heading, fontWeight: "700", marginTop: 4 }}
-        accessibilityLabel={`${pct}% of tracked days on target`}
+         accessibilityLabel={t({ id: "components.progress.nutritionCards.adherenceA11y", message: `${pct}% of tracked days on target` })}
       >
         {pct}%
       </Text>
       <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
-        {adherence.onTargetDays} of {adherence.trackedDays} tracked days on target
+         {t({ id: "components.progress.nutritionCards.onTargetDays", message: `${adherence.onTargetDays} of ${adherence.trackedDays} tracked days on target` })}
       </Text>
 
       <View
@@ -225,21 +220,21 @@ export function AdherenceCard({ adherence, style }: AdherenceCardProps) {
 
       <View style={[styles.streakRow, { marginTop: 12 }]}>
         <View style={{ flex: 1 }}>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Current Streak</Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "components.progress.nutritionCards.currentStreak", message: "Current Streak" })}</Text>
           <Text
             style={{ color: colors.onSurface, fontWeight: "600" }}
-            accessibilityLabel={`Current streak: ${adherence.currentStreak} days`}
+             accessibilityLabel={t({ id: "components.progress.nutritionCards.currentStreakA11y", message: `Current streak: ${adherence.currentStreak} days` })}
           >
-            {adherence.currentStreak} {adherence.currentStreak === 1 ? "day" : "days"}
+             {i18n._({ id: "components.progress.nutritionCards.currentStreakValue", message: "{count} {count, plural, one {day} other {days}}", values: { count: adherence.currentStreak } })}
           </Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Longest Streak</Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "components.progress.nutritionCards.longestStreak", message: "Longest Streak" })}</Text>
           <Text
             style={{ color: colors.onSurface, fontWeight: "600" }}
-            accessibilityLabel={`Longest streak: ${adherence.longestStreak} days`}
+             accessibilityLabel={t({ id: "components.progress.nutritionCards.longestStreakA11y", message: `Longest streak: ${adherence.longestStreak} days` })}
           >
-            {adherence.longestStreak} {adherence.longestStreak === 1 ? "day" : "days"}
+             {i18n._({ id: "components.progress.nutritionCards.longestStreakValue", message: "{count} {count, plural, one {day} other {days}}", values: { count: adherence.longestStreak } })}
           </Text>
         </View>
       </View>
@@ -252,11 +247,10 @@ export function AdherenceCard({ adherence, style }: AdherenceCardProps) {
 type MacroTrendCardProps = {
   weeklyAverages: WeeklyNutritionAverage[];
   chartWidth: number;
-  reducedMotion: boolean;
   style?: object;
 };
 
-export function MacroTrendCard({ weeklyAverages, chartWidth, reducedMotion, style }: MacroTrendCardProps) {
+export function MacroTrendCard({ weeklyAverages, chartWidth, style }: MacroTrendCardProps) {
   const colors = useThemeColors();
 
   if (weeklyAverages.length < 2) return null;
@@ -269,57 +263,52 @@ export function MacroTrendCard({ weeklyAverages, chartWidth, reducedMotion, styl
   }));
 
   const latestWeek = weeklyAverages[weeklyAverages.length - 1];
-  const summaryLabel = `Macro trends: latest week averages ${latestWeek.avgProtein}g protein, ${latestWeek.avgCarbs}g carbs, ${latestWeek.avgFat}g fat`;
+  const summaryLabel = t({ id: "components.progress.nutritionCards.macroSummary", message: `Macro trends: latest week averages ${latestWeek.avgProtein}g protein, ${latestWeek.avgCarbs}g carbs, ${latestWeek.avgFat}g fat` });
 
   return (
     <Card style={[styles.card, style]}>
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
-        Macro Trends
+        {t({ id: "components.progress.nutritionCards.macroTrends", message: "Macro Trends" })}
       </Text>
       <View style={styles.legendRow}>
-        <LegendDot color={semantic.protein} label="Protein" />
-        <LegendDot color={semantic.carbs} label="Carbs" />
-        <LegendDot color={semantic.fat} label="Fat" />
+        <LegendDot color={semantic.protein} label={t({ id: "components.progress.nutritionCards.protein", message: "Protein" })} />
+        <LegendDot color={semantic.carbs} label={t({ id: "components.progress.nutritionCards.carbs", message: "Carbs" })} />
+        <LegendDot color={semantic.fat} label={t({ id: "components.progress.nutritionCards.fat", message: "Fat" })} />
       </View>
       <View
         style={{ width: chartWidth, height: 180 }}
         accessibilityRole="image"
         accessibilityLabel={summaryLabel}
       >
-        <ChartGate>
-          <CartesianChart
-            data={chartData}
-            xKey="x"
-            yKeys={["protein", "carbs", "fat"]}
-            domainPadding={{ left: 10, right: 10 }}
-          >
-            {({ points }) => (
-              <>
-                <Line
-                  points={points.protein}
-                  color={semantic.protein}
-                  strokeWidth={2}
-                  curveType="natural"
-                  animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
-                />
-                <Line
-                  points={points.carbs}
-                  color={semantic.carbs}
-                  strokeWidth={2}
-                  curveType="natural"
-                  animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
-                />
-                <Line
-                  points={points.fat}
-                  color={semantic.fat}
-                  strokeWidth={2}
-                  curveType="natural"
-                  animate={reducedMotion ? undefined : { type: "timing", duration: 300 }}
-                />
-              </>
-            )}
-          </CartesianChart>
-        </ChartGate>
+        <LineChart
+          labels={weeklyAverages.map((w) => w.weekStart)}
+          series={[
+            {
+              key: "protein",
+              values: chartData.map((d) => d.protein),
+              color: semantic.protein,
+              strokeWidth: 2,
+              curve: "natural",
+            },
+            {
+              key: "carbs",
+              values: chartData.map((d) => d.carbs),
+              color: semantic.carbs,
+              strokeWidth: 2,
+              curve: "natural",
+            },
+            {
+              key: "fat",
+              values: chartData.map((d) => d.fat),
+              color: semantic.fat,
+              strokeWidth: 2,
+              curve: "natural",
+            },
+          ]}
+          padding={{ left: 10, right: 10 }}
+          height={180}
+          width={chartWidth}
+        />
       </View>
     </Card>
   );

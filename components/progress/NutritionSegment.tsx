@@ -17,6 +17,7 @@ import {
 } from "./NutritionCards";
 import { fontSizes } from "@/constants/design-tokens";
 import Masonry from "@/components/ui/Masonry";
+import { t } from "@lingui/core/macro";
 
 
 
@@ -37,7 +38,6 @@ export default function NutritionSegment() {
     loading,
     error,
     refetch,
-    reducedMotion,
   } = useNutritionProgress();
 
   useFocusEffect(
@@ -56,7 +56,7 @@ export default function NutritionSegment() {
       <View style={[styles.center, { flex: 1 }]}>
         <Card style={styles.errorCard}>
           <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
-            Couldn&apos;t load nutrition data
+            {t({ id: "components.progress.nutrition.loadError", message: "Couldn't load nutrition data" })}
           </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
             {error.message}
@@ -64,8 +64,8 @@ export default function NutritionSegment() {
           <Button
             variant="outline"
             onPress={refetch}
-            accessibilityLabel="Retry loading nutrition data"
-            label="Retry"
+            accessibilityLabel={t({ id: "components.progress.nutrition.retryA11y", message: "Retry loading nutrition data" })}
+            label={t({ id: "components.progress.nutrition.retry", message: "Retry" })}
           />
         </Card>
       </View>
@@ -101,13 +101,13 @@ export default function NutritionSegment() {
             maxWidth: 280,
           }}
         >
-          Start tracking your meals in the Nutrition tab to see trends here.
+          {t({ id: "components.progress.nutrition.empty", message: "Start tracking your meals in the Nutrition tab to see trends here." })}
         </Text>
         <Button
           variant="default"
           onPress={() => router.push("/(tabs)/nutrition")}
-          accessibilityLabel="Go to Nutrition tab"
-          label="Go to Nutrition"
+          accessibilityLabel={t({ id: "components.progress.nutrition.goToNutritionA11y", message: "Go to Nutrition tab" })}
+          label={t({ id: "components.progress.nutrition.goToNutrition", message: "Go to Nutrition" })}
           style={{ marginTop: 8 }}
         />
       </View>
@@ -129,20 +129,20 @@ export default function NutritionSegment() {
       {insufficientData && (
         <Card style={[styles.infoBanner, { backgroundColor: colors.surfaceVariant }]}>
           <Text style={{ color: colors.onSurfaceVariant }}>
-            Track for a few more days to see meaningful trends.
+            {t({ id: "components.progress.nutrition.moreDays", message: "Track for a few more days to see meaningful trends." })}
           </Text>
         </Card>
       )}
       {noTargets && (
         <Card style={[styles.infoBanner, { backgroundColor: colors.surfaceVariant }]}>
           <Text style={{ color: colors.onSurfaceVariant }}>
-            Set your macro targets to see adherence tracking.
+            {t({ id: "components.progress.nutrition.setTargetsMessage", message: "Set your macro targets to see adherence tracking." })}
           </Text>
           <Button
             variant="ghost"
             size="sm"
             onPress={() => router.push("/(tabs)/nutrition")}
-            label="Set Targets"
+            label={t({ id: "components.progress.nutrition.setTargets", message: "Set Targets" })}
             style={{ marginTop: 4, alignSelf: "flex-start" }}
           />
         </Card>
@@ -155,14 +155,12 @@ export default function NutritionSegment() {
             dailyTotals={dailyTotals}
             calorieTarget={targets?.calories ?? null}
             chartWidth={chartWidth}
-            reducedMotion={reducedMotion}
           />
           <WeeklyAveragesCard weeklyAverages={weeklyAverages} />
           {adherence && <AdherenceCard adherence={adherence} />}
           <MacroTrendCard
             weeklyAverages={weeklyAverages}
             chartWidth={chartWidth}
-            reducedMotion={reducedMotion}
           />
         </Masonry>
       ) : (
@@ -171,14 +169,12 @@ export default function NutritionSegment() {
             dailyTotals={dailyTotals}
             calorieTarget={targets?.calories ?? null}
             chartWidth={chartWidth}
-            reducedMotion={reducedMotion}
           />
           <WeeklyAveragesCard weeklyAverages={weeklyAverages} />
           {adherence && <AdherenceCard adherence={adherence} />}
           <MacroTrendCard
             weeklyAverages={weeklyAverages}
             chartWidth={chartWidth}
-            reducedMotion={reducedMotion}
           />
         </>
       )}
@@ -198,7 +194,7 @@ function PeriodSelector({
       <Chip
         selected={period === 4}
         onPress={() => onSelect(4)}
-        accessibilityLabel="4W period"
+        accessibilityLabel={t({ id: "components.progress.nutrition.period4A11y", message: "4W period" })}
         accessibilityRole="button"
         accessibilityState={{ selected: period === 4 }}
         style={{ minWidth: 48, minHeight: 48 }}
@@ -208,7 +204,7 @@ function PeriodSelector({
       <Chip
         selected={period === 8}
         onPress={() => onSelect(8)}
-        accessibilityLabel="8W period"
+        accessibilityLabel={t({ id: "components.progress.nutrition.period8A11y", message: "8W period" })}
         accessibilityRole="button"
         accessibilityState={{ selected: period === 8 }}
         style={{ minWidth: 48, minHeight: 48 }}
@@ -218,7 +214,7 @@ function PeriodSelector({
       <Chip
         selected={period === 12}
         onPress={() => onSelect(12)}
-        accessibilityLabel="12W period"
+        accessibilityLabel={t({ id: "components.progress.nutrition.period12A11y", message: "12W period" })}
         accessibilityRole="button"
         accessibilityState={{ selected: period === 12 }}
         style={{ minWidth: 48, minHeight: 48 }}

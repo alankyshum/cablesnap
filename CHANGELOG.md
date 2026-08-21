@@ -22,6 +22,106 @@ marker) at release time.
 
 ## Unreleased
 
+- **Aligned streak summary icons and text** — Aligns the vertical positioning of the current streak, longest streak, and workouts icons and text on the workout history screen. ([BLD-3641](/BLD/issues/BLD-3641))
+
+## v0.26.104 — 2026-08-20
+<!-- versionCode: 172 -->
+
+- Fixed Wear OS release builds shipping with a debug signing certificate; release APKs now use the production signing key.
+
+## v0.26.103 — 2026-08-20
+<!-- versionCode: 171 -->
+
+- Added: link to GitHub Releases from the About screen, and documented the F-Droid repo install path.
+- Fixed: GitHub release APKs retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.
+- Added recovery links in Settings and documentation for users on v0.26.100 or v0.26.101 whose in-app update check cannot run.
+
+## v0.26.102 — 2026-08-19
+<!-- versionCode: 170 -->
+
+- GitHub release APKs now retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.
+
+## v0.26.101 — 2026-08-19
+<!-- versionCode: 169 -->
+
+- The new AI Coach tab lets you chat with an AI fitness coach that can consult your workout, exercise, and nutrition history on-device. Bring your own OpenRouter API key, choose your model, and keep your key on this device while requests go directly to OpenRouter.
+- Exercises are now available from the top-right icons on the Workouts screen; AI Coach now occupies their place in the tab bar.
+- In-app language selection is now available in Settings for English (US), English (UK), Traditional Chinese (Taiwan), and Simplified Chinese, defaulting to en-US. The Chinese catalogs are machine-translated beta content and have not yet received native-speaker review.
+
+## v0.26.100 — 2026-08-18
+<!-- versionCode: 168 -->
+
+ - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
+ - Fixed exercise selection scrolling on compact screens.
+
+## v0.26.99 — 2026-08-18
+<!-- versionCode: 167 -->
+
+- Migrated self-hosted F-Droid Play-flavor releases to the persistent production signing certificate; users on the boundary release must reinstall CableSnap once.
+
+
+## v0.26.98 — 2026-08-18
+<!-- versionCode: 166 -->
+
+- Charts now work in the F-Droid build.
+- Progress, workout, nutrition, body, and muscle-volume charts now render consistently across supported platforms.
+
+## v0.26.97 — 2026-08-03
+<!-- versionCode: 165 -->
+
+- Importing a backup now shows clear progress, so large backups no longer appear to freeze.
+- Your settings, workouts, and custom content now restore correctly when an imported backup overlaps with built-in content.
+- Re-importing a backup now clearly tells you when its contents are already imported.
+- Buttons, tabs, bottom sheets, and toasts now have smoother, more refined motion and a more physical feel.
+- Filter chips are now easier to tap.
+- Backup imports now remain responsive while restoring larger files.
+
+## v0.26.96 — 2026-07-31
+<!-- versionCode: 164 -->
+
+- **Set rows on the workout summary screen now have increased vertical spacing**, improving readability of exercise sets at a glance. ([BLD-4546](/BLD/issues/BLD-4546))
+
+## v0.26.95 — 2026-07-31
+<!-- versionCode: 163 -->
+
+- Bottom sheets now expand their scrollable content at higher snap points and coordinate dragging with inner scrolling, keeping actions reachable.
+
+## v0.26.94 — 2026-07-30
+<!-- versionCode: 162 -->
+
+- F-Droid builds no longer include the Sentry crash-reporting dependency; crash reporting remains enabled in Play builds.
+
+## v0.26.93 — 2026-07-30
+<!-- versionCode: 161 -->
+
+- F-Droid builds now show an explicit “Charts unavailable in this build” message
+  instead of blank chart areas while keeping full chart rendering in Play and
+  development builds.
+
+## v0.26.92 — 2026-07-28
+<!-- versionCode: 160 -->
+
+- **Ellipsis (overflow) menu button on form library cards is now inset 6 dp from the top-right corner**, matching the check-overlay affordance for consistent touch target placement. ([BLD-4548](/BLD/issues/BLD-4548))
+- Left-align the "Set a goal" button in Weekly Training Goal settings so it
+  matches the padding of surrounding rows. ([BLD-4537](/BLD/issues/BLD-4537))
+
+## v0.26.91 — 2026-07-28
+<!-- versionCode: 159 -->
+
+- F-Droid now uses the standard Android `release` variant, avoiding creation of
+  an app-only build type that cannot be consumed by React Native libraries.
+
+## v0.26.90 — 2026-07-28
+<!-- versionCode: 158 -->
+
+- **F-Droid Camera source stubs now retain the image-plane conversion helper and typed empty barcode results**, keeping preview/capture compilation intact after ML Kit removal.
+- **F-Droid Camera scanner rewriting now preserves the complete Kotlin module**, removing only the proprietary scanner block so camera capture functions continue to compile.
+- **F-Droid cleanup now leaves Gradle-generated Expo build directories untouched**, preventing repeated prebuild cleanup from breaking Camera compilation inputs.
+- **F-Droid prebuild now removes Expo publisher artifacts only once per config evaluation**, avoiding repeated cleanup races with Gradle-generated Camera BuildConfig inputs.
+- **F-Droid Wear OS build step now exports CABLESNAP_FDROID=1**, ensuring Gradle configurations and dependencies remain fully consistent across all compilation steps and preventing incremental build failures. ([BLD-4482](/BLD/issues/BLD-4482))
+- **F-Droid’s post-prebuild sanitization now preserves generated Expo module inputs**, avoiding Gradle fingerprint failures while keeping the source-level proprietary-class removal intact.
+- **F-Droid proprietary-dependency excludes are now scoped to `:app` only**, unblocking the Scheduled Release build after a global-scope regression broke `:expo-camera` in both F-Droid and Play variants.
+- **F-Droid source sanitization no longer deletes freshly generated Expo BuildConfig outputs**, allowing the sanitized Camera module to compile cleanly during prebuild.
 - **F-Droid Camera autolinking now compiles sanitized source instead of the publisher AAR**, eliminating the remaining ML Kit and Google Play Services barcode classes.
 - **F-Droid CI now sanitizes Expo modules before prebuild autolinking**, preventing clean native generation from selecting proprietary publisher AARs.
 - **F-Droid sanitization now runs before Expo autolinking**, so the generated Android graph cannot retain a dependency on a deleted proprietary Expo AAR.
@@ -106,7 +206,6 @@ marker) at release time.
 - **F-Droid CI now invokes source sanitization explicitly after prebuild**, ensuring the generated native project uses the same clean source graph as the config plugin.
 - **Improved Progress empty-state text contrast** — Increases the contrast of the description text on the Progress tab empty-state screen to meet WCAG AA guidelines. ([BLD-3657](/BLD/issues/BLD-3657))
 
-- **Aligned streak summary icons and text** — Aligns the vertical positioning of the current streak, longest streak, and workouts icons and text on the workout history screen. ([BLD-3641](/BLD/issues/BLD-3641))
 
 
 ## v0.26.89 — 2026-07-26
@@ -175,10 +274,9 @@ marker) at release time.
 - **Consistent spacing for Workout History Import button** — Aligns the vertical spacing and gaps around the "Choose CSV File..." button inside the settings card to match standard design patterns and other buttons. (BLD-3499)
 - **Added customizable weight-step increments (micro-loading)** — you can now configure the weight step (0.5 kg, 1.25 kg, 2.5 kg, 5 kg or 1 lb, 2.5 lb, 5 lb, 10 lb) in Units settings, which applies across all steppers in your workout sessions and quick-adds. ([BLD-3517](/BLD/issues/BLD-3517))
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
-=======
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
->>>>>>> 4c987e2d (feat(release-notes): strip internal refs and support code/link markdown)
+- **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->

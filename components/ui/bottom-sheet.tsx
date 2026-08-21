@@ -1,14 +1,13 @@
 /* eslint-disable */
 import { Text } from '@/components/ui/text';
 import { View } from '@/components/ui/view';
-import { useKeyboardHeight } from '@/hooks/useKeyboardHeight'; // Make sure this path is correct
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { useColor } from '@/hooks/useColor';
-import { BORDER_RADIUS } from '@/theme/globals';
 import React, { useEffect } from 'react';
 import {
   Dimensions,
   Modal,
-  ScrollView,
+  Platform,
   TouchableWithoutFeedback,
   ViewStyle,
 } from 'react-native';
@@ -16,14 +15,19 @@ import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
+  ScrollView,
 } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
+  SharedValue,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { interiorDuration, interiorSpring, radii, spacing, scrim } from '@/constants/design-tokens';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
@@ -41,14 +45,15 @@ type BottomSheetContentProps = {
   cardColor: string;
   handleColor: string;
   onHandlePress?: () => void;
-  /** On-screen height of the sheet at the default (first) snap point in pixels.
-   *  Used to constrain the inner ScrollView frame so the content has genuine
-   *  scrollable overflow instead of being dwarfed inside a SCREEN_HEIGHT container.
-   *  BLD-1819: Without this, the ScrollView frame equals SCREEN_HEIGHT even when
-   *  the sheet is only at 0.7 snap, so content shorter than SCREEN_HEIGHT has no
-   *  overflow and Maestro's scrollUntilVisible finds nothing to scroll.
-   */
-  onScreenHeight: number;
+  /** Live translateY so the content area height tracks the sheet position. */
+  translateY: SharedValue<number>;
+  /** Scroll offset of the inner ScrollView, read by the pan gesture worklet. */
+  scrollY: SharedValue<number>;
+  /** Pre-computed chrome height (handle + optional title). */
+  headerHeight: number;
+  /** Bottom safe-area inset for home indicator clearance. */
+  safeBottomPadding: number;
+  disableContentScroll: boolean;
 };
 
 // Component for the bottom sheet content
@@ -61,14 +66,26 @@ const BottomSheetContent = ({
   cardColor,
   handleColor,
   onHandlePress,
-  onScreenHeight,
+  translateY,
+  scrollY,
+  headerHeight,
+  safeBottomPadding,
+  disableContentScroll,
 }: BottomSheetContentProps) => {
-  // The ScrollView must not exceed the visible sheet area minus the chrome above it.
-  // This gives it genuine overflow so the user (and Maestro) can scroll to content
-  // below the visible fold. Without this cap the frame equals SCREEN_HEIGHT and
-  // short-form content has no scrollable range. (BLD-1819)
-  const headerHeight = HANDLE_HEIGHT + (title ? TITLE_HEIGHT : 0);
-  const maxScrollHeight = onScreenHeight - headerHeight;
+  // Track scroll offset in a shared value so the pan gesture worklet can read it.
+  const handleScroll = (event: { nativeEvent: { contentOffset: { y: number } } }) => {
+    scrollY.value = event.nativeEvent.contentOffset.y;
+  };
+
+  // Dynamic height: the visible portion of the sheet (-translateY) minus chrome.
+  // This makes the scrollable frame grow when the user drags to a higher snap
+  // point, so the footer buttons are never hidden below the fold. (BLD-1819)
+  const liveContentHeight = useAnimatedStyle(() => {
+    const onScreenHeight = Math.min(-translateY.value, SCREEN_HEIGHT);
+    return {
+      height: Math.max(0, onScreenHeight - headerHeight),
+    };
+  });
 
   return (
     <Animated.View
@@ -78,9 +95,10 @@ const BottomSheetContent = ({
           width: '100%',
           position: 'absolute',
           top: SCREEN_HEIGHT,
+          overflow: 'hidden',
           backgroundColor: cardColor,
-          borderTopLeftRadius: BORDER_RADIUS,
-          borderTopRightRadius: BORDER_RADIUS,
+            borderTopLeftRadius: radii.xl,
+            borderTopRightRadius: radii.xl,
         },
         rBottomSheetStyle,
         style,
@@ -92,16 +110,16 @@ const BottomSheetContent = ({
           testID="bottom-sheet-handle"
           style={{
             width: '100%',
-            paddingVertical: 12,
+             paddingVertical: spacing.md,
             alignItems: 'center',
           }}
         >
           <View
             style={{
-              width: 64,
-              height: 6,
+             width: spacing.xxl * 2,
+             height: spacing.xs + 2,
               backgroundColor: handleColor,
-              borderRadius: 999,
+             borderRadius: radii.pill,
             }}
           />
         </View>
@@ -111,9 +129,9 @@ const BottomSheetContent = ({
       {title && (
         <View
           style={{
-            marginHorizontal: 16,
-            marginTop: 16,
-            paddingBottom: 8,
+             marginHorizontal: spacing.base,
+             marginTop: spacing.base,
+             paddingBottom: spacing.sm,
           }}
         >
           <Text variant='title' style={{ textAlign: 'center' }}>
@@ -122,17 +140,21 @@ const BottomSheetContent = ({
         </View>
       )}
 
-      {/* Content wrapped in a ScrollView whose height is bounded to the visible
-          sheet area. This ensures content taller than the visible region creates
-          genuine scrollable overflow. (BLD-1819) */}
-      <ScrollView
-        style={{ flex: 1, maxHeight: maxScrollHeight }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        keyboardShouldPersistTaps='handled'
-        showsVerticalScrollIndicator={false}
-      >
-        {children}
-      </ScrollView>
+      {/* Content wrapper with live height that tracks translateY, so the
+          scrollable frame expands when the sheet is dragged higher. The inner
+          ScrollView (from RNGH for native gesture coordination) fills it. */}
+      <Animated.View style={[liveContentHeight, { flexShrink: 0 }]}>
+        {disableContentScroll ? children : <ScrollView
+          style={{ flex: 1 }}
+           contentContainerStyle={{ padding: spacing.base, paddingBottom: spacing.xl + spacing.base + safeBottomPadding }}
+          keyboardShouldPersistTaps='handled'
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+        >
+          {children}
+        </ScrollView>}
+      </Animated.View>
     </Animated.View>
   );
 };
@@ -146,6 +168,7 @@ type BottomSheetProps = {
   title?: string;
   style?: ViewStyle;
   disablePanGesture?: boolean;
+  disableContentScroll?: boolean;
 };
 
 export function BottomSheet({
@@ -157,11 +180,14 @@ export function BottomSheet({
   title,
   style,
   disablePanGesture = false,
+  disableContentScroll = false,
 }: BottomSheetProps) {
   const cardColor = useColor('card');
   // Use mutedForeground for handle pill — ensures ≥3:1 contrast against card background (WCAG AA for non-text UI)
   const handleColor = useColor('mutedForeground');
   const { keyboardHeight, isKeyboardVisible } = useKeyboardHeight();
+  const insets = useSafeAreaInsets();
+  const reducedMotion = typeof useReducedMotion === 'function' ? useReducedMotion() : false;
 
   const translateY = useSharedValue(0);
   const context = useSharedValue({ y: 0 });
@@ -169,6 +195,8 @@ export function BottomSheet({
   const currentSnapIndex = useSharedValue(0);
   // Shared value to hold keyboard height for use in worklets
   const keyboardHeightSV = useSharedValue(0);
+  // Shared value to hold ScrollView scroll offset for the pan gesture worklet
+  const scrollY = useSharedValue(0);
 
   const snapPointsHeights: number[] = [];
   for (let i = 0; i < snapPoints.length; i++) {
@@ -176,9 +204,9 @@ export function BottomSheet({
   }
   const defaultHeight = snapPointsHeights[0];
 
-  // On-screen height at the default (first) snap point — passed to BottomSheetContent
-  // so it can cap the ScrollView frame. (BLD-1819)
-  const defaultOnScreenHeight = SCREEN_HEIGHT * snapPoints[0];
+  // Pre-compute the chrome height so the content wrapper can size itself
+  // relative to the live translateY (which IS the on-screen height).
+  const headerHeight = HANDLE_HEIGHT + (title ? TITLE_HEIGHT : 0);
 
   const [modalVisible, setModalVisible] = React.useState(false);
 
@@ -186,29 +214,27 @@ export function BottomSheet({
   useEffect(() => {
     if (isVisible) {
       setModalVisible(true);
-      translateY.value = withSpring(defaultHeight, {
-        damping: 50,
-        stiffness: 400,
-      });
-      opacity.value = withTiming(1, { duration: 300 });
+      translateY.value = reducedMotion ? defaultHeight : withSpring(defaultHeight, interiorSpring.disclose);
+      opacity.value = reducedMotion ? 1 : withTiming(1, { duration: interiorDuration.modalBackdrop });
       currentSnapIndex.value = 0;
+      scrollY.value = 0;
     } else {
-      translateY.value = withSpring(0, { damping: 50, stiffness: 400 });
-      opacity.value = withTiming(0, { duration: 300 }, (finished) => {
+      translateY.value = reducedMotion ? 0 : withSpring(0, interiorSpring.disclose);
+      opacity.value = reducedMotion ? 0 : withTiming(0, { duration: interiorDuration.exit }, (finished) => {
         if (finished) {
           runOnJS(setModalVisible)(false);
         }
       });
     }
-  }, [isVisible, defaultHeight]);
+  }, [isVisible, defaultHeight, reducedMotion]);
 
   // Function to animate the sheet to a specific destination
-  const scrollTo = (destination: number) => {
+  const scrollTo = (destination: number, velocity = 0) => {
     'worklet';
-    translateY.value = withSpring(destination, { damping: 50, stiffness: 400 });
+    translateY.value = reducedMotion ? destination : withSpring(destination, { ...interiorSpring.disclose, velocity });
   };
 
-  // --- START: NEW KEYBOARD HANDLING LOGIC ---
+  // --- START: KEYBOARD HANDLING LOGIC ---
   useEffect(() => {
     // Update the shared value whenever keyboardHeight changes
     keyboardHeightSV.value = keyboardHeight;
@@ -228,7 +254,7 @@ export function BottomSheet({
       scrollTo(destination);
     }
   }, [keyboardHeight, isKeyboardVisible, isVisible]);
-  // --- END: NEW KEYBOARD HANDLING LOGIC ---
+  // --- END: KEYBOARD HANDLING LOGIC ---
 
   const findClosestSnapPoint = (currentY: number) => {
     'worklet';
@@ -261,19 +287,38 @@ export function BottomSheet({
 
   const animateClose = () => {
     'worklet';
-    translateY.value = withSpring(0, { damping: 50, stiffness: 400 });
-    opacity.value = withTiming(0, { duration: 300 }, (finished) => {
+    translateY.value = reducedMotion ? 0 : withSpring(0, { ...interiorSpring.disclose, velocity: 0 });
+    opacity.value = reducedMotion ? 0 : withTiming(0, { duration: interiorDuration.exit }, (finished) => {
       if (finished) {
         runOnJS(onClose)();
       }
     });
   };
 
-  const gesture = Gesture.Pan()
+  // Highest (most negative) snap point — the sheet is fully expanded.
+  const maxSnapY = snapPointsHeights[snapPointsHeights.length - 1];
+
+  const panGesture = Gesture.Pan()
+    .activeOffsetY([-10, 10])
     .onStart(() => {
       context.value = { y: translateY.value };
     })
     .onUpdate((event) => {
+      const currentY = translateY.value;
+      const isMaxSnap = currentY <= maxSnapY;
+      const isScrollAtTop = scrollY.value <= 0;
+      const isDraggingDown = event.translationY > 0;
+
+      // At the max snap point: only drag the sheet when the scroll view is at
+      // the top AND the user is dragging downward (pull-to-dismiss). Otherwise
+      // let the RNGH ScrollView's native gesture handle scrolling.
+      // The .activeOffsetY([-10, 10]) already creates a small dead zone so the
+      // pan does not steal quick scrolls, and the handle is always draggable
+      // because touching above the ScrollView never activates the scroll gesture.
+      if (isMaxSnap && !(isScrollAtTop && isDraggingDown)) {
+        return;
+      }
+
       const newY = context.value.y + event.translationY;
       if (newY <= 0 && newY >= MAX_TRANSLATE_Y) {
         translateY.value = newY;
@@ -281,6 +326,11 @@ export function BottomSheet({
     })
     .onEnd((event) => {
       const currentY = translateY.value;
+      const startY = context.value.y;
+
+      // If the sheet didn't actually move (the scroll view was scrolling), skip snapping.
+      if (Math.abs(currentY - startY) < 1) return;
+
       const velocity = event.velocityY;
 
       if (velocity > 500 && currentY > -SCREEN_HEIGHT * 0.2) {
@@ -292,8 +342,12 @@ export function BottomSheet({
       const closestSnapPoint = findClosestSnapPoint(currentY);
       // Calculate the final destination, accounting for the keyboard height
       const finalDestination = closestSnapPoint - keyboardHeightSV.value;
-      scrollTo(finalDestination);
+      scrollTo(finalDestination, event.velocityY);
     });
+
+  // Native scroll gesture for coordination with the RNGH ScrollView.
+  const nativeScrollGesture = Gesture.Native();
+  const composedGesture = Gesture.Simultaneous(panGesture, nativeScrollGesture);
 
   const rBottomSheetStyle = useAnimatedStyle(() => {
     return {
@@ -313,12 +367,24 @@ export function BottomSheet({
     }
   };
 
+  const handleRequestClose = () => {
+    animateClose();
+  };
+
+  const safeBottomPadding = insets.bottom;
+
   return (
     <Modal
       visible={modalVisible}
       transparent
       statusBarTranslucent
       animationType='none'
+      onRequestClose={handleRequestClose}
+      // iOS: modal content is the only content exposed to assistive tech, so
+      // screen-reader users can't swipe past the sheet to background content.
+      // Disabled under test (NODE_ENV=test) so @testing-library/react-native
+      // can still query the full tree behind the modal.
+      accessibilityViewIsModal={Platform.OS !== 'web' && process.env.NODE_ENV !== 'test'}
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Animated.View
@@ -340,10 +406,14 @@ export function BottomSheet({
               cardColor={cardColor}
               handleColor={handleColor}
               onHandlePress={() => runOnJS(handlePress)()}
-              onScreenHeight={defaultOnScreenHeight}
+              translateY={translateY}
+              scrollY={scrollY}
+              headerHeight={headerHeight}
+              safeBottomPadding={safeBottomPadding}
+              disableContentScroll={disableContentScroll}
             />
           ) : (
-            <GestureDetector gesture={gesture}>
+            <GestureDetector gesture={composedGesture}>
               <BottomSheetContent
                 children={children}
                 title={title}
@@ -352,7 +422,11 @@ export function BottomSheet({
                 cardColor={cardColor}
                 handleColor={handleColor}
                 onHandlePress={() => runOnJS(handlePress)()}
-                onScreenHeight={defaultOnScreenHeight}
+                translateY={translateY}
+                scrollY={scrollY}
+                headerHeight={headerHeight}
+                safeBottomPadding={safeBottomPadding}
+                disableContentScroll={disableContentScroll}
               />
             </GestureDetector>
           )}

@@ -2,6 +2,11 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
+const WEAR_TEMPLATE_BUILD_GRADLE = path.join(
+  __dirname,
+  "../../modules/expo-wearos-bridge/wear-template/build.gradle.kts",
+);
+
 const {
   patchSettingsGradle,
   patchAppBuildGradle,
@@ -225,6 +230,59 @@ describe("patchAppBuildGradle", () => {
     expect(out).not.toMatch(/exclude group:\s*"androidx\.camera"/);
   });
 
+  it("with CABLESNAP_FDROID=1 emits variant-scoped :app excludes (BLD-4473)", () => {
+    const previous = process.env.CABLESNAP_FDROID;
+    try {
+      process.env.CABLESNAP_FDROID = "1";
+      const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+      // App-scoped marker present.
+      expect(out).toContain("// cablesnap:wearos:fdroid-excludes:app");
+      // Variant-scoped match block present.
+      expect(out).toMatch(
+        /configurations\.matching\s*\{\s*it\.name\.toLowerCase\(\)\.contains\("releasefdroid"\)\s*\}\.configureEach/,
+      );
+      // All required exclusions inside the variant-scoped block.
+      for (const group of [
+        "com.google.android.gms",
+        "com.google.firebase",
+        "com.google.mlkit",
+        "com.android.installreferrer",
+      ]) {
+        expect(out).toContain(`exclude group: "${group}"`);
+      }
+      expect(out).toContain('exclude module: "camera-mlkit-vision"');
+      expect(out).toContain('exclude module: "expo-wearos-bridge"');
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
+  });
+
+  it("does NOT emit a naked configurations.configureEach exclude block (BLD-4473 regression guard)", () => {
+    // The BLD-4473 fix removed a broad
+    // `configurations.configureEach { exclude group: "com.google.…" }` block
+    // from FDROID_APP_EXCLUDES_BLOCK. That block applied to ALL of :app's
+    // configurations, including Play's `release{Compile,Runtime}Classpath`
+    // — a Play build regression waiting to happen the moment
+    // CABLESNAP_FDROID=1 leaks into the Play Gradle invocation (which it
+    // already does in .github/workflows/scheduled-release.yml). Excludes
+    // must be bound to F-Droid variant configurations only.
+    const previous = process.env.CABLESNAP_FDROID;
+    try {
+      process.env.CABLESNAP_FDROID = "1";
+      const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
+      // No naked `configurations.configureEach { … exclude group: "com.google.…" }`.
+      // The only allowed configureEach is the variant-scoped one on
+      // `configurations.matching { … "releasefdroid" … }.configureEach`.
+      expect(out).not.toMatch(
+        /^\s*configurations\.configureEach\s*\{[\s\S]*?exclude group: "com\.google\./m,
+      );
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
+  });
+
   it("is idempotent across multiple prebuilds", () => {
     const once = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     const twice = patchAppBuildGradle(once);
@@ -259,6 +317,54 @@ describe("patchAppBuildGradle", () => {
     // test catches it.
     const out = patchAppBuildGradle(APP_BUILD_GRADLE_FIXTURE);
     expect(out).toContain("shrinkResources enableShrinkResources.toBoolean()");
+  });
+});
+
+describe("Wear OS template signing", () => {
+  it("loads keystore properties and creates the release signing config", () => {
+    const template = fs.readFileSync(WEAR_TEMPLATE_BUILD_GRADLE, "utf8");
+
+    expect(template).toMatch(/keystore\.properties/);
+    expect(template).toMatch(/hasReleaseKeystore\s*=\s*!storeFileProperty\.isNullOrBlank\(\)/);
+    expect(template).toMatch(/signingConfigs\.maybeCreate\(\s*["']release["']\s*\)/);
+    expect(template).toMatch(/releaseSigningConfig\.storeFile\s*=\s*if\s*\(configuredStoreFile\.isAbsolute\)/);
+    expect(template).toMatch(/rootProject\.file\(\s*["']app["']\s*\)\.resolve\(\s*configuredStoreFile\s*\)/);
+  });
+
+  it("populates every release signing property", () => {
+    const template = fs.readFileSync(WEAR_TEMPLATE_BUILD_GRADLE, "utf8");
+
+    for (const property of ["storePassword", "keyAlias", "keyPassword"]) {
+      expect(template).toMatch(
+        new RegExp(`releaseSigningConfig\\.${property}\\s*=\\s*requireProp\\(`),
+      );
+    }
+    expect(template).toMatch(/releaseSigningConfig\s*\.storeFile\s*=\s*if/);
+  });
+
+  it("rejects missing or blank signing properties with per-key errors", () => {
+    const template = fs.readFileSync(WEAR_TEMPLATE_BUILD_GRADLE, "utf8");
+
+    expect(template).toMatch(/fun\s+requireProp\(\s*value:\s*String\?\s*,\s*key:\s*String\s*\)/);
+    expect(template).toMatch(/value\?\.takeIf\(String::isNotBlank\)/);
+    for (const key of ["storePassword", "keyAlias", "keyPassword"]) {
+      expect(template).toMatch(new RegExp(`requireProp\\([^)]*['"]${key}['"]`));
+    }
+    expect(template).toMatch(/'\$key' is missing\/blank/);
+  });
+
+  it("keeps production signing and an explicit debug fallback", () => {
+    const template = fs.readFileSync(WEAR_TEMPLATE_BUILD_GRADLE, "utf8");
+
+    expect(template).toMatch(
+      /signingConfig\s*=\s*if\s*\(hasReleaseKeystore\)\s*\{/,
+    );
+    expect(template).toMatch(
+      /else\s*\{\s*signingConfigs\.getByName\(\s*["']debug["']\s*\)/,
+    );
+    expect(template).not.toMatch(
+      /getByName\(\s*["']release["']\s*\)\s*\{[^{}]*signingConfig\s*=\s*signingConfigs\.getByName\(\s*["']debug["']\s*\)/,
+    );
   });
 });
 
@@ -326,51 +432,49 @@ describe("patchProjectBuildGradle", () => {
     );
   });
 
-  it("emits gated all-project F-Droid exclusions for every SUSS group", () => {
+  it("does NOT inject an allprojects / configurations.all F-Droid exclude block (BLD-4473 regression guard)", () => {
+    // Commit 8072156b appended
+    // `allprojects { configurations.all { exclude … } }` here, gated on
+    // `CABLESNAP_FDROID=1`. That scope applied excludes to every Expo
+    // library subproject (:expo-camera etc.), corrupting their own R.jar
+    // / BuildConfig generation and breaking BOTH F-Droid and Play
+    // Scheduled Release variants (workflow exports CABLESNAP_FDROID=1
+    // across the whole Build APK step). The exclude block belongs on
+    // `:app` only — see patchAppBuildGradle + FDROID_APP_EXCLUDES_BLOCK.
+    // This test locks that scope in.
     const previous = process.env.CABLESNAP_FDROID;
-    process.env.CABLESNAP_FDROID = "1";
-    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
-    expect(out).toMatch(
-      /if \(System\.getenv\("CABLESNAP_FDROID"\) == "1"\)\s*\{[\s\S]*allprojects\s*\{[\s\S]*configurations\.all\s*\{/,
-    );
-    for (const group of [
-      "com.google.android.gms",
-      "com.google.firebase",
-      "com.google.mlkit",
-      "com.android.installreferrer",
-    ]) {
-      expect(out).toContain(`exclude group: "${group}"`);
+    try {
+      for (const envValue of ["1", undefined]) {
+        if (envValue === undefined) delete process.env.CABLESNAP_FDROID;
+        else process.env.CABLESNAP_FDROID = envValue;
+        const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+        // No project-level FDROID_EXCLUDES_MARKER at all.
+        expect(out).not.toContain("// cablesnap:wearos:fdroid-excludes");
+        // No allprojects { configurations.all { … } } block.
+        expect(out).not.toMatch(
+          /allprojects\s*\{[\s\S]*?configurations\.all\s*\{/,
+        );
+        // No configurations.all in the appended output whatsoever.
+        expect(out).not.toContain("configurations.all {");
+      }
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
     }
-    expect(out).toContain("resolutionStrategy.eachDependency");
-    expect(out).toContain("F-Droid build rejected proprietary dependency");
-    expect(out).toContain('exclude module: "camera-mlkit-vision"');
-    expect(out).toContain('exclude module: "expo-wearos-bridge"');
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
   });
 
-  it("places every exclusion inside the CABLESNAP_FDROID gate", () => {
+  it("output is identical regardless of CABLESNAP_FDROID env (BLD-4473 regression guard)", () => {
     const previous = process.env.CABLESNAP_FDROID;
-    process.env.CABLESNAP_FDROID = "1";
-    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
-    const gateStart = out.indexOf('if (System.getenv("CABLESNAP_FDROID") == "1")');
-    const gateEnd = out.indexOf("\n}\n", gateStart);
-    const exclusions = out.indexOf('exclude group: "com.google.firebase"');
-    expect(gateStart).toBeGreaterThan(-1);
-    expect(gateEnd).toBeGreaterThan(gateStart);
-    expect(exclusions).toBeGreaterThan(gateStart);
-    expect(exclusions).toBeLessThan(gateEnd);
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
-  });
-
-  it("omits F-Droid exclusions from Play prebuild output", () => {
-    const previous = process.env.CABLESNAP_FDROID;
-    delete process.env.CABLESNAP_FDROID;
-    const out = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
-    expect(out).not.toContain("cablesnap:wearos:fdroid-excludes");
-    if (previous === undefined) delete process.env.CABLESNAP_FDROID;
-    else process.env.CABLESNAP_FDROID = previous;
+    try {
+      delete process.env.CABLESNAP_FDROID;
+      const withoutEnv = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+      process.env.CABLESNAP_FDROID = "1";
+      const withEnv = patchProjectBuildGradle(PROJECT_BUILD_GRADLE_FIXTURE);
+      expect(withEnv).toBe(withoutEnv);
+    } finally {
+      if (previous === undefined) delete process.env.CABLESNAP_FDROID;
+      else process.env.CABLESNAP_FDROID = previous;
+    }
   });
 
   it("emits an androidComponents.beforeVariants selector for releaseFdroid", () => {

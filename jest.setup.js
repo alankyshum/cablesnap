@@ -1,4 +1,28 @@
 /* eslint-env jest */
+const { i18n } = require("@lingui/core");
+i18n.loadAndActivate({ locale: "en-US", messages: {} });
+
+// Keep Lingui's context-based macros usable from the default Testing Library
+// render path. Tests that need a different provider can still pass `wrapper`;
+// the default wrapper supplies the app's shared i18n instance.
+jest.mock('@testing-library/react-native', () => {
+  const actual = jest.requireActual('@testing-library/react-native');
+  const { TestI18nProvider } = require('./__tests__/helpers/i18n');
+
+  return {
+    ...actual,
+    render: (component, options = {}) =>
+      actual.render(component, {
+        ...options,
+        wrapper: options.wrapper || TestI18nProvider,
+      }),
+    renderHook: (callback, options = {}) =>
+      actual.renderHook(callback, {
+        ...options,
+        wrapper: options.wrapper || TestI18nProvider,
+      }),
+  };
+});
 // We rely on moduleNameMapper in jest.config.js to intercept
 // react-native-reanimated and react-native-worklets before they load native code.
 
@@ -27,17 +51,9 @@ jest.mock(
   }
 );
 
-// Mock @shopify/react-native-skia — its ESM entry imports native modules that
-// Jest cannot transform. Tests don't render via Skia anyway; charts/fonts are
-// stubbed at the victory-native level.
 if (typeof window !== 'undefined' && !window.dispatchEvent) {
   window.dispatchEvent = () => {};
 }
-
-jest.mock('@shopify/react-native-skia', () => ({
-  matchFont: () => null,
-  useFont: () => null,
-}));
 
 // Mock react-native-safe-area-context for tests (was previously provided by PaperProvider)
 jest.mock('react-native-safe-area-context', () => {
@@ -54,5 +70,3 @@ jest.mock('react-native-safe-area-context', () => {
     initialWindowMetrics: { insets, frame },
   };
 });
-
-
