@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.107",
+    "date": "2026-08-21",
+    "versionCode": 175,
+    "body": "- Localized the AI Coach navigation label in the app's supported languages.\n- Fixed hydration preset labels when displaying fluid ounces."
+  },
+  {
     "version": "0.26.106",
     "date": "2026-08-21",
     "versionCode": 174,

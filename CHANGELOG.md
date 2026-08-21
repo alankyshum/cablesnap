@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.107 — 2026-08-21
+<!-- versionCode: 175 -->
+
 - Localized the AI Coach navigation label in the app's supported languages.
 - Fixed hydration preset labels when displaying fluid ounces.
 
