@@ -5,6 +5,7 @@ import path from "node:path";
 import { parse } from "@babel/parser";
 import traverse, { type NodePath } from "@babel/traverse";
 import * as t from "@babel/types";
+import { compileMessageOrThrow } from "@lingui/message-utils/compileMessage";
 import { sourceHash, type CatalogEntry } from "./i18n/catalog-entry";
 import { generateZhCnCatalog, sp2tw, tw2sp } from "./i18n/opencc";
 import { readCatalog, type Catalog } from "./i18n/catalog-io";
@@ -23,6 +24,7 @@ export type ViolationClass =
   | "I18N_UNTRANSLATED_ICU_BRANCH"
   | "I18N_CONDITIONAL_MESSAGE"
   | "I18N_DYNAMIC_ID"
+  | "I18N_INVALID_ICU"
   | "I18N_WRONG_SCRIPT";
 
 const SUPPORTED_LOCALES = ["en-US", "en-GB", "zh-TW", "zh-CN"] as const;
@@ -196,6 +198,22 @@ export function checkRedundantOverrides(zhTw: Catalog, overrides: Catalog): I18n
 
 function catalogText(value: Catalog[string]): string {
   return entryMessage(value);
+}
+
+export function checkCatalogIcu(catalog: Catalog, locale: string): I18nViolation[] {
+  return Object.entries(catalog).flatMap(([key, value]) => {
+    try {
+      compileMessageOrThrow(entryMessage(value));
+      return [];
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return [{
+        class: "I18N_INVALID_ICU" as const,
+        key,
+        message: `${locale}:${key}: ${detail}`,
+      }];
+    }
+  });
 }
 
 /** Return true only for the AST constructs Lingui hoists incorrectly. */
@@ -459,6 +477,11 @@ export function runI18nGateCheck(input: {
     ...checkScriptPurity(input.zhTW, "zh-TW"),
     ...checkScriptPurity(input.zhCN, "zh-CN"),
     ...checkScriptPurity(input.zhCNOverrides, "zh-CN.overrides"),
+    ...checkCatalogIcu(input.source, "en-US"),
+    ...checkCatalogIcu(input.enGB, "en-GB"),
+    ...checkCatalogIcu(input.zhTW, "zh-TW"),
+    ...checkCatalogIcu(input.zhCN, "zh-CN"),
+    ...checkCatalogIcu(input.zhCNOverrides, "zh-CN.overrides"),
   ];
   return { passed: violations.length === 0, violations };
 }

@@ -1,8 +1,8 @@
 import { makeCatalogEntry } from "../../scripts/i18n/catalog-entry";
 import { tw2sp } from "../../scripts/i18n/opencc";
-import { renderRuntimeCatalogs, RUNTIME_LOCALES } from "../../scripts/i18n/runtime-catalogs";
 import {
   checkCatalog,
+  checkCatalogIcu,
   checkRedundantOverrides,
   checkZhCnGenerated,
   generateMessageKeys,
@@ -98,18 +98,11 @@ describe("gate and MessageKey codegen", () => {
   });
 });
 
-describe("compiled runtime catalogs", () => {
-  const catalogs = (message: string) => Object.fromEntries(
-    RUNTIME_LOCALES.map(locale => [locale, { greeting: makeCatalogEntry("greeting", message, message) }])
-  );
-
-  it("compiles ICU messages into the committed runtime representation", () => {
-    expect(renderRuntimeCatalogs(catalogs("Hello {name}"))).toContain('["Hello ",["name"]]');
-  });
-
-  it("rejects invalid ICU before a bundle can be built", () => {
-    expect(() => renderRuntimeCatalogs(catalogs("{unit, select, fl oz {fl oz}}")))
-      .toThrow("en-US:greeting");
+describe("runtime catalog ICU validation", () => {
+  it("accepts valid ICU and rejects invalid ICU before a bundle can be built", () => {
+    expect(checkCatalogIcu({ greeting: "Hello {name}" }, "en-US")).toEqual([]);
+    expect(checkCatalogIcu({ greeting: "{unit, select, fl oz {fl oz}}" }, "en-US")[0])
+      .toMatchObject({ class: "I18N_INVALID_ICU", key: "greeting" });
   });
 });
 
