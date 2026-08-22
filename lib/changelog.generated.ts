@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.108",
+    "date": "2026-08-22",
+    "versionCode": 176,
+    "body": "- Rebuilt the AI Coach chat experience with live-streaming responses and formatted markdown.\n- The model picker now scrolls properly, and your selected model is used for requests and remembered for later.\n- Added clearer messages when an AI provider is unavailable.\n- Improved accessibility and dark-mode contrast across the AI Coach experience.\n- Expanded translation coverage for AI Coach and related app labels."
+  },
+  {
     "version": "0.26.107",
     "date": "2026-08-21",
     "versionCode": 175,
