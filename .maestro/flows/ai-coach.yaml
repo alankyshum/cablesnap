@@ -1,0 +1,39 @@
+appId: com.persoack.cablesnap
+---
+# Native-only regression flow. The release APK cannot safely receive a test key:
+# SecureStore validation is intentionally unchanged. Before running this flow,
+# save a valid OpenRouter key in Settings > AI Provider on the emulator (or use
+# a dev build with the normal settings UI). Never put a key in this repository.
+- launchApp
+- tapOn: "AI Coach"
+- extendedWaitUntil:
+    visible: "AI Coach"
+    timeout: 90000
+- assertVisible: "Ask your AI Coach anything..."
+- tapOn: "Active Model: .*"
+- extendedWaitUntil:
+    visible: "Select AI Model"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: ".*supports tools, selected"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".*supports tools, selected"
+- tapOn: "Ask your AI Coach anything..."
+- inputText: "How did my last workout go?"
+- hideKeyboard
+- tapOn:
+    point: "95%,82%"
+- extendedWaitUntil:
+    visible: "Stop generating"
+    timeout: 90000
+- tapOn:
+    point: "95%,82%"
+- assertNotVisible: "Stop generating"
+# Kill and relaunch after cancellation. This verifies a clean native remount
+# without being blocked by Expo's dev-only canceled-fetch error overlay.
+- stopApp
+- launchApp
+- tapOn: "AI Coach"
+- assertVisible: "Ask your AI Coach anything..."
