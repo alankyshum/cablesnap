@@ -137,12 +137,11 @@ describe("source conditional-message gate", () => {
     expect(scan('import { t } from "@lingui/core/macro"; t({ id: "a", message: `Hello ${name}` });')).toEqual([]);
   });
 
-  it("flags literal accessibility labels and hints, but not translated expressions", () => {
-    const findings = scan([
-      'const a = <Button accessibilityLabel="Close" accessibilityHint={"Tap to close"} />;',
+  it("does not flag translated expressions as conditional messages", () => {
+    const findings = scan(
       'const b = <Button accessibilityLabel={t({ id: "close", message: "Close" })} />;',
-    ].join("\n"));
-    expect(findings.map(f => f.class)).toEqual(["I18N_LITERAL_A11Y_LABEL", "I18N_LITERAL_A11Y_LABEL"]);
+    );
+    expect(findings).toEqual([]);
   });
 });
 

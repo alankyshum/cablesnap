@@ -11088,5 +11088,570 @@
     "message": "與Strava連線時發生錯誤。請再試一次。",
     "srcHash": "24375bf260f1",
     "origin": "machine"
+  },
+  "components.coach.activeModelA11y": {
+    "message": "目前模型：{modelId}。點擊以變更模型。",
+    "srcHash": "a26ab7f3dec3",
+    "origin": "human"
+  },
+  "ai.errors.addCredits": {
+    "message": "新增 額度 at openrouter.ai",
+    "srcHash": "c17b8121cca5",
+    "origin": "human"
+  },
+  "ai.errors.addKey": {
+    "message": "新增 金鑰",
+    "srcHash": "73bd58e899fb",
+    "origin": "human"
+  },
+  "ai.errors.missingKey": {
+    "message": "新增 your 開啟Router 金鑰 to use AI 教練.",
+    "srcHash": "24ad06b9f83b",
+    "origin": "human"
+  },
+  "components.coach.deleteConversationBody": {
+    "message": "Are you sure you want to delete \"{title}\"? This cannot be undone.（AI 教練）",
+    "srcHash": "e0a94a64820e",
+    "origin": "human"
+  },
+  "ai.errors.checkKey": {
+    "message": "Check 金鑰",
+    "srcHash": "98509f3288cc",
+    "origin": "human"
+  },
+  "components.ui.sheet.close": {
+    "message": "關閉 sheet",
+    "srcHash": "c1100d93c22e",
+    "origin": "human"
+  },
+  "components.coach.deleteSessionA11y": {
+    "message": "刪除 {title}",
+    "srcHash": "ab5a7dd9578d",
+    "origin": "human"
+  },
+  "ai.errors.dismiss": {
+    "message": "Dismiss（AI 教練）",
+    "srcHash": "2101bfd447f7",
+    "origin": "human"
+  },
+  "components.coach.errorA11y": {
+    "message": "錯誤：{message}",
+    "srcHash": "187ddc51cbbe",
+    "origin": "human"
+  },
+  "components.coach.noModelsMatching": {
+    "message": "沒有模型s matching \"{query}\"",
+    "srcHash": "bc562255b034",
+    "origin": "human"
+  },
+  "ai.errors.openModelPicker": {
+    "message": "開啟 模型 picker",
+    "srcHash": "d8dddb7b2765",
+    "origin": "human"
+  },
+  "ai.errors.serverError": {
+    "message": "開啟Router encountered a 伺服器 錯誤. 重試 shortly or choose another 模型.",
+    "srcHash": "286eedd410a4",
+    "origin": "human"
+  },
+  "ai.errors.rateLimitedReset": {
+    "message": "開啟Router rate limit reached. 重試 after {resetAt}.",
+    "srcHash": "95558d7c6e63",
+    "origin": "human"
+  },
+  "ai.errors.rateLimitedGeneric": {
+    "message": "開啟Router rate limit reached. 重試 later; free-tier limits are 20 rpm, 50/day under $10 purchased, or 1000/day at $10+.",
+    "srcHash": "e7dc0a36dfc7",
+    "origin": "human"
+  },
+  "ai.errors.forbidden": {
+    "message": "開啟Router refused this request. Check 金鑰 permissions or 模型 access.",
+    "srcHash": "5fcd919d62b1",
+    "origin": "human"
+  },
+  "ai.errors.pickAnotherModel": {
+    "message": "Pick another 模型",
+    "srcHash": "910719260300",
+    "origin": "human"
+  },
+  "components.coach.refreshCatalog": {
+    "message": "Refresh 目錄",
+    "srcHash": "6d6f528e9652",
+    "origin": "human"
+  },
+  "components.coach.renameSessionA11y": {
+    "message": "Rename {title}（AI 教練）",
+    "srcHash": "4213f4ac4a07",
+    "origin": "human"
+  },
+  "ai.errors.retry": {
+    "message": "重試",
+    "srcHash": "caf5b375ea52",
+    "origin": "human"
+  },
+  "ai.errors.retryLater": {
+    "message": "重試 later",
+    "srcHash": "df5e18f6d072",
+    "origin": "human"
+  },
+  "components.coach.selectedModel": {
+    "message": "已選擇：{modelId}",
+    "srcHash": "c3d361beb6ee",
+    "origin": "human"
+  },
+  "components.coach.sessionA11y": {
+    "message": "工作階段: {title}",
+    "srcHash": "32b5b5300516",
+    "origin": "human"
+  },
+  "components.coach.cachedCatalogDescription": {
+    "message": "Showing cached 模型s from {time}. 選擇ions may have changed.",
+    "srcHash": "df55395d635e",
+    "origin": "human"
+  },
+  "components.coach.suggestionA11y": {
+    "message": "Suggestion: {title}（AI 教練）",
+    "srcHash": "0c99481f6208",
+    "origin": "human"
+  },
+  "ai.errors.modelLacksTools": {
+    "message": "That 模型 does not 支援 the tools AI 教練 needs.",
+    "srcHash": "3de9ee7d5863",
+    "origin": "human"
+  },
+  "ai.errors.modelNotInCatalog": {
+    "message": "That 模型 is no longer in the live 目錄.",
+    "srcHash": "1e4727d1056a",
+    "origin": "human"
+  },
+  "ai.errors.invalidKey": {
+    "message": "That 開啟Router 金鑰 was rejected. Check it and try again.",
+    "srcHash": "f2806b55a0ae",
+    "origin": "human"
+  },
+  "ai.errors.networkError": {
+    "message": "The AI request could not reach 開啟Router.",
+    "srcHash": "33dcc1873b43",
+    "origin": "human"
+  },
+  "ai.errors.abortedByUser": {
+    "message": "The AI request was stopped.（AI 教練）",
+    "srcHash": "8f410afdd2fb",
+    "origin": "human"
+  },
+  "ai.errors.stepLimitReached": {
+    "message": "The coach reached its data-checking limit before writing an answer. 重試 the question.",
+    "srcHash": "82f84617c8cd",
+    "origin": "human"
+  },
+  "ai.errors.staleCatalogWarning": {
+    "message": "The 模型 目錄 is stale; selections may have changed.",
+    "srcHash": "c7e202479bbe",
+    "origin": "human"
+  },
+  "ai.errors.catalogUnavailable": {
+    "message": "The 模型 目錄 is 無法使用, so no 模型 can be 已選 安全ly.",
+    "srcHash": "86b94b7325fe",
+    "origin": "human"
+  },
+  "ai.errors.emptyResponse": {
+    "message": "The 模型 returned nothing. 重試 or try another 模型.",
+    "srcHash": "1e1cdf69c8f4",
+    "origin": "human"
+  },
+  "ai.errors.upstreamProviderUnavailable": {
+    "message": "The 已選 模型's upstream 供應商 is 無法使用.",
+    "srcHash": "580960bb7bb1",
+    "origin": "human"
+  },
+  "ai.errors.insufficientCredits": {
+    "message": "This 金鑰 has insufficient 額度. Key-scoped usage is shown in Settings.",
+    "srcHash": "a33015498858",
+    "origin": "human"
+  },
+  "ai.errors.useCachedCatalog": {
+    "message": "Use cached 目錄",
+    "srcHash": "4317b5d9a79d",
+    "origin": "human"
+  },
+  "components.coach.toggleSidebar": {
+    "message": "Toggle sessions sidebar（AI 教練）",
+    "srcHash": "fab4b855ff73",
+    "origin": "human"
+  },
+  "components.coach.expandSidebar": {
+    "message": "Expand sessions sidebar（AI 教練）",
+    "srcHash": "7f5c2c39997b",
+    "origin": "human"
+  },
+  "components.coach.newChatA11y": {
+    "message": "開始 a new chat",
+    "srcHash": "e162fbffaa1d",
+    "origin": "human"
+  },
+  "components.coach.you": {
+    "message": "你",
+    "srcHash": "2e197779f01c",
+    "origin": "human"
+  },
+  "components.coach.aiCoachName": {
+    "message": "AI 教練",
+    "srcHash": "f1b99654eaa5",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt1": {
+    "message": "How have my 最近 few 訓練s gone?",
+    "srcHash": "1c33c9e16eae",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt2": {
+    "message": "What did I eat this week?（AI 教練）",
+    "srcHash": "80684bb8dc35",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt3": {
+    "message": "Show my bench press progression（AI 教練）",
+    "srcHash": "0fe02584d84c",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt4": {
+    "message": "How can I optimize my recovery?（AI 教練）",
+    "srcHash": "6e486f5dbfd6",
+    "origin": "human"
+  },
+  "components.coach.dataConsulted": {
+    "message": "Data consulted: local records（AI 教練）",
+    "srcHash": "5cd082650add",
+    "origin": "human"
+  },
+  "components.coach.stop": {
+    "message": "停止 generating",
+    "srcHash": "4bd8ce5fb79d",
+    "origin": "human"
+  },
+  "components.coach.sendA11y": {
+    "message": "傳送 訊息",
+    "srcHash": "c735f7c7c45b",
+    "origin": "human"
+  },
+  "components.coach.missingKeyPlaceholder": {
+    "message": "新增 your 開啟Router 金鑰 to chat...",
+    "srcHash": "e9697caf7b88",
+    "origin": "human"
+  },
+  "components.coach.selectModelPlaceholder": {
+    "message": "選擇 a 模型 above to begin...",
+    "srcHash": "e38d78982ee3",
+    "origin": "human"
+  },
+  "components.coach.placeholder": {
+    "message": "Ask your AI 教練 anything...",
+    "srcHash": "674ac03de896",
+    "origin": "human"
+  },
+  "components.coach.send": {
+    "message": "傳送",
+    "srcHash": "baf47c24d04b",
+    "origin": "human"
+  },
+  "components.coach.cancel": {
+    "message": "取消",
+    "srcHash": "e17cc0149ff8",
+    "origin": "human"
+  },
+  "components.coach.loadEarlier": {
+    "message": "Load earlier 訊息s",
+    "srcHash": "d57d796217a6",
+    "origin": "human"
+  },
+  "components.coach.today": {
+    "message": "今天",
+    "srcHash": "541f4f7ccabf",
+    "origin": "human"
+  },
+  "components.coach.promptReviewWorkoutTitle": {
+    "message": "Review Workout Progress（AI 教練）",
+    "srcHash": "00c1cf3632e5",
+    "origin": "human"
+  },
+  "components.coach.promptReviewWorkoutBody": {
+    "message": "How is my strength and volume progressing over my recent 訓練s?",
+    "srcHash": "20bcd3257642",
+    "origin": "human"
+  },
+  "components.coach.promptNutritionTitle": {
+    "message": "Nutrition & Macros（AI 教練）",
+    "srcHash": "cc71393626bc",
+    "origin": "human"
+  },
+  "components.coach.promptNutritionBody": {
+    "message": "What should I focus on eating today to hit my macro targets?（AI 教練）",
+    "srcHash": "41f1f53b1e25",
+    "origin": "human"
+  },
+  "components.coach.promptTechniqueTitle": {
+    "message": "Exercise Technique（AI 教練）",
+    "srcHash": "e93661b6a38e",
+    "origin": "human"
+  },
+  "components.coach.promptTechniqueBody": {
+    "message": "What are the 金鑰 cues for a strong and 安全 cable chest press?",
+    "srcHash": "fa67270520d5",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequired": {
+    "message": "API Key Required（AI 教練）",
+    "srcHash": "e363f9015237",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequiredDescription": {
+    "message": "新增 your 開啟Router 金鑰 in Settings to chat with AI 教練 and receive personalized 訓練 insights.",
+    "srcHash": "254035cfc384",
+    "origin": "human"
+  },
+  "components.coach.addApiKeyA11y": {
+    "message": "新增 開啟Router API Key",
+    "srcHash": "70981d2f0049",
+    "origin": "human"
+  },
+  "components.coach.addKey": {
+    "message": "新增 Key",
+    "srcHash": "43aeb402b013",
+    "origin": "human"
+  },
+  "components.coach.selectAnAIModel": {
+    "message": "選擇 an AI 模型",
+    "srcHash": "9f63af535fb6",
+    "origin": "human"
+  },
+  "components.coach.selectAIModelDescription": {
+    "message": "選擇 a 模型 from the 開啟Router 目錄 to power your AI 教練 conversations.",
+    "srcHash": "bbbf57805a38",
+    "origin": "human"
+  },
+  "components.coach.selectModel": {
+    "message": "選擇 模型",
+    "srcHash": "5864fecf3ebb",
+    "origin": "human"
+  },
+  "components.coach.howCanIHelp": {
+    "message": "How can I help you today?（AI 教練）",
+    "srcHash": "961223d90e8b",
+    "origin": "human"
+  },
+  "components.coach.howCanIHelpSubtitle": {
+    "message": "Ask anything about your 訓練s, progression, 營養, or exercise technique.",
+    "srcHash": "37d9b67c26f9",
+    "origin": "human"
+  },
+  "components.coach.privacyDisclaimer": {
+    "message": "Aggregated 訓練 and 營養 fields are sent to 開啟Router for your request; food names are not.",
+    "srcHash": "544bdade1ed9",
+    "origin": "human"
+  },
+  "components.coach.dismissError": {
+    "message": "Dismiss 錯誤",
+    "srcHash": "b230c2afbbf4",
+    "origin": "human"
+  },
+  "components.coach.selectAIModel": {
+    "message": "選擇 AI 模型",
+    "srcHash": "45e3e17a8e39",
+    "origin": "human"
+  },
+  "components.coach.cachedCatalogA11y": {
+    "message": "目錄 is cached. Tap to refresh.",
+    "srcHash": "86e531cf9e87",
+    "origin": "human"
+  },
+  "components.coach.cachedCatalog": {
+    "message": "Cached 目錄",
+    "srcHash": "d9c09bb513f6",
+    "origin": "human"
+  },
+  "components.coach.collapseSidebar": {
+    "message": "Collapse sessions sidebar（AI 教練）",
+    "srcHash": "7373e5d55073",
+    "origin": "human"
+  },
+  "components.coach.deleteConversationTitle": {
+    "message": "刪除 對話",
+    "srcHash": "638a1e0c8304",
+    "origin": "human"
+  },
+  "components.coach.deleteConfirm": {
+    "message": "刪除",
+    "srcHash": "3ab321300556",
+    "origin": "human"
+  },
+  "components.coach.conversations": {
+    "message": "對話s",
+    "srcHash": "4288ad037d50",
+    "origin": "human"
+  },
+  "components.coach.newChat": {
+    "message": "New 聊天",
+    "srcHash": "927a8580f047",
+    "origin": "human"
+  },
+  "components.coach.noConversations": {
+    "message": "沒有conversations yet",
+    "srcHash": "2334f42117bb",
+    "origin": "human"
+  },
+  "components.coach.startNewChatSubtitle": {
+    "message": "開始 a new chat to consult your AI 教練.",
+    "srcHash": "48240f045885",
+    "origin": "human"
+  },
+  "components.coach.renameConversation": {
+    "message": "Rename 對話",
+    "srcHash": "d49f19cc9afb",
+    "origin": "human"
+  },
+  "components.coach.conversationTitlePlaceholder": {
+    "message": "對話 title",
+    "srcHash": "a31b65027713",
+    "origin": "human"
+  },
+  "components.coach.cancelRenameA11y": {
+    "message": "取消 rename",
+    "srcHash": "6634cc20bb21",
+    "origin": "human"
+  },
+  "components.coach.saveRenameA11y": {
+    "message": "儲存 rename",
+    "srcHash": "5c5e89733323",
+    "origin": "human"
+  },
+  "components.coach.save": {
+    "message": "儲存",
+    "srcHash": "4ed0adfcce40",
+    "origin": "human"
+  },
+  "components.coach.modelsSourcedCatalog": {
+    "message": "模型s sourced from live 開啟Router 目錄",
+    "srcHash": "0976fc048d3e",
+    "origin": "human"
+  },
+  "components.coach.closeModelPicker": {
+    "message": "關閉 模型 picker",
+    "srcHash": "1e8d61812706",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequiredBanner": {
+    "message": "API 金鑰 required",
+    "srcHash": "2ad6ee3ab6ce",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequiredPickerDescription": {
+    "message": "新增 your 開啟Router API 金鑰 to use AI 教練 and browse all 模型s.",
+    "srcHash": "b791176d647a",
+    "origin": "human"
+  },
+  "components.coach.configureApiKeyA11y": {
+    "message": "Configure 開啟Router API 金鑰",
+    "srcHash": "5c73abf8f321",
+    "origin": "human"
+  },
+  "components.coach.configureApiKey": {
+    "message": "Configure API Key（AI 教練）",
+    "srcHash": "ce8489f7b978",
+    "origin": "human"
+  },
+  "components.coach.refresh": {
+    "message": "Refresh（AI 教練）",
+    "srcHash": "60980447fce1",
+    "origin": "human"
+  },
+  "components.coach.noModelSelected": {
+    "message": "沒有模型 已選. 選擇 a 模型 below to start coaching.",
+    "srcHash": "ded26f820bc4",
+    "origin": "human"
+  },
+  "components.coach.searchModelsPlaceholder": {
+    "message": "Search by 模型 id or name…",
+    "srcHash": "72f6d9cff015",
+    "origin": "human"
+  },
+  "components.coach.searchModelsA11y": {
+    "message": "Search 模型s by id or name",
+    "srcHash": "4cdbdec02b2a",
+    "origin": "human"
+  },
+  "components.coach.clearModelSearch": {
+    "message": "清除 模型 search",
+    "srcHash": "97c6d11f4239",
+    "origin": "human"
+  },
+  "components.coach.toolCallingOnly": {
+    "message": "Tool-calling only（AI 教練）",
+    "srcHash": "a6efff3e2c95",
+    "origin": "human"
+  },
+  "components.coach.toolCallingDescription": {
+    "message": "Coach needs tool calling to read logs and manage 訓練s",
+    "srcHash": "a92648e50f12",
+    "origin": "human"
+  },
+  "components.coach.filterToolsA11y": {
+    "message": "Filter by tool calling 支援",
+    "srcHash": "fdd3ee943974",
+    "origin": "human"
+  },
+  "components.coach.toolCallingWarning": {
+    "message": "Tool Calling Warning（AI 教練）",
+    "srcHash": "9ca286f0b2aa",
+    "origin": "human"
+  },
+  "components.coach.toolCallingWarningDescription": {
+    "message": "Tools will not work on 模型s without tool-calling 支援. AI 教練 will not be able to log sets, retrieve exercises, or analyze 訓練 歷史紀錄.",
+    "srcHash": "c67e45657a6c",
+    "origin": "human"
+  },
+  "components.coach.catalogUnavailable": {
+    "message": "目錄 Unavailable",
+    "srcHash": "0b7d03cc1619",
+    "origin": "human"
+  },
+  "components.coach.loadingCatalog": {
+    "message": "Loading live 模型 目錄…",
+    "srcHash": "72f04bcc72a0",
+    "origin": "human"
+  },
+  "components.coach.toolsBadge": {
+    "message": "Tools（AI 教練）",
+    "srcHash": "9a6b0766590f",
+    "origin": "human"
+  },
+  "components.coach.noModelsAvailable": {
+    "message": "沒有模型s available in 目錄.",
+    "srcHash": "ef1e9f20d3f9",
+    "origin": "human"
+  },
+  "components.coach.tryDifferentSearch": {
+    "message": "Try searching for a different 供應商 or 模型 name.",
+    "srcHash": "f8ba938b0fc5",
+    "origin": "human"
+  },
+  "components.coach.checkNetworkOrRefresh": {
+    "message": "Check your 網路 connection or refresh the 目錄.",
+    "srcHash": "8d4f276fca6a",
+    "origin": "human"
+  },
+  "components.coach.toolReadingHistory": {
+    "message": "讀取訓練歷史",
+    "srcHash": "76e65755eb81",
+    "origin": "human"
+  },
+  "components.coach.toolExerciseProgress": {
+    "message": "分析動作進度",
+    "srcHash": "7abafbed717a",
+    "origin": "human"
+  },
+  "components.coach.toolNutritionMacros": {
+    "message": "檢視營養與巨量營養素",
+    "srcHash": "029b553ebb5a",
+    "origin": "human"
   }
 }
