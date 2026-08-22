@@ -1,5 +1,6 @@
 import { makeCatalogEntry } from "../../scripts/i18n/catalog-entry";
 import { tw2sp } from "../../scripts/i18n/opencc";
+import { renderRuntimeCatalogs, RUNTIME_LOCALES } from "../../scripts/i18n/runtime-catalogs";
 import {
   checkCatalog,
   checkRedundantOverrides,
@@ -97,6 +98,21 @@ describe("gate and MessageKey codegen", () => {
   });
 });
 
+describe("compiled runtime catalogs", () => {
+  const catalogs = (message: string) => Object.fromEntries(
+    RUNTIME_LOCALES.map(locale => [locale, { greeting: makeCatalogEntry("greeting", message, message) }])
+  );
+
+  it("compiles ICU messages into the committed runtime representation", () => {
+    expect(renderRuntimeCatalogs(catalogs("Hello {name}"))).toContain('["Hello ",["name"]]');
+  });
+
+  it("rejects invalid ICU before a bundle can be built", () => {
+    expect(() => renderRuntimeCatalogs(catalogs("{unit, select, fl oz {fl oz}}")))
+      .toThrow("en-US:greeting");
+  });
+});
+
 describe("source conditional-message gate", () => {
   function scan(source: string) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "i18n-gate-"));
@@ -119,6 +135,14 @@ describe("source conditional-message gate", () => {
 
   it("does not flag simple template interpolation", () => {
     expect(scan('import { t } from "@lingui/core/macro"; t({ id: "a", message: `Hello ${name}` });')).toEqual([]);
+  });
+
+  it("flags literal accessibility labels and hints, but not translated expressions", () => {
+    const findings = scan([
+      'const a = <Button accessibilityLabel="Close" accessibilityHint={"Tap to close"} />;',
+      'const b = <Button accessibilityLabel={t({ id: "close", message: "Close" })} />;',
+    ].join("\n"));
+    expect(findings.map(f => f.class)).toEqual(["I18N_LITERAL_A11Y_LABEL", "I18N_LITERAL_A11Y_LABEL"]);
   });
 });
 

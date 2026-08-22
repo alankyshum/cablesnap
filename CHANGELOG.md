@@ -22,7 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Rebuilt the AI Coach chat experience with live-streaming responses and formatted markdown.
+- The model picker now scrolls properly, and your selected model is used for requests and remembered for later.
+- Added clearer messages when an AI provider is unavailable.
+- Improved accessibility and dark-mode contrast across the AI Coach experience.
+- Expanded translation coverage for AI Coach and related app labels.
 
 ## v0.26.107 — 2026-08-21
 <!-- versionCode: 175 -->
