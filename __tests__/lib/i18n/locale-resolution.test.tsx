@@ -17,9 +17,9 @@ describe("locale resolution", () => {
   });
 
   it("includes the AI Coach floating tab label in every maintained catalog", () => {
-    expect(catalogs["en-US"]["floatingTabBar.tabs.aiCoach"]).toEqual(["AI Coach"]);
-    expect(catalogs["zh-TW"]["floatingTabBar.tabs.aiCoach"]).toEqual(["AI 教練"]);
-    expect(catalogs["zh-CN"]["floatingTabBar.tabs.aiCoach"]).toEqual(["AI 教练"]);
+    expect(catalogs["en-US"]!["floatingTabBar.tabs.aiCoach"]).toEqual(["AI Coach"]);
+    expect(catalogs["zh-TW"]!["floatingTabBar.tabs.aiCoach"]).toEqual(["AI 教練"]);
+    expect(catalogs["zh-CN"]!["floatingTabBar.tabs.aiCoach"]).toEqual(["AI 教练"]);
   });
   it.each([
     ["zh-Hant-TW", "zh-TW"], ["zh-Hant", "zh-TW"], ["zh-Hant-HK", "zh-TW"],
