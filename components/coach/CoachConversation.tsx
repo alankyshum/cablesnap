@@ -15,12 +15,6 @@ import type { CoachMessage } from "@/lib/db/coach";
 import { CoachEmptyState } from "./CoachEmptyState";
 import { CoachErrorCard } from "./CoachErrorCard";
 
-const TOOL_LABELS: Record<string, { id: string; message: string }> = {
-  recent_sessions: { id: "components.coach.toolReadingHistory", message: "Reading workout history" },
-  exercise_history: { id: "components.coach.toolExerciseProgress", message: "Analyzing exercise progress" },
-  nutrition_macros: { id: "components.coach.toolNutritionMacros", message: "Reviewing nutrition & macros" },
-};
-
 export type CoachConversationProps = {
   messages: CoachMessage[];
   activeSessionId: string | null;
@@ -248,7 +242,13 @@ export function CoachConversation({
   );
 
   const toolLabel = inFlightTool
-    ? `${t(TOOL_LABELS[inFlightTool] ?? { id: "components.coach.toolUsing", message: `Using tool: ${inFlightTool}` })}...`
+    ? `${inFlightTool === "recent_sessions"
+      ? t({ id: "components.coach.toolReadingHistory", message: "Reading workout history" })
+      : inFlightTool === "exercise_history"
+        ? t({ id: "components.coach.toolExerciseProgress", message: "Analyzing exercise progress" })
+        : inFlightTool === "nutrition_macros"
+          ? t({ id: "components.coach.toolNutritionMacros", message: "Reviewing nutrition & macros" })
+          : `Using tool: ${inFlightTool}`}...`
     : null;
 
   const renderCustomView = useCallback(
