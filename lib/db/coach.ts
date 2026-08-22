@@ -1,7 +1,9 @@
 import { asc, desc, eq } from "drizzle-orm";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction } from "./helpers";
-import { coachMessages, coachSessions } from "./schema";
+import { appSettings, coachMessages, coachSessions } from "./schema";
+
+export const LAST_COACH_MODEL_KEY = "ai_coach.last_model_id";
 
 export type CoachSession = typeof coachSessions.$inferSelect;
 export type CoachMessage = typeof coachMessages.$inferSelect;
@@ -27,6 +29,39 @@ export async function createSession(
 export async function listSessions(): Promise<CoachSession[]> {
   const db = await getDrizzle();
   return db.select().from(coachSessions).orderBy(desc(coachSessions.updated_at), desc(coachSessions.created_at)).all();
+}
+
+export async function getLastCoachModel(): Promise<string | null> {
+  const db = await getDrizzle();
+  const row = await db.select({ value: appSettings.value })
+    .from(appSettings)
+    .where(eq(appSettings.key, LAST_COACH_MODEL_KEY))
+    .get();
+  return row?.value ?? null;
+}
+
+/**
+ * Persist a model choice as the app-wide new-chat default and, when a session
+ * is active, as that session's model. Keeping both writes in one transaction
+ * prevents the header/default and the next inference from diverging.
+ */
+export async function saveCoachModelSelection(
+  sessionId: string | null,
+  modelId: string,
+): Promise<CoachSession | null> {
+  const db = await getDrizzle();
+  await withTransaction(async () => {
+    if (sessionId) {
+      await db.update(coachSessions)
+        .set({ model_id: modelId, updated_at: Date.now() })
+        .where(eq(coachSessions.id, sessionId));
+    }
+    await db.insert(appSettings)
+      .values({ key: LAST_COACH_MODEL_KEY, value: modelId })
+      .onConflictDoUpdate({ target: appSettings.key, set: { value: modelId } });
+  });
+  if (!sessionId) return null;
+  return (await db.select().from(coachSessions).where(eq(coachSessions.id, sessionId)).get())!;
 }
 
 export async function renameSession(id: string, title: string): Promise<CoachSession> {

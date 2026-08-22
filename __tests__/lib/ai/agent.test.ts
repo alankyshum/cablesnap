@@ -121,6 +121,26 @@ describe("coach agent", () => {
     expect(mockAppendMessage).not.toHaveBeenCalled();
   });
 
+  it("maps an in-band provider-unavailable stream error before transport fallback", async () => {
+    mockStreamText.mockReturnValue(result((async function* () {
+      yield {
+        type: "error",
+        error: {
+          code: 502,
+          message: "Service temporarily overloaded",
+          metadata: { error_type: "provider_unavailable" },
+        },
+      };
+    })()));
+
+    await expect(runCoachAgent({
+      sessionId: "session-1",
+      modelId: "provider/tool-model",
+      prompt: "Hello",
+    })).rejects.toEqual({ kind: "upstream_provider_unavailable", status: 502 });
+    expect(mockAppendMessage).not.toHaveBeenCalled();
+  });
+
   it("keeps a successful completion with no text as an empty response", async () => {
     mockStreamText.mockReturnValue(result((async function* () {
       yield { type: "finish", finishReason: "stop", totalUsage: {} };

@@ -94,19 +94,30 @@ export function persistedMessagesToModelMessages(persisted: CoachMessage[]): Mod
   });
 }
 
+// The SDK exposes distinct pre-response and in-band stream error shapes.
+// eslint-disable-next-line complexity
 function asAIError(error: unknown): AIError {
   if (error && typeof error === "object" && "kind" in error) return error as AIError;
-  const status = error && typeof error === "object" && "statusCode" in error
+  const statusCode = error && typeof error === "object" && "statusCode" in error
     ? (error as { statusCode?: unknown }).statusCode
     : undefined;
+  // Pre-response API failures use APICallError.statusCode/responseBody. Once a
+  // stream has started, the AI SDK instead surfaces OpenRouter's in-band error
+  // object directly ({ code, message, metadata }). Preserve both wire shapes.
+  const inBandCode = error && typeof error === "object" && "code" in error
+    ? (error as { code?: unknown }).code
+    : undefined;
+  const status = typeof statusCode === "number" && statusCode >= 400 && statusCode <= 599
+    ? statusCode
+    : typeof inBandCode === "number" && inBandCode >= 400 && inBandCode <= 599 ? inBandCode : undefined;
   const body = error && typeof error === "object" && "responseBody" in error
     ? (error as { responseBody?: unknown }).responseBody
     : undefined;
-  let envelope: unknown = body;
+  let envelope: unknown = body ?? (typeof inBandCode === "number" ? { error } : undefined);
   if (typeof body === "string") {
     try { envelope = JSON.parse(body); } catch { envelope = undefined; }
   }
-  return typeof status === "number" ? parseOpenRouterError(status, envelope) : { kind: "network_error" };
+  return parseOpenRouterError(status, envelope);
 }
 
 // eslint-disable-next-line complexity
