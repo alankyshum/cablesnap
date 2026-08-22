@@ -16,12 +16,19 @@ const CATALOG = {
   ],
 };
 
-async function mockCatalog(page: Page) {
-  await page.route("**openrouter.ai/api/v1/models", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(CATALOG) }));
+const CATALOG_WITH_SELECTED_MODEL_UNSUPPORTED = {
+  data: CATALOG.data.map((model) => model.id === MODEL ? { ...model, supported_parameters: [] } : model),
+};
+async function mockCatalog(page: Page, response: { readonly status?: number; readonly body?: unknown } = {}) {
+  await page.route("**openrouter.ai/api/v1/models", (route) => route.fulfill({
+    status: response.status ?? 200,
+    contentType: "application/json",
+    body: JSON.stringify(response.body ?? CATALOG),
+  }));
   await page.route("**openrouter.ai/api/v1/key", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: {} }) }));
 }
 
-async function openCoach(page: Page, testInfo: { parallelIndex: number }) {
+async function openCoach(page: Page, testInfo: { parallelIndex: number }, catalogResponse?: { readonly status?: number; readonly body?: unknown }) {
   await enablePerWorkerDb(page, testInfo.parallelIndex);
   // Deterministic tier always starts without credentials, even when a local
   // browser profile was used for a preceding live run.
@@ -30,7 +37,7 @@ async function openCoach(page: Page, testInfo: { parallelIndex: number }) {
       sessionStorage.removeItem("cablesnap.secure-store.openrouter_api_key");
     }
   });
-  await mockCatalog(page);
+  await mockCatalog(page, catalogResponse);
   await skipOnboarding(page);
   await navigateTo(page, "/ai-coach");
   await expect(page.getByRole("button", { name: "Select AI Model" })).toBeVisible({ timeout: 20_000 });
@@ -279,20 +286,65 @@ test.describe("@scenario ai-coach", () => {
     await expect(page.getByText("orphan session answer", { exact: true })).toHaveCount(0);
   });
 
-  for (const [status, expected] of [[401, "That OpenRouter key was rejected"], [429, "OpenRouter rate limit reached"], [502, "OpenRouter encountered a server error"]] as const) {
-    test(`shows the translated provider error for HTTP ${status}`, async ({ page }, testInfo) => {
+  for (const [status, body, expected, recovery] of [
+    [401, { error: { message: "synthetic invalid key" } }, "That OpenRouter key was rejected", "Check key"],
+    [429, { error: { message: "synthetic rate limit" } }, "OpenRouter rate limit reached", "Retry later"],
+    // This deliberately remains untyped: status-only 5xx responses are server errors,
+    // not provider-unavailable responses.
+    [502, { error: { message: "synthetic untyped server error" } }, "OpenRouter encountered a server error", "Retry"],
+    [429, { error: { code: 429, message: "synthetic shared pool", metadata: { limit_source: "upstream_provider_shared_pool", provider_name: "Chutes" } } }, "The selected model's upstream provider is unavailable.", "Open model picker"],
+    [502, { error: { code: 502, message: "synthetic unavailable provider", metadata: { error_type: "provider_unavailable", provider_name: "Chutes" } } }, "The selected model's upstream provider is unavailable.", "Open model picker"],
+    [503, { error: { code: 503, message: "synthetic overloaded provider", metadata: { error_type: "provider_overloaded", provider_name: "Chutes" } } }, "The selected model's upstream provider is unavailable.", "Open model picker"],
+  ] as const) {
+    test(`renders HTTP ${status} ${body.error.metadata?.error_type ?? body.error.metadata?.limit_source ?? (expected === "OpenRouter encountered a server error" ? "untyped server error" : "typed error")} with recovery`, async ({ page }, testInfo) => {
       await openCoach(page, testInfo);
       await seedKeyThroughSettings(page);
       await page.goto("/ai-coach");
       await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
       await expect(page.getByTestId(`model-row-${MODEL}`)).toBeVisible({ timeout: 20_000 });
     await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
-      await page.route("**openrouter.ai/api/v1/chat/completions", (route) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify({ error: { message: "synthetic provider error" } }) }));
+      await page.route("**openrouter.ai/api/v1/chat/completions", (route) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }));
       await composer(page).fill("trigger error");
       await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
-      await expect(page.getByText(new RegExp(expected))).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByText(new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))).toBeVisible({ timeout: 20_000 });
+      // Button's RN-web primitive exposes the recovery action through its
+      // accessibility label (rather than a native button role in every
+      // viewport), so assert the actual labelled control.
+      await expect(page.getByLabel(recovery, { exact: true })).toBeVisible();
     });
   }
+
+  test("renders catalog-unavailable copy and refresh-catalog recovery", async ({ page }, testInfo) => {
+    await openCoach(page, testInfo, { status: 500, body: {} });
+    await seedKeyThroughSettings(page);
+    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await expect(page.getByText("The model catalog is unavailable, so no model can be selected safely.", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByLabel("Refresh catalog", { exact: true })).toBeVisible();
+  });
+
+  test("renders model-lacks-tools copy and pick-model recovery", async ({ page }, testInfo) => {
+    // Select the model while it is tool-capable, then make its mocked catalog
+    // entry incompatible. This exercises getModel's capability guard through
+    // the real chat surface without making a live request.
+    await openCoach(page, testInfo);
+    await seedKeyThroughSettings(page);
+    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
+    await expect(page.getByLabel(new RegExp(`Active Model: ${MODEL}`))).toBeVisible();
+    await page.waitForTimeout(750);
+    await page.unroute("**openrouter.ai/api/v1/models");
+    await page.route("**openrouter.ai/api/v1/models", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(CATALOG_WITH_SELECTED_MODEL_UNSUPPORTED),
+    }));
+    await page.reload();
+    await expect(page.getByLabel(new RegExp(`Active Model: ${MODEL}`))).toBeVisible({ timeout: 20_000 });
+    await composer(page).fill("trigger unsupported model");
+    await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
+    await expect(page.getByText("That model does not support the tools AI Coach needs.", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByLabel("Pick another model", { exact: true })).toBeVisible();
+  });
 
   test.describe("live (key-gated)", () => {
     test.skip(!process.env.OPENROUTER_TEST_API_KEY, "OPENROUTER_TEST_API_KEY is not set");
