@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.109",
+    "date": "2026-08-22",
+    "versionCode": 177,
+    "body": "- Improved AI Coach reliability when an upstream provider is unavailable or a selected model cannot support Coach tools.\n- Improved translation robustness by validating ICU messages before release builds."
+  },
+  {
     "version": "0.26.108",
     "date": "2026-08-22",
     "versionCode": 176,

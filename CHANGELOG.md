@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.109 — 2026-08-22
+<!-- versionCode: 177 -->
+
 - Improved AI Coach reliability when an upstream provider is unavailable or a selected model cannot support Coach tools.
 - Improved translation robustness by validating ICU messages before release builds.
 
