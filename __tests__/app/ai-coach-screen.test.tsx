@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, waitFor } from "@testing-library/react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import AiCoachScreen from "@/app/(tabs)/ai-coach";
@@ -12,6 +12,8 @@ import {
   useRenameCoachSession,
   useDeleteCoachSession,
   useAppendCoachMessage,
+  useLastCoachModel,
+  useSelectCoachModel,
 } from "@/hooks/useCoachSessions";
 import { useKeyStatus } from "@/hooks/useKeyStatus";
 import { useModelCatalog, useRefreshModelCatalog } from "@/hooks/useModelCatalog";
@@ -41,6 +43,8 @@ jest.mock("@/hooks/useCoachSessions", () => ({
   useRenameCoachSession: jest.fn(),
   useDeleteCoachSession: jest.fn(),
   useAppendCoachMessage: jest.fn(),
+  useLastCoachModel: jest.fn(),
+  useSelectCoachModel: jest.fn(),
 }));
 
 jest.mock("@/hooks/useKeyStatus", () => ({
@@ -56,6 +60,8 @@ jest.mock("@/lib/ai/agent", () => ({
   startCoachAgent: jest.fn(),
 }));
 
+// The integration harness intentionally exercises the complete screen lifecycle.
+/* eslint-disable max-lines-per-function */
 describe("AiCoachScreen Integration", () => {
   const mockSetOptions = jest.fn();
   const mockPush = jest.fn();
@@ -64,6 +70,7 @@ describe("AiCoachScreen Integration", () => {
   const mockDeleteSession = jest.fn();
   const mockRenameSession = jest.fn();
   const mockRefreshCatalog = jest.fn();
+  const mockSelectModel = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -139,6 +146,15 @@ describe("AiCoachScreen Integration", () => {
       }),
     });
 
+    (useLastCoachModel as jest.Mock).mockReturnValue({
+      data: null,
+      isLoading: false,
+    });
+
+    (useSelectCoachModel as jest.Mock).mockReturnValue({
+      mutate: mockSelectModel,
+    });
+
     (useDeleteCoachSession as jest.Mock).mockReturnValue({
       mutateAsync: mockDeleteSession.mockResolvedValue(undefined),
     });
@@ -160,6 +176,13 @@ describe("AiCoachScreen Integration", () => {
             name: "GPT-4o",
             contextLength: 128000,
             pricing: { prompt: "0.000005", completion: "0.000015" },
+            supportedParameters: ["tools"],
+          },
+          {
+            id: "stealth/ox-alpha",
+            name: "Ox Alpha",
+            contextLength: 200000,
+            pricing: { prompt: "0", completion: "0" },
             supportedParameters: ["tools"],
           },
         ],
@@ -202,6 +225,27 @@ describe("AiCoachScreen Integration", () => {
     // On tablet, conversations sidebar is visible directly in the screen tree
     expect(getByText("Conversations")).toBeTruthy();
     expect(getByText("Upper Body Hypertrophy")).toBeTruthy();
+  });
+
+  it("collapses and expands the tablet sessions sidebar", () => {
+    (useLayout as jest.Mock).mockReturnValue({
+      compact: false,
+      medium: true,
+      expanded: false,
+      atLeastMedium: true,
+      width: 768,
+      scale: 1.1,
+      horizontalPadding: 24,
+    });
+
+    const { getByLabelText, queryByText } = renderScreen(<AiCoachScreen />);
+
+    fireEvent.press(getByLabelText("Collapse sessions sidebar"));
+    expect(queryByText("Conversations")).toBeNull();
+    expect(getByLabelText("Expand sessions sidebar")).toBeTruthy();
+
+    fireEvent.press(getByLabelText("Expand sessions sidebar"));
+    expect(queryByText("Conversations")).toBeTruthy();
   });
 
   it("renders conversation messages correctly", () => {
@@ -251,17 +295,99 @@ describe("AiCoachScreen Integration", () => {
     });
   });
 
+  it("updates the header and uses the newly selected model for the next inference", async () => {
+    (startCoachAgent as jest.Mock).mockReturnValue({
+      done: Promise.resolve({ id: "assistant-ox", role: "assistant", content: "Ox response" }),
+      abort: jest.fn(),
+    });
+
+    const { getByLabelText, getByPlaceholderText, getByTestId, getByText, getAllByText } = renderScreen(
+      <AiCoachScreen />,
+    );
+    await waitFor(() => expect(getByText("GPT-4o")).toBeTruthy());
+
+    fireEvent.press(getByLabelText("Active Model: openai/gpt-4o. Tap to change model."));
+    fireEvent.press(getByTestId("model-row-stealth/ox-alpha"));
+
+    await waitFor(() => expect(getAllByText("Ox Alpha").length).toBeGreaterThan(0));
+    expect(mockSelectModel).toHaveBeenCalledWith({
+      sessionId: "session-1",
+      modelId: "stealth/ox-alpha",
+    });
+
+    fireEvent.changeText(getByPlaceholderText("Ask your AI Coach anything..."), "Use Ox for this turn");
+    fireEvent.press(getByLabelText("Send message"));
+
+    await waitFor(() => expect(startCoachAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionId: "session-1",
+        modelId: "stealth/ox-alpha",
+        prompt: "Use Ox for this turn",
+      }),
+    ));
+  });
+
+  it("rehydrates the selected model from each session when switching", async () => {
+    (useCoachSessions as jest.Mock).mockReturnValue({
+      data: [
+        { id: "session-glm", title: "GLM chat", model_id: "z-ai/glm-5.3", created_at: 1, updated_at: 2 },
+        { id: "session-ox", title: "Ox chat", model_id: "stealth/ox-alpha", created_at: 1, updated_at: 1 },
+      ],
+      isLoading: false,
+    });
+    (useModelCatalog as jest.Mock).mockReturnValue({
+      data: {
+        models: [
+          { id: "z-ai/glm-5.3", name: "GLM 5.3", contextLength: 128000, pricing: { prompt: "0", completion: "0" }, supportedParameters: ["tools"] },
+          { id: "stealth/ox-alpha", name: "Ox Alpha", contextLength: 200000, pricing: { prompt: "0", completion: "0" }, supportedParameters: ["tools"] },
+        ],
+        stale: false,
+        cachedAt: Date.now(),
+        warning: null,
+      },
+      isLoading: false,
+    });
+    (useLayout as jest.Mock).mockReturnValue({
+      compact: false,
+      medium: true,
+      expanded: false,
+      atLeastMedium: true,
+      width: 768,
+      scale: 1,
+      horizontalPadding: 24,
+    });
+
+    const { getByText } = renderScreen(<AiCoachScreen />);
+    await waitFor(() => expect(getByText("GLM 5.3")).toBeTruthy());
+    fireEvent.press(getByText("Ox chat"));
+    await waitFor(() => expect(getByText("Ox Alpha")).toBeTruthy());
+  });
+
+  it("restores the last-used model after restart when starting a new chat", async () => {
+    (useCoachSessions as jest.Mock).mockReturnValue({ data: [], isLoading: false });
+    (useCoachMessages as jest.Mock).mockReturnValue({ data: [], isLoading: false });
+    (useLastCoachModel as jest.Mock).mockReturnValue({ data: "stealth/ox-alpha", isLoading: false });
+
+    const { getByText } = renderScreen(<AiCoachScreen />);
+    await waitFor(() => expect(getByText("Ox Alpha")).toBeTruthy());
+    expect(getByText("How can I help you today?")).toBeTruthy();
+  });
+
   it("handles streaming stop button", async () => {
     const mockAbort = jest.fn();
+    let capturedSignal: AbortSignal | undefined;
     let resolveDone!: (value: unknown) => void;
     const donePromise = new Promise<unknown>((resolve) => {
       resolveDone = resolve;
     });
 
-    (startCoachAgent as jest.Mock).mockImplementation(() => ({
+    (startCoachAgent as jest.Mock).mockImplementation((options: CoachAgentOptions) => {
+      capturedSignal = options.signal;
+      return ({
       done: donePromise,
       abort: mockAbort,
-    }));
+      });
+    });
 
     const { getByPlaceholderText, getByLabelText, findByLabelText } = renderScreen(
       <AiCoachScreen />
@@ -278,9 +404,71 @@ describe("AiCoachScreen Integration", () => {
 
     fireEvent.press(stopBtn);
     expect(mockAbort).toHaveBeenCalled();
+    expect(capturedSignal?.aborted).toBe(true);
 
     resolveDone({ id: "msg-stop", role: "assistant", content: "Partial" });
     await waitFor(() => expect(mockAppendMessage).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps the active turn on its original model when selection changes mid-stream", async () => {
+    const mockAbort = jest.fn();
+    let resolveDone!: (value: unknown) => void;
+    const done = new Promise<unknown>((resolve) => { resolveDone = resolve; });
+    (startCoachAgent as jest.Mock).mockReturnValue({ done, abort: mockAbort });
+
+    const view = renderScreen(<AiCoachScreen />);
+    fireEvent.changeText(view.getByPlaceholderText("Ask your AI Coach anything..."), "Use the current model");
+    fireEvent.press(view.getByLabelText("Send message"));
+    await waitFor(() => expect(startCoachAgent).toHaveBeenCalledWith(expect.objectContaining({
+      modelId: "openai/gpt-4o",
+    })));
+
+    fireEvent.press(view.getByLabelText("Active Model: openai/gpt-4o. Tap to change model."));
+    fireEvent.press(view.getByTestId("model-row-stealth/ox-alpha"));
+
+    await waitFor(() => expect(view.getAllByText("Ox Alpha").length).toBeGreaterThan(0));
+    expect(mockAbort).not.toHaveBeenCalled();
+    expect(mockSelectModel).toHaveBeenCalledWith({ sessionId: "session-1", modelId: "stealth/ox-alpha" });
+    await act(async () => resolveDone({ id: "assistant-original-model", role: "assistant", content: "Done" }));
+  });
+
+  it("aborts and removes the orphan streaming bubble when switching sessions mid-stream", async () => {
+    const mockAbort = jest.fn();
+    let emit!: (event: { type: "delta"; text: string }) => void;
+    let resolveDone!: (value: unknown) => void;
+    const done = new Promise<unknown>((resolve) => { resolveDone = resolve; });
+    (startCoachAgent as jest.Mock).mockImplementation((options: CoachAgentOptions) => {
+      emit = options.onEvent as (event: { type: "delta"; text: string }) => void;
+      return { done, abort: mockAbort };
+    });
+    (useCoachSessions as jest.Mock).mockReturnValue({
+      data: [
+        { id: "session-1", title: "Upper Body Hypertrophy", model_id: "openai/gpt-4o", created_at: 1, updated_at: 2 },
+        { id: "session-2", title: "Nutrition Advice", model_id: "stealth/ox-alpha", created_at: 1, updated_at: 1 },
+      ],
+      isLoading: false,
+    });
+    (useLayout as jest.Mock).mockReturnValue({
+      compact: false,
+      medium: true,
+      expanded: false,
+      atLeastMedium: true,
+      width: 768,
+      scale: 1,
+      horizontalPadding: 24,
+    });
+
+    const view = renderScreen(<AiCoachScreen />);
+    fireEvent.changeText(view.getByPlaceholderText("Ask your AI Coach anything..."), "Long answer");
+    fireEvent.press(view.getByLabelText("Send message"));
+    await waitFor(() => expect(startCoachAgent).toHaveBeenCalledTimes(1));
+    act(() => emit({ type: "delta", text: "partial orphan" }));
+    expect(view.getByText("partial orphan")).toBeTruthy();
+
+    fireEvent.press(view.getByText("Nutrition Advice"));
+    await waitFor(() => expect(mockAbort).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(view.queryByText("partial orphan")).toBeNull());
+    await act(async () => resolveDone({ id: "aborted", role: "assistant", content: "ignored" }));
   });
 
   it("aborts before agent creation when switching sessions during message persistence", async () => {
@@ -314,6 +502,40 @@ describe("AiCoachScreen Integration", () => {
 
     await waitFor(() => expect(startCoachAgent).not.toHaveBeenCalled());
     expect(mockAppendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not steal focus or start an agent when switching sessions during new-chat creation", async () => {
+    let releaseCreate!: (session: { id: string; title: string; model_id: string }) => void;
+    mockCreateSession.mockImplementationOnce(() => new Promise((resolve) => { releaseCreate = resolve; }));
+    (useCoachSessions as jest.Mock).mockReturnValue({
+      data: [
+        { id: "session-1", title: "Existing chat", model_id: "openai/gpt-4o", created_at: 1, updated_at: 1 },
+      ],
+      isLoading: false,
+    });
+    (useLastCoachModel as jest.Mock).mockReturnValue({ data: "openai/gpt-4o", isLoading: false });
+    (useLayout as jest.Mock).mockReturnValue({
+      compact: false,
+      medium: true,
+      expanded: false,
+      atLeastMedium: true,
+      width: 768,
+      scale: 1,
+      horizontalPadding: 24,
+    });
+
+    const view = renderScreen(<AiCoachScreen />);
+    fireEvent.press(view.getByLabelText("Start a new chat"));
+    fireEvent.changeText(view.getByPlaceholderText("Ask your AI Coach anything..."), "Create slowly");
+    fireEvent.press(view.getByLabelText("Send message"));
+    await waitFor(() => expect(mockCreateSession).toHaveBeenCalledTimes(1));
+
+    fireEvent.press(view.getByText("Existing chat"));
+    await act(async () => releaseCreate({ id: "session-orphan", title: "Create slowly", model_id: "openai/gpt-4o" }));
+
+    await waitFor(() => expect(startCoachAgent).not.toHaveBeenCalled());
+    expect(mockAppendMessage).not.toHaveBeenCalled();
+    expect(view.getByText("GPT-4o")).toBeTruthy();
   });
 
   it("handles no-key error state and links to /settings/ai-key", async () => {
@@ -462,12 +684,9 @@ describe("AiCoachScreen Integration", () => {
     const errorMsg = await findByText(/tier_free: OpenRouter rate limit reached/);
     expect(errorMsg).toBeTruthy();
     expect(getByText("Retry later")).toBeTruthy();
-    expect(mockAppendMessage).toHaveBeenCalledWith(expect.objectContaining({
-      session_id: "session-1",
-      role: "assistant",
-      error: JSON.stringify({ kind: "rate_limited", status: 429, limitSource: "tier_free" }),
-    }));
-    expect(mockAppendMessage).toHaveBeenCalledTimes(2);
+    // Errors stay in ChatErrorState and are rendered outside Chat; assistant
+    // error rows are no longer persisted by the presentation layer.
+    expect(mockAppendMessage).toHaveBeenCalledTimes(1);
   });
 
   it("renders stale catalog badge and triggers refresh on press", () => {
@@ -518,3 +737,4 @@ describe("AiCoachScreen Integration", () => {
     expect(queryByText("Upper Body Hypertrophy")).toBeTruthy(); // in sidebar
   });
 });
+/* eslint-enable max-lines-per-function */

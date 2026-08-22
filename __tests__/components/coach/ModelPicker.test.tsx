@@ -307,7 +307,7 @@ describe("ModelPicker", () => {
     const handleSelect = jest.fn();
     const handleClose = jest.fn();
 
-    const { getByText, rerender } = render(
+    const { getByText, getByLabelText, getByTestId, rerender } = render(
       <ModelPickerSheet
         isVisible={true}
         onClose={handleClose}
@@ -318,6 +318,8 @@ describe("ModelPicker", () => {
 
     expect(getByText("Select AI Model")).toBeTruthy();
     expect(getByText("Model Alpha")).toBeTruthy();
+    expect(getByLabelText("Close model picker")).toBeTruthy();
+    expect(getByTestId("model-catalog-list")).toBeTruthy();
 
     // When isVisible is false, picker content is not rendered
     rerender(
@@ -345,6 +347,10 @@ describe("ModelPicker", () => {
     );
 
     const combined = pickerSource + sheetSource + formatterSource;
+
+    expect(pickerSource).toContain("BottomSheetFlatList");
+    expect(sheetSource).toContain("BottomSheetModal");
+    expect(sheetSource).toContain("BottomSheetView");
 
     // Proves zero hardcoded provider slugs or model families
     expect(combined).not.toMatch(

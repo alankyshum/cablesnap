@@ -1,19 +1,31 @@
 import React from "react";
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import { useRouter } from "expo-router";
+import { Chat } from "@kesha-antonov/react-native-chat";
 import {
-  CoachComposer,
   CoachConversation,
   CoachEmptyState,
   CoachErrorCard,
   CoachHeader,
-  CoachMessageBubble,
   CoachSidebar,
 } from "@/components/coach";
 import { toChatErrorState } from "@/lib/ai/errors";
 import { confirmAction } from "@/lib/confirm";
 import type { CoachSession } from "@/lib/db/coach";
+
+const mockStartCoachAgent = jest.fn();
+const mockAppendCoachMessage = jest.fn();
+
+jest.mock("@/lib/ai/agent", () => ({
+  startCoachAgent: (...args: unknown[]) => mockStartCoachAgent(...args),
+}));
+
+jest.mock("@/hooks/useCoachSessions", () => ({
+  coachQueryKeys: { messages: (id: string) => ["coach", "messages", id] },
+  useAppendCoachMessage: () => ({ mutateAsync: mockAppendCoachMessage }),
+  useCreateCoachSession: () => ({ mutateAsync: jest.fn() }),
+}));
 
 jest.mock("expo-router", () => ({
   useRouter: jest.fn(),
@@ -27,6 +39,13 @@ const mockPush = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockAppendCoachMessage.mockImplementation(async (input) => ({
+    id: "persisted-user",
+    ...input,
+    tool_calls: null,
+    error: null,
+    created_at: 2,
+  }));
   (useRouter as jest.Mock).mockReturnValue({
     push: mockPush,
   });
@@ -184,6 +203,21 @@ describe("CoachHeader", () => {
     fireEvent.press(getByLabelText("Catalog is cached. Tap to refresh."));
     expect(onRefreshCatalog).toHaveBeenCalled();
   });
+
+  it("renders and toggles the tablet sidebar affordance", () => {
+    const onToggleSidebar = jest.fn();
+    const { getByLabelText } = render(
+      <CoachHeader
+        selectedModelId="openai/gpt-4o"
+        onOpenModelPicker={jest.fn()}
+        sidebarCollapsed={false}
+        onToggleSidebar={onToggleSidebar}
+      />,
+    );
+
+    fireEvent.press(getByLabelText("Collapse sessions sidebar"));
+    expect(onToggleSidebar).toHaveBeenCalled();
+  });
 });
 
 describe("CoachErrorCard", () => {
@@ -245,123 +279,84 @@ describe("CoachErrorCard", () => {
   });
 });
 
-describe("CoachComposer", () => {
-  it("disables send button when empty and enables on typing", () => {
-    const onSend = jest.fn();
-    const onChangeText = jest.fn();
-
-    const { getByLabelText, rerender } = render(
-      <CoachComposer
-        value=""
-        onChangeText={onChangeText}
-        onSend={onSend}
-      />
-    );
-
-    const sendButton = getByLabelText("Send message");
-    fireEvent.press(sendButton);
-    expect(onSend).not.toHaveBeenCalled();
-
-    rerender(
-      <CoachComposer
-        value="What is my max volume?"
-        onChangeText={onChangeText}
-        onSend={onSend}
-      />
-    );
-
-    fireEvent.press(sendButton);
-    expect(onSend).toHaveBeenCalled();
-  });
-
-  it("renders stop button when streaming", () => {
-    const onStop = jest.fn();
-    const { getByLabelText } = render(
-      <CoachComposer
-        value="Thinking"
-        onChangeText={jest.fn()}
-        onSend={jest.fn()}
-        onStop={onStop}
-        isStreaming={true}
-      />
-    );
-
-    const stopButton = getByLabelText("Stop generating");
-    fireEvent.press(stopButton);
-    expect(onStop).toHaveBeenCalled();
-  });
-});
-
-describe("CoachMessageBubble", () => {
-  it("renders user message", () => {
-    const { getByText } = render(
-      <CoachMessageBubble
-        message={{
-          role: "user",
-          content: "How is my bench progress?",
-          created_at: 1700000000000,
-        }}
-      />
-    );
-
-    expect(getByText("How is my bench progress?")).toBeTruthy();
-  });
-
-  it("renders assistant message with in-flight tool indicator", () => {
-    const { getByText } = render(
-      <CoachMessageBubble
-        message={{
-          role: "assistant",
-          content: "Let me check your stats...",
-        }}
-        isStreaming={true}
-        inFlightTool="recent_sessions"
-      />
-    );
-
-    expect(getByText("Reading workout history...")).toBeTruthy();
-    expect(getByText("Let me check your stats...")).toBeTruthy();
-    expect(getByText("Thinking...")).toBeTruthy();
-  });
-
-  it("renders assistant message with persisted tool badge", () => {
-    const { getByText } = render(
-      <CoachMessageBubble
-        message={{
-          role: "assistant",
-          content: "Your bench increased 5kg this month.",
-          tool_calls: '[{"name":"exercise_history"}]',
-        }}
-      />
-    );
-
-    expect(getByText("Data consulted: local records")).toBeTruthy();
-    expect(getByText("Your bench increased 5kg this month.")).toBeTruthy();
-  });
-});
-
 describe("CoachConversation", () => {
+  const conversationProps = {
+    messages: [],
+    activeSessionId: "session-b",
+    selectedModelId: "provider/model",
+    isMissingKey: false,
+    activeError: null,
+    onOpenModelPicker: jest.fn(),
+    onDismissError: jest.fn(),
+    onSessionCreated: jest.fn(),
+    onError: jest.fn(),
+  };
+
   it("does not render another session's streaming reply", () => {
     const props = {
       messages: [{ id: "message-1", session_id: "session-b", role: "user", content: "Hello", tool_calls: null, error: null, created_at: 1 }],
       activeSessionId: "session-b",
       selectedModelId: "provider/model",
       isMissingKey: false,
-      isStreaming: true,
-      streamingSessionId: "session-a",
-      streamingText: "Reply from session A",
-      inFlightTool: null,
       activeError: null,
-      inputText: "",
-      onChangeInputText: jest.fn(),
-      onSend: jest.fn(),
-      onStop: jest.fn(),
       onOpenModelPicker: jest.fn(),
       onDismissError: jest.fn(),
+      onSessionCreated: jest.fn(),
+      onError: jest.fn(),
     };
     const { queryByText } = render(<CoachConversation {...props} />);
 
     expect(queryByText("Reply from session A")).toBeNull();
+  });
+
+  it("enables the library's streaming-safe markdown renderer for live and persisted replies", () => {
+    render(<CoachConversation {...conversationProps} />);
+
+    const chatProps = (Chat as unknown as jest.Mock).mock.calls.at(-1)?.[0];
+    expect(chatProps.messageTextProps).toEqual({ markdown: true });
+    expect(chatProps.theme.colors).toEqual(expect.objectContaining({
+      incomingText: expect.any(String),
+      accent: expect.any(String),
+      incomingBubble: expect.any(String),
+    }));
+  });
+
+  it("keeps and grows the streaming bubble across query hydration renders", async () => {
+    let emit!: (event: { type: "delta"; text: string }) => void;
+    let resolveDone!: (message: { id: string }) => void;
+    const done = new Promise<{ id: string }>((resolve) => { resolveDone = resolve; });
+    mockStartCoachAgent.mockImplementation((options) => {
+      emit = options.onEvent;
+      return { done, abort: jest.fn() };
+    });
+
+    const view = render(<CoachConversation {...conversationProps} />);
+    const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    fireEvent.changeText(input, "Review my training");
+    fireEvent.press(view.getByLabelText("Send message"));
+    await waitFor(() => expect(mockStartCoachAgent).toHaveBeenCalledTimes(1));
+
+    act(() => emit({ type: "delta", text: "**Reviewing" }));
+    expect(view.getByText("**Reviewing")).toBeTruthy();
+
+    view.rerender(<CoachConversation
+      {...conversationProps}
+      messages={[{
+        id: "persisted-user",
+        session_id: "session-b",
+        role: "user",
+        content: "Review my training",
+        tool_calls: null,
+        error: null,
+        created_at: 2,
+      }]}
+    />);
+    act(() => emit({ type: "delta", text: " your workouts**" }));
+
+    expect(view.getByText("**Reviewing your workouts**")).toBeTruthy();
+    expect(view.queryByText("**Reviewing")).toBeNull();
+    expect(view.getAllByText("Review my training")).toHaveLength(1);
+    await act(async () => resolveDone({ id: "assistant-1" }));
   });
 });
 
