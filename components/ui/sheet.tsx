@@ -6,6 +6,7 @@ import { useColor } from '@/hooks/useColor';
 import { BORDER_RADIUS, FONT_SIZE } from '@/theme/globals';
 import { Colors } from '@/theme/colors';
 import { X } from 'lucide-react-native';
+import { t } from '@lingui/core/macro';
 import React, { useEffect } from 'react';
 import {
   Dimensions,
@@ -212,6 +213,8 @@ export function SheetContent({ children, style }: SheetContentProps) {
               },
             ]}
             onPress={handleClose}
+            accessibilityRole="button"
+            accessibilityLabel={t({ id: "components.ui.sheet.close", message: "Close sheet" })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <X size={20} color={iconColor} />

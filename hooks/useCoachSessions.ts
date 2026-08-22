@@ -3,15 +3,18 @@ import {
   appendMessage,
   createSession,
   deleteSession,
+  getLastCoachModel,
   getMessages,
   listSessions,
   renameSession,
+  saveCoachModelSelection,
 } from "@/lib/db/coach";
 import type { AppendCoachMessage, CoachMessage, CoachSession, CreateCoachSession } from "@/lib/db/coach";
 
 export const coachQueryKeys = {
   sessions: ["coach", "sessions"] as const,
   messages: (sessionId: string) => ["coach", "messages", sessionId] as const,
+  lastModel: ["coach", "last-model"] as const,
 };
 
 export function useCoachSessions() {
@@ -23,6 +26,47 @@ export function useCoachMessages(sessionId: string | null) {
     queryKey: coachQueryKeys.messages(sessionId ?? ""),
     queryFn: () => getMessages(sessionId!),
     enabled: sessionId !== null,
+  });
+}
+
+export function useLastCoachModel() {
+  return useQuery({ queryKey: coachQueryKeys.lastModel, queryFn: getLastCoachModel });
+}
+
+export function useSelectCoachModel() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ sessionId, modelId }: { sessionId: string | null; modelId: string }) =>
+      saveCoachModelSelection(sessionId, modelId),
+    onMutate: async ({ sessionId, modelId }) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: coachQueryKeys.sessions }),
+        queryClient.cancelQueries({ queryKey: coachQueryKeys.lastModel }),
+      ]);
+      const previousSessions = queryClient.getQueryData<CoachSession[]>(coachQueryKeys.sessions);
+      const previousLastModel = queryClient.getQueryData<string | null>(coachQueryKeys.lastModel);
+      queryClient.setQueryData(coachQueryKeys.lastModel, modelId);
+      if (sessionId) {
+        queryClient.setQueryData<CoachSession[]>(coachQueryKeys.sessions, (sessions) =>
+          sessions?.map((session) => session.id === sessionId
+            ? { ...session, model_id: modelId }
+            : session),
+        );
+      }
+      return { previousSessions, previousLastModel };
+    },
+    onError: (_error, _input, context) => {
+      queryClient.setQueryData(coachQueryKeys.sessions, context?.previousSessions);
+      queryClient.setQueryData(coachQueryKeys.lastModel, context?.previousLastModel);
+    },
+    onSuccess: (session, { sessionId, modelId }) => {
+      queryClient.setQueryData(coachQueryKeys.lastModel, modelId);
+      if (sessionId && session) {
+        queryClient.setQueryData<CoachSession[]>(coachQueryKeys.sessions, (sessions) =>
+          sessions?.map((item) => item.id === sessionId ? session : item),
+        );
+      }
+    },
   });
 }
 

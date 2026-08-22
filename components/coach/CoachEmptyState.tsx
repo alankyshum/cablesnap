@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Bot, ChevronRight, Key, Sparkles, TrendingUp, Utensils, Zap } from "lucide-react-native";
@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes, radii, spacing } from "@/constants/design-tokens";
+import { i18n, t } from "@/lib/i18n";
 
 export type CoachEmptyStateProps = {
   isMissingKey: boolean;
@@ -13,24 +14,6 @@ export type CoachEmptyStateProps = {
   onOpenModelPicker: () => void;
   onSelectPrompt: (prompt: string) => void;
 };
-
-const PROMPT_SUGGESTIONS = [
-  {
-    icon: TrendingUp,
-    title: "Review Workout Progress",
-    prompt: "How is my strength and volume progressing over my recent workouts?",
-  },
-  {
-    icon: Utensils,
-    title: "Nutrition & Macros",
-    prompt: "What should I focus on eating today to hit my macro targets?",
-  },
-  {
-    icon: Zap,
-    title: "Exercise Technique",
-    prompt: "What are the key cues for a strong and safe cable chest press?",
-  },
-];
 
 export function CoachEmptyState({
   isMissingKey,
@@ -41,6 +24,45 @@ export function CoachEmptyState({
   const colors = useThemeColors();
   const router = useRouter();
 
+  const promptSuggestions = useMemo(
+    () => [
+      {
+        icon: TrendingUp,
+        title: t({
+          id: "components.coach.promptReviewWorkoutTitle",
+          message: "Review Workout Progress",
+        }),
+        prompt: t({
+          id: "components.coach.promptReviewWorkoutBody",
+          message: "How is my strength and volume progressing over my recent workouts?",
+        }),
+      },
+      {
+        icon: Utensils,
+        title: t({
+          id: "components.coach.promptNutritionTitle",
+          message: "Nutrition & Macros",
+        }),
+        prompt: t({
+          id: "components.coach.promptNutritionBody",
+          message: "What should I focus on eating today to hit my macro targets?",
+        }),
+      },
+      {
+        icon: Zap,
+        title: t({
+          id: "components.coach.promptTechniqueTitle",
+          message: "Exercise Technique",
+        }),
+        prompt: t({
+          id: "components.coach.promptTechniqueBody",
+          message: "What are the key cues for a strong and safe cable chest press?",
+        }),
+      },
+    ],
+    []
+  );
+
   if (isMissingKey) {
     return (
       <View style={styles.container}>
@@ -49,18 +71,21 @@ export function CoachEmptyState({
             <Key size={28} color={colors.onErrorContainer} />
           </View>
           <Text variant="title" style={[styles.cardTitle, { color: colors.onSurface }]}>
-            API Key Required
+            {t({ id: "components.coach.apiKeyRequired", message: "API Key Required" })}
           </Text>
           <Text style={[styles.cardDescription, { color: colors.onSurfaceVariant }]}>
-            Add your OpenRouter key in Settings to chat with AI Coach and receive personalized workout insights.
+            {t({
+              id: "components.coach.apiKeyRequiredDescription",
+              message: "Add your OpenRouter key in Settings to chat with AI Coach and receive personalized workout insights.",
+            })}
           </Text>
           <Button
             variant="default"
             onPress={() => router.push("/settings/ai-key")}
-            accessibilityLabel="Add OpenRouter API Key"
+            accessibilityLabel={t({ id: "components.coach.addApiKeyA11y", message: "Add OpenRouter API Key" })}
             style={styles.ctaButton}
           >
-            Add Key
+            {t({ id: "components.coach.addKey", message: "Add Key" })}
           </Button>
         </View>
       </View>
@@ -75,18 +100,21 @@ export function CoachEmptyState({
             <Sparkles size={28} color={colors.onPrimaryContainer} />
           </View>
           <Text variant="title" style={[styles.cardTitle, { color: colors.onSurface }]}>
-            Select an AI Model
+            {t({ id: "components.coach.selectAnAIModel", message: "Select an AI Model" })}
           </Text>
           <Text style={[styles.cardDescription, { color: colors.onSurfaceVariant }]}>
-            Choose a model from the OpenRouter catalog to power your AI Coach conversations.
+            {t({
+              id: "components.coach.selectAIModelDescription",
+              message: "Choose a model from the OpenRouter catalog to power your AI Coach conversations.",
+            })}
           </Text>
           <Button
             variant="default"
             onPress={onOpenModelPicker}
-            accessibilityLabel="Select AI Model"
+            accessibilityLabel={t({ id: "components.coach.selectModel", message: "Select Model" })}
             style={styles.ctaButton}
           >
-            Select Model
+            {t({ id: "components.coach.selectModel", message: "Select Model" })}
           </Button>
         </View>
       </View>
@@ -100,24 +128,36 @@ export function CoachEmptyState({
           <Bot size={32} color={colors.primary} />
         </View>
         <Text variant="title" style={[styles.welcomeTitle, { color: colors.onSurface }]}>
-          How can I help you today?
+          {t({ id: "components.coach.howCanIHelp", message: "How can I help you today?" })}
         </Text>
         <Text style={[styles.welcomeSubtitle, { color: colors.onSurfaceVariant }]}>
-          Ask anything about your workouts, progression, nutrition, or exercise technique.
+          {t({
+            id: "components.coach.howCanIHelpSubtitle",
+            message: "Ask anything about your workouts, progression, nutrition, or exercise technique.",
+          })}
         </Text>
-        <Text style={[styles.welcomeSubtitle, { color: colors.onSurfaceVariant }]}>Aggregated workout and nutrition fields are sent to OpenRouter for your request; food names are not.</Text>
+        <Text style={[styles.welcomeSubtitle, { color: colors.onSurfaceVariant }]}>
+          {t({
+            id: "components.coach.privacyDisclaimer",
+            message: "Aggregated workout and nutrition fields are sent to OpenRouter for your request; food names are not.",
+          })}
+        </Text>
       </View>
 
       {/* Suggestion Prompts */}
       <View style={styles.suggestionsContainer}>
-        {PROMPT_SUGGESTIONS.map((item, index) => {
+        {promptSuggestions.map((item, index) => {
           const IconComponent = item.icon;
           return (
             <TouchableOpacity
               key={index}
               onPress={() => onSelectPrompt(item.prompt)}
               accessibilityRole="button"
-              accessibilityLabel={`Suggestion: ${item.title}`}
+              accessibilityLabel={i18n._({
+                id: "components.coach.suggestionA11y",
+                message: "Suggestion: {title}",
+                values: { title: item.title },
+              })}
               style={[
                 styles.suggestionItem,
                 {

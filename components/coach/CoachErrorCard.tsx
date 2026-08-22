@@ -6,6 +6,7 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes, radii, spacing } from "@/constants/design-tokens";
+import { i18n, t } from "@/lib/i18n";
 import type { ChatErrorState } from "@/lib/ai/errors";
 
 export type CoachErrorCardProps = {
@@ -72,7 +73,11 @@ export function CoachErrorCard({
         },
       ]}
       accessibilityRole="alert"
-      accessibilityLabel={`Error: ${error.message}`}
+      accessibilityLabel={i18n._({
+        id: "components.coach.errorA11y",
+        message: "Error: {message}",
+        values: { message: error.message },
+      })}
     >
       <View style={styles.topRow}>
         <View style={styles.iconMessageRow}>
@@ -89,7 +94,7 @@ export function CoachErrorCard({
         {onDismiss && (
           <TouchableOpacity
             onPress={onDismiss}
-            accessibilityLabel="Dismiss error"
+            accessibilityLabel={t({ id: "components.coach.dismissError", message: "Dismiss error" })}
             accessibilityRole="button"
             style={styles.dismissButton}
             hitSlop={{ top: spacing.xs, bottom: spacing.xs, left: spacing.xs, right: spacing.xs }}

@@ -1,5 +1,13 @@
-import React from "react";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { StyleSheet } from "react-native";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+  type BottomSheetBackdropProps,
+} from "@gorhom/bottom-sheet";
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@/lib/i18n";
 import { ModelPicker } from "./ModelPicker";
 
 export type ModelPickerSheetProps = {
@@ -16,35 +24,63 @@ export type ModelPickerSheetProps = {
 };
 
 /**
- * Bottom-sheet drawer wrapper for the AI Model Picker.
- * Reuses the app's existing BottomSheet primitive.
+ * Gorhom wrapper for the AI Model Picker. Its BottomSheetFlatList must remain
+ * inside this sheet so native pan and scroll gestures coordinate correctly.
  */
 export function ModelPickerSheet({
   isVisible,
   onClose,
   selectedModelId,
   onSelectModel,
-  title = "Select AI Model",
+  title,
 }: ModelPickerSheetProps) {
+  const colors = useThemeColors();
+  const sheetRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["60%", "90%"], []);
+  const resolvedTitle = title ?? t({ id: "components.coach.selectAIModel", message: "Select AI Model" });
+
+  useEffect(() => {
+    if (isVisible) sheetRef.current?.present();
+    else sheetRef.current?.dismiss();
+  }, [isVisible]);
+
+  const renderBackdrop = useCallback(
+    (props: BottomSheetBackdropProps) => (
+      <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} pressBehavior="close" />
+    ),
+    [],
+  );
+
+  const requestClose = useCallback(() => sheetRef.current?.dismiss(), []);
+
   return (
-    <BottomSheet
-      isVisible={isVisible}
-      onClose={onClose}
-      title={title}
-      snapPoints={[0.6, 0.9]}
-      enableBackdropDismiss
-      disableContentScroll
+    <BottomSheetModal
+      ref={sheetRef}
+      snapPoints={snapPoints}
+      enableDynamicSizing={false}
+      enablePanDownToClose
+      backdropComponent={renderBackdrop}
+      onDismiss={onClose}
+      backgroundStyle={{ backgroundColor: colors.background }}
+      handleIndicatorStyle={{ backgroundColor: colors.onSurfaceVariant }}
     >
       {isVisible ? (
-        <ModelPicker
-          selectedModelId={selectedModelId}
-          onSelectModel={onSelectModel}
-          onClose={onClose}
-          title={null}
-        />
+        <BottomSheetView style={styles.content}>
+          <ModelPicker
+            selectedModelId={selectedModelId}
+            onSelectModel={onSelectModel}
+            onClose={requestClose}
+            showCloseButton
+            title={resolvedTitle}
+          />
+        </BottomSheetView>
       ) : null}
-    </BottomSheet>
+    </BottomSheetModal>
   );
 }
 
 export default ModelPickerSheet;
+
+const styles = StyleSheet.create({
+  content: { flex: 1 },
+});

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes, radii, spacing } from "@/constants/design-tokens";
 import { confirmAction } from "@/lib/confirm";
+import { i18n, t } from "@/lib/i18n";
 import type { CoachSession } from "@/lib/db/coach";
 
 export type CoachSidebarProps = {
@@ -57,11 +58,15 @@ export function CoachSidebar({
 
   const handleDelete = (session: CoachSession) => {
     confirmAction(
-      "Delete Conversation",
-      `Are you sure you want to delete "${session.title}"? This cannot be undone.`,
+      t({ id: "components.coach.deleteConversationTitle", message: "Delete Conversation" }),
+      i18n._({
+        id: "components.coach.deleteConversationBody",
+        message: 'Are you sure you want to delete "{title}"? This cannot be undone.',
+        values: { title: session.title },
+      }),
       () => onDeleteSession(session.id),
       true,
-      "Delete",
+      t({ id: "components.coach.deleteConfirm", message: "Delete" }),
     );
   };
 
@@ -86,18 +91,20 @@ export function CoachSidebar({
         <View style={styles.titleRow}>
           <Bot size={20} color={colors.primary} />
           <Text variant="title" style={[styles.headerTitle, { color: colors.onSurface }]}>
-            Conversations
+            {t({ id: "components.coach.conversations", message: "Conversations" })}
           </Text>
         </View>
         <Button
           variant="default"
           size="sm"
           onPress={onNewChat}
-          accessibilityLabel="Start a new chat"
+          accessibilityLabel={t({ id: "components.coach.newChatA11y", message: "Start a new chat" })}
           style={styles.newChatButton}
         >
-          <Plus size={16} color={colors.onPrimary} style={styles.buttonIcon} />
-          <Text style={[styles.newChatText, { color: colors.onPrimary }]}>New Chat</Text>
+          <Plus size={16} color={colors.onPrimary} />
+          <Text style={[styles.newChatText, { color: colors.onPrimary }]}>
+            {t({ id: "components.coach.newChat", message: "New Chat" })}
+          </Text>
         </Button>
       </View>
 
@@ -106,10 +113,13 @@ export function CoachSidebar({
         <View style={styles.emptyContainer}>
           <MessageSquare size={32} color={colors.onSurfaceVariant} />
           <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>
-            No conversations yet
+            {t({ id: "components.coach.noConversations", message: "No conversations yet" })}
           </Text>
           <Text style={[styles.emptySubtitle, { color: colors.onSurfaceVariant }]}>
-            Start a new chat to consult your AI Coach.
+            {t({
+              id: "components.coach.startNewChatSubtitle",
+              message: "Start a new chat to consult your AI Coach.",
+            })}
           </Text>
         </View>
       ) : (
@@ -120,11 +130,7 @@ export function CoachSidebar({
           renderItem={({ item }) => {
             const isActive = item.id === activeSessionId;
             return (
-              <Pressable
-                onPress={() => onSelectSession(item.id)}
-                accessibilityRole="button"
-                accessibilityLabel={`Session: ${item.title}`}
-                accessibilityState={{ selected: isActive }}
+              <View
                 style={[
                   styles.sessionItem,
                   {
@@ -135,7 +141,17 @@ export function CoachSidebar({
                   },
                 ]}
               >
-                <View style={styles.sessionInfo}>
+                <Pressable
+                  onPress={() => onSelectSession(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={i18n._({
+                    id: "components.coach.sessionA11y",
+                    message: "Session: {title}",
+                    values: { title: item.title },
+                  })}
+                  accessibilityState={{ selected: isActive }}
+                  style={styles.sessionInfo}
+                >
                   <Text
                     numberOfLines={1}
                     style={[
@@ -162,13 +178,17 @@ export function CoachSidebar({
                   >
                     {formatDate(item.updated_at)}
                   </Text>
-                </View>
+                </Pressable>
 
                 {/* Actions */}
                 <View style={styles.itemActions}>
                   <TouchableOpacity
                     onPress={() => handleStartRename(item)}
-                    accessibilityLabel={`Rename ${item.title}`}
+                    accessibilityLabel={i18n._({
+                      id: "components.coach.renameSessionA11y",
+                      message: "Rename {title}",
+                      values: { title: item.title },
+                    })}
                     accessibilityRole="button"
                     style={styles.actionButton}
                     hitSlop={{ top: spacing.xs, bottom: spacing.xs, left: spacing.xs, right: spacing.xs }}
@@ -181,7 +201,11 @@ export function CoachSidebar({
 
                   <TouchableOpacity
                     onPress={() => handleDelete(item)}
-                    accessibilityLabel={`Delete ${item.title}`}
+                    accessibilityLabel={i18n._({
+                      id: "components.coach.deleteSessionA11y",
+                      message: "Delete {title}",
+                      values: { title: item.title },
+                    })}
                     accessibilityRole="button"
                     style={styles.actionButton}
                     hitSlop={{ top: spacing.xs, bottom: spacing.xs, left: spacing.xs, right: spacing.xs }}
@@ -192,7 +216,7 @@ export function CoachSidebar({
                     />
                   </TouchableOpacity>
                 </View>
-              </Pressable>
+              </View>
             );
           }}
         />
@@ -208,12 +232,15 @@ export function CoachSidebar({
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <Text variant="title" style={[styles.modalTitle, { color: colors.onSurface }]}>
-              Rename Conversation
+              {t({ id: "components.coach.renameConversation", message: "Rename Conversation" })}
             </Text>
             <TextInput
               value={editTitle}
               onChangeText={setEditTitle}
-              placeholder="Conversation title"
+              placeholder={t({
+                id: "components.coach.conversationTitlePlaceholder",
+                message: "Conversation title",
+              })}
               placeholderTextColor={colors.onSurfaceVariant}
               style={[
                 styles.modalInput,
@@ -232,18 +259,18 @@ export function CoachSidebar({
                 variant="outline"
                 size="sm"
                 onPress={handleCancelRename}
-                accessibilityLabel="Cancel rename"
+                accessibilityLabel={t({ id: "components.coach.cancelRenameA11y", message: "Cancel rename" })}
               >
-                Cancel
+                {t({ id: "components.coach.cancel", message: "Cancel" })}
               </Button>
               <Button
                 variant="default"
                 size="sm"
                 onPress={handleSaveRename}
                 disabled={editTitle.trim().length === 0}
-                accessibilityLabel="Save rename"
+                accessibilityLabel={t({ id: "components.coach.saveRenameA11y", message: "Save rename" })}
               >
-                Save
+                {t({ id: "components.coach.save", message: "Save" })}
               </Button>
             </View>
           </View>
@@ -278,12 +305,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  buttonIcon: {
-    marginRight: spacing.xs,
-  },
   newChatText: {
     fontSize: fontSizes.sm,
     fontWeight: "600",
+    textAlign: "center",
   },
   listContent: {
     paddingHorizontal: spacing.base,
@@ -294,14 +319,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: spacing.md,
     borderRadius: radii.md,
     borderWidth: 1,
     minHeight: 56,
   },
   sessionInfo: {
     flex: 1,
-    marginRight: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
+    justifyContent: "center",
   },
   sessionTitle: {
     fontSize: fontSizes.sm,
@@ -313,11 +340,13 @@ const styles = StyleSheet.create({
   itemActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
+    paddingRight: spacing.xs,
   },
   actionButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radii.sm,

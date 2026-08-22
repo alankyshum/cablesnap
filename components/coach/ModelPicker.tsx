@@ -1,13 +1,14 @@
+/* eslint-disable max-lines */
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Platform,
   Pressable,
   StyleSheet,
   TextInput,
   View,
 } from "react-native";
+import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import { useRouter } from "expo-router";
 import { AlertCircle, Check, RotateCcw, Search, X } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
@@ -18,6 +19,7 @@ import { useKeyStatus } from "@/hooks/useKeyStatus";
 import { toChatErrorState } from "@/lib/ai/errors";
 import type { CatalogModel } from "@/lib/ai/catalog";
 import { fontSizes, radii, spacing } from "@/constants/design-tokens";
+import { i18n, t } from "@/lib/i18n";
 import {
   formatCachedTimestamp,
   formatContextLength,
@@ -45,13 +47,16 @@ export function ModelPicker({
   onSelectModel,
   onClose,
   showCloseButton = false,
-  title = "Select AI Model",
+  title,
 }: ModelPickerProps) {
   const colors = useThemeColors();
   const router = useRouter();
   const catalogQuery = useModelCatalog();
   const refreshCatalog = useRefreshModelCatalog();
   const keyStatus = useKeyStatus();
+  const resolvedTitle = title === undefined
+    ? t({ id: "components.coach.selectAIModel", message: "Select AI Model" })
+    : title;
 
   // Search query filter
   const [searchQuery, setSearchQuery] = useState("");
@@ -95,21 +100,27 @@ export function ModelPicker({
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header (rendered if title is provided) */}
-      {Boolean(title) && (
+      {Boolean(resolvedTitle) && (
         <View style={styles.headerRow}>
           <View style={styles.headerTextContainer}>
             <Text variant="title" style={{ color: colors.onSurface }}>
-              {title}
+              {resolvedTitle}
             </Text>
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-              Models sourced from live OpenRouter catalog
+              {t({
+                id: "components.coach.modelsSourcedCatalog",
+                message: "Models sourced from live OpenRouter catalog",
+              })}
             </Text>
           </View>
           {showCloseButton && onClose && (
             <Pressable
               onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel="Close model picker"
+              accessibilityLabel={t({
+                id: "components.coach.closeModelPicker",
+                message: "Close model picker",
+              })}
               hitSlop={12}
               style={[styles.iconButton, { borderColor: colors.outline }]}
             >
@@ -134,24 +145,30 @@ export function ModelPicker({
             <AlertCircle size={20} color={colors.onErrorContainer} />
             <View style={styles.bannerText}>
               <Text style={{ color: colors.onErrorContainer, fontWeight: "600" }}>
-                API key required
+                {t({ id: "components.coach.apiKeyRequiredBanner", message: "API key required" })}
               </Text>
               <Text variant="caption" style={{ color: colors.onErrorContainer }}>
-                Add your OpenRouter API key to use AI Coach and browse all models.
+                {t({
+                  id: "components.coach.apiKeyRequiredPickerDescription",
+                  message: "Add your OpenRouter API key to use AI Coach and browse all models.",
+                })}
               </Text>
             </View>
           </View>
           <Pressable
             onPress={handleNavigateKeySettings}
             accessibilityRole="button"
-            accessibilityLabel="Configure OpenRouter API key"
+            accessibilityLabel={t({
+              id: "components.coach.configureApiKeyA11y",
+              message: "Configure OpenRouter API key",
+            })}
             style={[
               styles.bannerButton,
               { backgroundColor: colors.error },
             ]}
           >
             <Text style={{ color: colors.onError, fontWeight: "600", fontSize: fontSizes.sm }}>
-              Configure API Key
+              {t({ id: "components.coach.configureApiKey", message: "Configure API Key" })}
             </Text>
           </Pressable>
         </View>
@@ -173,17 +190,21 @@ export function ModelPicker({
             <AlertCircle size={20} color={colors.onTertiaryContainer} />
             <View style={styles.bannerText}>
               <Text style={{ color: colors.onTertiaryContainer, fontWeight: "600" }}>
-                Cached catalog
+                {t({ id: "components.coach.cachedCatalog", message: "Cached catalog" })}
               </Text>
               <Text variant="caption" style={{ color: colors.onTertiaryContainer }}>
-                Showing cached models from {formatCachedTimestamp(catalogQuery.data?.cachedAt)}. Selections may have changed.
+                {i18n._({
+                  id: "components.coach.cachedCatalogDescription",
+                  message: "Showing cached models from {time}. Selections may have changed.",
+                  values: { time: formatCachedTimestamp(catalogQuery.data?.cachedAt) },
+                })}
               </Text>
             </View>
           </View>
           <Pressable
             onPress={() => void refreshCatalog()}
             accessibilityRole="button"
-            accessibilityLabel="Refresh catalog"
+            accessibilityLabel={t({ id: "components.coach.refreshCatalog", message: "Refresh catalog" })}
             style={[
               styles.bannerOutlineButton,
               { borderColor: colors.onTertiaryContainer },
@@ -191,7 +212,7 @@ export function ModelPicker({
           >
             <RotateCcw size={14} color={colors.onTertiaryContainer} />
             <Text style={{ color: colors.onTertiaryContainer, fontWeight: "600", fontSize: fontSizes.sm }}>
-              Refresh
+              {t({ id: "components.coach.refresh", message: "Refresh" })}
             </Text>
           </Pressable>
         </View>
@@ -215,8 +236,15 @@ export function ModelPicker({
           }}
         >
           {selectedModelId
-            ? `Selected: ${selectedModelId}`
-            : "No model selected. Choose a model below to start coaching."}
+            ? i18n._({
+                id: "components.coach.selectedModel",
+                message: "Selected: {modelId}",
+                values: { modelId: selectedModelId },
+              })
+            : t({
+                id: "components.coach.noModelSelected",
+                message: "No model selected. Choose a model below to start coaching.",
+              })}
         </Text>
       </View>
 
@@ -236,13 +264,19 @@ export function ModelPicker({
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search by model id or name…"
+            placeholder={t({
+              id: "components.coach.searchModelsPlaceholder",
+              message: "Search by model id or name…",
+            })}
             placeholderTextColor={colors.onSurfaceVariant}
             autoCapitalize="none"
             autoCorrect={false}
             spellCheck={false}
             accessibilityRole="search"
-            accessibilityLabel="Search models by id or name"
+            accessibilityLabel={t({
+              id: "components.coach.searchModelsA11y",
+              message: "Search models by id or name",
+            })}
             testID="model-search-input"
             style={[
               styles.searchInput,
@@ -255,7 +289,10 @@ export function ModelPicker({
             <Pressable
               onPress={() => setSearchQuery("")}
               accessibilityRole="button"
-              accessibilityLabel="Clear model search"
+              accessibilityLabel={t({
+                id: "components.coach.clearModelSearch",
+                message: "Clear model search",
+              })}
               hitSlop={8}
               style={styles.clearButton}
             >
@@ -268,16 +305,22 @@ export function ModelPicker({
         <View style={styles.filterRow}>
           <View style={styles.filterLabelContainer}>
             <Text variant="body" style={[styles.filterLabel, { color: colors.onSurface }]}>
-              Tool-calling only
+              {t({ id: "components.coach.toolCallingOnly", message: "Tool-calling only" })}
             </Text>
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-              Coach needs tool calling to read logs and manage workouts
+              {t({
+                id: "components.coach.toolCallingDescription",
+                message: "Coach needs tool calling to read logs and manage workouts",
+              })}
             </Text>
           </View>
           <Switch
             value={toolsOnly}
             onValueChange={setToolsOnly}
-            accessibilityLabel="Filter by tool calling support"
+            accessibilityLabel={t({
+              id: "components.coach.filterToolsA11y",
+              message: "Filter by tool calling support",
+            })}
           />
         </View>
       </View>
@@ -298,10 +341,14 @@ export function ModelPicker({
             <AlertCircle size={20} color={colors.onTertiaryContainer} />
             <View style={styles.bannerText}>
               <Text style={{ color: colors.onTertiaryContainer, fontWeight: "600" }}>
-                Tool Calling Warning
+                {t({ id: "components.coach.toolCallingWarning", message: "Tool Calling Warning" })}
               </Text>
               <Text variant="caption" style={{ color: colors.onTertiaryContainer }}>
-                Tools will not work on models without tool-calling support. AI Coach will not be able to log sets, retrieve exercises, or analyze workout history.
+                {t({
+                  id: "components.coach.toolCallingWarningDescription",
+                  message:
+                    "Tools will not work on models without tool-calling support. AI Coach will not be able to log sets, retrieve exercises, or analyze workout history.",
+                })}
               </Text>
             </View>
           </View>
@@ -322,7 +369,7 @@ export function ModelPicker({
         >
           <AlertCircle size={32} color={colors.error} />
           <Text style={[styles.errorTitle, { color: colors.onSurface }]}>
-            Catalog Unavailable
+            {t({ id: "components.coach.catalogUnavailable", message: "Catalog Unavailable" })}
           </Text>
           <Text variant="caption" style={[styles.errorMessage, { color: colors.onSurfaceVariant }]}>
             {toChatErrorState({ kind: "catalog_unavailable" }).message}
@@ -330,7 +377,7 @@ export function ModelPicker({
           <Pressable
             onPress={() => void refreshCatalog()}
             accessibilityRole="button"
-            accessibilityLabel="Refresh catalog"
+            accessibilityLabel={t({ id: "components.coach.refreshCatalog", message: "Refresh catalog" })}
             style={[
               styles.primaryButton,
               { backgroundColor: colors.primary },
@@ -338,7 +385,7 @@ export function ModelPicker({
           >
             <RotateCcw size={16} color={colors.onPrimary} style={{ marginRight: spacing.xs }} />
             <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>
-              Refresh catalog
+              {t({ id: "components.coach.refreshCatalog", message: "Refresh catalog" })}
             </Text>
           </Pressable>
         </View>
@@ -346,12 +393,13 @@ export function ModelPicker({
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: spacing.sm }}>
-            Loading live model catalog…
+            {t({ id: "components.coach.loadingCatalog", message: "Loading live model catalog…" })}
           </Text>
         </View>
       ) : (
         /* Model FlatList */
-        <FlatList
+        <BottomSheetFlatList<CatalogModel>
+          testID="model-catalog-list"
           style={styles.modelList}
           data={filteredModels}
           keyExtractor={(item) => item.id}
@@ -418,7 +466,7 @@ export function ModelPicker({
                               },
                             ]}
                           >
-                            Tools
+                            {t({ id: "components.coach.toolsBadge", message: "Tools" })}
                           </Text>
                         </View>
                       )}
@@ -492,28 +540,43 @@ export function ModelPicker({
             <View style={styles.emptyContainer}>
               <Text variant="subtitle" style={{ color: colors.onSurface, textAlign: "center" }}>
                 {searchQuery.trim().length > 0
-                  ? `No models matching "${searchQuery}"`
-                  : "No models available in catalog."}
+                  ? i18n._({
+                      id: "components.coach.noModelsMatching",
+                      message: 'No models matching "{query}"',
+                      values: { query: searchQuery },
+                    })
+                  : t({
+                      id: "components.coach.noModelsAvailable",
+                      message: "No models available in catalog.",
+                    })}
               </Text>
               <Text
                 variant="caption"
                 style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: spacing.xs }}
               >
                 {searchQuery.trim().length > 0
-                  ? "Try searching for a different provider or model name."
-                  : "Check your network connection or refresh the catalog."}
+                  ? t({
+                      id: "components.coach.tryDifferentSearch",
+                      message: "Try searching for a different provider or model name.",
+                    })
+                  : t({
+                      id: "components.coach.checkNetworkOrRefresh",
+                      message: "Check your network connection or refresh the catalog.",
+                    })}
               </Text>
               <Pressable
                 onPress={() => void refreshCatalog()}
                 accessibilityRole="button"
-                accessibilityLabel="Refresh catalog"
+                accessibilityLabel={t({ id: "components.coach.refreshCatalog", message: "Refresh catalog" })}
                 style={[
                   styles.primaryButton,
                   { backgroundColor: colors.primary, marginTop: spacing.md },
                 ]}
               >
                 <RotateCcw size={16} color={colors.onPrimary} style={{ marginRight: spacing.xs }} />
-                <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>Refresh catalog</Text>
+                <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>
+                  {t({ id: "components.coach.refreshCatalog", message: "Refresh catalog" })}
+                </Text>
               </Pressable>
             </View>
           )}
@@ -542,8 +605,10 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   iconButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
     borderRadius: radii.md,
     borderWidth: 1,
     alignItems: "center",
