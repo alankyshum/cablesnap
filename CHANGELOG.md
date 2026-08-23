@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.110 — 2026-08-23
+<!-- versionCode: 178 -->
+
 - AI Coach markdown now renders tables, horizontally scrollable code blocks, and clearer headings.
 - Fixed tablet AI Coach layout issues, including header overlap and quick-prompt chip overflow.
 - AI Coach now records and displays the model that produced each response, and preserves model selections across reloads and new chats.

@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.110",
+    "date": "2026-08-23",
+    "versionCode": 178,
+    "body": "- AI Coach markdown now renders tables, horizontally scrollable code blocks, and clearer headings.\n- Fixed tablet AI Coach layout issues, including header overlap and quick-prompt chip overflow.\n- AI Coach now records and displays the model that produced each response, and preserves model selections across reloads and new chats.\n- The model picker now scrolls reliably to offscreen models and dismisses after selection.\n- Backups can include AI Coach chat history and the selected model, with an optional API key protected by explicit opt-in; automatic backups never include credentials."
+  },
+  {
     "version": "0.26.109",
     "date": "2026-08-22",
     "versionCode": 177,
