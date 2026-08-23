@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.111",
+    "date": "2026-08-23",
+    "versionCode": 179,
+    "body": "- Improved AI Coach dark-mode text and table readability with theme-aware colors.\n- Kept AI Coach tables inside the message bubble while allowing horizontal scrolling for wide tables.\n- Removed the large empty gap at the top of the AI Coach screen."
+  },
+  {
     "version": "0.26.110",
     "date": "2026-08-23",
     "versionCode": 178,

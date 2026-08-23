@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.111 — 2026-08-23
+<!-- versionCode: 179 -->
+
 - Improved AI Coach dark-mode text and table readability with theme-aware colors.
 - Kept AI Coach tables inside the message bubble while allowing horizontal scrolling for wide tables.
 - Removed the large empty gap at the top of the AI Coach screen.
