@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.112",
+    "date": "2026-08-23",
+    "versionCode": 180,
+    "body": "- Update checks now run every 6 hours instead of once per day, so new releases are surfaced sooner.\n- AI Coach replies work again with models that reject tool requests.\n- Fixed mirrored message text and out-of-order conversation dates.\n- Fixed Coach layout issues, including navbar overlap, sidebar height and alignment, collapse button placement, and layer shadows.\n- Added consistent padding to warning cards, sidebar buttons, and the empty state."
+  },
+  {
     "version": "0.26.111",
     "date": "2026-08-23",
     "versionCode": 179,

@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.112 — 2026-08-23
+<!-- versionCode: 180 -->
+
 - Update checks now run every 6 hours instead of once per day, so new releases are surfaced sooner.
 - AI Coach replies work again with models that reject tool requests.
 - Fixed mirrored message text and out-of-order conversation dates.
