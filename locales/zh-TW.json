@@ -11653,5 +11653,45 @@
     "message": "檢視營養與巨量營養素",
     "srcHash": "029b553ebb5a",
     "origin": "human"
+  },
+  "settings.backup.credentialsWarning": {
+    "message": "此即時且可能產生費用的金鑰將以未加密形式寫入分享檔案。",
+    "srcHash": "0cd5f6f975da",
+    "origin": "human"
+  },
+  "settings.backup.includeCredentials": {
+    "message": "包含 API 憑證",
+    "srcHash": "6ccc1a42f2be",
+    "origin": "human"
+  },
+  "settings.backup.includeCredentialsA11y": {
+    "message": "在匯出中包含即時 API 憑證",
+    "srcHash": "c16e4caafd4f",
+    "origin": "human"
+  },
+  "settings.importBackup.credentialsWarning": {
+    "message": "請只在信任此備份時確認。金鑰將安全儲存。",
+    "srcHash": "57784665f8b0",
+    "origin": "human"
+  },
+  "settings.importBackup.importCredentials": {
+    "message": "匯入 API 憑證",
+    "srcHash": "4ab4d7352536",
+    "origin": "human"
+  },
+  "settings.importBackup.importCredentialsA11y": {
+    "message": "確認匯入 API 憑證",
+    "srcHash": "7b1422a9d2cd",
+    "origin": "human"
+  },
+  "settings.importBackup.credentialFailed": {
+    "message": "API 憑證無法儲存；其他資料已匯入。",
+    "srcHash": "7e252a1e9ce4",
+    "origin": "human"
+  },
+  "settings.importBackup.invalidCredential": {
+    "message": "API 憑證無效，已略過；其他資料已匯入。",
+    "srcHash": "e43f4a144f16",
+    "origin": "human"
   }
 }

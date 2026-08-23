@@ -1289,6 +1289,11 @@
     "srcHash": "07cacebdf686",
     "origin": "human"
   },
+  "components.coach.aiCoachName": {
+    "message": "AI Coach",
+    "srcHash": "f1b99654eaa5",
+    "origin": "human"
+  },
   "home.programs.all": {
     "message": "All",
     "srcHash": "7173d9505fd9",
@@ -2682,6 +2687,11 @@
   "components.nutrition.coach.confirm": {
     "message": "Confirm",
     "srcHash": "f5a9cb3bb7ae",
+    "origin": "human"
+  },
+  "settings.importBackup.importCredentialsA11y": {
+    "message": "Confirm importing API credential",
+    "srcHash": "7b1422a9d2cd",
     "origin": "human"
   },
   "session.pulleypinpickersheet.str3": {
@@ -4209,14 +4219,14 @@
     "srcHash": "cb1ba1a25176",
     "origin": "human"
   },
-  "tabs.workouts.exercisesA11y": {
-    "message": "Exercises",
-    "srcHash": "fe34e979251c",
-    "origin": "human"
-  },
   "tabs.exercises.title": {
     "message": "Exercises",
     "srcHash": "0fb7d657b43d",
+    "origin": "human"
+  },
+  "tabs.workouts.exercisesA11y": {
+    "message": "Exercises",
+    "srcHash": "fe34e979251c",
     "origin": "human"
   },
   "app.template.id.exercises": {
@@ -4959,6 +4969,11 @@
     "srcHash": "04674d6c2aa9",
     "origin": "human"
   },
+  "settings.importBackup.importCredentials": {
+    "message": "Import API credential",
+    "srcHash": "4ab4d7352536",
+    "origin": "human"
+  },
   "settings.importBackup.title": {
     "message": "Import Backup",
     "srcHash": "2ca8d787165f",
@@ -5029,9 +5044,19 @@
     "srcHash": "255ac62f77be",
     "origin": "human"
   },
+  "settings.backup.includeCredentials": {
+    "message": "Include API credentials",
+    "srcHash": "6ccc1a42f2be",
+    "origin": "human"
+  },
   "feedback.diagnostics.includeA11y": {
     "message": "Include diagnostic data",
     "srcHash": "16755a1552da",
+    "origin": "human"
+  },
+  "settings.backup.includeCredentialsA11y": {
+    "message": "Include live API credential in export",
+    "srcHash": "c16e4caafd4f",
     "origin": "human"
   },
   "components.muscleVolume.increaseA11y": {
@@ -5867,6 +5892,11 @@
   "settings.csv.measurements": {
     "message": "Measurements",
     "srcHash": "4c11846ac1a2",
+    "origin": "human"
+  },
+  "components.coach.loadEarlier": {
+    "message": "Load earlier messages",
+    "srcHash": "d57d796217a6",
     "origin": "human"
   },
   "components.muscleVolume.mev": {
@@ -6727,6 +6757,11 @@
   "settings.macroCoach.quickQuestionHeading": {
     "message": "One quick question",
     "srcHash": "6d6139801fd8",
+    "origin": "human"
+  },
+  "settings.importBackup.credentialsWarning": {
+    "message": "Only confirm if you trust this backup. The key will be stored securely.",
+    "srcHash": "57784665f8b0",
     "origin": "human"
   },
   "components.exercise.records.rm-a11y": {
@@ -9489,6 +9524,16 @@
     "srcHash": "8f410afdd2fb",
     "origin": "human"
   },
+  "settings.importBackup.credentialFailed": {
+    "message": "The API credential could not be saved; other data was imported.",
+    "srcHash": "7e252a1e9ce4",
+    "origin": "human"
+  },
+  "settings.importBackup.invalidCredential": {
+    "message": "The API credential was invalid and was skipped; other data was imported.",
+    "srcHash": "e43f4a144f16",
+    "origin": "human"
+  },
   "ai.errors.stepLimitReached": {
     "message": "The coach reached its data-checking limit before writing an answer. Retry the question.",
     "srcHash": "82f84617c8cd",
@@ -9547,6 +9592,11 @@
   "ai.errors.insufficientCredits": {
     "message": "This key has insufficient credits. Key-scoped usage is shown in Settings.",
     "srcHash": "a33015498858",
+    "origin": "human"
+  },
+  "settings.backup.credentialsWarning": {
+    "message": "This live, billable key will be written unencrypted to the shared file.",
+    "srcHash": "0cd5f6f975da",
     "origin": "human"
   },
   "home.stats.thisWeek": {
@@ -11294,11 +11344,6 @@
     "srcHash": "2e197779f01c",
     "origin": "human"
   },
-  "components.coach.aiCoachName": {
-    "message": "AI Coach",
-    "srcHash": "f1b99654eaa5",
-    "origin": "human"
-  },
   "components.coach.quickPrompt1": {
     "message": "How have my last few workouts gone?",
     "srcHash": "1c33c9e16eae",
@@ -11357,11 +11402,6 @@
   "components.coach.cancel": {
     "message": "Cancel",
     "srcHash": "e17cc0149ff8",
-    "origin": "human"
-  },
-  "components.coach.loadEarlier": {
-    "message": "Load earlier messages",
-    "srcHash": "d57d796217a6",
     "origin": "human"
   },
   "components.coach.today": {
