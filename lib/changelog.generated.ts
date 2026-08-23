@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.113",
+    "date": "2026-08-23",
+    "versionCode": 181,
+    "body": "- The AI Coach model picker now scrolls properly on tablets and phones.\n- AI Coach now shows an animated indicator while it is thinking or running a tool."
+  },
+  {
     "version": "0.26.112",
     "date": "2026-08-23",
     "versionCode": 180,
