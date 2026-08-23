@@ -22,7 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- AI Coach markdown now renders tables, horizontally scrollable code blocks, and clearer headings.
+- Fixed tablet AI Coach layout issues, including header overlap and quick-prompt chip overflow.
+- AI Coach now records and displays the model that produced each response, and preserves model selections across reloads and new chats.
+- The model picker now scrolls reliably to offscreen models and dismisses after selection.
+- Backups can include AI Coach chat history and the selected model, with an optional API key protected by explicit opt-in; automatic backups never include credentials.
 
 ## v0.26.109 — 2026-08-22
 <!-- versionCode: 177 -->
