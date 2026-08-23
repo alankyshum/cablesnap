@@ -16,7 +16,7 @@
     "ios": "expo run:ios",
     "preweb": "npm run changelog:gen",
     "web": "expo start --web",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint --rulesdir scripts/eslint-rules . --ext .ts,.tsx --max-warnings=17",
     "typecheck": "tsc --noEmit",
     "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-sqlite jest --runInBand --verbose",
     "test:coverage": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-sqlite jest --coverage",
@@ -153,7 +153,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --max-warnings=0"
+      "eslint --rulesdir scripts/eslint-rules --rule design-tokens:error --max-warnings=0"
     ]
   },
   "private": true
