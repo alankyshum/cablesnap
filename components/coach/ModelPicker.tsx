@@ -33,6 +33,8 @@ export type ModelPickerProps = {
   onSelectModel: (modelId: string) => void;
   /** Optional callback to close the picker sheet/modal. */
   onClose?: () => void;
+  /** Sheet wrappers may own dismissal to avoid a present/dismiss race. */
+  closeOnSelect?: boolean;
   /** Whether to render a close button in the header. */
   showCloseButton?: boolean;
   /** Optional title override (pass null to suppress internal header when rendered inside a titled sheet). */
@@ -46,6 +48,7 @@ export function ModelPicker({
   selectedModelId,
   onSelectModel,
   onClose,
+  closeOnSelect = true,
   showCloseButton = false,
   title,
 }: ModelPickerProps) {
@@ -90,7 +93,7 @@ export function ModelPicker({
 
   const handleSelect = (modelId: string) => {
     onSelectModel(modelId);
-    onClose?.();
+    if (closeOnSelect) onClose?.();
   };
 
   const handleNavigateKeySettings = () => {
@@ -404,6 +407,7 @@ export function ModelPicker({
           data={filteredModels}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
           contentContainerStyle={styles.listContent}
           initialNumToRender={15}
           maxToRenderPerBatch={20}

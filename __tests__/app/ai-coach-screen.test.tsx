@@ -44,6 +44,7 @@ jest.mock("@/hooks/useCoachSessions", () => ({
   useDeleteCoachSession: jest.fn(),
   useAppendCoachMessage: jest.fn(),
   useLastCoachModel: jest.fn(),
+  usePendingNewChatModel: jest.fn(() => ({ data: false, isLoading: false })),
   useSelectCoachModel: jest.fn(),
 }));
 

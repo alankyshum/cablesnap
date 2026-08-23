@@ -52,6 +52,12 @@ export function ModelPickerSheet({
   );
 
   const requestClose = useCallback(() => sheetRef.current?.dismiss(), []);
+  const handleSelect = useCallback((modelId: string) => {
+    // Dismiss before notifying the parent. This prevents the parent's selected
+    // model update from causing the controlled sheet to present again.
+    requestClose();
+    onSelectModel(modelId);
+  }, [onSelectModel, requestClose]);
 
   return (
     <BottomSheetModal
@@ -68,8 +74,9 @@ export function ModelPickerSheet({
         <BottomSheetView style={styles.content}>
           <ModelPicker
             selectedModelId={selectedModelId}
-            onSelectModel={onSelectModel}
+            onSelectModel={handleSelect}
             onClose={requestClose}
+            closeOnSelect={false}
             showCloseButton
             title={resolvedTitle}
           />

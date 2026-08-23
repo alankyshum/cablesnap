@@ -12,6 +12,7 @@ import {
   useCoachSessions,
   useDeleteCoachSession,
   useLastCoachModel,
+  usePendingNewChatModel,
   useRenameCoachSession,
   useSelectCoachModel,
 } from "@/hooks/useCoachSessions";
@@ -40,6 +41,7 @@ export default function AiCoachScreen() {
   const rename = useRenameCoachSession();
   const remove = useDeleteCoachSession();
   const lastModel = useLastCoachModel();
+  const pendingNewChat = usePendingNewChatModel();
   const selectModel = useSelectCoachModel();
   const keyStatus = useKeyStatus();
   const catalog = useModelCatalog();
@@ -53,16 +55,17 @@ export default function AiCoachScreen() {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!selectionHydratedRef.current) {
-      if (sessionsQuery.isLoading || lastModel.isLoading) return;
+      if (sessionsQuery.isLoading || lastModel.isLoading || pendingNewChat.isLoading) return;
       selectionHydratedRef.current = true;
-      if (sessions[0]) {
+      const pendingModel = typeof pendingNewChat.data === "string" ? pendingNewChat.data : null;
+      if (sessions[0] && !pendingModel) {
         setActiveSessionId(sessions[0].id);
         setSelectedModelId(sessions[0].model_id);
       } else {
-        setSelectedModelId(lastModel.data ?? null);
+        setSelectedModelId(pendingModel ?? lastModel.data ?? null);
       }
     }
-  }, [sessions, sessionsQuery.isLoading, lastModel.data, lastModel.isLoading]);
+  }, [sessions, sessionsQuery.isLoading, lastModel.data, lastModel.isLoading, pendingNewChat.data, pendingNewChat.isLoading]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
@@ -91,7 +94,9 @@ export default function AiCoachScreen() {
 
   const handleNewChat = () => {
     setActiveSessionId(null);
-    setSelectedModelId(lastModel.data ?? null);
+    setSelectedModelId(
+      (typeof pendingNewChat.data === "string" ? pendingNewChat.data : null) ?? lastModel.data ?? null,
+    );
     setActiveError(null);
     if (layout.compact) setSidebarOpen(false);
   };
@@ -186,8 +191,15 @@ export default function AiCoachScreen() {
         onClose={() => setModelPickerOpen(false)}
         selectedModelId={selectedModelId}
         onSelectModel={(id) => {
+          // Close synchronously before changing selection; the sheet owns its
+          // imperative dismissal and parent state follows its selection.
+          setModelPickerOpen(false);
           setSelectedModelId(id);
-          selectModel.mutate({ sessionId: activeSessionId, modelId: id });
+          const mutation = selectModel.mutateAsync ?? ((input: { sessionId: string | null; modelId: string }) => {
+            selectModel.mutate(input);
+            return Promise.resolve();
+          });
+          void mutation({ sessionId: activeSessionId, modelId: id });
         }}
       />
     </View>

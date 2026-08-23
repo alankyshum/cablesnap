@@ -14,6 +14,10 @@ appId: com.persoack.cablesnap
 - extendedWaitUntil:
     visible: "Select AI Model"
     timeout: 30000
+- swipe:
+    start: "50%,75%"
+    end: "50%,25%"
+    duration: 500
 - scrollUntilVisible:
     element:
       text: ".*supports tools, selected"

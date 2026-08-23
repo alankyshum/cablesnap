@@ -349,6 +349,7 @@ describe("ModelPicker", () => {
     const combined = pickerSource + sheetSource + formatterSource;
 
     expect(pickerSource).toContain("BottomSheetFlatList");
+    expect(pickerSource).toContain("nestedScrollEnabled");
     expect(sheetSource).toContain("BottomSheetModal");
     expect(sheetSource).toContain("BottomSheetView");
 

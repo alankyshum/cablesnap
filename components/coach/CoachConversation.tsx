@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { ArrowUp, Bot, Square, Wrench } from "lucide-react-native";
-import { Chat, useStreamingMessages, type IMessage, type BubbleProps, type SendProps } from "@kesha-antonov/react-native-chat";
+import { Chat, useStreamingMessages, type IMessage, type BubbleProps, type SendProps, type MessageTextProps } from "@kesha-antonov/react-native-chat";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFloatingTabBarHeight } from "@/components/FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -14,6 +14,7 @@ import { fontSizes, radii, spacing } from "@/constants/design-tokens";
 import type { CoachMessage } from "@/lib/db/coach";
 import { CoachEmptyState } from "./CoachEmptyState";
 import { CoachErrorCard } from "./CoachErrorCard";
+import { CoachMarkdown } from "./CoachMarkdown";
 
 export type CoachConversationProps = {
   messages: CoachMessage[];
@@ -152,7 +153,12 @@ export function CoachConversation({
         }
         runOwnerRef.current = owner;
         runningSessionIdRef.current = sessionId;
-        const persistedUser = await append.mutateAsync({ session_id: sessionId, role: "user", content: prompt });
+        const persistedUser = await append.mutateAsync({
+          session_id: sessionId,
+          role: "user",
+          content: prompt,
+          model_id: selectedModelId,
+        });
         // The user can switch conversations while SQLite is writing. Do not
         // start an agent for a conversation that is no longer active.
         if (activeSessionIdRef.current !== sessionId || runOwnerRef.current !== owner) return;
@@ -294,6 +300,18 @@ export function CoachConversation({
     [colors.primaryContainer, colors.outlineVariant, colors.primary]
   );
 
+  const renderMessageText = useCallback(
+    ({ currentMessage, textStyle, linkStyle, onPress, position = "left" }: MessageTextProps<IMessage>) => (
+      <CoachMarkdown
+        text={currentMessage.text}
+        textStyle={textStyle?.[position ?? "left"]}
+        linkStyle={linkStyle?.[position ?? "left"]}
+        onLinkPress={(url) => onPress?.(currentMessage, url, "url")}
+      />
+    ),
+    []
+  );
+
   const renderChatEmpty = useCallback(
     () => (
       <CoachEmptyState
@@ -316,6 +334,7 @@ export function CoachConversation({
       <View style={styles.footerContainer}>
         <ScrollView
           horizontal
+          style={styles.promptsScroll}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.promptsContent}
         >
@@ -441,7 +460,12 @@ export function CoachConversation({
           renderChatEmpty={renderChatEmpty}
           renderChatFooter={renderChatFooter}
           renderSend={renderSend}
+          renderMessageText={renderMessageText}
           messageTextProps={{ markdown: true }}
+          // The animated floating day label is absolutely positioned by the chat
+          // library and can escape the chat's header boundary on web. Inline day
+          // separators remain visible and cannot paint under CoachHeader.
+          isDayAnimationEnabled={false}
           isFlashListEnabled={!isWeb}
           disableGestureHandlerRootView
           listProps={{
@@ -476,10 +500,15 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 768,
     alignSelf: "center",
+    minWidth: 0,
   },
   footerContainer: {
     paddingVertical: spacing.xs,
+    width: "100%",
+    minWidth: 0,
+    overflow: "hidden",
   },
+  promptsScroll: { maxWidth: "100%", flexGrow: 0 },
   promptsContent: {
     flexDirection: "row",
     gap: spacing.sm,

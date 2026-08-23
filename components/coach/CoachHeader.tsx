@@ -133,6 +133,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
+    position: "relative",
+    zIndex: 10,
+    elevation: 10,
   },
   contentRow: {
     flexDirection: "row",
