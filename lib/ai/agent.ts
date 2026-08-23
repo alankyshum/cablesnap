@@ -140,42 +140,66 @@ async function executeCoachAgent(options: CoachAgentOptions, controller?: AbortC
     compatibility: "strict",
     fetch: expoFetch,
   });
-  const result = streamText({
-    model: openrouter.chat(modelId),
-    system: COACH_SYSTEM_PROMPT,
-    messages: [...history, { role: "user", content: prompt }],
-    tools,
-    toolChoice: "auto",
-    stopWhen: stepCountIs(3),
-    abortSignal: signal,
-    maxRetries: 0,
-    onChunk: async ({ chunk }) => {
-      if (chunk.type === "tool-call") {
-        toolCalls.push({ name: chunk.toolName, input: chunk.input });
-        onEvent?.({ type: "tool-call", name: chunk.toolName, input: chunk.input });
-      } else if (chunk.type === "tool-result") {
-        const call = toolCalls.find((item) => item.name === chunk.toolName && item.output === undefined);
-        if (call) call.output = chunk.output;
-        onEvent?.({ type: "tool-result", name: chunk.toolName, output: chunk.output });
-      }
-    },
-  });
-
   let text = "";
-  try {
-    for await (const part of result.fullStream) {
-      if (part.type === "error") throw asAIError(part.error);
-      if (part.type === "text-delta") {
-        text += part.text;
-        if (part.text) onEvent?.({ type: "delta", text: part.text });
+  let activeTools = tools;
+  let usedToolCompatibilityFallback = false;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let reasoning = "";
+    let finishReason: string | undefined;
+    const result = streamText({
+      model: openrouter.chat(modelId),
+      system: usedToolCompatibilityFallback
+        ? `${COACH_SYSTEM_PROMPT} Local data tools are unavailable for this response; do not claim to have read local records.`
+        : COACH_SYSTEM_PROMPT,
+      messages: [...history, { role: "user", content: prompt }],
+      tools: activeTools,
+      toolChoice: "auto",
+      stopWhen: stepCountIs(3),
+      abortSignal: signal,
+      maxRetries: 0,
+      onChunk: async ({ chunk }) => {
+        if (chunk.type === "tool-call") {
+          toolCalls.push({ name: chunk.toolName, input: chunk.input });
+          onEvent?.({ type: "tool-call", name: chunk.toolName, input: chunk.input });
+        } else if (chunk.type === "tool-result") {
+          const call = toolCalls.find((item) => item.name === chunk.toolName && item.output === undefined);
+          if (call) call.output = chunk.output;
+          onEvent?.({ type: "tool-result", name: chunk.toolName, output: chunk.output });
+        }
+      },
+    });
+
+    try {
+      for await (const part of result.fullStream) {
+        if (part.type === "error") throw asAIError(part.error);
+        if (part.type === "reasoning-delta") reasoning += part.text;
+        else if (part.type === "finish") finishReason = part.finishReason;
+        else if (part.type === "text-delta") {
+          text += part.text;
+          if (part.text) onEvent?.({ type: "delta", text: part.text });
+        }
       }
+    } catch (error) {
+      if (signal?.aborted) throw { kind: "aborted_by_user" } satisfies AIError;
+      throw asAIError(error);
     }
-  } catch (error) {
     if (signal?.aborted) throw { kind: "aborted_by_user" } satisfies AIError;
-    throw asAIError(error);
+    if (text.trim() !== "") break;
+
+    // Some catalog entries advertise tool support but silently return a 200
+    // completion with null content, no usage, and no tool call whenever tools
+    // are present. Retry that exact protocol failure once without advertising
+    // tools; real tool runs, reasoning-only responses, and non-stop finishes do
+    // not qualify and retain their existing error behavior.
+    const canRetryWithoutTools = !usedToolCompatibilityFallback
+      && Object.keys(activeTools).length > 0
+      && toolCalls.length === 0
+      && reasoning.trim() === ""
+      && finishReason === "stop";
+    if (!canRetryWithoutTools) throw { kind: "empty_response" } satisfies AIError;
+    activeTools = {};
+    usedToolCompatibilityFallback = true;
   }
-  if (signal?.aborted) throw { kind: "aborted_by_user" } satisfies AIError;
-  if (text.trim() === "") throw { kind: "empty_response" } satisfies AIError;
 
   // This is deliberately the sole assistant write, after the stream is complete.
   return appendMessage({ session_id: sessionId, role: "assistant", content: text, model_id: modelId, ...(toolCalls.length > 0 ? { tool_calls: JSON.stringify(toolCalls) } : {}) });

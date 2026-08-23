@@ -48,6 +48,7 @@ import { invalidateModelCatalog } from "../../lib/ai/catalog";
 
 const PRIMARY_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free";
 const BACKUP_MODELS = ["nvidia/nemotron-3.5-lightning:free", "google/gemma-4-26b-a4b-it:free"];
+const OX_ALPHA_MODEL = "stealth/ox-alpha";
 const NO_TOOLS_MODEL = "google/lyria-3-clip-preview";
 const WRONG_KEY = `sk-or-v1-${"0".repeat(64)}`;
 const live = Boolean(process.env.OPENROUTER_TEST_API_KEY);
@@ -110,6 +111,25 @@ describeLive(live ? "OpenRouter live integration suite" : "OpenRouter live integ
     const deltaTimes = events.filter((event) => event.type === "delta").map((event) => event.atMs);
     console.info(`OpenRouter live incremental delta timings (ms): ${deltaTimes.join(", ")}`);
     expect(new Set(deltaTimes).size).toBeGreaterThan(1);
+  });
+
+  it("recovers when Ox Alpha silently returns an empty tool-advertised completion", async () => {
+    const events: Array<{ type: string; text?: string }> = [];
+    const id = session("ox-alpha-tools");
+    const result = await runCoachAgent({
+      sessionId: id,
+      modelId: OX_ALPHA_MODEL,
+      prompt: "Give one concise, general recovery tip without reading my local records.",
+      tools: coachTools,
+      onEvent: (event) => events.push(event),
+    });
+
+    expect(events.filter((event) => event.type === "delta").map((event) => event.text ?? "").join("").trim())
+      .not.toBe("");
+    expect(result.content.trim()).not.toBe("");
+    expect(mockMessages.get(id)).toEqual([
+      expect.objectContaining({ role: "assistant", content: result.content, model_id: OX_ALPHA_MODEL }),
+    ]);
   });
 
   it("aborts after the first delta and does not persist partial assistant text", async () => {
