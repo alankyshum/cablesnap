@@ -451,10 +451,111 @@ describe("CoachConversation", () => {
     />);
     act(() => emit({ type: "delta", text: " your workouts**" }));
 
-    expect(view.getByText("**Reviewing your workouts**")).toBeTruthy();
+    expect(view.getByText("Reviewing your workouts")).toBeTruthy();
     expect(view.queryByText("**Reviewing")).toBeNull();
     expect(view.getAllByText("Review my training")).toHaveLength(1);
     await act(async () => resolveDone({ id: "assistant-1" }));
+  });
+
+  it("shows thinking indicator after send and before first delta, hides once delta arrives", async () => {
+    let emit!: (event: { type: "delta"; text: string }) => void;
+    let resolveDone!: (message: { id: string }) => void;
+    const done = new Promise<{ id: string }>((resolve) => { resolveDone = resolve; });
+    mockStartCoachAgent.mockImplementation((options) => {
+      emit = options.onEvent;
+      return { done, abort: jest.fn() };
+    });
+
+    const view = render(<CoachConversation {...conversationProps} />);
+    const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    fireEvent.changeText(input, "What is my plan?");
+    fireEvent.press(view.getByLabelText("Send message"));
+    await waitFor(() => expect(mockStartCoachAgent).toHaveBeenCalledTimes(1));
+
+    // Thinking indicator is visible before any delta
+    expect(view.getByTestId("coach-thinking-indicator")).toBeTruthy();
+    expect(view.getByText("Thinking...")).toBeTruthy();
+
+    // First delta arrives -> thinking indicator disappears and text takes over
+    act(() => emit({ type: "delta", text: "Here is your plan" }));
+    expect(view.queryByTestId("coach-thinking-indicator")).toBeNull();
+    expect(view.getByText("Here is your plan")).toBeTruthy();
+
+    await act(async () => resolveDone({ id: "assistant-done" }));
+  });
+
+  it("shows tool-specific label in thinking indicator during tool execution", async () => {
+    let emit!: (event: { type: string; name?: string; text?: string }) => void;
+    let resolveDone!: (message: { id: string }) => void;
+    const done = new Promise<{ id: string }>((resolve) => { resolveDone = resolve; });
+    mockStartCoachAgent.mockImplementation((options) => {
+      emit = options.onEvent;
+      return { done, abort: jest.fn() };
+    });
+
+    const view = render(<CoachConversation {...conversationProps} />);
+    const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    fireEvent.changeText(input, "Analyze my exercises");
+    fireEvent.press(view.getByLabelText("Send message"));
+    await waitFor(() => expect(mockStartCoachAgent).toHaveBeenCalledTimes(1));
+
+    expect(view.getByText("Thinking...")).toBeTruthy();
+
+    // Tool call event fires
+    act(() => emit({ type: "tool-call", name: "exercise_history" }));
+    expect(view.getAllByText("Analyzing exercise progress...").length).toBeGreaterThan(0);
+    expect(view.getByTestId("coach-tool-badge")).toBeTruthy();
+    expect(view.getByTestId("coach-thinking-indicator")).toBeTruthy();
+
+    // Tool finishes
+    act(() => emit({ type: "tool-result", name: "exercise_history" }));
+    expect(view.getByText("Thinking...")).toBeTruthy();
+    expect(view.queryByTestId("coach-tool-badge")).toBeNull();
+
+    // First delta arrives
+    act(() => emit({ type: "delta", text: "Analysis complete." }));
+    expect(view.queryByTestId("coach-thinking-indicator")).toBeNull();
+    expect(view.getByText("Analysis complete.")).toBeTruthy();
+
+    await act(async () => resolveDone({ id: "assistant-done" }));
+  });
+
+  it("hides thinking indicator when agent run fails with an error", async () => {
+    const onError = jest.fn();
+    mockStartCoachAgent.mockReturnValue({
+      done: Promise.reject({ kind: "network_error" }),
+      abort: jest.fn(),
+    });
+
+    const view = render(<CoachConversation {...conversationProps} onError={onError} />);
+    const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    fireEvent.changeText(input, "Will this fail?");
+    fireEvent.press(view.getByLabelText("Send message"));
+
+    await waitFor(() => expect(onError).toHaveBeenCalled());
+    expect(view.queryByTestId("coach-thinking-indicator")).toBeNull();
+  });
+
+  it("hides thinking indicator when streaming is stopped or aborted by user", async () => {
+    const mockAbort = jest.fn();
+    let resolveDone!: (value: unknown) => void;
+    const done = new Promise<unknown>((resolve) => { resolveDone = resolve; });
+    mockStartCoachAgent.mockReturnValue({ done, abort: mockAbort });
+
+    const view = render(<CoachConversation {...conversationProps} />);
+    const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    fireEvent.changeText(input, "Stop me now");
+    fireEvent.press(view.getByLabelText("Send message"));
+
+    await waitFor(() => expect(mockStartCoachAgent).toHaveBeenCalledTimes(1));
+    expect(view.getByTestId("coach-thinking-indicator")).toBeTruthy();
+
+    const stopButton = view.getByLabelText("Stop generating");
+    fireEvent.press(stopButton);
+
+    expect(mockAbort).toHaveBeenCalled();
+    expect(view.queryByTestId("coach-thinking-indicator")).toBeNull();
+    resolveDone({ id: "aborted", role: "assistant", content: "" });
   });
 });
 

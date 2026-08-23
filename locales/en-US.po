@@ -13804,3 +13804,19 @@ msgstr "Your training data suggests you may benefit from a lighter week. Tap to 
 #: components/nutrition/MacroCoachCard.tsx:381
 msgid "components.nutrition.coach.explainerWeight"
 msgstr "Your trend weight is an exponentially-weighted moving average (EWMA) of your daily weigh-ins. This smooths out water-weight fluctuations so that one heavy day doesn't distort your estimate."
+
+#. js-lingui-explicit-id
+#: components/coach/CoachThinkingIndicator.tsx
+msgid "components.coach.thinking"
+msgstr "Thinking..."
+
+#. js-lingui-explicit-id
+#: components/coach/CoachThinkingIndicator.tsx
+msgid "components.coach.thinkingA11y"
+msgstr "AI Coach is thinking"
+
+#. js-lingui-explicit-id
+#: components/coach/CoachConversation.tsx
+msgid "components.coach.usingTool"
+msgstr "Using tool: {tool}"
+

@@ -13803,3 +13803,19 @@ msgstr ""
 #: components/nutrition/MacroCoachCard.tsx:381
 msgid "components.nutrition.coach.explainerWeight"
 msgstr ""
+
+#. js-lingui-explicit-id
+#: components/coach/CoachThinkingIndicator.tsx
+msgid "components.coach.thinking"
+msgstr "思考中..."
+
+#. js-lingui-explicit-id
+#: components/coach/CoachThinkingIndicator.tsx
+msgid "components.coach.thinkingA11y"
+msgstr "AI 教練正在思考"
+
+#. js-lingui-explicit-id
+#: components/coach/CoachConversation.tsx
+msgid "components.coach.usingTool"
+msgstr "使用工具：{tool}"
+

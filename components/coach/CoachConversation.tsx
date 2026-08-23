@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { ArrowUp, Bot, Square, Wrench } from "lucide-react-native";
+import { ArrowUp, Bot, Square } from "lucide-react-native";
 import { Chat, useStreamingMessages, type IMessage, type BubbleProps, type SendProps, type MessageTextProps } from "@kesha-antonov/react-native-chat";
 import { useQueryClient } from "@tanstack/react-query";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -14,6 +14,8 @@ import type { CoachMessage } from "@/lib/db/coach";
 import { CoachEmptyState } from "./CoachEmptyState";
 import { CoachErrorCard } from "./CoachErrorCard";
 import { CoachMarkdown } from "./CoachMarkdown";
+import { CoachThinkingIndicator } from "./CoachThinkingIndicator";
+import { CoachToolBadge } from "./CoachToolBadge";
 
 export type CoachConversationProps = {
   messages: CoachMessage[];
@@ -255,25 +257,22 @@ export function CoachConversation({
         ? t({ id: "components.coach.toolExerciseProgress", message: "Analyzing exercise progress" })
         : inFlightTool === "nutrition_macros"
           ? t({ id: "components.coach.toolNutritionMacros", message: "Reviewing nutrition & macros" })
-          : `Using tool: ${inFlightTool}`}...`
+          : t({ id: "components.coach.usingTool", message: "Using tool: {tool}" }, { tool: inFlightTool })}...`
     : null;
 
   const renderCustomView = useCallback(
     ({ currentMessage }: BubbleProps<IMessage>) => {
       const custom = currentMessage as IMessage & { __toolCalls?: boolean };
+      const isToolRunning = Boolean(currentMessage.streaming && toolLabel);
       const label = custom.__toolCalls
         ? t({ id: "components.coach.dataConsulted", message: "Data consulted: local records" })
-        : currentMessage.streaming && toolLabel
+        : isToolRunning
           ? toolLabel
           : null;
-      return label ? (
-        <View style={[styles.badge, { backgroundColor: colors.surface }]}>
-          <Wrench size={12} color={colors.onSurfaceVariant} />
-          <Text style={[styles.badgeText, { color: colors.onSurfaceVariant }]}>{label}</Text>
-        </View>
-      ) : null;
+      if (!label) return null;
+      return <CoachToolBadge label={label} isStreaming={isToolRunning} />;
     },
-    [colors.surface, colors.onSurfaceVariant, toolLabel]
+    [toolLabel]
   );
 
   const renderAvatar = useCallback(
@@ -302,16 +301,29 @@ export function CoachConversation({
   );
 
   const renderMessageText = useCallback(
-    ({ currentMessage, textStyle, linkStyle, onPress, position = "left" }: MessageTextProps<IMessage>) => (
-      <CoachMarkdown
-        text={currentMessage.text}
-        position={position}
-        textStyle={textStyle?.[position ?? "left"]}
-        linkStyle={linkStyle?.[position ?? "left"]}
-        onLinkPress={(url) => onPress?.(currentMessage, url, "url")}
-      />
-    ),
-    []
+    ({ currentMessage, textStyle, linkStyle, onPress, position = "left" }: MessageTextProps<IMessage>) => {
+      const isAssistant = currentMessage.user?._id === 2 || position === "left";
+      if (isAssistant && currentMessage.streaming && !currentMessage.text) {
+        return (
+          <CoachThinkingIndicator
+            label={toolLabel}
+            accessibilityLabel={
+              toolLabel || t({ id: "components.coach.thinkingA11y", message: "AI Coach is thinking" })
+            }
+          />
+        );
+      }
+      return (
+        <CoachMarkdown
+          text={currentMessage.text}
+          position={position}
+          textStyle={textStyle?.[position ?? "left"]}
+          linkStyle={linkStyle?.[position ?? "left"]}
+          onLinkPress={(url) => onPress?.(currentMessage, url, "url")}
+        />
+      );
+    },
+    [toolLabel]
   );
 
   const renderChatEmpty = useCallback(
@@ -551,17 +563,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.sm,
-  },
-  badge: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    alignItems: "center",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.sm,
-  },
-  badgeText: {
-    fontSize: fontSizes.xs,
   },
   assistantAvatar: {
     width: 32,

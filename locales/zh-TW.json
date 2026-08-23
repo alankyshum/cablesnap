@@ -11654,6 +11654,21 @@
     "srcHash": "029b553ebb5a",
     "origin": "human"
   },
+  "components.coach.thinking": {
+    "message": "思考中...",
+    "srcHash": "57cceac7e7c8",
+    "origin": "human"
+  },
+  "components.coach.thinkingA11y": {
+    "message": "AI 教練正在思考",
+    "srcHash": "5e8d14850447",
+    "origin": "human"
+  },
+  "components.coach.usingTool": {
+    "message": "使用工具：{tool}",
+    "srcHash": "91bec32f3e3c",
+    "origin": "human"
+  },
   "settings.backup.credentialsWarning": {
     "message": "此即時且可能產生費用的金鑰將以未加密形式寫入分享檔案。",
     "srcHash": "0cd5f6f975da",

@@ -11693,5 +11693,20 @@
     "message": "Reviewing nutrition & macros",
     "srcHash": "029b553ebb5a",
     "origin": "human"
+  },
+  "components.coach.thinking": {
+    "message": "Thinking...",
+    "srcHash": "57cceac7e7c8",
+    "origin": "human"
+  },
+  "components.coach.thinkingA11y": {
+    "message": "AI Coach is thinking",
+    "srcHash": "5e8d14850447",
+    "origin": "human"
+  },
+  "components.coach.usingTool": {
+    "message": "Using tool: {tool}",
+    "srcHash": "91bec32f3e3c",
+    "origin": "human"
   }
 }

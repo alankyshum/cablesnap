@@ -11654,6 +11654,21 @@
     "srcHash": "029b553ebb5a",
     "origin": "human"
   },
+  "components.coach.thinking": {
+    "message": "思考中...",
+    "srcHash": "57cceac7e7c8",
+    "origin": "human"
+  },
+  "components.coach.thinkingA11y": {
+    "message": "AI 教练正在思考",
+    "srcHash": "5e8d14850447",
+    "origin": "human"
+  },
+  "components.coach.usingTool": {
+    "message": "使用工具：{tool}",
+    "srcHash": "91bec32f3e3c",
+    "origin": "human"
+  },
   "settings.backup.credentialsWarning": {
     "message": "此即时且可能产生费用的金钥将以未加密形式写入分享档案。",
     "srcHash": "0cd5f6f975da",

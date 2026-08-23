@@ -11,3 +11,6 @@ export { CoachHeader, type CoachHeaderProps } from "./CoachHeader";
 export { CoachConversation, type CoachConversationProps } from "./CoachConversation";
 export { CoachErrorCard, type CoachErrorCardProps } from "./CoachErrorCard";
 export { CoachEmptyState, type CoachEmptyStateProps } from "./CoachEmptyState";
+export { CoachThinkingIndicator, type CoachThinkingIndicatorProps } from "./CoachThinkingIndicator";
+export { CoachToolBadge, type CoachToolBadgeProps } from "./CoachToolBadge";
+
