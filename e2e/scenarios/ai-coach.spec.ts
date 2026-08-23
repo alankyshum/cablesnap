@@ -135,8 +135,14 @@ test.describe("@scenario ai-coach", () => {
     await openCoach(page, testInfo);
     await seedKeyThroughSettings(page);
     await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
+    const catalog = page.getByTestId("model-catalog-list");
     const lastModel = page.getByTestId("model-row-test/model-30");
-    await lastModel.scrollIntoViewIfNeeded();
+    for (let attempt = 0; attempt < 10 && !(await lastModel.isVisible()); attempt += 1) {
+      await catalog.evaluate((element) => {
+        element.scrollBy({ top: element.clientHeight });
+      });
+      await page.waitForTimeout(100);
+    }
     await expect(lastModel).toBeVisible();
     await lastModel.dispatchEvent("click");
     await expect(page.getByRole("button", { name: /Active Model: test\/model-30/ })).toBeVisible();

@@ -14,16 +14,23 @@ appId: com.persoack.cablesnap
 - extendedWaitUntil:
     visible: "Select AI Model"
     timeout: 30000
+# Native-only gesture regression. Option 9 starts outside the viewport on both
+# phone portrait and tablet landscape. Swipe from the registered Gorhom list so
+# this exercises RNGH touch coordination rather than DOM scrolling or adb input.
+- assertNotVisible:
+    id: model-catalog-option-9
 - swipe:
-    start: "50%,75%"
-    end: "50%,25%"
-    duration: 500
-- scrollUntilVisible:
-    element:
-      text: ".*supports tools, selected"
-    direction: DOWN
+    from:
+      id: model-catalog-list
+    direction: UP
+- assertVisible:
+    id: model-catalog-option-9
+- tapOn:
+    id: model-catalog-option-9
+- extendedWaitUntil:
+    notVisible: "Select AI Model"
     timeout: 30000
-- tapOn: ".*supports tools, selected"
+- assertVisible: "Active Model: .*"
 - tapOn: "Ask your AI Coach anything..."
 - inputText: "How did my last workout go?"
 - hideKeyboard

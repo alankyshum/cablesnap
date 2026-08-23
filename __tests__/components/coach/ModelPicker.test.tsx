@@ -351,7 +351,9 @@ describe("ModelPicker", () => {
     expect(pickerSource).toContain("BottomSheetFlatList");
     expect(pickerSource).toContain("nestedScrollEnabled");
     expect(sheetSource).toContain("BottomSheetModal");
-    expect(sheetSource).toContain("BottomSheetView");
+    expect(sheetSource).not.toContain("BottomSheetView");
+    expect(sheetSource).toContain("index={1}");
+    expect(sheetSource).toContain("enableDynamicSizing={false}");
 
     // Proves zero hardcoded provider slugs or model families
     expect(combined).not.toMatch(

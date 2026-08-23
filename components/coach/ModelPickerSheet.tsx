@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { StyleSheet } from "react-native";
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
-  BottomSheetView,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -62,6 +60,7 @@ export function ModelPickerSheet({
   return (
     <BottomSheetModal
       ref={sheetRef}
+      index={1}
       snapPoints={snapPoints}
       enableDynamicSizing={false}
       enablePanDownToClose
@@ -71,23 +70,20 @@ export function ModelPickerSheet({
       handleIndicatorStyle={{ backgroundColor: colors.onSurfaceVariant }}
     >
       {isVisible ? (
-        <BottomSheetView style={styles.content}>
-          <ModelPicker
-            selectedModelId={selectedModelId}
-            onSelectModel={handleSelect}
-            onClose={requestClose}
-            closeOnSelect={false}
-            showCloseButton
-            title={resolvedTitle}
-          />
-        </BottomSheetView>
+        // Keep the Gorhom scrollable in this direct child tree. A generic sheet
+        // view registers itself as a non-scrollable VIEW and can overwrite the
+        // nested BottomSheetFlatList's native gesture registration on Android.
+        <ModelPicker
+          selectedModelId={selectedModelId}
+          onSelectModel={handleSelect}
+          onClose={requestClose}
+          closeOnSelect={false}
+          showCloseButton
+          title={resolvedTitle}
+        />
       ) : null}
     </BottomSheetModal>
   );
 }
 
 export default ModelPickerSheet;
-
-const styles = StyleSheet.create({
-  content: { flex: 1 },
-});

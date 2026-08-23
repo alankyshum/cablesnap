@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- The AI Coach model picker now scrolls properly on tablets and phones.
+- AI Coach now shows an animated indicator while it is thinking or running a tool.
 
 ## v0.26.112 — 2026-08-23
 <!-- versionCode: 180 -->

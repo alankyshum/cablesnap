@@ -412,7 +412,7 @@ export function ModelPicker({
           initialNumToRender={15}
           maxToRenderPerBatch={20}
           windowSize={7}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const isSelected = selectedModelId === item.id;
             const hasTools = item.supportedParameters.includes("tools");
             const contextStr = formatContextLength(item.contextLength);
@@ -437,7 +437,7 @@ export function ModelPicker({
                   },
                 ]}
               >
-                <View style={styles.rowMain}>
+                <View style={styles.rowMain} testID={`model-catalog-option-${index}`}>
                   {/* Top Row: Name & Badges */}
                   <View style={styles.rowTopLine}>
                     <Text
