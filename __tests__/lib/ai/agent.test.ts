@@ -263,6 +263,7 @@ describe("coach agent", () => {
       session_id: "session-1",
       role: "assistant",
       content: "The tool completed.",
+      model_id: "provider/tool-model",
       tool_calls: JSON.stringify([{ name: "record_probe", input: { marker: "ok" }, output: { completed: true } }]),
     });
   });

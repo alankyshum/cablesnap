@@ -4,9 +4,14 @@ import { getDrizzle, withTransaction } from "./helpers";
 import { appSettings, coachMessages, coachSessions } from "./schema";
 
 export const LAST_COACH_MODEL_KEY = "ai_coach.last_model_id";
+export const NEW_CHAT_MODEL_KEY = "ai_coach.new_chat_model_id";
 
 export type CoachSession = typeof coachSessions.$inferSelect;
-export type CoachMessage = typeof coachMessages.$inferSelect;
+// Keep the attribution optional at the application boundary so fixtures and
+// legacy callers representing pre-migration rows remain source-compatible.
+export type CoachMessage = Omit<typeof coachMessages.$inferSelect, "model_id"> & {
+  model_id?: string | null;
+};
 export type CreateCoachSession = typeof coachSessions.$inferInsert;
 export type AppendCoachMessage = typeof coachMessages.$inferInsert;
 
@@ -23,6 +28,9 @@ export async function createSession(
     created_at: now,
     updated_at: now,
   });
+  await db.update(appSettings)
+    .set({ value: "0" })
+    .where(eq(appSettings.key, NEW_CHAT_MODEL_KEY));
   return (await db.select().from(coachSessions).where(eq(coachSessions.id, id)).get())!;
 }
 
@@ -40,6 +48,13 @@ export async function getLastCoachModel(): Promise<string | null> {
   return row?.value ?? null;
 }
 
+export async function getPendingNewChatModel(): Promise<string | null> {
+  const db = await getDrizzle();
+  const row = await db.select({ value: appSettings.value })
+    .from(appSettings).where(eq(appSettings.key, NEW_CHAT_MODEL_KEY)).get();
+  return row?.value && row.value !== "0" ? row.value : null;
+}
+
 /**
  * Persist a model choice as the app-wide new-chat default and, when a session
  * is active, as that session's model. Keeping both writes in one transaction
@@ -55,6 +70,11 @@ export async function saveCoachModelSelection(
       await db.update(coachSessions)
         .set({ model_id: modelId, updated_at: Date.now() })
         .where(eq(coachSessions.id, sessionId));
+      await db.delete(appSettings).where(eq(appSettings.key, NEW_CHAT_MODEL_KEY));
+    } else {
+      await db.insert(appSettings)
+        .values({ key: NEW_CHAT_MODEL_KEY, value: modelId })
+        .onConflictDoUpdate({ target: appSettings.key, set: { value: modelId } });
     }
     await db.insert(appSettings)
       .values({ key: LAST_COACH_MODEL_KEY, value: modelId })
@@ -82,7 +102,7 @@ export async function deleteSession(id: string): Promise<void> {
 
 export async function appendMessage(
   input: Pick<AppendCoachMessage, "session_id" | "role" | "content"> &
-    Partial<Pick<AppendCoachMessage, "tool_calls" | "error">>,
+    Partial<Pick<AppendCoachMessage, "tool_calls" | "error" | "model_id">>,
 ): Promise<CoachMessage> {
   if (input.role === "assistant" && input.error == null && input.content.trim() === "") {
     throw new Error("Assistant messages without content must include an error");
@@ -95,6 +115,7 @@ export async function appendMessage(
     session_id: input.session_id,
     role: input.role,
     content: input.content,
+    model_id: input.model_id,
     tool_calls: input.tool_calls,
     error: input.error,
     created_at: now,

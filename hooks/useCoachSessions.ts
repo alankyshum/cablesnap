@@ -4,6 +4,7 @@ import {
   createSession,
   deleteSession,
   getLastCoachModel,
+  getPendingNewChatModel,
   getMessages,
   listSessions,
   renameSession,
@@ -15,6 +16,7 @@ export const coachQueryKeys = {
   sessions: ["coach", "sessions"] as const,
   messages: (sessionId: string) => ["coach", "messages", sessionId] as const,
   lastModel: ["coach", "last-model"] as const,
+  pendingNewChat: ["coach", "pending-new-chat"] as const,
 };
 
 export function useCoachSessions() {
@@ -33,6 +35,10 @@ export function useLastCoachModel() {
   return useQuery({ queryKey: coachQueryKeys.lastModel, queryFn: getLastCoachModel });
 }
 
+export function usePendingNewChatModel() {
+  return useQuery({ queryKey: coachQueryKeys.pendingNewChat, queryFn: getPendingNewChatModel });
+}
+
 export function useSelectCoachModel() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -42,10 +48,13 @@ export function useSelectCoachModel() {
       await Promise.all([
         queryClient.cancelQueries({ queryKey: coachQueryKeys.sessions }),
         queryClient.cancelQueries({ queryKey: coachQueryKeys.lastModel }),
+        queryClient.cancelQueries({ queryKey: coachQueryKeys.pendingNewChat }),
       ]);
       const previousSessions = queryClient.getQueryData<CoachSession[]>(coachQueryKeys.sessions);
       const previousLastModel = queryClient.getQueryData<string | null>(coachQueryKeys.lastModel);
+      const previousPending = queryClient.getQueryData<string | null>(coachQueryKeys.pendingNewChat);
       queryClient.setQueryData(coachQueryKeys.lastModel, modelId);
+      queryClient.setQueryData(coachQueryKeys.pendingNewChat, sessionId ? null : modelId);
       if (sessionId) {
         queryClient.setQueryData<CoachSession[]>(coachQueryKeys.sessions, (sessions) =>
           sessions?.map((session) => session.id === sessionId
@@ -53,14 +62,16 @@ export function useSelectCoachModel() {
             : session),
         );
       }
-      return { previousSessions, previousLastModel };
+      return { previousSessions, previousLastModel, previousPending };
     },
     onError: (_error, _input, context) => {
       queryClient.setQueryData(coachQueryKeys.sessions, context?.previousSessions);
       queryClient.setQueryData(coachQueryKeys.lastModel, context?.previousLastModel);
+      queryClient.setQueryData(coachQueryKeys.pendingNewChat, context?.previousPending);
     },
     onSuccess: (session, { sessionId, modelId }) => {
       queryClient.setQueryData(coachQueryKeys.lastModel, modelId);
+      queryClient.setQueryData(coachQueryKeys.pendingNewChat, sessionId ? null : modelId);
       if (sessionId && session) {
         queryClient.setQueryData<CoachSession[]>(coachQueryKeys.sessions, (sessions) =>
           sessions?.map((item) => item.id === sessionId ? session : item),
@@ -107,7 +118,7 @@ export function useAppendCoachMessage() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: Pick<AppendCoachMessage, "session_id" | "role" | "content"> &
-      Partial<Pick<AppendCoachMessage, "tool_calls" | "error">>) => appendMessage(input),
+      Partial<Pick<AppendCoachMessage, "tool_calls" | "error" | "model_id">>) => appendMessage(input),
     onMutate: async (input) => {
       if (input.role !== "user") return undefined;
       const key = coachQueryKeys.messages(input.session_id);
@@ -118,6 +129,7 @@ export function useAppendCoachMessage() {
         session_id: input.session_id,
         role: input.role,
         content: input.content,
+        model_id: input.model_id ?? null,
         tool_calls: input.tool_calls ?? null,
         created_at: Date.now(),
         error: input.error ?? null,

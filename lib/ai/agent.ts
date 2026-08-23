@@ -178,7 +178,7 @@ async function executeCoachAgent(options: CoachAgentOptions, controller?: AbortC
   if (text.trim() === "") throw { kind: "empty_response" } satisfies AIError;
 
   // This is deliberately the sole assistant write, after the stream is complete.
-  return appendMessage({ session_id: sessionId, role: "assistant", content: text, ...(toolCalls.length > 0 ? { tool_calls: JSON.stringify(toolCalls) } : {}) });
+  return appendMessage({ session_id: sessionId, role: "assistant", content: text, model_id: modelId, ...(toolCalls.length > 0 ? { tool_calls: JSON.stringify(toolCalls) } : {}) });
 }
 
 export function startCoachAgent(options: CoachAgentOptions): CoachAgentRun {
