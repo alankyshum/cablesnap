@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Update checks now run every 6 hours instead of once per day, so new releases are surfaced sooner.
 
 ## v0.26.111 — 2026-08-23
 <!-- versionCode: 179 -->

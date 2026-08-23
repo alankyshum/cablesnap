@@ -88,10 +88,15 @@ describe("checkForUpdate", () => {
     await expect(checkForUpdate(2 * 24 * 60 * 60 * 1000)).resolves.toMatchObject({ tag: "v1.2.5" });
   });
 
-  it("throttles checks for 24 hours", async () => {
+  it("throttles checks for 6 hours and checks again after the boundary", async () => {
+    const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+    const lastCheckedAt = 1000;
     mockedGet.mockImplementation(async (key) => key === "update.lastCheckedAt" ? "1000" : null);
-    await expect(checkForUpdate(1000 + 24 * 60 * 60 * 1000 - 1)).resolves.toBeNull();
+    await expect(checkForUpdate(lastCheckedAt + SIX_HOURS_MS - 1)).resolves.toBeNull();
     expect(global.fetch).not.toHaveBeenCalled();
+
+    await expect(checkForUpdate(lastCheckedAt + SIX_HOURS_MS + 1)).resolves.toMatchObject({ tag: "v1.2.4" });
+    expect(global.fetch).toHaveBeenCalled();
   });
 
   it("clears the last checked timestamp for a retry", async () => {
