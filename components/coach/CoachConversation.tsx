@@ -76,7 +76,10 @@ export function CoachConversation({
   const runningSessionIdRef = useRef<string | null>(null);
   const runOwnerRef = useRef<symbol | null>(null);
   const activeSessionIdRef = useRef(activeSessionId);
-  const stream = useStreamingMessages<IMessage>({ initialMessages: toIMessages(messages), inverted: true });
+  // FlashList cannot use the chat library's inverted content-container alignment.
+  // Keep chronological data in a normal list so native FlashList can remain enabled
+  // while `isAlignedTop` correctly places short conversations below the header.
+  const stream = useStreamingMessages<IMessage>({ initialMessages: toIMessages(messages), inverted: false });
 
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
@@ -304,6 +307,7 @@ export function CoachConversation({
     ({ currentMessage, textStyle, linkStyle, onPress, position = "left" }: MessageTextProps<IMessage>) => (
       <CoachMarkdown
         text={currentMessage.text}
+        position={position}
         textStyle={textStyle?.[position ?? "left"]}
         linkStyle={linkStyle?.[position ?? "left"]}
         onLinkPress={(url) => onPress?.(currentMessage, url, "url")}
@@ -436,10 +440,16 @@ export function CoachConversation({
     [isMissingKey, selectedModelId]
   );
 
-  // FlashList 2.0.2 crashes under react-native-web with
-  // `TypeError: Failed to set an indexed property [0] on 'CSSStyleDeclaration'`.
-  // FlatList fallback is used on web to prevent crashes while retaining native FlashList optimization.
   const isWeb = Platform.OS === "web";
+  // FlashList v2 reads this extra option at runtime, although react-native-chat's
+  // FlatList-only declaration does not include it in `listProps`.
+  const listProps = {
+    maintainVisibleContentPosition: {
+      minIndexForVisible: 0,
+      autoscrollToTopThreshold: 10,
+      startRenderingFromBottom: false,
+    },
+  } as unknown as React.ComponentProps<typeof Chat>["listProps"];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingBottom: tabBarHeight }]}>
@@ -462,15 +472,16 @@ export function CoachConversation({
           renderSend={renderSend}
           renderMessageText={renderMessageText}
           messageTextProps={{ markdown: true }}
-          // The animated floating day label is absolutely positioned by the chat
-          // library and can escape the chat's header boundary on web. Inline day
-          // separators remain visible and cannot paint under CoachHeader.
+          isAvatarOnTop
+          isAlignedTop
+          isInverted={false}
+          // FlashList v2 crashes under react-native-web; native keeps its virtualization
+          // benefit. The non-inverted arrangement makes the library's top alignment
+          // effective for short conversations too.
           isDayAnimationEnabled={false}
           isFlashListEnabled={!isWeb}
           disableGestureHandlerRootView
-          listProps={{
-            maintainVisibleContentPosition: { minIndexForVisible: 0, autoscrollToTopThreshold: 10 },
-          }}
+          listProps={listProps}
           theme={theme}
           darkTheme={theme}
           labels={labels}

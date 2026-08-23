@@ -4,7 +4,6 @@ import { Bot, ChevronDown, ChevronLeft, ChevronRight, Clock, Sparkles } from "lu
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes, radii, spacing } from "@/constants/design-tokens";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { i18n, t } from "@/lib/i18n";
 
 export type CoachHeaderProps = {
@@ -30,7 +29,6 @@ export function CoachHeader({
   onToggleSidebar,
 }: CoachHeaderProps) {
   const colors = useThemeColors();
-  const insets = useSafeAreaInsets();
 
   // Extract a readable short name from modelId if it looks like "openai/gpt-4o" -> "gpt-4o"
   const getModelLabel = () => {
@@ -41,7 +39,10 @@ export function CoachHeader({
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.sm, backgroundColor: colors.surface, borderBottomColor: colors.outlineVariant }]}>
+    <View
+      testID="coach-header"
+      style={[styles.container, { backgroundColor: colors.surface, borderBottomColor: colors.outlineVariant }]}
+    >
       <View style={styles.contentRow}>
         {/* Active Model Selector Chip */}
         <TouchableOpacity

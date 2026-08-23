@@ -40,7 +40,7 @@ async function openCoach(page: Page, testInfo: { parallelIndex: number }, catalo
   await mockCatalog(page, catalogResponse);
   await skipOnboarding(page);
   await navigateTo(page, "/ai-coach");
-  await expect(page.getByRole("button", { name: "Select AI Model" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Select AI Model" }).first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByLabel(/chat\.\.\.|AI Coach anything|model above/)).toBeVisible({ timeout: 10_000 });
   const update = page.getByText("Skip this version", { exact: true });
   if (await update.isVisible().catch(() => false)) await update.click({ force: true });
@@ -54,7 +54,7 @@ async function seedKeyThroughSettings(page: Page) {
     sessionStorage.setItem("cablesnap.secure-store.openrouter_api_key", key);
   }, process.env.OPENROUTER_TEST_API_KEY ?? VALID_TEST_KEY);
   await page.reload();
-  await expect(page.getByRole("button", { name: "Select AI Model" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Select AI Model" }).first()).toBeVisible({ timeout: 20_000 });
 }
 
 function composer(page: Page) {
@@ -68,6 +68,33 @@ function sse(text: string, done = true) {
   ].join("");
 }
 
+function parseRgb(colorStr: string): [number, number, number] {
+  const match = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (!match) return [0, 0, 0];
+  return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
+}
+
+function srgbToLinear(c: number): number {
+  const s = c / 255;
+  return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+
+function calcLuminance(r: number, g: number, b: number): number {
+  return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
+}
+
+function getContrast(fgStr: string, bgStr: string): number {
+  const [r1, g1, b1] = parseRgb(fgStr);
+  const [r2, g2, b2] = parseRgb(bgStr);
+  const l1 = calcLuminance(r1, g1, b1);
+  const l2 = calcLuminance(r2, g2, b2);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+// The scenario suite intentionally keeps related Coach regression flows together.
+// eslint-disable-next-line max-lines-per-function
 test.describe("@scenario ai-coach", () => {
   test("renders the chat surface, missing-key affordance, and has no page errors", async ({ page }, testInfo) => {
     const errors: string[] = [];
@@ -85,7 +112,7 @@ test.describe("@scenario ai-coach", () => {
   test("composer only enables send for non-empty input", async ({ page }, testInfo) => {
     await openCoach(page, testInfo);
     await seedKeyThroughSettings(page);
-    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
     await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
     await expect(page.getByLabel("Ask your AI Coach anything...")).toBeEditable({ timeout: 10_000 });
     const input = composer(page);
@@ -98,7 +125,7 @@ test.describe("@scenario ai-coach", () => {
   test("opens the model picker and lists the catalog", async ({ page }, testInfo) => {
     await openCoach(page, testInfo);
     await seedKeyThroughSettings(page);
-    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
     await expect(page.getByTestId(`model-row-${MODEL}`)).toBeAttached({ timeout: 20_000 });
     await expect(page.getByText("Nemotron test model", { exact: true })).toBeVisible();
   });
@@ -106,7 +133,7 @@ test.describe("@scenario ai-coach", () => {
   test("scrolls the model catalog and selects an offscreen model", async ({ page }, testInfo) => {
     await openCoach(page, testInfo);
     await seedKeyThroughSettings(page);
-    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
     const lastModel = page.getByTestId("model-row-test/model-30");
     await lastModel.scrollIntoViewIfNeeded();
     await expect(lastModel).toBeVisible();
@@ -139,7 +166,7 @@ test.describe("@scenario ai-coach", () => {
     test.skip(!testInfo.project.name.startsWith("mobile"), "One browser viewport is sufficient for persistence flow");
     await openCoach(page, testInfo);
     await seedKeyThroughSettings(page);
-    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
     await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
     await page.route("**openrouter.ai/api/v1/chat/completions", async (route) => {
       const requestText = route.request().postData() ?? "";
@@ -167,9 +194,9 @@ test.describe("@scenario ai-coach", () => {
     await openCoach(page, testInfo);
     await seedKeyThroughSettings(page);
     await page.goto("/ai-coach");
-    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
     await expect(page.getByTestId(`model-row-${MODEL}`)).toBeVisible({ timeout: 20_000 });
-      await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
+    await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
     const markdown = [
       "# Training review",
       "",
@@ -206,7 +233,7 @@ test.describe("@scenario ai-coach", () => {
     await openCoach(page, testInfo);
     await seedKeyThroughSettings(page);
     await page.goto("/ai-coach");
-    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
     await expect(page.getByTestId(`model-row-${MODEL}`)).toBeVisible({ timeout: 20_000 });
     await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
     let release!: () => void;
@@ -228,7 +255,7 @@ test.describe("@scenario ai-coach", () => {
     test.skip(!testInfo.project.name.startsWith("mobile"), "One browser viewport is sufficient for stream ownership");
     await openCoach(page, testInfo);
     await seedKeyThroughSettings(page);
-    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
     await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
     let release!: () => void;
     const held = new Promise<void>((resolve) => { release = resolve; });
@@ -255,7 +282,7 @@ test.describe("@scenario ai-coach", () => {
     test.skip(!testInfo.project.name.startsWith("mobile"), "One browser viewport is sufficient for stream ownership");
     await openCoach(page, testInfo);
     await seedKeyThroughSettings(page);
-    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
     await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
     await page.route("**openrouter.ai/api/v1/chat/completions", (route) => route.fulfill({
       status: 200,
@@ -300,9 +327,9 @@ test.describe("@scenario ai-coach", () => {
       await openCoach(page, testInfo);
       await seedKeyThroughSettings(page);
       await page.goto("/ai-coach");
-      await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+      await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
       await expect(page.getByTestId(`model-row-${MODEL}`)).toBeVisible({ timeout: 20_000 });
-    await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
+      await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
       await page.route("**openrouter.ai/api/v1/chat/completions", (route) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }));
       await composer(page).fill("trigger error");
       await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
@@ -317,10 +344,354 @@ test.describe("@scenario ai-coach", () => {
   test("renders catalog-unavailable copy and refresh-catalog recovery", async ({ page }, testInfo) => {
     await openCoach(page, testInfo, { status: 500, body: {} });
     await seedKeyThroughSettings(page);
-    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
     await expect(page.getByText("The model catalog is unavailable, so no model can be selected safely.", { exact: true })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByLabel("Refresh catalog", { exact: true })).toBeVisible();
   });
+
+  // This single end-to-end flow intentionally covers all reported visual regressions.
+  // eslint-disable-next-line max-lines-per-function
+  test("dark mode assistant and user bubbles meet WCAG AA contrast (≥ 4.5:1), table is contained, avatar adjacent with 8px gap", async ({ page }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "dark" });
+    await openCoach(page, testInfo);
+    await seedKeyThroughSettings(page);
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
+    await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
+
+    const complexMarkdown = [
+      "# High Performance Plan",
+      "",
+      "This is regular assistant paragraph text that must remain legible.",
+      "",
+      "**Important Focus**: Prioritize recovery between heavy sets.",
+      "",
+      "*Controlled tempo* on every eccentric phase.",
+      "",
+      "- Bullet one with key details",
+      "- Bullet two with additional notes",
+      "1. First sequential milestone",
+      "2. Second sequential milestone",
+      "",
+      "> Quality over quantity in every session.",
+      "",
+      "Use `RPE 8.5` for working sets.",
+      "",
+      "```typescript",
+      "const sets = 4;\nconst reps = 8;",
+      "```",
+      "",
+      "| Exercise | Sets | Reps | Load | Notes |",
+      "| :--- | :---: | :---: | :---: | :--- |",
+      "| Barbell Back Squat | 4 | 8 | 225 lbs | Solid depth, 3 min rest |",
+      "| Romanian Deadlift | 3 | 10 | 185 lbs | Hamstring focus |",
+      "",
+      "[Official Training Guide](https://example.com/training)",
+    ].join("\n");
+
+    await page.route("**openrouter.ai/api/v1/chat/completions", (route) =>
+      route.fulfill({ status: 200, contentType: "text/event-stream", body: sse(complexMarkdown) })
+    );
+
+    await composer(page).fill("What is my plan?");
+    await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
+
+    await expect(page.getByText("High Performance Plan", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("This is regular assistant paragraph text that must remain legible.", { exact: true })).toBeVisible();
+    await expect(page.getByText("Barbell Back Squat", { exact: true })).toBeVisible();
+
+    // 1. Contrast checks on dark assistant message
+    const getElColors = async (text: string | RegExp) => {
+      const el = page.getByText(text).first();
+      return el.evaluate((node) => {
+        let curr: HTMLElement | null = node as HTMLElement;
+        let bg = "transparent";
+        while (curr) {
+          const style = window.getComputedStyle(curr);
+          if (style.backgroundColor && style.backgroundColor !== "transparent" && style.backgroundColor !== "rgba(0, 0, 0, 0)") {
+            bg = style.backgroundColor;
+            break;
+          }
+          curr = curr.parentElement;
+        }
+        const color = window.getComputedStyle(node as HTMLElement).color;
+        return { color, bg };
+      });
+    };
+
+    const paragraphColors = await getElColors("This is regular assistant paragraph text that must remain legible.");
+    const pContrast = getContrast(paragraphColors.color, paragraphColors.bg);
+    console.log(`[DARK CONTRAST] Assistant paragraph: ${pContrast.toFixed(2)}:1 (fg: ${paragraphColors.color}, bg: ${paragraphColors.bg})`);
+    expect(pContrast).toBeGreaterThanOrEqual(4.5);
+
+    const listColors = await getElColors("Bullet one with key details");
+    const listContrast = getContrast(listColors.color, listColors.bg);
+    console.log(`[DARK CONTRAST] Assistant list: ${listContrast.toFixed(2)}:1 (fg: ${listColors.color}, bg: ${listColors.bg})`);
+    expect(listContrast).toBeGreaterThanOrEqual(4.5);
+
+    const headerCellColors = await getElColors("Exercise");
+    const thContrast = getContrast(headerCellColors.color, headerCellColors.bg);
+    console.log(`[DARK CONTRAST] Assistant table header: ${thContrast.toFixed(2)}:1 (fg: ${headerCellColors.color}, bg: ${headerCellColors.bg})`);
+    expect(thContrast).toBeGreaterThanOrEqual(4.5);
+
+    const bodyCellColors = await getElColors("Barbell Back Squat");
+    const tdContrast = getContrast(bodyCellColors.color, bodyCellColors.bg);
+    console.log(`[DARK CONTRAST] Assistant table body: ${tdContrast.toFixed(2)}:1 (fg: ${bodyCellColors.color}, bg: ${bodyCellColors.bg})`);
+    expect(tdContrast).toBeGreaterThanOrEqual(4.5);
+
+    const codeColors = await getElColors(/const sets = 4;/);
+    const codeContrast = getContrast(codeColors.color, codeColors.bg);
+    console.log(`[DARK CONTRAST] Assistant code block: ${codeContrast.toFixed(2)}:1 (fg: ${codeColors.color}, bg: ${codeColors.bg})`);
+    expect(codeContrast).toBeGreaterThanOrEqual(4.5);
+
+    const inlineCodeColors = await getElColors("RPE 8.5");
+    const inlineCodeContrast = getContrast(inlineCodeColors.color, inlineCodeColors.bg);
+    console.log(`[DARK CONTRAST] Assistant inline code: ${inlineCodeContrast.toFixed(2)}:1 (fg: ${inlineCodeColors.color}, bg: ${inlineCodeColors.bg})`);
+    expect(inlineCodeContrast).toBeGreaterThanOrEqual(4.5);
+
+    const linkColors = await getElColors("Official Training Guide");
+    const linkContrast = getContrast(linkColors.color, linkColors.bg);
+    console.log(`[DARK CONTRAST] Assistant link: ${linkContrast.toFixed(2)}:1 (fg: ${linkColors.color}, bg: ${linkColors.bg})`);
+    expect(linkContrast).toBeGreaterThanOrEqual(4.5);
+
+    // 2. Table Containment Check
+    const tableContainer = page.getByTestId("coach-markdown-table-container").first();
+    await expect(tableContainer).toBeVisible();
+
+    const containment = await tableContainer.evaluate((tableNode) => {
+      let curr = tableNode.parentElement;
+      let bubble: HTMLElement | null = null;
+      while (curr) {
+        const style = window.getComputedStyle(curr);
+        if (style.borderRadius && parseInt(style.borderRadius, 10) >= 12) {
+          bubble = curr;
+          break;
+        }
+        curr = curr.parentElement;
+      }
+      const tRect = tableNode.getBoundingClientRect();
+      const bRect = (bubble ?? tableNode.parentElement!).getBoundingClientRect();
+      
+      const scrollEl = tableNode.querySelector("div[style*='overflow'], [class*='r-overflow']") as HTMLElement | null;
+      const scrollWidth = scrollEl ? scrollEl.scrollWidth : tableNode.scrollWidth;
+      const clientWidth = scrollEl ? scrollEl.clientWidth : tableNode.clientWidth;
+
+      return {
+        tableLeft: tRect.left,
+        tableRight: tRect.right,
+        tableWidth: tRect.width,
+        bubbleLeft: bRect.left,
+        bubbleRight: bRect.right,
+        bubbleWidth: bRect.width,
+        isScrollable: scrollWidth > clientWidth,
+        scrollWidth,
+        clientWidth,
+      };
+    });
+
+    console.log(`[TABLE CONTAINMENT] table: [${containment.tableLeft}, ${containment.tableRight}] (width: ${containment.tableWidth}px), bubble: [${containment.bubbleLeft}, ${containment.bubbleRight}] (width: ${containment.bubbleWidth}px), scrollWidth: ${containment.scrollWidth}px, clientWidth: ${containment.clientWidth}px`);
+    expect(containment.tableLeft).toBeGreaterThanOrEqual(containment.bubbleLeft - 2);
+    expect(containment.tableRight).toBeLessThanOrEqual(containment.bubbleRight + 2);
+    expect(containment.isScrollable).toBe(true);
+
+    // 3. Avatar Alignment & Gap
+    const avatar = page.getByLabel("AI Coach", { exact: true }).first();
+    await expect(avatar).toBeVisible();
+    const avatarBox = await avatar.boundingBox();
+    const bubbleBox = await tableContainer.evaluate((node) => {
+      let curr = node.parentElement;
+      while (curr) {
+        const style = window.getComputedStyle(curr);
+        if (style.borderRadius && parseInt(style.borderRadius, 10) >= 12) {
+          const rect = curr.getBoundingClientRect();
+          return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+        }
+        curr = curr.parentElement;
+      }
+      const rect = node.parentElement!.getBoundingClientRect();
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    });
+
+    if (avatarBox && bubbleBox) {
+      const horizontalGap = bubbleBox.x - (avatarBox.x + avatarBox.width);
+      const verticalOffset = Math.abs(avatarBox.y - bubbleBox.y);
+      console.log(`[AVATAR] horizontal gap: ${horizontalGap}px (target: 8px), vertical offset: ${verticalOffset}px`);
+      // Gap between avatar right edge and bubble left edge should be ~8px
+      expect(Math.abs(horizontalGap - 8)).toBeLessThanOrEqual(4);
+      // Avatar top should sit adjacent to the message top (within 24px)
+      expect(verticalOffset).toBeLessThanOrEqual(24);
+    }
+
+    // 4. User Bubble Contrast Check
+    const userTextColors = await getElColors("What is my plan?");
+    const userContrast = getContrast(userTextColors.color, userTextColors.bg);
+    console.log(`[DARK CONTRAST] User bubble text: ${userContrast.toFixed(2)}:1 (fg: ${userTextColors.color}, bg: ${userTextColors.bg})`);
+    expect(userContrast).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("light mode assistant and user bubbles meet WCAG AA contrast (≥ 4.5:1)", async ({ page }, testInfo) => {
+    await page.emulateMedia({ colorScheme: "light" });
+    await openCoach(page, testInfo);
+    await seedKeyThroughSettings(page);
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
+    await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
+
+    const lightMarkdown = [
+      "# Training Overview",
+      "",
+      "Regular assistant summary text for light theme verification.",
+      "",
+      "- Focus on consistent recovery",
+      "1. Follow the scheduled progression",
+      "",
+      "Use `RPE 8` for the top set.",
+      "",
+      "```typescript",
+      "const sets = 3;\nconst reps = 10;",
+      "```",
+      "",
+      "| Exercise | Sets | Reps |",
+      "| :--- | :---: | :---: |",
+      "| Overhead Press | 3 | 10 |",
+      "",
+      "[Detailed Guide](https://example.com/guide)",
+    ].join("\n");
+
+    await page.route("**openrouter.ai/api/v1/chat/completions", (route) =>
+      route.fulfill({ status: 200, contentType: "text/event-stream", body: sse(lightMarkdown) })
+    );
+
+    await composer(page).fill("How is my light mode plan?");
+    await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
+
+    await expect(page.getByText("Training Overview", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Regular assistant summary text for light theme verification.", { exact: true })).toBeVisible();
+
+    const getElColors = async (text: string | RegExp) => {
+      const el = page.getByText(text).first();
+      return el.evaluate((node) => {
+        let curr: HTMLElement | null = node as HTMLElement;
+        let bg = "transparent";
+        while (curr) {
+          const style = window.getComputedStyle(curr);
+          if (style.backgroundColor && style.backgroundColor !== "transparent" && style.backgroundColor !== "rgba(0, 0, 0, 0)") {
+            bg = style.backgroundColor;
+            break;
+          }
+          curr = curr.parentElement;
+        }
+        const color = window.getComputedStyle(node as HTMLElement).color;
+        return { color, bg };
+      });
+    };
+
+    const paragraphColors = await getElColors("Regular assistant summary text for light theme verification.");
+    const pContrast = getContrast(paragraphColors.color, paragraphColors.bg);
+    console.log(`[LIGHT CONTRAST] Assistant paragraph: ${pContrast.toFixed(2)}:1 (fg: ${paragraphColors.color}, bg: ${paragraphColors.bg})`);
+    expect(pContrast).toBeGreaterThanOrEqual(4.5);
+
+    const listColors = await getElColors("Focus on consistent recovery");
+    const listContrast = getContrast(listColors.color, listColors.bg);
+    console.log(`[LIGHT CONTRAST] Assistant list: ${listContrast.toFixed(2)}:1 (fg: ${listColors.color}, bg: ${listColors.bg})`);
+    expect(listContrast).toBeGreaterThanOrEqual(4.5);
+
+    const headerCellColors = await getElColors("Exercise");
+    const thContrast = getContrast(headerCellColors.color, headerCellColors.bg);
+    console.log(`[LIGHT CONTRAST] Assistant table header: ${thContrast.toFixed(2)}:1 (fg: ${headerCellColors.color}, bg: ${headerCellColors.bg})`);
+    expect(thContrast).toBeGreaterThanOrEqual(4.5);
+
+    const bodyCellColors = await getElColors("Overhead Press");
+    const tdContrast = getContrast(bodyCellColors.color, bodyCellColors.bg);
+    console.log(`[LIGHT CONTRAST] Assistant table body: ${tdContrast.toFixed(2)}:1 (fg: ${bodyCellColors.color}, bg: ${bodyCellColors.bg})`);
+    expect(tdContrast).toBeGreaterThanOrEqual(4.5);
+
+    const codeColors = await getElColors(/const sets = 3;/);
+    const codeContrast = getContrast(codeColors.color, codeColors.bg);
+    console.log(`[LIGHT CONTRAST] Assistant code block: ${codeContrast.toFixed(2)}:1 (fg: ${codeColors.color}, bg: ${codeColors.bg})`);
+    expect(codeContrast).toBeGreaterThanOrEqual(4.5);
+
+    const inlineCodeColors = await getElColors("RPE 8");
+    const inlineCodeContrast = getContrast(inlineCodeColors.color, inlineCodeColors.bg);
+    console.log(`[LIGHT CONTRAST] Assistant inline code: ${inlineCodeContrast.toFixed(2)}:1 (fg: ${inlineCodeColors.color}, bg: ${inlineCodeColors.bg})`);
+    expect(inlineCodeContrast).toBeGreaterThanOrEqual(4.5);
+
+    const linkColors = await getElColors("Detailed Guide");
+    const linkContrast = getContrast(linkColors.color, linkColors.bg);
+    console.log(`[LIGHT CONTRAST] Assistant link: ${linkContrast.toFixed(2)}:1 (fg: ${linkColors.color}, bg: ${linkColors.bg})`);
+    expect(linkContrast).toBeGreaterThanOrEqual(4.5);
+
+    const userTextColors = await getElColors("How is my light mode plan?");
+    const userContrast = getContrast(userTextColors.color, userTextColors.bg);
+    console.log(`[LIGHT CONTRAST] User bubble text: ${userContrast.toFixed(2)}:1 (fg: ${userTextColors.color}, bg: ${userTextColors.bg})`);
+    expect(userContrast).toBeGreaterThanOrEqual(4.5);
+  });
+
+  for (const themeMode of ["dark", "light"] as const) {
+    test(`header to conversation content gap is bounded (> 0 and <= 24px) in ${themeMode} mode`, async ({ page }, testInfo) => {
+      await page.emulateMedia({ colorScheme: themeMode });
+      await openCoach(page, testInfo);
+      await seedKeyThroughSettings(page);
+      await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
+      await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
+
+      await page.route("**openrouter.ai/api/v1/chat/completions", (route) =>
+        route.fulfill({ status: 200, contentType: "text/event-stream", body: sse("First message for gap verification") })
+      );
+
+      await composer(page).fill("Hello Coach");
+      await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
+
+      await expect(page.getByText("First message for gap verification", { exact: true })).toBeVisible({ timeout: 20_000 });
+
+      // If on tablet, also test both expanded and collapsed sidebar states
+      const isTablet = testInfo.project.name === "tablet";
+      const collapseButton = page.getByRole("button", { name: "Collapse sessions sidebar" }).first();
+      const expandButton = page.getByRole("button", { name: "Expand sessions sidebar" }).first();
+
+      const verifyGap = async () => {
+        const header = page.getByTestId("coach-header");
+        await expect(header).toBeVisible();
+
+        const modelChip = page.getByRole("button", { name: /Active Model|Select AI Model/ }).first();
+        await expect(modelChip).toBeVisible();
+
+        // The first message sent by the user inside the chat pane (avoid matching sidebar item on tablet/desktop)
+        const userPrompt = page.locator("[class*='r-borderRadius-18'], [class*='r-borderRadius-14'], [class*='r-borderRadius-rgqbjd'], [class*='r-borderRadius-1aepz99'], [class*='r-backgroundColor']").filter({ hasText: "Hello Coach" }).first();
+        await expect(userPrompt).toBeVisible();
+
+        // The day badge if rendered
+        const todayBadge = page.getByText("Today", { exact: true });
+        const hasToday = await todayBadge.isVisible().catch(() => false);
+
+        const headerBox = await header.boundingBox();
+        const modelChipBox = await modelChip.boundingBox();
+        const userPromptBox = await userPrompt.boundingBox();
+        const todayBox = hasToday ? await todayBadge.boundingBox() : null;
+
+        // Verify model chip sits inside CoachHeader with standard token padding (8px spacing.sm)
+        expect(modelChipBox?.y).toBeGreaterThanOrEqual(headerBox?.y ?? 0);
+        expect((modelChipBox?.y ?? 0) - (headerBox?.y ?? 0)).toBeLessThanOrEqual(16);
+
+        const headerBottom = (headerBox?.y ?? 0) + (headerBox?.height ?? 0);
+        // The first content element in the conversation is either the Today badge or the first message
+        const firstContentTop = todayBox ? todayBox.y : (userPromptBox?.y ?? 0);
+        const gap = firstContentTop - headerBottom;
+
+        console.log(`[GAP MEASUREMENT] ${testInfo.project.name} (${themeMode}): headerBottom=${headerBottom}px, firstContentTop=${firstContentTop}px, gap=${gap}px (hasToday=${hasToday})`);
+
+        // Gap must be strictly positive (no occlusion) and <= 24px (standard design token spacing: spacing.base 16px or spacing.xl 24px)
+        expect(gap).toBeGreaterThan(0);
+        expect(gap).toBeLessThanOrEqual(24);
+      };
+
+      await verifyGap();
+
+      if (isTablet && await collapseButton.isVisible()) {
+        await collapseButton.click();
+        await expect(expandButton).toBeVisible();
+        await verifyGap();
+      }
+    });
+  }
 
   test("renders model-lacks-tools copy and pick-model recovery", async ({ page }, testInfo) => {
     // Select the model while it is tool-capable, then make its mocked catalog
@@ -328,7 +699,7 @@ test.describe("@scenario ai-coach", () => {
     // the real chat surface without making a live request.
     await openCoach(page, testInfo);
     await seedKeyThroughSettings(page);
-    await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
     await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
     await expect(page.getByLabel(new RegExp(`Active Model: ${MODEL}`))).toBeVisible();
     await page.waitForTimeout(750);
@@ -352,7 +723,7 @@ test.describe("@scenario ai-coach", () => {
       await openCoach(page, testInfo);
       await seedKeyThroughSettings(page);
       await page.goto("/ai-coach");
-      await page.getByRole("button", { name: "Select AI Model" }).click({ force: true });
+      await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
       await expect(page.getByTestId(`model-row-${MODEL}`)).toBeVisible({ timeout: 20_000 });
       await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
       await composer(page).fill("Write four short markdown bullet points about recovery. Start the first bullet with sleep.");
