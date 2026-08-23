@@ -3,7 +3,7 @@ import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { Bot, ChevronDown, ChevronLeft, ChevronRight, Clock, Sparkles } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { fontSizes, radii, spacing } from "@/constants/design-tokens";
+import { elevation, fontSizes, radii, spacing } from "@/constants/design-tokens";
 import { i18n, t } from "@/lib/i18n";
 
 export type CoachHeaderProps = {
@@ -41,53 +41,81 @@ export function CoachHeader({
   return (
     <View
       testID="coach-header"
-      style={[styles.container, { backgroundColor: colors.surface, borderBottomColor: colors.outlineVariant }]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.surface,
+          borderBottomColor: colors.outlineVariant,
+          shadowColor: colors.shadow,
+        },
+      ]}
     >
       <View style={styles.contentRow}>
-        {/* Active Model Selector Chip */}
-        <TouchableOpacity
-          onPress={onOpenModelPicker}
-          disabled={disabled}
-          accessibilityRole="button"
-          accessibilityLabel={
-            selectedModelId
-              ? i18n._({
-                  id: "components.coach.activeModelA11y",
-                  message: "Active Model: {modelId}. Tap to change model.",
-                  values: { modelId: selectedModelId },
-                })
-              : t({ id: "components.coach.selectAIModel", message: "Select AI Model" })
-          }
-          style={[
-            styles.modelChip,
-            {
-              backgroundColor: selectedModelId ? colors.surfaceVariant : colors.primaryContainer,
-              borderColor: selectedModelId ? colors.outline : colors.primary,
-            },
-          ]}
-        >
-          {selectedModelId ? (
-            <Bot size={16} color={colors.primary} />
-          ) : (
-            <Sparkles size={16} color={colors.onPrimaryContainer} />
+        <View style={styles.leftControls}>
+          {onToggleSidebar && (
+            <TouchableOpacity
+              onPress={onToggleSidebar}
+              accessibilityRole="button"
+              accessibilityLabel={
+                sidebarCollapsed
+                  ? t({ id: "components.coach.expandSidebar", message: "Expand sessions sidebar" })
+                  : t({ id: "components.coach.collapseSidebar", message: "Collapse sessions sidebar" })
+              }
+              style={styles.sidebarToggle}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRight size={20} color={colors.onSurface} />
+              ) : (
+                <ChevronLeft size={20} color={colors.onSurface} />
+              )}
+            </TouchableOpacity>
           )}
-          <Text
-            numberOfLines={1}
+
+          {/* Active Model Selector Chip */}
+          <TouchableOpacity
+            onPress={onOpenModelPicker}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityLabel={
+              selectedModelId
+                ? i18n._({
+                    id: "components.coach.activeModelA11y",
+                    message: "Active Model: {modelId}. Tap to change model.",
+                    values: { modelId: selectedModelId },
+                  })
+                : t({ id: "components.coach.selectAIModel", message: "Select AI Model" })
+            }
             style={[
-              styles.modelChipText,
+              styles.modelChip,
               {
-                color: selectedModelId ? colors.onSurface : colors.onPrimaryContainer,
-                fontWeight: selectedModelId ? "600" : "700",
+                backgroundColor: selectedModelId ? colors.surfaceVariant : colors.primaryContainer,
+                borderColor: selectedModelId ? colors.outline : colors.primary,
               },
             ]}
           >
-            {getModelLabel()}
-          </Text>
-          <ChevronDown
-            size={14}
-            color={selectedModelId ? colors.onSurfaceVariant : colors.onPrimaryContainer}
-          />
-        </TouchableOpacity>
+            {selectedModelId ? (
+              <Bot size={16} color={colors.primary} />
+            ) : (
+              <Sparkles size={16} color={colors.onPrimaryContainer} />
+            )}
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.modelChipText,
+                {
+                  color: selectedModelId ? colors.onSurface : colors.onPrimaryContainer,
+                  fontWeight: selectedModelId ? "600" : "700",
+                },
+              ]}
+            >
+              {getModelLabel()}
+            </Text>
+            <ChevronDown
+              size={14}
+              color={selectedModelId ? colors.onSurfaceVariant : colors.onPrimaryContainer}
+            />
+          </TouchableOpacity>
+        </View>
 
         {/* Stale Catalog Indicator */}
         {isStaleCatalog && (
@@ -106,24 +134,6 @@ export function CoachHeader({
             </Text>
           </TouchableOpacity>
         )}
-        {onToggleSidebar && (
-          <TouchableOpacity
-            onPress={onToggleSidebar}
-            accessibilityRole="button"
-            accessibilityLabel={
-              sidebarCollapsed
-                ? t({ id: "components.coach.expandSidebar", message: "Expand sessions sidebar" })
-                : t({ id: "components.coach.collapseSidebar", message: "Collapse sessions sidebar" })
-            }
-            style={styles.sidebarToggle}
-          >
-            {sidebarCollapsed ? (
-              <ChevronRight size={20} color={colors.onSurface} />
-            ) : (
-              <ChevronLeft size={20} color={colors.onSurface} />
-            )}
-          </TouchableOpacity>
-        )}
       </View>
     </View>
   );
@@ -136,7 +146,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     position: "relative",
     zIndex: 10,
-    elevation: 10,
+    ...elevation.low,
   },
   contentRow: {
     flexDirection: "row",
@@ -147,6 +157,13 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
   },
+  leftControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexShrink: 1,
+    maxWidth: "80%",
+  },
   modelChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -155,8 +172,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
     borderWidth: 1,
-    minHeight: 48,
-    maxWidth: "75%",
+    minHeight: 44,
+    flexShrink: 1,
   },
   modelChipText: {
     fontSize: fontSizes.sm,
@@ -165,19 +182,22 @@ const styles = StyleSheet.create({
   staleBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xxs,
+    gap: spacing.xs,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.sm,
-    minHeight: 48,
+    minHeight: 44,
   },
   staleText: {
     fontSize: fontSizes.xs,
   },
   sidebarToggle: {
-    minWidth: 48,
-    minHeight: 48,
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: radii.md,
   },
 });

@@ -3,9 +3,8 @@ import { Linking, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
 import { AlertTriangle, ExternalLink, RefreshCw, X } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { fontSizes, radii, spacing } from "@/constants/design-tokens";
+import { elevation, fontSizes, radii, spacing } from "@/constants/design-tokens";
 import { i18n, t } from "@/lib/i18n";
 import type { ChatErrorState } from "@/lib/ai/errors";
 
@@ -70,6 +69,7 @@ export function CoachErrorCard({
         {
           backgroundColor: colors.errorContainer,
           borderColor: colors.error,
+          shadowColor: colors.shadow,
         },
       ]}
       accessibilityRole="alert"
@@ -105,12 +105,11 @@ export function CoachErrorCard({
       </View>
 
       <View style={styles.actionRow}>
-        <Button
-          variant="destructive"
-          size="sm"
+        <TouchableOpacity
           onPress={handleRecoveryPress}
+          accessibilityRole="button"
           accessibilityLabel={error.recovery.label}
-          style={styles.recoveryButton}
+          style={[styles.recoveryButton, { backgroundColor: colors.error }]}
         >
           {isExternal ? (
             <ExternalLink size={14} color={colors.onError} style={styles.buttonIcon} />
@@ -120,7 +119,7 @@ export function CoachErrorCard({
           <Text style={[styles.recoveryButtonText, { color: colors.onError }]}>
             {error.recovery.label}
           </Text>
-        </Button>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -130,15 +129,17 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: radii.md,
     borderWidth: 1,
-    padding: spacing.md,
+    padding: spacing.base,
     marginHorizontal: spacing.base,
     marginVertical: spacing.sm,
-    gap: spacing.sm,
+    gap: spacing.md,
+    ...elevation.low,
   },
   topRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
+    gap: spacing.sm,
   },
   iconMessageRow: {
     flex: 1,
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   alertIcon: {
-    marginTop: spacing.xxs,
+    marginTop: spacing.xs,
   },
   errorMessage: {
     flex: 1,
@@ -156,10 +157,13 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   dismissButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: radii.pill,
     marginLeft: spacing.xs,
   },
   actionRow: {
@@ -167,17 +171,20 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   recoveryButton: {
-    minHeight: 48,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    gap: spacing.xs,
   },
   buttonIcon: {
     marginRight: spacing.xs,
   },
   recoveryButtonText: {
-    fontSize: fontSizes.xs,
+    fontSize: fontSizes.sm,
     fontWeight: "700",
   },
 });

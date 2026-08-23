@@ -3,9 +3,9 @@ import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { ChevronRight, Plus } from "lucide-react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { CoachConversation, CoachHeader, CoachSidebar, ModelPickerSheet } from "@/components/coach";
+import { useFloatingTabBarHeight } from "@/components/FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import {
   useCoachMessages,
@@ -20,14 +20,14 @@ import { useKeyStatus } from "@/hooks/useKeyStatus";
 import { useModelCatalog, useRefreshModelCatalog } from "@/hooks/useModelCatalog";
 import type { ChatErrorState } from "@/lib/ai/errors";
 import { useLayout } from "@/lib/layout";
-import { radii, spacing } from "@/constants/design-tokens";
+import { elevation, radii, spacing } from "@/constants/design-tokens";
 import { t } from "@/lib/i18n";
 
 export default function AiCoachScreen() {
   const colors = useThemeColors();
   const layout = useLayout();
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const tabBarHeight = useFloatingTabBarHeight();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [modelPickerOpen, setModelPickerOpen] = useState(false);
@@ -116,21 +116,26 @@ export default function AiCoachScreen() {
           setSelectedModelId(next?.model_id ?? lastModel.data ?? null);
         }
       }}
+      onToggleSidebar={layout.atLeastMedium && !sidebarCollapsed ? () => setSidebarCollapsed(true) : undefined}
     />
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View style={[styles.root, { backgroundColor: colors.background, paddingBottom: tabBarHeight }]}>
       {layout.atLeastMedium && (
         <View
           style={[
             styles.sidebar,
             sidebarCollapsed && styles.collapsed,
-            { backgroundColor: colors.surface, borderRightColor: colors.outlineVariant },
+            {
+              backgroundColor: colors.surface,
+              borderRightColor: colors.outlineVariant,
+              shadowColor: colors.shadow,
+            },
           ]}
         >
           {sidebarCollapsed ? (
-            <View style={[styles.miniRail, { paddingTop: insets.top + spacing.sm }]}>
+            <View style={[styles.miniRail, { paddingTop: spacing.sm }]}>
               <TouchableOpacity
                 onPress={() => setSidebarCollapsed(false)}
                 accessibilityRole="button"
@@ -161,8 +166,6 @@ export default function AiCoachScreen() {
           isStaleCatalog={Boolean(catalog.data?.stale || catalog.data?.warning?.kind === "stale_catalog_warning")}
           onRefreshCatalog={() => refresh()}
           disabled={false}
-          sidebarCollapsed={sidebarCollapsed}
-          onToggleSidebar={layout.atLeastMedium && !sidebarCollapsed ? () => setSidebarCollapsed(true) : undefined}
         />
         <CoachConversation
           messages={messages}
@@ -214,6 +217,8 @@ const styles = StyleSheet.create({
   sidebar: {
     width: 280,
     borderRightWidth: 1,
+    zIndex: 20,
+    ...elevation.medium,
   },
   collapsed: {
     width: 52,
@@ -221,6 +226,7 @@ const styles = StyleSheet.create({
   miniRail: {
     alignItems: "center",
     gap: spacing.xs,
+    paddingHorizontal: spacing.xs,
   },
   miniRailButton: {
     width: 44,
@@ -242,7 +248,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   drawer: {
-    padding: 0,
     borderTopRightRadius: radii.xl,
     borderBottomRightRadius: radii.xl,
   },

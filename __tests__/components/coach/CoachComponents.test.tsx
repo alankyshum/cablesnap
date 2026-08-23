@@ -12,7 +12,7 @@ import {
 } from "@/components/coach";
 import { toChatErrorState } from "@/lib/ai/errors";
 import { confirmAction } from "@/lib/confirm";
-import type { CoachSession } from "@/lib/db/coach";
+import type { CoachMessage, CoachSession } from "@/lib/db/coach";
 
 const mockStartCoachAgent = jest.fn();
 const mockAppendCoachMessage = jest.fn();
@@ -159,6 +159,50 @@ describe("CoachSidebar", () => {
     fireEvent.press(getByText("New Chat"));
     expect(onNewChat).toHaveBeenCalled();
   });
+
+  it("renders and handles sidebar collapse button at the sidebar boundary", () => {
+    const onToggleSidebar = jest.fn();
+    const { getByLabelText } = render(
+      <CoachSidebar
+        sessions={sampleSessions}
+        activeSessionId="session-1"
+        onSelectSession={jest.fn()}
+        onNewChat={jest.fn()}
+        onRenameSession={jest.fn()}
+        onDeleteSession={jest.fn()}
+        onToggleSidebar={onToggleSidebar}
+      />
+    );
+
+    const collapseBtn = getByLabelText("Collapse sessions sidebar");
+    expect(collapseBtn).toBeTruthy();
+    fireEvent.press(collapseBtn);
+    expect(onToggleSidebar).toHaveBeenCalled();
+  });
+
+  it("regression: sidebar buttons have token-aligned padding divisible by 4", () => {
+    const { getByLabelText } = render(
+      <CoachSidebar
+        sessions={sampleSessions}
+        activeSessionId="session-1"
+        onSelectSession={jest.fn()}
+        onNewChat={jest.fn()}
+        onRenameSession={jest.fn()}
+        onDeleteSession={jest.fn()}
+      />
+    );
+
+    const newChatBtn = getByLabelText("Start a new chat");
+    const newChatStyle = Array.isArray(newChatBtn.props.style)
+      ? Object.assign({}, ...newChatBtn.props.style)
+      : newChatBtn.props.style;
+
+    expect(newChatStyle.paddingHorizontal).toBe(16);
+    expect(newChatStyle.paddingHorizontal % 4).toBe(0);
+    expect(newChatStyle.paddingVertical).toBe(8);
+    expect(newChatStyle.paddingVertical % 4).toBe(0);
+    expect(newChatStyle.minHeight).toBe(44);
+  });
 });
 
 describe("CoachHeader", () => {
@@ -277,6 +321,31 @@ describe("CoachErrorCard", () => {
     fireEvent.press(getByLabelText(errorState.recovery.label));
     expect(onRetry).toHaveBeenCalled();
   });
+
+  it("regression: error card and recovery button have non-zero token-aligned padding", () => {
+    const errorState = toChatErrorState({ kind: "empty_response" });
+    const { getByLabelText } = render(<CoachErrorCard error={errorState} />);
+
+    const alertCard = getByLabelText(`Error: ${errorState.message}`);
+    const cardStyle = Array.isArray(alertCard.props.style)
+      ? Object.assign({}, ...alertCard.props.style)
+      : alertCard.props.style;
+
+    // Card must have positive padding divisible by 4
+    expect(cardStyle.padding).toBe(16);
+    expect(cardStyle.padding % 4).toBe(0);
+    expect(cardStyle.marginHorizontal).toBe(16);
+    expect(cardStyle.gap).toBe(12);
+
+    const button = getByLabelText(errorState.recovery.label);
+    const buttonStyle = Array.isArray(button.props.style)
+      ? Object.assign({}, ...button.props.style)
+      : button.props.style;
+
+    expect(buttonStyle.paddingHorizontal).toBe(16);
+    expect(buttonStyle.paddingVertical).toBe(8);
+    expect(buttonStyle.minHeight).toBe(44);
+  });
 });
 
 describe("CoachConversation", () => {
@@ -291,6 +360,35 @@ describe("CoachConversation", () => {
     onSessionCreated: jest.fn(),
     onError: jest.fn(),
   };
+
+  it("regression: un-inverts empty state container to prevent mirrored text", () => {
+    render(<CoachConversation {...conversationProps} />);
+
+    const chatProps = (Chat as unknown as jest.Mock).mock.calls.at(-1)?.[0];
+    expect(chatProps.isInverted).toBe(false);
+
+    // Call renderChatEmpty and verify the returned tree contains counter-transform
+    const emptyElement = chatProps.renderChatEmpty();
+    const emptyWrapperStyle = Array.isArray(emptyElement.props.style)
+      ? Object.assign({}, ...emptyElement.props.style)
+      : emptyElement.props.style;
+
+    expect(emptyWrapperStyle.transform).toEqual([{ scaleY: -1 }]);
+  });
+
+  it("regression: chronological message ordering in non-inverted list", () => {
+    const orderedMessages: CoachMessage[] = [
+      { id: "msg-1", session_id: "s-1", role: "user", content: "First", tool_calls: null, error: null, created_at: 1000 },
+      { id: "msg-2", session_id: "s-1", role: "assistant", content: "Second", tool_calls: null, error: null, created_at: 2000 },
+    ];
+
+    render(<CoachConversation {...conversationProps} messages={orderedMessages} />);
+
+    const chatProps = (Chat as unknown as jest.Mock).mock.calls.at(-1)?.[0];
+    expect(chatProps.isInverted).toBe(false);
+    expect(chatProps.messages[0]._id).toBe("msg-1");
+    expect(chatProps.messages[1]._id).toBe("msg-2");
+  });
 
   it("does not render another session's streaming reply", () => {
     const props = {

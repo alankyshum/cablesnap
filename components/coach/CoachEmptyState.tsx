@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   suggestionTextContainer: {
     flex: 1,
-    gap: spacing.xxs,
+    gap: spacing.xs,
   },
   suggestionTitle: {
     fontSize: fontSizes.sm,

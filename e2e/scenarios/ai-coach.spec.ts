@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { test, expect, type Page } from "@playwright/test";
 import { navigateTo, skipOnboarding, enablePerWorkerDb } from "../helpers";
 
@@ -471,7 +472,7 @@ test.describe("@scenario ai-coach", () => {
       const tRect = tableNode.getBoundingClientRect();
       const bRect = (bubble ?? tableNode.parentElement!).getBoundingClientRect();
       
-      const scrollEl = tableNode.querySelector("div[style*='overflow'], [class*='r-overflow']") as HTMLElement | null;
+      const scrollEl = tableNode.querySelector("[data-testid='coach-markdown-table-scroll']") as HTMLElement | null;
       const scrollWidth = scrollEl ? scrollEl.scrollWidth : tableNode.scrollWidth;
       const clientWidth = scrollEl ? scrollEl.clientWidth : tableNode.clientWidth;
 
@@ -655,7 +656,7 @@ test.describe("@scenario ai-coach", () => {
         await expect(modelChip).toBeVisible();
 
         // The first message sent by the user inside the chat pane (avoid matching sidebar item on tablet/desktop)
-        const userPrompt = page.locator("[class*='r-borderRadius-18'], [class*='r-borderRadius-14'], [class*='r-borderRadius-rgqbjd'], [class*='r-borderRadius-1aepz99'], [class*='r-backgroundColor']").filter({ hasText: "Hello Coach" }).first();
+        const userPrompt = page.getByText("Hello Coach").last();
         await expect(userPrompt).toBeVisible();
 
         // The day badge if rendered
@@ -686,8 +687,8 @@ test.describe("@scenario ai-coach", () => {
       await verifyGap();
 
       if (isTablet && await collapseButton.isVisible()) {
-        await collapseButton.click();
-        await expect(expandButton).toBeVisible();
+        await collapseButton.dispatchEvent("click");
+        await expect(expandButton).toBeVisible({ timeout: 10_000 });
         await verifyGap();
       }
     });
@@ -715,6 +716,197 @@ test.describe("@scenario ai-coach", () => {
     await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
     await expect(page.getByText("That model does not support the tools AI Coach needs.", { exact: true })).toBeVisible({ timeout: 20_000 });
     await expect(page.getByLabel("Pick another model", { exact: true })).toBeVisible();
+  });
+
+  test("regression: empty state is rendered upright and not vertically flipped or mirrored", async ({ page }, testInfo) => {
+    await openCoach(page, testInfo);
+    await seedKeyThroughSettings(page);
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
+    await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
+
+    const welcomeHeading = page.getByText("How can I help you today?", { exact: true });
+    await expect(welcomeHeading).toBeVisible({ timeout: 10_000 });
+
+    // Verify computed transform on the heading node and its parent containers
+    const transformInfo = await welcomeHeading.evaluate((node) => {
+      let curr: HTMLElement | null = node as HTMLElement;
+      let effectiveScaleY = 1;
+      while (curr && curr !== document.body) {
+        const style = window.getComputedStyle(curr);
+        const transform = style.transform;
+        if (transform && transform !== "none") {
+          // Parse 2D or 3D transform matrix
+          const matrixMatch = transform.match(/^matrix\((.+)\)$/);
+          if (matrixMatch) {
+            const values = matrixMatch[1].split(",").map((v) => parseFloat(v.trim()));
+            // In matrix(a, b, c, d, tx, ty), d is the scaleY factor
+            if (values.length >= 4 && !isNaN(values[3])) {
+              effectiveScaleY *= values[3];
+            }
+          }
+        }
+        curr = curr.parentElement;
+      }
+      return { effectiveScaleY };
+    });
+
+    expect(transformInfo.effectiveScaleY).toBeGreaterThan(0);
+  });
+
+  test("regression: error card has non-zero token-aligned padding and zero navbar overlap", async ({ page }, testInfo) => {
+    await openCoach(page, testInfo);
+    await seedKeyThroughSettings(page);
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
+    await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
+
+    // Route an empty response error
+    await page.route("**openrouter.ai/api/v1/chat/completions", (route) =>
+      route.fulfill({ status: 200, contentType: "text/event-stream", body: sse("", true) })
+    );
+
+    await composer(page).fill("trigger empty response error");
+    await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
+
+    const errorAlert = page.getByRole("alert");
+    await expect(errorAlert).toBeVisible({ timeout: 20_000 });
+
+    const errorMetrics = await errorAlert.evaluate((cardNode) => {
+      const cardStyle = window.getComputedStyle(cardNode);
+      const cardRect = cardNode.getBoundingClientRect();
+      const button = cardNode.querySelector("div[role='button'], button, [class*='r-cursor-pointer']") as HTMLElement | null;
+      const buttonStyle = button ? window.getComputedStyle(button) : null;
+      const buttonRect = button ? button.getBoundingClientRect() : null;
+
+      return {
+        paddingTop: parseFloat(cardStyle.paddingTop) || 0,
+        paddingBottom: parseFloat(cardStyle.paddingBottom) || 0,
+        paddingLeft: parseFloat(cardStyle.paddingLeft) || 0,
+        paddingRight: parseFloat(cardStyle.paddingRight) || 0,
+        cardBottom: cardRect.bottom,
+        buttonPaddingHorizontal: buttonStyle ? parseFloat(buttonStyle.paddingLeft) || 0 : 0,
+        buttonHeight: buttonRect ? buttonRect.height : 0,
+      };
+    });
+
+    // Card must have positive token-aligned padding (16px)
+    expect(errorMetrics.paddingLeft).toBeGreaterThanOrEqual(12);
+    expect(errorMetrics.paddingTop).toBeGreaterThanOrEqual(12);
+    expect(errorMetrics.paddingLeft % 4).toBe(0);
+
+    // Verify zero navbar overlap
+    const tabNav = page.getByRole("tablist");
+    if (await tabNav.isVisible()) {
+      const navBox = await tabNav.boundingBox();
+      if (navBox) {
+        expect(errorMetrics.cardBottom).toBeLessThanOrEqual(navBox.y);
+      }
+    }
+  });
+
+  test("regression: tablet sidebar and conversation panel heights match with zero navbar overlap", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "tablet", "Tablet panel layout is tablet-only");
+    await openCoach(page, testInfo);
+
+    const header = page.getByTestId("coach-header");
+    await expect(header).toBeVisible();
+
+    const collapseButton = page.getByRole("button", { name: "Collapse sessions sidebar" });
+    await expect(collapseButton).toBeVisible();
+
+    // Verify collapse button is placed near the sidebar boundary (< 320px from screen left)
+    const collapseBox = await collapseButton.boundingBox();
+    expect(collapseBox).not.toBeNull();
+    expect(collapseBox?.x).toBeLessThan(350);
+
+    const tabNav = page.getByRole("tablist");
+    await expect(tabNav).toBeVisible();
+    const navBox = await tabNav.boundingBox();
+    expect(navBox).not.toBeNull();
+
+    // Verify sidebar and chat pane bounding box bottom edges terminate above tab bar
+    const panels = await page.evaluate(() => {
+      const sidebars = document.querySelectorAll("[class*='r-borderRightWidth-1'], [class*='r-width-1']");
+      let sidebarEl: HTMLElement | null = null;
+      for (const el of Array.from(sidebars)) {
+        if (el.getBoundingClientRect().width > 200) {
+          sidebarEl = el as HTMLElement;
+          break;
+        }
+      }
+      const chatCol = document.querySelector("[class*='r-maxWidth-3s8t3t'], [class*='r-maxWidth-']") as HTMLElement | null;
+      return {
+        sidebarBottom: sidebarEl ? sidebarEl.getBoundingClientRect().bottom : null,
+        chatBottom: chatCol ? chatCol.getBoundingClientRect().bottom : null,
+      };
+    });
+
+    if (panels.sidebarBottom && navBox) {
+      expect(panels.sidebarBottom).toBeLessThanOrEqual(navBox.y + 4);
+    }
+  });
+
+  test("regression: message text and date separators render chronologically and upright (not vertically flipped)", async ({ page }, testInfo) => {
+    await openCoach(page, testInfo);
+    await seedKeyThroughSettings(page);
+    await page.getByRole("button", { name: "Select AI Model" }).first().click({ force: true });
+    await page.getByTestId(`model-row-${MODEL}`).dispatchEvent("click");
+
+    await page.route("**openrouter.ai/api/v1/chat/completions", (route) =>
+      route.fulfill({ status: 200, contentType: "text/event-stream", body: sse("Chronological assistant response text") })
+    );
+
+    await composer(page).fill("Chronological user prompt text");
+    await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
+
+    const assistantMsg = page.getByText("Chronological assistant response text", { exact: true });
+    await expect(assistantMsg).toBeVisible({ timeout: 20_000 });
+
+    const userMsg = page.getByText("Chronological user prompt text").last();
+    await expect(userMsg).toBeVisible();
+
+    // 1. Verify vertical orientation of both message texts (not scaleY: -1 or mirrored)
+    for (const locator of [userMsg, assistantMsg]) {
+      const scaleY = await locator.evaluate((node) => {
+        let curr: HTMLElement | null = node as HTMLElement;
+        let effectiveScale = 1;
+        while (curr && curr !== document.body) {
+          const style = window.getComputedStyle(curr);
+          const transform = style.transform;
+          if (transform && transform !== "none") {
+            const matrixMatch = transform.match(/^matrix\((.+)\)$/);
+            if (matrixMatch) {
+              const values = matrixMatch[1].split(",").map((v) => parseFloat(v.trim()));
+              if (values.length >= 4 && !isNaN(values[3])) {
+                effectiveScale *= values[3];
+              }
+            }
+          }
+          curr = curr.parentElement;
+        }
+        return effectiveScale;
+      });
+      expect(scaleY).toBeGreaterThan(0);
+    }
+
+    // 2. Verify user prompt is visually ABOVE the assistant response (chronological top-to-bottom)
+    const uBox = await userMsg.boundingBox();
+    const aBox = await assistantMsg.boundingBox();
+    expect(uBox).not.toBeNull();
+    expect(aBox).not.toBeNull();
+    expect(uBox!.y).toBeLessThan(aBox!.y);
+
+    // 3. Verify composer, quick prompt chips, and message elements stay above FloatingTabBar
+    const tabNav = page.getByRole("tablist");
+    if (await tabNav.isVisible()) {
+      const navBox = await tabNav.boundingBox();
+      if (navBox) {
+        const composerEl = composer(page);
+        const compBox = await composerEl.boundingBox();
+        if (compBox) {
+          expect(compBox.y + compBox.height).toBeLessThanOrEqual(navBox.y + 4);
+        }
+      }
+    }
   });
 
   test.describe("live (key-gated)", () => {

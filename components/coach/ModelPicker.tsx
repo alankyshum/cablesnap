@@ -124,7 +124,7 @@ export function ModelPicker({
                 id: "components.coach.closeModelPicker",
                 message: "Close model picker",
               })}
-              hitSlop={12}
+              hitSlop={{ top: spacing.md, bottom: spacing.md, left: spacing.md, right: spacing.md }}
               style={[styles.iconButton, { borderColor: colors.outline }]}
             >
               <X size={20} color={colors.onSurface} />
@@ -296,7 +296,7 @@ export function ModelPicker({
                 id: "components.coach.clearModelSearch",
                 message: "Clear model search",
               })}
-              hitSlop={8}
+              hitSlop={{ top: spacing.sm, bottom: spacing.sm, left: spacing.sm, right: spacing.sm }}
               style={styles.clearButton}
             >
               <X size={16} color={colors.onSurfaceVariant} />
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     flex: 1,
-    gap: spacing.xxs,
+    gap: spacing.xs,
   },
   iconButton: {
     width: 44,
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
   },
   bannerText: {
     flex: 1,
-    gap: spacing.xxs,
+    gap: spacing.xs,
   },
   bannerButton: {
     alignSelf: "flex-start",
@@ -728,7 +728,7 @@ const styles = StyleSheet.create({
   },
   toolBadge: {
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: spacing.xs,
     borderRadius: radii.pill,
   },
   toolBadgeText: {
@@ -753,7 +753,7 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   metaText: {
     fontSize: fontSizes.xs,

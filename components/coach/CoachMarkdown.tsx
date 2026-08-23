@@ -240,12 +240,13 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
 
         if (block.kind === "heading") {
           const isH1 = block.level <= 1;
+          const isH2 = block.level === 2;
           return (
             <Text
               key={keyBase}
               style={[
                 styles.heading,
-                isH1 ? styles.h1 : styles.h2,
+                isH1 ? styles.h1 : isH2 ? styles.h2 : styles.h3,
                 { color: textColor },
                 textStyle,
               ]}
@@ -303,6 +304,7 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
             >
               <ScrollView
                 horizontal
+                testID="coach-markdown-table-scroll"
                 style={styles.tableScroll}
                 contentContainerStyle={styles.tableContent}
                 showsHorizontalScrollIndicator
@@ -324,21 +326,29 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
                         ]}
                       >
                         {row.map((cell, cellIndex) => (
-                          <Text
+                          <View
                             key={`cell-${cellIndex}`}
                             style={[
                               styles.tableCell,
-                              isHeader && styles.tableHeader,
                               {
-                                color: textColor,
                                 borderRightColor: colors.outlineVariant,
                                 borderRightWidth: cellIndex < row.length - 1 ? 1 : 0,
                               },
-                              textStyle,
                             ]}
                           >
-                            {cell}
-                          </Text>
+                            <Text
+                              style={[
+                                styles.tableCellText,
+                                isHeader && styles.tableHeaderText,
+                                {
+                                  color: textColor,
+                                },
+                                textStyle,
+                              ]}
+                            >
+                              {cell}
+                            </Text>
+                          </View>
                         ))}
                       </View>
                     );
@@ -388,7 +398,7 @@ const styles = StyleSheet.create({
     fontFamily: MONO_FONT,
     fontSize: fontSizes.sm,
     paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xxs,
+    paddingVertical: spacing.xs,
     borderRadius: radii.sm,
     borderWidth: 1,
   },
@@ -397,16 +407,20 @@ const styles = StyleSheet.create({
     marginVertical: spacing.xs,
   },
   h1: {
-    fontSize: 21,
-    lineHeight: 27,
+    fontSize: fontSizes.h1,
+    lineHeight: 28,
   },
   h2: {
-    fontSize: 18,
+    fontSize: fontSizes.h2,
+    lineHeight: 24,
+  },
+  h3: {
+    fontSize: fontSizes.h3,
     lineHeight: 24,
   },
   listItem: {
     flexDirection: "row",
-    marginBottom: spacing.xxs,
+    marginBottom: spacing.xs,
     alignItems: "flex-start",
   },
   listMarker: {
@@ -460,22 +474,30 @@ const styles = StyleSheet.create({
   },
   tableContent: {
     minWidth: "100%",
+    width: "auto",
+    flexGrow: 0,
   },
   tableInner: {
-    minWidth: "100%",
+    minWidth: 500,
+    width: "auto",
+    alignSelf: "flex-start",
   },
   tableRow: {
     flexDirection: "row",
     minWidth: "100%",
   },
   tableCell: {
-    minWidth: 72,
+    minWidth: 100,
+    flexShrink: 0,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
+    justifyContent: "center",
+  },
+  tableCellText: {
     fontSize: fontSizes.sm,
     textAlign: "left",
   },
-  tableHeader: {
+  tableHeaderText: {
     fontWeight: "700",
   },
 });

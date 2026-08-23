@@ -3,7 +3,6 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-n
 import { ArrowUp, Bot, Square, Wrench } from "lucide-react-native";
 import { Chat, useStreamingMessages, type IMessage, type BubbleProps, type SendProps, type MessageTextProps } from "@kesha-antonov/react-native-chat";
 import { useQueryClient } from "@tanstack/react-query";
-import { useFloatingTabBarHeight } from "@/components/FloatingTabBar";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useAppendCoachMessage, useCreateCoachSession, coachQueryKeys } from "@/hooks/useCoachSessions";
 import { startCoachAgent } from "@/lib/ai/agent";
@@ -66,7 +65,6 @@ export function CoachConversation({
   onError,
 }: CoachConversationProps) {
   const colors = useThemeColors();
-  const tabBarHeight = useFloatingTabBarHeight();
   const queryClient = useQueryClient();
   const append = useAppendCoachMessage();
   const create = useCreateCoachSession();
@@ -318,14 +316,16 @@ export function CoachConversation({
 
   const renderChatEmpty = useCallback(
     () => (
-      <CoachEmptyState
-        isMissingKey={isMissingKey}
-        selectedModelId={selectedModelId}
-        onOpenModelPicker={onOpenModelPicker}
-        onSelectPrompt={(prompt) =>
-          send([{ _id: "quick", text: prompt, createdAt: new Date(), user: { _id: 1 } }])
-        }
-      />
+      <View style={styles.emptyStateWrapper}>
+        <CoachEmptyState
+          isMissingKey={isMissingKey}
+          selectedModelId={selectedModelId}
+          onOpenModelPicker={onOpenModelPicker}
+          onSelectPrompt={(prompt) =>
+            send([{ _id: "quick", text: prompt, createdAt: new Date(), user: { _id: 1 } }])
+          }
+        />
+      </View>
     ),
     [isMissingKey, selectedModelId, onOpenModelPicker, send]
   );
@@ -452,7 +452,7 @@ export function CoachConversation({
   } as unknown as React.ComponentProps<typeof Chat>["listProps"];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, paddingBottom: tabBarHeight }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.chatColumn}>
         <Chat
           messages={stream.messages}
@@ -513,6 +513,11 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     minWidth: 0,
   },
+  emptyStateWrapper: {
+    flex: 1,
+    width: "100%",
+    transform: [{ scaleY: -1 }],
+  },
   footerContainer: {
     paddingVertical: spacing.xs,
     width: "100%",
@@ -542,7 +547,7 @@ const styles = StyleSheet.create({
   send: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.sm,
