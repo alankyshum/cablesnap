@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Improved AI Coach replies with a typing indicator and correctly aligned table columns.
+- AI Coach can now create workout templates when asked.
 
 ## v0.26.113 — 2026-08-23
 <!-- versionCode: 181 -->

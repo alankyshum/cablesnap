@@ -10,7 +10,7 @@ jest.mock("@kesha-antonov/react-native-chat", () => {
   const MockChat = jest.fn(({ messages = [], onSend, renderChatEmpty, renderSend, renderCustomView, renderMessageText, textInputProps, labels }) => {
     const [text, setText] = mockReact.useState("");
     return mockReact.createElement(View, null,
-      messages.length ? messages.map((message) => mockReact.createElement(View, { key: String(message._id) }, renderMessageText ? renderMessageText({ currentMessage: message, position: message.user?._id === 1 ? "right" : "left" }) : mockReact.createElement(Text, null, message.text), renderCustomView?.({ currentMessage: message })) ) : renderChatEmpty?.(),
+      messages.length ? messages.map((message) => mockReact.createElement(View, { key: String(message._id) }, message.text ? (renderMessageText ? renderMessageText({ currentMessage: message, position: message.user?._id === 1 ? "right" : "left" }) : mockReact.createElement(Text, null, message.text)) : null, renderCustomView?.({ currentMessage: message })) ) : renderChatEmpty?.(),
       mockReact.createElement(TextInput, { placeholder: labels?.placeholder || "Ask your AI Coach anything...", value: text, onChangeText: setText, ...textInputProps }),
       renderSend?.({ text, onSend: (items) => { setText(""); onSend?.(items); } }),
     );

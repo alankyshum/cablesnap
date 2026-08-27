@@ -257,20 +257,34 @@ export function CoachConversation({
         ? t({ id: "components.coach.toolExerciseProgress", message: "Analyzing exercise progress" })
         : inFlightTool === "nutrition_macros"
           ? t({ id: "components.coach.toolNutritionMacros", message: "Reviewing nutrition & macros" })
+          : inFlightTool === "create_workout_template"
+            ? t({ id: "components.coach.toolCreateTemplate", message: "Creating workout template" })
           : t({ id: "components.coach.usingTool", message: "Using tool: {tool}" }, { tool: inFlightTool })}...`
     : null;
 
   const renderCustomView = useCallback(
     ({ currentMessage }: BubbleProps<IMessage>) => {
       const custom = currentMessage as IMessage & { __toolCalls?: boolean };
+      const isEmptyAssistantStream = currentMessage.user?._id === 2
+        && Boolean(currentMessage.streaming)
+        && !currentMessage.text;
       const isToolRunning = Boolean(currentMessage.streaming && toolLabel);
       const label = custom.__toolCalls
         ? t({ id: "components.coach.dataConsulted", message: "Data consulted: local records" })
         : isToolRunning
           ? toolLabel
           : null;
-      if (!label) return null;
-      return <CoachToolBadge label={label} isStreaming={isToolRunning} />;
+      if (isEmptyAssistantStream) {
+        return (
+          <CoachThinkingIndicator
+            label={toolLabel}
+            accessibilityLabel={
+              toolLabel || t({ id: "components.coach.thinkingA11y", message: "AI Coach is thinking" })
+            }
+          />
+        );
+      }
+      return label ? <CoachToolBadge label={label} isStreaming={isToolRunning} /> : null;
     },
     [toolLabel]
   );
@@ -302,17 +316,6 @@ export function CoachConversation({
 
   const renderMessageText = useCallback(
     ({ currentMessage, textStyle, linkStyle, onPress, position = "left" }: MessageTextProps<IMessage>) => {
-      const isAssistant = currentMessage.user?._id === 2 || position === "left";
-      if (isAssistant && currentMessage.streaming && !currentMessage.text) {
-        return (
-          <CoachThinkingIndicator
-            label={toolLabel}
-            accessibilityLabel={
-              toolLabel || t({ id: "components.coach.thinkingA11y", message: "AI Coach is thinking" })
-            }
-          />
-        );
-      }
       return (
         <CoachMarkdown
           text={currentMessage.text}
@@ -323,7 +326,7 @@ export function CoachConversation({
         />
       );
     },
-    [toolLabel]
+    []
   );
 
   const renderChatEmpty = useCallback(

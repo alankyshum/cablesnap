@@ -62,6 +62,18 @@ describe("CoachMarkdown", () => {
     expect(getByTestId("coach-markdown-table-container")).toBeTruthy();
   });
 
+  it("uses the same width for each column across every row", () => {
+    const { getAllByTestId } = render(
+      <CoachMarkdown text={"| Exercise | Sets | Notes |\n| --- | --- | --- |\n| Squat with a long name | 3 | Heavy |\n| Row | 12 | Short |"} />,
+    );
+
+    for (const columnIndex of [0, 1, 2]) {
+      const widths = getAllByTestId(`coach-markdown-table-cell-blk-0-${columnIndex}`)
+        .map((cell) => Object.assign({}, ...cell.props.style).width);
+      expect(new Set(widths).size).toBe(1);
+    }
+  });
+
   it("keeps incomplete markdown safe while streaming", () => {
     expect(() => render(<CoachMarkdown text={"```\nhttps://example.test/"} />)).not.toThrow();
     expect(() => render(<CoachMarkdown text={"| Exercise | Sets |\n| --- |"} />)).not.toThrow();

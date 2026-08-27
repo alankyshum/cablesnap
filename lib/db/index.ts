@@ -34,6 +34,8 @@ export {
 
 export {
   createTemplate,
+  createTemplateWithExercises,
+  type CreateTemplateExerciseInput,
   getTemplates,
   getTemplateById,
   updateTemplateName,

@@ -22,6 +22,16 @@ type Block =
   | { kind: "paragraph"; text: string };
 
 const MONO_FONT = Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" });
+const TABLE_MIN_WIDTH = 500;
+const TABLE_MIN_COLUMN_WIDTH = 100;
+const TABLE_MAX_COLUMN_WIDTH = 260;
+const TABLE_CHARACTER_WIDTH = 7;
+const TABLE_CELL_HORIZONTAL_PADDING = spacing.sm * 2;
+
+const estimatedTableTextWidth = (text: string) => Array.from(text).reduce(
+  (width, character) => width + ((character.codePointAt(0) ?? 0) > 0xff ? TABLE_CHARACTER_WIDTH * 2 : TABLE_CHARACTER_WIDTH),
+  TABLE_CELL_HORIZONTAL_PADDING,
+);
 
 const INLINE_RE = /`([^`]+)`|\*\*([\s\S]+?)\*\*|\*([\s\S]+?)\*|_([\s\S]+?)_|~~([\s\S]+?)~~|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s)]+)/;
 
@@ -296,6 +306,21 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
 
         if (block.kind === "table") {
           const rows = block.lines.filter((_, row) => row !== 1).map(tableCells);
+          const columnCount = Math.max(1, ...rows.map((row) => row.length));
+          const columnWidths = Array.from({ length: columnCount }, (_, columnIndex) => {
+            const contentWidth = Math.max(
+              ...rows.map((row) => estimatedTableTextWidth(row[columnIndex] ?? "")),
+            );
+            return Math.max(
+              TABLE_MIN_COLUMN_WIDTH,
+              Math.ceil(TABLE_MIN_WIDTH / columnCount),
+              Math.min(TABLE_MAX_COLUMN_WIDTH, contentWidth),
+            );
+          });
+          const normalizedRows = rows.map((row) => Array.from(
+            { length: columnCount },
+            (_, columnIndex) => row[columnIndex] ?? "",
+          ));
           return (
             <View
               key={keyBase}
@@ -310,7 +335,7 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
                 showsHorizontalScrollIndicator
               >
                 <View style={styles.tableInner}>
-                  {rows.map((row, rowIndex) => {
+                  {normalizedRows.map((row, rowIndex) => {
                     const isHeader = rowIndex === 0;
                     return (
                       <View
@@ -328,8 +353,10 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
                         {row.map((cell, cellIndex) => (
                           <View
                             key={`cell-${cellIndex}`}
+                            testID={`coach-markdown-table-cell-${keyBase}-${cellIndex}`}
                             style={[
                               styles.tableCell,
+                              { width: columnWidths[cellIndex] },
                               {
                                 borderRightColor: colors.outlineVariant,
                                 borderRightWidth: cellIndex < row.length - 1 ? 1 : 0,
@@ -478,7 +505,7 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   tableInner: {
-    minWidth: 500,
+    minWidth: TABLE_MIN_WIDTH,
     width: "auto",
     alignSelf: "flex-start",
   },

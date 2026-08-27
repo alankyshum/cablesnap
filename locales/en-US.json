@@ -11694,6 +11694,11 @@
     "srcHash": "029b553ebb5a",
     "origin": "human"
   },
+  "components.coach.toolCreateTemplate": {
+    "message": "Creating workout template",
+    "srcHash": "c71e91ff884b",
+    "origin": "human"
+  },
   "components.coach.thinking": {
     "message": "Thinking...",
     "srcHash": "57cceac7e7c8",

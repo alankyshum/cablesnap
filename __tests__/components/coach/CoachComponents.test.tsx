@@ -503,8 +503,8 @@ describe("CoachConversation", () => {
 
     // Tool call event fires
     act(() => emit({ type: "tool-call", name: "exercise_history" }));
-    expect(view.getAllByText("Analyzing exercise progress...").length).toBeGreaterThan(0);
-    expect(view.getByTestId("coach-tool-badge")).toBeTruthy();
+    expect(view.getByText("Analyzing exercise progress...")).toBeTruthy();
+    expect(view.queryByTestId("coach-tool-badge")).toBeNull();
     expect(view.getByTestId("coach-thinking-indicator")).toBeTruthy();
 
     // Tool finishes

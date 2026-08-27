@@ -491,6 +491,7 @@ export type MessageKey =
   | "components.coach.toolCallingOnly"
   | "components.coach.toolCallingWarning"
   | "components.coach.toolCallingWarningDescription"
+  | "components.coach.toolCreateTemplate"
   | "components.coach.toolExerciseProgress"
   | "components.coach.toolNutritionMacros"
   | "components.coach.toolReadingHistory"

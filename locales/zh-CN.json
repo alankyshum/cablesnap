@@ -11654,6 +11654,11 @@
     "srcHash": "029b553ebb5a",
     "origin": "human"
   },
+  "components.coach.toolCreateTemplate": {
+    "message": "正在建立训练范本",
+    "srcHash": "c71e91ff884b",
+    "origin": "human"
+  },
   "components.coach.thinking": {
     "message": "思考中...",
     "srcHash": "57cceac7e7c8",
