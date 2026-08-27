@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.114",
+    "date": "2026-08-27",
+    "versionCode": 182,
+    "body": "- Improved AI Coach replies with a typing indicator and correctly aligned table columns.\n- AI Coach can now create workout templates when asked."
+  },
+  {
     "version": "0.26.113",
     "date": "2026-08-23",
     "versionCode": 181,
