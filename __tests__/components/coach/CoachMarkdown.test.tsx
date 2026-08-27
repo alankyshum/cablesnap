@@ -63,7 +63,7 @@ describe("CoachMarkdown", () => {
   });
 
   it("uses the same width for each column across every row", () => {
-    const { getAllByTestId } = render(
+    const { getAllByTestId, getByTestId } = render(
       <CoachMarkdown text={"| Exercise | Sets | Notes |\n| --- | --- | --- |\n| Squat with a long name | 3 | Heavy |\n| Row | 12 | Short |"} />,
     );
 
@@ -72,6 +72,10 @@ describe("CoachMarkdown", () => {
         .map((cell) => Object.assign({}, ...cell.props.style).width);
       expect(new Set(widths).size).toBe(1);
     }
+
+    const scroll = getByTestId("coach-markdown-table-scroll");
+    expect(scroll.props.horizontal).toBe(true);
+    expect(scroll.props.directionalLockEnabled).toBe(true);
   });
 
   it("keeps incomplete markdown safe while streaming", () => {

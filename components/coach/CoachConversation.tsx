@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { ArrowUp, Bot, Square } from "lucide-react-native";
-import { Chat, useStreamingMessages, type IMessage, type BubbleProps, type SendProps, type MessageTextProps } from "@kesha-antonov/react-native-chat";
+import { Bubble, Chat, useStreamingMessages, type IMessage, type BubbleProps, type SendProps, type MessageTextProps } from "@kesha-antonov/react-native-chat";
 import { useQueryClient } from "@tanstack/react-query";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useAppendCoachMessage, useCreateCoachSession, coachQueryKeys } from "@/hooks/useCoachSessions";
@@ -13,7 +13,7 @@ import { fontSizes, radii, spacing } from "@/constants/design-tokens";
 import type { CoachMessage } from "@/lib/db/coach";
 import { CoachEmptyState } from "./CoachEmptyState";
 import { CoachErrorCard } from "./CoachErrorCard";
-import { CoachMarkdown } from "./CoachMarkdown";
+import { CoachMarkdown, hasMarkdownTable } from "./CoachMarkdown";
 import { CoachThinkingIndicator } from "./CoachThinkingIndicator";
 import { CoachToolBadge } from "./CoachToolBadge";
 
@@ -52,6 +52,8 @@ function toIMessages(messages: CoachMessage[]): IMessage[] {
     .map(toIMessage);
 }
 
+const isCoachMessageGestureEnabled = (message: IMessage) => !hasMarkdownTable(message.text ?? "");
+
 // eslint-disable-next-line max-lines-per-function
 export function CoachConversation({
   messages,
@@ -67,6 +69,8 @@ export function CoachConversation({
   onError,
 }: CoachConversationProps) {
   const colors = useThemeColors();
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrowScreen = viewportWidth < 768;
   const queryClient = useQueryClient();
   const append = useAppendCoachMessage();
   const create = useCreateCoachSession();
@@ -329,6 +333,19 @@ export function CoachConversation({
     []
   );
 
+  const renderBubble = useCallback(
+    (bubbleProps: BubbleProps<IMessage>) => (
+      <Bubble
+        {...bubbleProps}
+        wrapperStyle={{
+          left: isNarrowScreen ? styles.narrowBubble : styles.wideBubble,
+          right: isNarrowScreen ? styles.narrowBubble : styles.wideBubble,
+        }}
+      />
+    ),
+    [isNarrowScreen]
+  );
+
   const renderChatEmpty = useCallback(
     () => (
       <View style={styles.emptyStateWrapper}>
@@ -481,6 +498,7 @@ export function CoachConversation({
             editable: !isMissingKey,
           }}
           renderCustomView={renderCustomView}
+          renderBubble={renderBubble}
           renderAvatar={renderAvatar}
           renderChatEmpty={renderChatEmpty}
           renderChatFooter={renderChatFooter}
@@ -490,6 +508,9 @@ export function CoachConversation({
           isAvatarOnTop
           isAlignedTop
           isInverted={false}
+          // Let the table's horizontal ScrollView own drags while preserving
+          // message gestures everywhere else in mixed-content replies.
+          isMessageGestureEnabled={isCoachMessageGestureEnabled}
           // FlashList v2 crashes under react-native-web; native keeps its virtualization
           // benefit. The non-inverted arrangement makes the library's top alignment
           // effective for short conversations too.
@@ -574,5 +595,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  narrowBubble: {
+    maxWidth: "92%",
+  },
+  wideBubble: {
+    maxWidth: "70%",
   },
 });

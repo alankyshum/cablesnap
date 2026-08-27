@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Improved AI Coach chat on narrow screens with wider bubbles, horizontally scrollable tables, and a mobile composer that stays above the keyboard.
 
 ## v0.26.114 — 2026-08-27
 <!-- versionCode: 182 -->

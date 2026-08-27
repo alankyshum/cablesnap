@@ -17,6 +17,7 @@ jest.mock("@kesha-antonov/react-native-chat", () => {
   });
   return {
     Chat: MockChat,
+    Bubble: (props) => mockReact.createElement(View, props),
     BasicMarkdown: ({ text }) => mockReact.createElement(Text, null, text),
     useStreamingMessages: ({ initialMessages = [] } = {}) => {
       const [messages, setMessages] = mockReact.useState(initialMessages);

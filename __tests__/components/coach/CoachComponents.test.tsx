@@ -417,6 +417,24 @@ describe("CoachConversation", () => {
       accent: expect.any(String),
       incomingBubble: expect.any(String),
     }));
+    expect(chatProps.keyboardAvoidingViewProps).toBeUndefined();
+    expect(chatProps.isMessageGestureEnabled({ text: "| Exercise | Sets |\n| --- | --- |" })).toBe(false);
+    expect(chatProps.isMessageGestureEnabled({ text: "| Not a table |" })).toBe(true);
+    expect(chatProps.isMessageGestureEnabled({ text: "```\n| code |\n```" })).toBe(true);
+    expect(chatProps.isMessageGestureEnabled({ text: "Regular message" })).toBe(true);
+  });
+
+  it("uses most of the available width for message bubbles on narrow screens", () => {
+    render(<CoachConversation {...conversationProps} />);
+
+    const chatProps = (Chat as unknown as jest.Mock).mock.calls.at(-1)?.[0];
+    const bubble = chatProps.renderBubble({
+      currentMessage: { _id: "message", text: "Hello", user: { _id: 2 } },
+      position: "left",
+    });
+
+    expect(bubble.props.wrapperStyle.left.maxWidth).toBe("92%");
+    expect(bubble.props.wrapperStyle.right.maxWidth).toBe("92%");
   });
 
   it("keeps and grows the streaming bubble across query hydration renders", async () => {

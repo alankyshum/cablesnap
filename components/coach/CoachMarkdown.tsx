@@ -230,6 +230,10 @@ function parseBlocks(text: string): Block[] {
   return blocks;
 }
 
+export function hasMarkdownTable(text: string): boolean {
+  return text.includes("|") && parseBlocks(text).some((block) => block.kind === "table");
+}
+
 export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, onLinkPress }: CoachMarkdownProps) {
   const colors = useThemeColors();
   const scheme = useColorScheme();
@@ -333,8 +337,10 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
                 style={styles.tableScroll}
                 contentContainerStyle={styles.tableContent}
                 showsHorizontalScrollIndicator
+                directionalLockEnabled
+                keyboardShouldPersistTaps="handled"
               >
-                <View style={styles.tableInner}>
+                <View style={[styles.tableInner, { width: columnWidths.reduce((total, width) => total + width, 0) }]}>
                   {normalizedRows.map((row, rowIndex) => {
                     const isHeader = rowIndex === 0;
                     return (

@@ -239,7 +239,10 @@ const styles = StyleSheet.create({
   },
   pane: {
     flex: 1,
-    height: "100%",
+    // Allow the chat's keyboard-avoiding container to shrink inside this row
+    // instead of overflowing beneath the keyboard.
+    minWidth: 0,
+    minHeight: 0,
   },
   toggle: {
     minWidth: 48,
