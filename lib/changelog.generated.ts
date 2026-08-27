@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.115",
+    "date": "2026-08-27",
+    "versionCode": 183,
+    "body": "- AI Coach messages now support full CommonMark and GitHub-flavored Markdown, including rich table cells, line breaks, nested lists, and task checkboxes.\n- Improved AI Coach chat on narrow screens with wider bubbles, horizontally scrollable tables, and a mobile composer that stays above the keyboard."
+  },
+  {
     "version": "0.26.114",
     "date": "2026-08-27",
     "versionCode": 182,
