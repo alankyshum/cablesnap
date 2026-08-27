@@ -1,6 +1,6 @@
 import React from "react";
 import { render, fireEvent } from "@testing-library/react-native";
-import { CoachMarkdown } from "@/components/coach/CoachMarkdown";
+import { CoachMarkdown, hasMarkdownTable } from "@/components/coach/CoachMarkdown";
 import { lightColors, darkColors } from "@/theme/colors";
 
 const mockUseThemeColors = jest.fn();
@@ -62,6 +62,18 @@ describe("CoachMarkdown", () => {
     expect(getByTestId("coach-markdown-table-container")).toBeTruthy();
   });
 
+  it("renders inline Markdown and HTML breaks inside table cells", () => {
+    const { getByText, queryByText } = render(
+      <CoachMarkdown text={"| Exercise | Prescription |\n| --- | --- |\n| **Squat** | 3 sets<br>8 reps |"} />,
+    );
+
+    const bold = getByText("Squat");
+    const boldStyles = Array.isArray(bold.props.style) ? Object.assign({}, ...bold.props.style) : bold.props.style;
+    expect(boldStyles.fontWeight).toBe("700");
+    expect(getByText("3 sets\n8 reps")).toBeTruthy();
+    expect(queryByText(/<br>/)).toBeNull();
+  });
+
   it("uses the same width for each column across every row", () => {
     const { getAllByTestId, getByTestId } = render(
       <CoachMarkdown text={"| Exercise | Sets | Notes |\n| --- | --- | --- |\n| Squat with a long name | 3 | Heavy |\n| Row | 12 | Short |"} />,
@@ -117,6 +129,73 @@ describe("CoachMarkdown", () => {
     expect(getByText("Second bullet")).toBeTruthy();
     expect(getByText("Numbered item")).toBeTruthy();
     expect(getByText("1.")).toBeTruthy();
+  });
+
+  it("renders nested list items and accessible GFM task checkboxes", () => {
+    const { getByText, getByTestId } = render(
+      <CoachMarkdown text={"- Parent item\n  - Nested **item**\n- [ ] Warm up\n- [x] Main work"} />,
+    );
+
+    expect(getByText("Parent item")).toBeTruthy();
+    expect(getByText(/Nested/)).toBeTruthy();
+    expect(getByText("item")).toBeTruthy();
+    expect(getByText("Warm up")).toBeTruthy();
+    expect(getByText("Main work")).toBeTruthy();
+    expect(getByTestId("coach-markdown-checkbox-unchecked").props.accessibilityState).toEqual({
+      checked: false,
+      disabled: true,
+    });
+    expect(getByTestId("coach-markdown-checkbox-checked").props.accessibilityState).toEqual({
+      checked: true,
+      disabled: true,
+    });
+  });
+
+  it("preserves block content nested inside list items", () => {
+    const { getByText, getByTestId } = render(
+      <CoachMarkdown
+        text={"1. Day A\n\n   | Exercise | Sets |\n   | --- | --- |\n   | **Squat** | 3 |\n\n   > Keep your torso braced.\n\n   ```\n   controlled tempo\n   ```"}
+      />,
+    );
+
+    expect(getByText("Day A")).toBeTruthy();
+    expect(getByTestId("coach-markdown-table-container")).toBeTruthy();
+    expect(getByText("Squat")).toBeTruthy();
+    expect(getByText("Keep your torso braced.")).toBeTruthy();
+    expect(getByText("controlled tempo")).toBeTruthy();
+  });
+
+  it("detects a rendered table nested inside a list item", () => {
+    expect(hasMarkdownTable("1. Day A\n\n   | Exercise | Sets |\n   | --- | --- |\n   | Squat | 3 |"))
+      .toBe(true);
+    expect(hasMarkdownTable("    | code | only |\n    | --- | --- |"))
+      .toBe(false);
+  });
+
+  it("preserves blockquote styling", () => {
+    const { getByText } = render(<CoachMarkdown text={"> Styled quote\n>\n> - Quoted item"} />);
+    const quote = getByText("Styled quote");
+    const quoteStyles = Array.isArray(quote.props.style)
+      ? Object.assign({}, ...quote.props.style.flat(Infinity).filter(Boolean))
+      : quote.props.style;
+    expect(quoteStyles.fontStyle).toBe("italic");
+    const quotedItem = getByText("Quoted item");
+    const quotedItemStyles = Array.isArray(quotedItem.props.style)
+      ? Object.assign({}, ...quotedItem.props.style.flat(Infinity).filter(Boolean))
+      : quotedItem.props.style;
+    expect(quotedItemStyles.fontStyle).toBe("italic");
+  });
+
+  it("renders CommonMark additions and keeps raw HTML safe", () => {
+    const { getByText, getByTestId, queryByText } = render(
+      <CoachMarkdown text={"Setext heading\n==============\n\nText  \nnext line\n\n---\n\n<script>alert('x')</script>Safe"} />,
+    );
+
+    expect(getByText("Setext heading")).toBeTruthy();
+    expect(getByText("Text\nnext line")).toBeTruthy();
+    expect(getByText("alert('x')Safe")).toBeTruthy();
+    expect(queryByText(/<script>/)).toBeNull();
+    expect(getByTestId("coach-markdown-horizontal-rule")).toBeTruthy();
   });
 
   it("renders blockquotes and inline formatting", () => {

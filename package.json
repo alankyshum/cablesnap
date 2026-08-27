@@ -98,6 +98,7 @@
     "expo-video-thumbnails": "^55.0.14",
     "expo-web-browser": "~55.0.14",
     "lucide-react-native": "^1.22.0",
+    "marked": "^12.0.2",
     "papaparse": "^5.5.3",
     "patch-package": "^8.0.1",
     "react": "19.2.0",

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Linking, Platform, ScrollView, StyleSheet, Text, View, type StyleProp, type TextStyle } from "react-native";
+import type { Token, Tokens, TokensList } from "marked";
 import { fontSizes, radii, spacing } from "@/constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -11,15 +12,6 @@ export type CoachMarkdownProps = {
   linkStyle?: StyleProp<TextStyle>;
   onLinkPress?: (url: string) => void;
 };
-
-type Block =
-  | { kind: "heading"; level: number; text: string }
-  | { kind: "bullet"; text: string }
-  | { kind: "ordered"; marker: string; text: string }
-  | { kind: "quote"; text: string }
-  | { kind: "code"; lines: string[] }
-  | { kind: "table"; lines: string[] }
-  | { kind: "paragraph"; text: string };
 
 const MONO_FONT = Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" });
 const TABLE_MIN_WIDTH = 500;
@@ -33,205 +25,43 @@ const estimatedTableTextWidth = (text: string) => Array.from(text).reduce(
   TABLE_CELL_HORIZONTAL_PADDING,
 );
 
-const INLINE_RE = /`([^`]+)`|\*\*([\s\S]+?)\*\*|\*([\s\S]+?)\*|_([\s\S]+?)_|~~([\s\S]+?)~~|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s)]+)/;
+type MarkedModule = typeof import("marked");
+let markedModule: MarkedModule | null = null;
 
-const isDivider = (line: string) => {
-  const values = line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|");
-  return values.length > 0 && values.every((value) => /^\s*:?-{3,}:?\s*$/.test(value));
-};
-
-const tableCells = (line: string) =>
-  line.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((cell) => cell.replace(/\\\|/g, "|").trim());
-
-function parseInline(
-  text: string,
-  keyBase: string,
-  textColor: string,
-  linkColor: string,
-  codeBg: string,
-  codeBorder: string,
-  linkStyle?: StyleProp<TextStyle>,
-  onLinkPress?: (url: string) => void,
-): React.ReactNode[] {
-  const nodes: React.ReactNode[] = [];
-  let rest = text;
-  let index = 0;
-
-  const handleLink = (url: string) => {
-    if (onLinkPress) onLinkPress(url);
-    else Linking.openURL(url).catch(() => {});
-  };
-
-  while (rest.length > 0) {
-    const match = INLINE_RE.exec(rest);
-    if (!match) {
-      nodes.push(rest);
-      break;
-    }
-
-    if (match.index > 0) {
-      nodes.push(rest.slice(0, match.index));
-    }
-
-    const key = `${keyBase}.node.${index++}`;
-
-    if (match[1] != null) {
-      // `code`
-      nodes.push(
-        <Text key={key} style={[styles.inlineCode, { color: textColor, backgroundColor: codeBg, borderColor: codeBorder }]}>
-          {match[1]}
-        </Text>,
-      );
-    } else if (match[2] != null) {
-      // **bold**
-      nodes.push(
-        <Text key={key} style={[styles.bold, { color: textColor }]}>
-          {parseInline(match[2], key, textColor, linkColor, codeBg, codeBorder, linkStyle, onLinkPress)}
-        </Text>,
-      );
-    } else if (match[3] != null || match[4] != null) {
-      // *italic* or _italic_
-      const italicContent = match[3] ?? match[4];
-      nodes.push(
-        <Text key={key} style={[styles.italic, { color: textColor }]}>
-          {parseInline(italicContent, key, textColor, linkColor, codeBg, codeBorder, linkStyle, onLinkPress)}
-        </Text>,
-      );
-    } else if (match[5] != null) {
-      // ~~strike~~
-      nodes.push(
-        <Text key={key} style={[styles.strike, { color: textColor }]}>
-          {parseInline(match[5], key, textColor, linkColor, codeBg, codeBorder, linkStyle, onLinkPress)}
-        </Text>,
-      );
-    } else if (match[6] != null) {
-      // [text](url)
-      const url = match[7];
-      nodes.push(
-        <Text key={key} style={[styles.link, { color: linkColor }, linkStyle]} onPress={() => handleLink(url)}>
-          {parseInline(match[6], `${key}.label`, linkColor, linkColor, codeBg, codeBorder, linkStyle, onLinkPress)}
-        </Text>,
-      );
-    } else if (match[8] != null) {
-      // bare URL
-      const url = match[8];
-      nodes.push(
-        <Text key={key} style={[styles.link, { color: linkColor }, linkStyle]} onPress={() => handleLink(url)}>
-          {url}
-        </Text>,
-      );
-    }
-
-    rest = rest.slice(match.index + match[0].length);
-  }
-
-  return nodes;
+/**
+ * Defer parser initialization until a Coach message is actually rendered.
+ * Metro still includes JS dependencies in native bundles, but this avoids eager
+ * evaluation and keeps the dependency boundary replaceable. The deliberately
+ * small, zero-dependency `marked` lexer avoids shipping a full RN renderer.
+ */
+function lexMarkdown(text: string): TokensList {
+  markedModule ??= require("marked") as MarkedModule;
+  return markedModule.lexer(text, { gfm: true, breaks: false });
 }
 
-function parseCodeBlock(lines: string[], startIndex: number): { block: Block; nextIndex: number } {
-  const code: string[] = [];
-  let index = startIndex + 1;
-  while (index < lines.length && !/^\s*```\s*$/.test(lines[index])) {
-    code.push(lines[index++]);
-  }
-  if (index < lines.length) index += 1;
-  return { block: { kind: "code", lines: code }, nextIndex: index };
+function isBreakHtml(text: string): boolean {
+  return /^<br\s*\/?\s*>$/i.test(text.trim());
 }
 
-function parseTableBlock(lines: string[], startIndex: number): { block: Block; nextIndex: number } {
-  const table = [lines[startIndex], lines[startIndex + 1]];
-  let index = startIndex + 2;
-  while (index < lines.length && lines[index].includes("|") && lines[index].trim() !== "") {
-    table.push(lines[index++]);
-  }
-  return { block: { kind: "table", lines: table }, nextIndex: index };
-}
-
-function parseBlocks(text: string): Block[] {
-  const lines = text.split("\n");
-  const blocks: Block[] = [];
-  let paragraph: string[] = [];
-
-  const flushParagraph = () => {
-    if (paragraph.length > 0) {
-      blocks.push({ kind: "paragraph", text: paragraph.join("\n") });
-      paragraph = [];
-    }
-  };
-
-  for (let index = 0; index < lines.length;) {
-    const line = lines[index];
-
-    // Fenced code block (```lang ... ```)
-    if (/^\s*```/.test(line)) {
-      flushParagraph();
-      const parsed = parseCodeBlock(lines, index);
-      blocks.push(parsed.block);
-      index = parsed.nextIndex;
-      continue;
-    }
-
-    // GFM Table
-    if (index + 1 < lines.length && line.includes("|") && isDivider(lines[index + 1])) {
-      flushParagraph();
-      const parsed = parseTableBlock(lines, index);
-      blocks.push(parsed.block);
-      index = parsed.nextIndex;
-      continue;
-    }
-
-    // Headings (#, ##, ###, ...)
-    const heading = line.match(/^(#{1,6})\s+(.*)$/);
-    if (heading) {
-      flushParagraph();
-      blocks.push({ kind: "heading", level: heading[1].length, text: heading[2] });
-      index += 1;
-      continue;
-    }
-
-    // List item (bullet or ordered)
-    const bullet = line.match(/^\s*[-*+]\s+(.*)$/);
-    if (bullet) {
-      flushParagraph();
-      blocks.push({ kind: "bullet", text: bullet[1] });
-      index += 1;
-      continue;
-    }
-
-    const ordered = line.match(/^\s*(\d+)\.\s+(.*)$/);
-    if (ordered) {
-      flushParagraph();
-      blocks.push({ kind: "ordered", marker: `${ordered[1]}.`, text: ordered[2] });
-      index += 1;
-      continue;
-    }
-
-    // Blockquote
-    const quote = line.match(/^>\s?(.*)$/);
-    if (quote) {
-      flushParagraph();
-      blocks.push({ kind: "quote", text: quote[1] });
-      index += 1;
-      continue;
-    }
-
-    // Empty line separates paragraphs
-    if (line.trim() === "") {
-      flushParagraph();
-      index += 1;
-      continue;
-    }
-
-    paragraph.push(line);
-    index += 1;
-  }
-
-  flushParagraph();
-  return blocks;
+function plainTextFromTokens(tokens: Token[]): string {
+  return tokens.map((token) => {
+    if (token.type === "br" || (token.type === "html" && isBreakHtml(token.text))) return "\n";
+    if (token.type === "image") return token.text;
+    if ("tokens" in token && token.tokens) return plainTextFromTokens(token.tokens);
+    return "text" in token ? String(token.text) : "";
+  }).join("");
 }
 
 export function hasMarkdownTable(text: string): boolean {
-  return text.includes("|") && parseBlocks(text).some((block) => block.kind === "table");
+  if (!text.includes("|")) return false;
+  const containsTable = (tokens: Token[]): boolean => tokens.some((token) => {
+    if (token.type === "table") return true;
+    if (token.type === "list") {
+      return (token as Tokens.List).items.some((item) => containsTable(item.tokens));
+    }
+    return "tokens" in token && Boolean(token.tokens) && containsTable(token.tokens ?? []);
+  });
+  return containsTable(lexMarkdown(text));
 }
 
 export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, onLinkPress }: CoachMarkdownProps) {
@@ -245,16 +75,127 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
   const codeBg = isIncoming ? colors.surface : colors.surfaceAlt;
   const codeBorder = colors.outlineVariant;
 
-  const blocks = useMemo(() => parseBlocks(text), [text]);
+  const blocks = useMemo(() => lexMarkdown(text), [text]);
 
-  return (
-    <View style={styles.root}>
-      {blocks.map((block, index) => {
-        const keyBase = `blk-${index}`;
+  const handleLink = (url: string) => {
+    if (onLinkPress) onLinkPress(url);
+    else Linking.openURL(url).catch(() => {});
+  };
 
-        if (block.kind === "heading") {
-          const isH1 = block.level <= 1;
-          const isH2 = block.level === 2;
+  // Token dispatch is intentionally centralized so every inline context shares identical Markdown behavior.
+  // eslint-disable-next-line complexity
+  const renderInline = (tokens: Token[], keyBase: string): React.ReactNode[] => tokens.map((token, index) => {
+    const key = `${keyBase}.inline.${index}`;
+    if (token.type === "text" || token.type === "escape") {
+      const childTokens = "tokens" in token ? token.tokens : undefined;
+      return token.type === "text" && childTokens
+        ? <React.Fragment key={key}>{renderInline(childTokens, key)}</React.Fragment>
+        : token.text;
+    }
+    if (token.type === "br" || (token.type === "html" && isBreakHtml(token.text))) return "\n";
+    if (token.type === "strong") {
+      return <Text key={key} style={[styles.bold, { color: textColor }]}>{renderInline(token.tokens ?? [], key)}</Text>;
+    }
+    if (token.type === "em") {
+      return <Text key={key} style={[styles.italic, { color: textColor }]}>{renderInline(token.tokens ?? [], key)}</Text>;
+    }
+    if (token.type === "del") {
+      return <Text key={key} style={[styles.strike, { color: textColor }]}>{renderInline(token.tokens ?? [], key)}</Text>;
+    }
+    if (token.type === "codespan") {
+      return (
+        <Text key={key} style={[styles.inlineCode, { color: textColor, backgroundColor: codeBg, borderColor: codeBorder }]}>
+          {token.text}
+        </Text>
+      );
+    }
+    if (token.type === "link") {
+      return (
+        <Text key={key} style={[styles.link, { color: linkColor }, linkStyle]} onPress={() => handleLink(token.href)}>
+          {renderInline(token.tokens ?? [], `${key}.label`)}
+        </Text>
+      );
+    }
+    if (token.type === "image") {
+      return (
+        <Text key={key} style={[styles.link, { color: linkColor }, linkStyle]} onPress={() => handleLink(token.href)}>
+          {token.text || token.href}
+        </Text>
+      );
+    }
+    if (token.type === "html") return token.text.replace(/<[^>]*>/g, "");
+    if (token.type === "checkbox") return null;
+    if ("tokens" in token && token.tokens) return <React.Fragment key={key}>{renderInline(token.tokens, key)}</React.Fragment>;
+    return null;
+  });
+
+  const renderList = (
+    list: Tokens.List,
+    keyBase: string,
+    depth = 0,
+    inheritedTextStyle?: StyleProp<TextStyle>,
+  ): React.ReactNode => {
+    const start = typeof list.start === "number" ? list.start : 1;
+    return (
+      <View key={keyBase} style={depth > 0 ? styles.nestedList : undefined}>
+        {list.items.map((item, itemIndex) => {
+          const itemKey = `${keyBase}.item.${itemIndex}`;
+          const marker = list.ordered ? `${start + itemIndex}.` : "•";
+          return (
+            <View key={itemKey} style={styles.listItem}>
+              {item.task ? (
+                <View
+                  testID={`coach-markdown-checkbox-${item.checked ? "checked" : "unchecked"}`}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: Boolean(item.checked), disabled: true }}
+                  style={[
+                    styles.taskCheckbox,
+                    { borderColor: textColor, backgroundColor: item.checked ? textColor : "transparent" },
+                  ]}
+                >
+                  {item.checked ? <Text style={[styles.taskCheckmark, { color: codeBg }]}>✓</Text> : null}
+                </View>
+              ) : (
+                <Text style={[styles.listMarker, { color: textColor }]}>{marker}</Text>
+              )}
+              <View style={styles.listContent}>
+                {item.tokens.map((token, tokenIndex) => {
+                  const contentKey = `${itemKey}.content.${tokenIndex}`;
+                  if (token.type === "list") {
+                    return renderList(token as Tokens.List, contentKey, depth + 1, inheritedTextStyle);
+                  }
+                  if (token.type === "paragraph" || token.type === "text") {
+                    const childTokens = "tokens" in token ? token.tokens : undefined;
+                    return (
+                      <Text key={contentKey} style={[styles.listText, { color: textColor }, inheritedTextStyle, textStyle]}>
+                        {renderInline(childTokens ?? [token], contentKey)}
+                      </Text>
+                    );
+                  }
+                  return <React.Fragment key={contentKey}>{renderBlocks([token], contentKey, inheritedTextStyle)}</React.Fragment>;
+                })}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
+  function renderBlocks(
+    tokens: Token[],
+    keyPrefix: string,
+    inheritedTextStyle?: StyleProp<TextStyle>,
+  ): React.ReactNode[] {
+    // Block dispatch stays centralized to keep rendering and nested-list behavior consistent.
+    // eslint-disable-next-line complexity
+    return tokens.map((block, index) => {
+    const keyBase = `${keyPrefix}-${index}`;
+
+    if (block.type === "space" || block.type === "def") return null;
+    if (block.type === "heading") {
+          const isH1 = block.depth <= 1;
+          const isH2 = block.depth === 2;
           return (
             <Text
               key={keyBase}
@@ -265,34 +206,22 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
                 textStyle,
               ]}
             >
-              {parseInline(block.text, keyBase, textColor, linkColor, codeBg, codeBorder, linkStyle, onLinkPress)}
+              {renderInline(block.tokens ?? [], keyBase)}
             </Text>
           );
         }
 
-        if (block.kind === "bullet" || block.kind === "ordered") {
-          const marker = block.kind === "ordered" ? block.marker : "•";
-          return (
-            <View key={keyBase} style={styles.listItem}>
-              <Text style={[styles.listMarker, { color: textColor }]}>{marker}</Text>
-              <Text style={[styles.listText, { color: textColor }, textStyle]}>
-                {parseInline(block.text, keyBase, textColor, linkColor, codeBg, codeBorder, linkStyle, onLinkPress)}
-              </Text>
-            </View>
-          );
-        }
+    if (block.type === "list") return renderList(block as Tokens.List, keyBase, 0, inheritedTextStyle);
 
-        if (block.kind === "quote") {
+    if (block.type === "blockquote") {
           return (
             <View key={keyBase} style={[styles.quote, { borderLeftColor: isIncoming ? colors.outlineVariant : colors.onPrimary }]}>
-              <Text style={[styles.quoteText, { color: textColor }, textStyle]}>
-                {parseInline(block.text, keyBase, textColor, linkColor, codeBg, codeBorder, linkStyle, onLinkPress)}
-              </Text>
+              {renderBlocks(block.tokens ?? [], `${keyBase}.quote`, [inheritedTextStyle, styles.quoteText])}
             </View>
           );
         }
 
-        if (block.kind === "code") {
+    if (block.type === "code") {
           return (
             <ScrollView
               key={keyBase}
@@ -301,19 +230,21 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
               contentContainerStyle={styles.codeContent}
               showsHorizontalScrollIndicator
             >
-              <Text style={[styles.codeText, { color: textColor }, textStyle]}>
-                {block.lines.join("\n")}
+              <Text style={[styles.codeText, { color: textColor }, inheritedTextStyle, textStyle]}>
+                {block.text}
               </Text>
             </ScrollView>
           );
         }
 
-        if (block.kind === "table") {
-          const rows = block.lines.filter((_, row) => row !== 1).map(tableCells);
+    if (block.type === "table") {
+          const rows = [block.header, ...block.rows];
           const columnCount = Math.max(1, ...rows.map((row) => row.length));
           const columnWidths = Array.from({ length: columnCount }, (_, columnIndex) => {
             const contentWidth = Math.max(
-              ...rows.map((row) => estimatedTableTextWidth(row[columnIndex] ?? "")),
+              ...rows.map((row) => estimatedTableTextWidth(
+                plainTextFromTokens(row[columnIndex]?.tokens ?? []),
+              )),
             );
             return Math.max(
               TABLE_MIN_COLUMN_WIDTH,
@@ -323,7 +254,7 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
           });
           const normalizedRows = rows.map((row) => Array.from(
             { length: columnCount },
-            (_, columnIndex) => row[columnIndex] ?? "",
+            (_, columnIndex) => row[columnIndex] ?? { text: "", tokens: [], header: false, align: null },
           ));
           return (
             <View
@@ -375,11 +306,13 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
                                 isHeader && styles.tableHeaderText,
                                 {
                                   color: textColor,
+                                  textAlign: cell.align ?? "left",
                                 },
+                                inheritedTextStyle,
                                 textStyle,
                               ]}
                             >
-                              {cell}
+                              {renderInline(cell.tokens, `${keyBase}.cell.${rowIndex}.${cellIndex}`)}
                             </Text>
                           </View>
                         ))}
@@ -392,12 +325,42 @@ export function CoachMarkdown({ text, position = "left", textStyle, linkStyle, o
           );
         }
 
-        return (
-          <Text key={keyBase} style={[styles.paragraph, { color: textColor }, textStyle]}>
-            {parseInline(block.text, keyBase, textColor, linkColor, codeBg, codeBorder, linkStyle, onLinkPress)}
-          </Text>
-        );
-      })}
+    if (block.type === "hr") {
+          return (
+            <View
+              key={keyBase}
+              testID="coach-markdown-horizontal-rule"
+              style={[styles.horizontalRule, { backgroundColor: colors.outlineVariant }]}
+            />
+          );
+        }
+
+    if (block.type === "html") {
+          const value = block.text.replace(/<br\s*\/?\s*>/gi, "\n").replace(/<[^>]*>/g, "");
+          return value ? <Text key={keyBase} style={[styles.paragraph, { color: textColor }, inheritedTextStyle, textStyle]}>{value}</Text> : null;
+        }
+
+    if (block.type === "paragraph" || block.type === "text") {
+          const childTokens = "tokens" in block ? block.tokens : undefined;
+          const inlineTokens = block.type === "text" && !childTokens ? [block] : childTokens;
+          return (
+            <Text key={keyBase} style={[styles.paragraph, { color: textColor }, inheritedTextStyle, textStyle]}>
+              {renderInline(inlineTokens ?? [], keyBase)}
+            </Text>
+          );
+        }
+
+    if ("tokens" in block && block.tokens) {
+          return <React.Fragment key={keyBase}>{renderBlocks(block.tokens, `${keyBase}.children`, inheritedTextStyle)}</React.Fragment>;
+        }
+
+    return null;
+    });
+  }
+
+  return (
+    <View style={styles.root}>
+      {renderBlocks(blocks, "blk")}
     </View>
   );
 }
@@ -467,6 +430,29 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.base,
     lineHeight: 22,
   },
+  listContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  nestedList: {
+    marginTop: spacing.xs,
+    paddingLeft: spacing.md,
+  },
+  taskCheckbox: {
+    width: 18,
+    height: 18,
+    borderWidth: 2,
+    borderRadius: radii.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  taskCheckmark: {
+    fontSize: fontSizes.sm,
+    lineHeight: 14,
+    fontWeight: "700",
+  },
   quote: {
     borderLeftWidth: 3,
     paddingLeft: spacing.sm,
@@ -476,6 +462,10 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     fontSize: fontSizes.base,
     lineHeight: 22,
+  },
+  horizontalRule: {
+    height: 1,
+    marginVertical: spacing.sm,
   },
   codeScroll: {
     width: "100%",

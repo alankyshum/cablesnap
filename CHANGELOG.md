@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- AI Coach messages now support full CommonMark and GitHub-flavored Markdown, including rich table cells, line breaks, nested lists, and task checkboxes.
 - Improved AI Coach chat on narrow screens with wider bubbles, horizontally scrollable tables, and a mobile composer that stays above the keyboard.
 
 ## v0.26.114 — 2026-08-27
