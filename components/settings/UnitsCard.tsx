@@ -8,6 +8,7 @@ import { updateBodySettings, getAppSetting, setAppSetting } from '@/lib/db';
 import { getValidSteps, resolveStep } from '@/lib/weightStep';
 import type { ThemeColors } from '@/hooks/useThemeColors';
 import type { useToast } from '@/components/ui/bna-toast';
+import { t } from '@/lib/i18n';
 
 type Props = {
   colors: ThemeColors;
@@ -53,7 +54,7 @@ export default function UnitsCard({
     try {
       await setAppSetting('session.weightStep', newStepStr);
     } catch {
-      toast.error('Could not save weight step setting');
+      toast.error(t({ id: "settings.units.saveWeightStepFailed", message: "Could not save weight step setting" }));
     }
   };
 
@@ -63,11 +64,11 @@ export default function UnitsCard({
         variant="body"
         style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm }}
       >
-        Units
+        {t({ id: "settings.units.title", message: "Units" })}
       </Text>
       <View style={styles.row}>
         <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-          Weight
+          {t({ id: "settings.units.weight", message: "Weight" })}
         </Text>
         <View style={styles.unitToggle}>
           <SegmentedControl
@@ -82,7 +83,7 @@ export default function UnitsCard({
                 await setAppSetting('session.weightStep', String(resolved));
                 setWeightStepState(String(resolved));
               } catch {
-                toast.error('Could not save unit');
+                toast.error(t({ id: "settings.units.saveUnitFailed", message: "Could not save unit" }));
               }
             }}
             buttons={[
@@ -94,7 +95,7 @@ export default function UnitsCard({
       </View>
       <View style={styles.row}>
         <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-          Measurements
+          {t({ id: "settings.units.measurements", message: "Measurements" })}
         </Text>
         <View style={styles.unitToggle}>
           <SegmentedControl
@@ -105,7 +106,7 @@ export default function UnitsCard({
               try {
                 await updateBodySettings(weightUnit, m, weightGoal, fatGoal);
               } catch {
-                toast.error('Could not save unit');
+                toast.error(t({ id: "settings.units.saveUnitFailed", message: "Could not save unit" }));
               }
             }}
             buttons={[
@@ -118,10 +119,10 @@ export default function UnitsCard({
       <View style={styles.row}>
         <View style={{ flex: 1, paddingRight: 8 }}>
           <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
-            Weight step
+            {t({ id: "settings.units.weightStep", message: "Weight step" })}
           </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs, marginTop: 2, lineHeight: 16 }}>
-            Input step granularity for exercises. Applies to new sessions.
+            {t({ id: "settings.units.weightStepHint", message: "Input step granularity for exercises. Applies to new sessions." })}
           </Text>
         </View>
         <View style={styles.weightStepToggle}>
