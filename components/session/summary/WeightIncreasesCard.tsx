@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text";
 import { toDisplay } from "@/lib/units";
 import type { Increase } from "@/hooks/useSummaryData";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   increases: Increase[];
@@ -22,7 +23,7 @@ export default function WeightIncreasesCard({ increases, unit, colors }: Props) 
             variant="title"
             style={{ color: colors.onSurface, marginLeft: 8, fontWeight: "700" }}
           >
-            Weight Increases
+            {t({ id: "components.session.summary.weight-increases.title", message: "Weight Increases" })}
           </Text>
         </View>
         {increases.map((inc) => (
@@ -30,7 +31,7 @@ export default function WeightIncreasesCard({ increases, unit, colors }: Props) 
             <Text
               variant="body"
               style={{ color: colors.onSurface, flex: 1 }}
-              accessibilityLabel={`${inc.name}: weight increased from ${toDisplay(inc.previous, unit)} to ${toDisplay(inc.current, unit)} ${unit}`}
+              accessibilityLabel={t({ id: "components.session.summary.weight-increases.a11y", message: `${inc.name}: weight increased from ${toDisplay(inc.previous, unit)} to ${toDisplay(inc.current, unit)} ${unit}` })}
             >
               {inc.name}
             </Text>

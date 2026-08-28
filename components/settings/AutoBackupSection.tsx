@@ -7,6 +7,7 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { fontSizes } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@/lib/i18n";
 import type { useToast } from "@/components/ui/bna-toast";
 
 const MIN_RETENTION = 1;
@@ -24,7 +25,7 @@ type Props = {
 };
 
 function formatLastBackup(iso: string | null): string {
-  if (!iso) return "No backups yet";
+  if (!iso) return t({ id: "settings.autoBackup.noBackups", message: "No backups yet" });
   const date = new Date(iso);
   const now = new Date();
   const isToday =
@@ -33,7 +34,7 @@ function formatLastBackup(iso: string | null): string {
     date.getDate() === now.getDate();
 
   const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (isToday) return `Last backup: Today at ${time}`;
+  if (isToday) return t({ id: "settings.autoBackup.lastToday", message: "Last backup: Today at {time}" }, { time });
 
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -41,9 +42,12 @@ function formatLastBackup(iso: string | null): string {
     date.getFullYear() === yesterday.getFullYear() &&
     date.getMonth() === yesterday.getMonth() &&
     date.getDate() === yesterday.getDate();
-  if (isYesterday) return `Last backup: Yesterday at ${time}`;
+  if (isYesterday) return t({ id: "settings.autoBackup.lastYesterday", message: "Last backup: Yesterday at {time}" }, { time });
 
-  return `Last backup: ${date.toLocaleDateString()} at ${time}`;
+  return t(
+    { id: "settings.autoBackup.lastDate", message: "Last backup: {dateText} at {time}" },
+    { dateText: date.toLocaleDateString(), time },
+  );
 }
 
 export default function AutoBackupSection({ colors, toast, bareContent = false }: Props) {
@@ -82,7 +86,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
       const { setAutoBackupEnabled } = await import("../../lib/backup");
       await setAutoBackupEnabled(value);
     } catch {
-      toast.error("Failed to update setting");
+      toast.error(t({ id: "settings.autoBackup.updateFailed", message: "Failed to update setting" }));
       setEnabled(!value);
     }
   }, [toast]);
@@ -96,7 +100,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
       const { setBackupRetention } = await import("../../lib/backup");
       await setBackupRetention(clamped);
     } catch {
-      toast.error("Failed to update retention");
+      toast.error(t({ id: "settings.autoBackup.retentionFailed", message: "Failed to update retention" }));
     }
   }, [toast]);
 
@@ -107,12 +111,12 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
       const result = await performAutoBackup();
       if (result.success) {
         setLastBackup(new Date().toISOString());
-        toast.success("Backup created successfully");
+        toast.success(t({ id: "settings.autoBackup.created", message: "Backup created successfully" }));
       } else {
-        toast.error("Backup failed");
+        toast.error(t({ id: "settings.autoBackup.failed", message: "Backup failed" }));
       }
     } catch {
-      toast.error("Backup failed");
+      toast.error(t({ id: "settings.autoBackup.failed", message: "Backup failed" }));
     } finally {
       setLoading(false);
     }
@@ -133,7 +137,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
         <Pressable
           onPress={() => setTooltipVisible(!tooltipVisible)}
           accessibilityRole="button"
-          accessibilityLabel="Auto-Backup. Tap for more info"
+          accessibilityLabel={t({ id: "settings.autoBackup.infoA11y", message: "Auto-Backup. Tap for more info" })}
           style={{ flex: 1 }}
         >
           <View style={styles.labelWithIcon}>
@@ -147,7 +151,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
           value={enabled}
           onValueChange={handleToggle}
           accessibilityRole="switch"
-          accessibilityLabel="Toggle auto-backup after workouts"
+          accessibilityLabel={t({ id: "settings.autoBackup.toggleA11y", message: "Toggle auto-backup after workouts" })}
         />
       </View>
 
@@ -177,7 +181,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
             onPress={() => retention > MIN_RETENTION && handleRetentionChange(retention - 1)}
             disabled={retention <= MIN_RETENTION}
             accessibilityRole="button"
-            accessibilityLabel="Decrease backup retention"
+            accessibilityLabel={t({ id: "settings.autoBackup.decreaseA11y", message: "Decrease backup retention" })}
             style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: retention > MIN_RETENTION ? 1 : 0.35 }]}
           >
             <MaterialCommunityIcons name="minus" size={16} color={colors.onSurface} />
@@ -189,7 +193,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
             onPress={() => retention < MAX_RETENTION && handleRetentionChange(retention + 1)}
             disabled={retention >= MAX_RETENTION}
             accessibilityRole="button"
-            accessibilityLabel="Increase backup retention"
+            accessibilityLabel={t({ id: "settings.autoBackup.increaseA11y", message: "Increase backup retention" })}
             style={[styles.stepButton, { backgroundColor: colors.surfaceVariant, opacity: retention < MAX_RETENTION ? 1 : 0.35 }]}
           >
             <MaterialCommunityIcons name="plus" size={16} color={colors.onSurface} />
@@ -207,7 +211,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
           onPress={handleBackupNow}
           loading={loading}
           disabled={loading}
-          accessibilityLabel="Create a backup now"
+          accessibilityLabel={t({ id: "settings.autoBackup.createA11y", message: "Create a backup now" })}
           accessibilityRole="button"
         >
           Backup Now
@@ -216,7 +220,7 @@ export default function AutoBackupSection({ colors, toast, bareContent = false }
           variant="outline"
           size="sm"
           onPress={() => router.push("/settings/backups")}
-          accessibilityLabel="View all backups"
+          accessibilityLabel={t({ id: "settings.autoBackup.viewA11y", message: "View all backups" })}
           accessibilityRole="button"
         >
           View Backups

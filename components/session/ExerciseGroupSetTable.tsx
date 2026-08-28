@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /* eslint-disable max-lines-per-function */
 import React from "react";
 import { StyleSheet, View } from "react-native";
@@ -75,8 +78,8 @@ export function ExerciseGroupSetTable({
   return (
     <>
       <View style={styles.headerRow}>
-        <Text variant="caption" style={[styles.colSet, { color: colors.onSurfaceVariant }]}>SET</Text>
-        <Text variant="caption" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>PREV</Text>
+        <Text variant="caption" style={[styles.colSet, { color: colors.onSurfaceVariant }]}>{t({ id: "session.exercisegroupsettable.str1", message: "SET" })}</Text>
+        <Text variant="caption" style={[styles.colPrev, { color: colors.onSurfaceVariant }]}>{t({ id: "session.exercisegroupsettable.str2", message: "PREV" })}</Text>
         <Text variant="caption" style={[styles.colLabel, { color: colors.onSurfaceVariant }]}>
           {group.is_bodyweight ? "LOAD" : (unit === "lb" ? "LB" : "KG")}
         </Text>
@@ -134,11 +137,11 @@ export function ExerciseGroupSetTable({
           size="sm"
           onPress={() => onAddSet(group.exercise_id)}
           style={styles.addSetBtn}
-          accessibilityLabel={`Add set to ${group.name}`}
+          accessibilityLabel={t({ id: "session.exercisegroupsettable.dynamic1", message: `Add set to ${group.name}` })}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
-            <Text style={{ color: colors.primary, fontWeight: "600" }}>Add Set</Text>
+            <Text style={{ color: colors.primary, fontWeight: "600" }}>{t({ id: "session.exercisegroupsettable.str3", message: "Add Set" })}</Text>
           </View>
         </Button>
         {showWarmupButton && (
@@ -147,11 +150,11 @@ export function ExerciseGroupSetTable({
             size="sm"
             onPress={() => onAddWarmups(group.exercise_id)}
             style={styles.addSetBtn}
-            accessibilityLabel={`Add warmup sets for ${group.name}`}
+            accessibilityLabel={t({ id: "session.exercisegroupsettable.dynamic2", message: `Add warmup sets for ${group.name}` })}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <MaterialCommunityIcons name="fire" size={18} color={colors.tertiary ?? colors.primary} />
-              <Text style={{ color: colors.tertiary ?? colors.primary, fontWeight: "600" }}>Add Warmups</Text>
+              <Text style={{ color: colors.tertiary ?? colors.primary, fontWeight: "600" }}>{t({ id: "session.exercisegroupsettable.str4", message: "Add Warmups" })}</Text>
             </View>
           </Button>
         )}

@@ -100,7 +100,7 @@ export async function enablePerWorkerDb(page: Page, parallelIndex: number) {
 
 /**
  * Inject a backup-JSON string that `pickImportBackup`
- * (app/(tabs)/_settings-handlers.ts) will return in place of the OS file
+ * (lib/settings-handlers.ts) will return in place of the OS file
  * picker (BLD-1769), so the production "Import data" → category sheet →
  * router.push("/settings/import-backup") flow runs headless and gives
  * expo-router's Stack the back-history the nav-header guard requires. The
@@ -117,6 +117,23 @@ export async function enableImportBackupFixture(page: Page, backupJson: string) 
       window as unknown as Record<string, unknown>
     ).__E2E_IMPORT_BACKUP_FIXTURE__ = raw;
   }, backupJson);
+}
+
+/** A minimal v8 fixture for import-flow coverage, including the AI Coach section. */
+export function aiCoachBackupFixture(): string {
+  return JSON.stringify({
+    version: 8,
+    app_version: "e2e",
+    exported_at: new Date(0).toISOString(),
+    data: {
+      ai_coach: {
+        last_model_id: "e2e/model",
+        coach_sessions: [{ id: "e2e-coach-session", title: "E2E Coach", model_id: "e2e/model", created_at: 1, updated_at: 1 }],
+        coach_messages: [{ id: "e2e-coach-message", session_id: "e2e-coach-session", role: "user", content: "E2E message", tool_calls: null, created_at: 2, error: null }],
+      },
+    },
+    counts: {},
+  });
 }
 
 /**

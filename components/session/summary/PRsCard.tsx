@@ -5,6 +5,8 @@ import { Text } from "@/components/ui/text";
 import { toDisplay } from "@/lib/units";
 import type { PR, RepPR } from "@/hooks/useSummaryData";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 type Props = {
   prs: PR[];
@@ -19,7 +21,7 @@ export default function PRsCard({ prs, repPrs, unit, colors }: Props) {
   return (
     <Card
       style={StyleSheet.flatten([styles.section, { backgroundColor: colors.tertiaryContainer }])}
-      accessibilityLabel={`${allPrs.length} new personal record${allPrs.length > 1 ? "s" : ""}`}
+      accessibilityLabel={i18n._({ id: "components.session.summary.prs-card.accessibility", message: "{count} new personal {count, plural, one {record} other {records}}", values: { count: allPrs.length } })}
     >
       <CardContent>
         <View style={styles.sectionHeader}>
@@ -28,7 +30,7 @@ export default function PRsCard({ prs, repPrs, unit, colors }: Props) {
             variant="title"
             style={{ color: colors.onTertiaryContainer, marginLeft: 8, fontWeight: "700" }}
           >
-            {allPrs.length} New PR{allPrs.length > 1 ? "s" : ""}
+            {i18n._({ id: "components.session.summary.prs-card.title", message: "{count} New {count, plural, one {PR} other {PRs}}", values: { count: allPrs.length } })}
           </Text>
         </View>
         {prs.map((pr) => (
@@ -36,7 +38,7 @@ export default function PRsCard({ prs, repPrs, unit, colors }: Props) {
             <Text
               variant="body"
               style={{ color: colors.onTertiaryContainer, flex: 1 }}
-              accessibilityLabel={`New personal record: ${pr.name}, ${toDisplay(pr.weight, unit)} ${unit}`}
+              accessibilityLabel={t({ id: "components.session.summary.prs-card.row", message: `New personal record: ${pr.name}, ${toDisplay(pr.weight, unit)} ${unit}` })}
             >
               {pr.name}
             </Text>
@@ -50,7 +52,7 @@ export default function PRsCard({ prs, repPrs, unit, colors }: Props) {
             <Text
               variant="body"
               style={{ color: colors.onTertiaryContainer, flex: 1 }}
-              accessibilityLabel={`New rep personal record: ${pr.name}, ${pr.reps} reps`}
+              accessibilityLabel={t({ id: "components.session.summary.prs-card.rep-row", message: `New rep personal record: ${pr.name}, ${pr.reps} reps` })}
             >
               {pr.name}
             </Text>

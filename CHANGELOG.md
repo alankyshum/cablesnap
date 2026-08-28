@@ -24,6 +24,107 @@ marker) at release time.
 
 - Form Library / Compare grid: increased the overflow (⋮) menu button inset from 4dp to 8dp so it no longer looks cramped against the card corner; touch target unchanged. (BLD-4550)
 
+## v0.26.115 — 2026-08-27
+<!-- versionCode: 183 -->
+
+- AI Coach messages now support full CommonMark and GitHub-flavored Markdown, including rich table cells, line breaks, nested lists, and task checkboxes.
+- Improved AI Coach chat on narrow screens with wider bubbles, horizontally scrollable tables, and a mobile composer that stays above the keyboard.
+
+## v0.26.114 — 2026-08-27
+<!-- versionCode: 182 -->
+
+- Improved AI Coach replies with a typing indicator and correctly aligned table columns.
+- AI Coach can now create workout templates when asked.
+
+## v0.26.113 — 2026-08-23
+<!-- versionCode: 181 -->
+
+- The AI Coach model picker now scrolls properly on tablets and phones.
+- AI Coach now shows an animated indicator while it is thinking or running a tool.
+
+## v0.26.112 — 2026-08-23
+<!-- versionCode: 180 -->
+
+- Update checks now run every 6 hours instead of once per day, so new releases are surfaced sooner.
+- AI Coach replies work again with models that reject tool requests.
+- Fixed mirrored message text and out-of-order conversation dates.
+- Fixed Coach layout issues, including navbar overlap, sidebar height and alignment, collapse button placement, and layer shadows.
+- Added consistent padding to warning cards, sidebar buttons, and the empty state.
+
+## v0.26.111 — 2026-08-23
+<!-- versionCode: 179 -->
+
+- Improved AI Coach dark-mode text and table readability with theme-aware colors.
+- Kept AI Coach tables inside the message bubble while allowing horizontal scrolling for wide tables.
+- Removed the large empty gap at the top of the AI Coach screen.
+
+## v0.26.110 — 2026-08-23
+<!-- versionCode: 178 -->
+
+- AI Coach markdown now renders tables, horizontally scrollable code blocks, and clearer headings.
+- Fixed tablet AI Coach layout issues, including header overlap and quick-prompt chip overflow.
+- AI Coach now records and displays the model that produced each response, and preserves model selections across reloads and new chats.
+- The model picker now scrolls reliably to offscreen models and dismisses after selection.
+- Backups can include AI Coach chat history and the selected model, with an optional API key protected by explicit opt-in; automatic backups never include credentials.
+
+## v0.26.109 — 2026-08-22
+<!-- versionCode: 177 -->
+
+- Improved AI Coach reliability when an upstream provider is unavailable or a selected model cannot support Coach tools.
+- Improved translation robustness by validating ICU messages before release builds.
+
+## v0.26.108 — 2026-08-22
+<!-- versionCode: 176 -->
+
+- Rebuilt the AI Coach chat experience with live-streaming responses and formatted markdown.
+- The model picker now scrolls properly, and your selected model is used for requests and remembered for later.
+- Added clearer messages when an AI provider is unavailable.
+- Improved accessibility and dark-mode contrast across the AI Coach experience.
+- Expanded translation coverage for AI Coach and related app labels.
+
+## v0.26.107 — 2026-08-21
+<!-- versionCode: 175 -->
+
+- Localized the AI Coach navigation label in the app's supported languages.
+- Fixed hydration preset labels when displaying fluid ounces.
+
+## v0.26.106 — 2026-08-21
+<!-- versionCode: 174 -->
+- Keep cable setup labels in sync when switching app language.
+
+_No user-facing changes yet._
+
+## v0.26.105 — 2026-08-21
+<!-- versionCode: 173 -->
+
+- Fixed text that showed raw placeholders instead of real values. Most visibly, the Settings About row now displays the actual version number instead of “CableSnap v{version}”; this also fixes interpolated text throughout the app in release builds.
+- Fixed labels that showed internal identifiers instead of translated text, including the AI Coach tab.
+- Improved the update prompt so release notes render as formatted text with proper headings and bullets, hidden internal markers, and scrolling for longer notes.
+
+## v0.26.104 — 2026-08-20
+<!-- versionCode: 172 -->
+
+- Fixed Wear OS release builds shipping with a debug signing certificate; release APKs now use the production signing key.
+
+## v0.26.103 — 2026-08-20
+<!-- versionCode: 171 -->
+
+- Added: link to GitHub Releases from the About screen, and documented the F-Droid repo install path.
+- Fixed: GitHub release APKs retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.
+- Added recovery links in Settings and documentation for users on v0.26.100 or v0.26.101 whose in-app update check cannot run.
+
+## v0.26.102 — 2026-08-19
+<!-- versionCode: 170 -->
+
+- GitHub release APKs now retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.
+
+## v0.26.101 — 2026-08-19
+<!-- versionCode: 169 -->
+
+- The new AI Coach tab lets you chat with an AI fitness coach that can consult your workout, exercise, and nutrition history on-device. Bring your own OpenRouter API key, choose your model, and keep your key on this device while requests go directly to OpenRouter.
+- Exercises are now available from the top-right icons on the Workouts screen; AI Coach now occupies their place in the tab bar.
+- In-app language selection is now available in Settings for English (US), English (UK), Traditional Chinese (Taiwan), and Simplified Chinese, defaulting to en-US. The Chinese catalogs are machine-translated beta content and have not yet received native-speaker review.
+
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
@@ -248,8 +349,8 @@ marker) at release time.
 - **Consistent spacing for Workout History Import button** — Aligns the vertical spacing and gaps around the "Choose CSV File..." button inside the settings card to match standard design patterns and other buttons. (BLD-3499)
 - **Added customizable weight-step increments (micro-loading)** — you can now configure the weight step (0.5 kg, 1.25 kg, 2.5 kg, 5 kg or 1 lb, 2.5 lb, 5 lb, 10 lb) in Units settings, which applies across all steppers in your workout sessions and quick-adds. ([BLD-3517](/BLD/issues/BLD-3517))
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
- - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
- - **What's New now supports inline code and tappable web or email links** in release notes.
+- **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
+- **What's New now supports inline code and tappable web or email links** in release notes.
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->

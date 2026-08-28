@@ -12,21 +12,25 @@ import { useAchievements } from "@/hooks/useAchievements";
 import type { AchievementItem } from "@/hooks/useAchievements";
 import { AchievementBadge } from "@/components/achievements/AchievementBadge";
 import { AchievementsLevelCard } from "@/components/achievements/AchievementsLevelCard";
+import { t } from "@lingui/core/macro";
 
-const CATEGORY_LABELS: Record<AchievementCategory, string> = {
-  consistency: "Consistency",
-  strength: "Strength",
-  volume: "Volume",
-  nutrition: "Nutrition",
-  body: "Body",
-};
+function getCategoryLabels(): Record<AchievementCategory, string> {
+  return {
+  consistency: t({ id: "app.progress.achievements.consistency", message: "Consistency" }),
+  strength: t({ id: "app.progress.achievements.strength", message: "Strength" }),
+  volume: t({ id: "app.progress.achievements.volume", message: "Volume" }),
+  nutrition: t({ id: "app.progress.achievements.nutrition", message: "Nutrition" }),
+  body: t({ id: "app.progress.achievements.body", message: "Body" }),
+  };
+}
 
 export default function AchievementsScreen() {
   const colors = useThemeColors();
+  const categoryLabels = getCategoryLabels();
   const { items, earnedCount, loading, error, retroBanner } = useAchievements();
 
   // Group items by category
-  const sections = Object.entries(CATEGORY_LABELS)
+  const sections = Object.entries(categoryLabels)
     .map(([cat, label]) => ({
       category: cat as AchievementCategory,
       label,
@@ -37,9 +41,9 @@ export default function AchievementsScreen() {
   if (loading) {
     return (
       <>
-        <Stack.Screen options={{ title: "Achievements" }} />
+        <Stack.Screen options={{ title: t({ id: "app.progress.achievements.title", message: "Achievements" }) }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <Text style={{ color: colors.onSurfaceVariant }}>Loading achievements...</Text>
+          <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.progress.achievements.loading", message: "Loading achievements..." })}</Text>
         </View>
       </>
     );
@@ -48,7 +52,7 @@ export default function AchievementsScreen() {
   if (error) {
     return (
       <>
-        <Stack.Screen options={{ title: "Achievements" }} />
+        <Stack.Screen options={{ title: t({ id: "app.progress.achievements.title", message: "Achievements" }) }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
           <MaterialCommunityIcons
             name="alert-circle"
@@ -67,7 +71,7 @@ export default function AchievementsScreen() {
   if (items.length === 0) {
     return (
       <>
-        <Stack.Screen options={{ title: "Achievements" }} />
+        <Stack.Screen options={{ title: t({ id: "app.progress.achievements.title", message: "Achievements" }) }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
           <MaterialCommunityIcons
             name="trophy"
@@ -76,7 +80,7 @@ export default function AchievementsScreen() {
             style={{ marginBottom: 8 }}
           />
           <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center", padding: 16 }}>
-            Complete your first workout to start earning achievements!
+            {t({ id: "app.progress.achievements.empty", message: "Complete your first workout to start earning achievements!" })}
           </Text>
         </View>
       </>
@@ -85,7 +89,7 @@ export default function AchievementsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Achievements" }} />
+      <Stack.Screen options={{ title: t({ id: "app.progress.achievements.title", message: "Achievements" }) }} />
       <FlatList
         data={[{ key: "header" }, ...sections.map((s) => ({ key: s.category, ...s }))]}
         keyExtractor={(item) => item.key}

@@ -7,6 +7,7 @@ import type { MuscleGroup } from "../../lib/types";
 import { MUSCLE_LABELS } from "../../lib/types";
 import type { TrendRow } from "../../hooks/useMuscleVolume";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { Trans } from "@lingui/react/macro";
 
 type Props = {
   selected: MuscleGroup | null;
@@ -44,7 +45,7 @@ export default function VolumeTrendChart({
   return (
     <CardContent>
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 4 }}>
-        {selected ? `${MUSCLE_LABELS[selected]} — 8 Week Trend` : "Weekly Trend"}
+         {selected ? `${MUSCLE_LABELS[selected]} — 8 Week Trend` : <Trans id="components.muscleVolume.weeklyTrend">Weekly Trend</Trans>}
       </Text>
       {hasEnoughTrend ? (
         <View style={chartContainerStyle}>
@@ -88,7 +89,7 @@ export default function VolumeTrendChart({
             padding: 24,
           }}
         >
-          Keep training to see your trends
+           <Trans id="components.muscleVolume.keepTraining">Keep training to see your trends</Trans>
         </Text>
       )}
     </CardContent>

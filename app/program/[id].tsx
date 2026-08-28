@@ -20,6 +20,8 @@ import {
   useCuratedCaption,
 } from "@/components/program/CuratedExtras";
 import { CURATED_ATTRIBUTION } from "../../lib/curated-programs";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 export default function ProgramDetail() {
   const colors = useThemeColors();
@@ -45,9 +47,9 @@ export default function ProgramDetail() {
   if (!program) {
     return (
       <>
-        <Stack.Screen options={{ title: "Program" }} />
+          <Stack.Screen options={{ title: t({ id: "app.program.id.program", message: "Program" }) }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text>
+          <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.program.id.loading", message: "Loading..." })}</Text>
         </View>
       </>
     );
@@ -77,9 +79,9 @@ export default function ProgramDetail() {
               <Chip
                 compact
                 style={styles.starterChip}
-                accessibilityLabel="Starter program, read-only. Duplicate to edit."
+                accessibilityLabel={t({ id: "app.program.id.starter-a11y", message: "Starter program, read-only. Duplicate to edit." })}
               >
-                STARTER
+                {t({ id: "app.program.id.starter", message: "STARTER" })}
               </Chip>
             )}
             {curated && <CuratedChip />}
@@ -104,15 +106,15 @@ export default function ProgramDetail() {
 
             <View style={styles.meta}>
               <Text variant="body" style={{ color: colors.onBackground }}>
-                {days.length} day{days.length !== 1 ? "s" : ""} · {cycle} cycle{cycle !== 1 ? "s" : ""} completed
+                 {i18n._({ id: "app.program.id.meta", message: "{days, plural, one {# day} other {# days}} · {cycles, plural, one {# cycle} other {# cycles}} completed", values: { days: days.length, cycles: cycle } })}
               </Text>
               {program.is_active && currentIdx >= 0 && (
                 <Text
                   variant="body"
                   style={{ color: colors.primary, fontWeight: "600" }}
-                  accessibilityLabel={`Currently on day ${currentIdx + 1} of ${days.length}: ${dayName(days[currentIdx])}`}
+                  accessibilityLabel={i18n._({ id: "app.program.id.current-day-a11y", message: "Currently on day {current} of {total}: {name}", values: { current: currentIdx + 1, total: days.length, name: dayName(days[currentIdx]) } })}
                 >
-                  Current: Day {currentIdx + 1} — {dayName(days[currentIdx])}
+                  {i18n._({ id: "app.program.id.current-day", message: "Current: Day {day} — {name}", values: { day: currentIdx + 1, name: dayName(days[currentIdx]) } })}
                 </Text>
               )}
             </View>
@@ -124,16 +126,16 @@ export default function ProgramDetail() {
                   onPress={toggle}
                   disabled={loading}
                   style={styles.actionBtn}
-                  accessibilityLabel={program.is_active ? "Deactivate program" : "Set program as active"}
+                  accessibilityLabel={program.is_active ? t({ id: "app.program.id.deactivate-a11y", message: "Deactivate program" }) : t({ id: "app.program.id.activate-a11y", message: "Set program as active" })}
                 >
-                  {program.is_active ? "Deactivate" : "Set Active"}
+                  {program.is_active ? t({ id: "app.program.id.deactivate", message: "Deactivate" }) : t({ id: "app.program.id.set-active", message: "Set Active" })}
                 </Button>
                 <Button
                   variant="outline"
                   onPress={handleDuplicate}
                   style={styles.actionBtn}
-                  accessibilityLabel="Duplicate to edit"
-                  label="Duplicate to Edit"
+                 accessibilityLabel={t({ id: "app.program.id.duplicate-a11y", message: "Duplicate to edit" })}
+                 label={t({ id: "app.program.id.duplicate", message: "Duplicate to Edit" })}
                 />
               </View>
             ) : curated ? (
@@ -145,16 +147,16 @@ export default function ProgramDetail() {
                   onPress={toggle}
                   disabled={loading}
                   style={styles.actionBtn}
-                  accessibilityLabel={program.is_active ? "Deactivate program" : "Set program as active"}
+                  accessibilityLabel={program.is_active ? t({ id: "app.program.id.deactivate-a11y-2", message: "Deactivate program" }) : t({ id: "app.program.id.activate-a11y-2", message: "Set program as active" })}
                 >
-                  {program.is_active ? "Deactivate" : "Set Active"}
+                  {program.is_active ? t({ id: "app.program.id.deactivate-2", message: "Deactivate" }) : t({ id: "app.program.id.set-active-2", message: "Set Active" })}
                 </Button>
                 <Button
                   variant="outline"
                   onPress={() => router.push(`/program/create?programId=${program.id}`)}
                   style={styles.actionBtn}
-                  accessibilityLabel="Edit program"
-                  label="Edit"
+                   accessibilityLabel={t({ id: "app.program.id.edit-a11y", message: "Edit program" })}
+                   label={t({ id: "app.program.id.edit", message: "Edit" })}
                 />
               </View>
             ) : (
@@ -164,18 +166,18 @@ export default function ProgramDetail() {
                   onPress={toggle}
                   disabled={loading}
                   style={styles.actionBtn}
-                  accessibilityLabel={program.is_active ? "Deactivate program" : "Set program as active"}
+                  accessibilityLabel={program.is_active ? t({ id: "app.program.id.deactivate-a11y-3", message: "Deactivate program" }) : t({ id: "app.program.id.activate-a11y-3", message: "Set program as active" })}
                 >
-                  {program.is_active ? "Deactivate" : "Set Active"}
+                  {program.is_active ? t({ id: "app.program.id.deactivate-3", message: "Deactivate" }) : t({ id: "app.program.id.set-active-3", message: "Set Active" })}
                 </Button>
                 <Button
                   variant="outline"
                   onPress={() => router.push(`/program/create?programId=${program.id}`)}
                   style={styles.actionBtn}
-                  accessibilityLabel="Edit program"
-                  label="Edit"
+                   accessibilityLabel={t({ id: "app.program.id.edit-a11y-2", message: "Edit program" })}
+                   label={t({ id: "app.program.id.edit-2", message: "Edit" })}
                 />
-                <TouchableOpacity onPress={confirmDelete} accessibilityLabel="Delete program" hitSlop={8} style={{ padding: 8 }}>
+                 <TouchableOpacity onPress={confirmDelete} accessibilityLabel={t({ id: "app.program.id.delete-a11y", message: "Delete program" })} hitSlop={8} style={{ padding: 8 }}>
                   <MaterialCommunityIcons name="delete" size={24} color={colors.onSurface} />
                 </TouchableOpacity>
               </View>
@@ -183,15 +185,15 @@ export default function ProgramDetail() {
 
             <View style={styles.sectionHeader}>
               <Text variant="title" style={{ color: colors.onBackground }}>
-                Workout Days ({days.length})
+                 {t({ id: "app.program.id.workout-days", message: `Workout Days (${days.length})` })}
               </Text>
               {!starter && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onPress={() => router.push(`/program/pick-template?programId=${program.id}`)}
-                  accessibilityLabel="Add workout day"
-                  label="Add Day"
+                 accessibilityLabel={t({ id: "app.program.id.add-day-a11y", message: "Add workout day" })}
+                 label={t({ id: "app.program.id.add-day", message: "Add Day" })}
                 />
               )}
             </View>
@@ -207,16 +209,16 @@ export default function ProgramDetail() {
                 borderWidth: 2,
               },
             ])}
-            accessibilityLabel={`Day ${index + 1}: ${dayName(item)}${item.id === program.current_day_id ? ", current day" : ""}`}
+            accessibilityLabel={i18n._({ id: "app.program.id.day-a11y", message: "Day {day}: {name}{current, select, true {, current day} false {}}", values: { day: index + 1, name: dayName(item), current: item.id === program.current_day_id } })}
           >
             <CardContent style={styles.cardContent}>
               <View style={styles.cardInfo}>
                 <Text variant="subtitle" style={{ color: colors.onSurface }}>
-                  Day {index + 1}: {dayName(item)}
+                   {i18n._({ id: "app.program.id.day-name", message: "Day {day}: {name}", values: { day: index + 1, name: dayName(item) } })}
                 </Text>
                 {item.template_id === null && (
                   <Text variant="caption" style={{ color: colors.error }}>
-                    Deleted Template
+                    {t({ id: "app.program.id.deleted-template", message: "Deleted Template" })}
                   </Text>
                 )}
                 {item.label && item.template_name && item.label !== item.template_name && (
@@ -227,13 +229,13 @@ export default function ProgramDetail() {
               </View>
               {!starter && (
                 <View style={styles.cardActions}>
-                  <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={`Move ${dayName(item)} up`} accessibilityHint="Reorders workout day" hitSlop={8} style={{ padding: 8 }}>
+                  <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={t({ id: "app.program.id.move-up", message: `Move ${dayName(item)} up` })} accessibilityHint={t({ id: "app.program.id.reorder-hint", message: "Reorders workout day" })} hitSlop={8} style={{ padding: 8 }}>
                     <MaterialCommunityIcons name="arrow-up" size={18} color={index === 0 ? colors.onSurfaceDisabled : colors.onSurface} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => move(index, 1)} disabled={index === days.length - 1} accessibilityLabel={`Move ${dayName(item)} down`} accessibilityHint="Reorders workout day" hitSlop={8} style={{ padding: 8 }}>
+                  <TouchableOpacity onPress={() => move(index, 1)} disabled={index === days.length - 1} accessibilityLabel={t({ id: "app.program.id.move-down", message: `Move ${dayName(item)} down` })} accessibilityHint={t({ id: "app.program.id.reorder-hint-down", message: "Reorders workout day" })} hitSlop={8} style={{ padding: 8 }}>
                     <MaterialCommunityIcons name="arrow-down" size={18} color={index === days.length - 1 ? colors.onSurfaceDisabled : colors.onSurface} />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={`Remove ${dayName(item)}`} hitSlop={8} style={{ padding: 8 }}>
+                  <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={t({ id: "app.program.id.remove-day-a11y", message: `Remove ${dayName(item)}` })} hitSlop={8} style={{ padding: 8 }}>
                     <MaterialCommunityIcons name="close" size={18} color={colors.onSurface} />
                   </TouchableOpacity>
                 </View>
@@ -247,9 +249,9 @@ export default function ProgramDetail() {
               variant="body"
               style={{ color: colors.onSurfaceVariant }}
               accessibilityRole="text"
-              accessibilityLabel="No workout days added yet"
+               accessibilityLabel={t({ id: "app.program.id.no-days-a11y", message: "No workout days added yet" })}
             >
-              No workout days yet. Add templates above.
+               {t({ id: "app.program.id.no-days", message: "No workout days yet. Add templates above." })}
             </Text>
           </View>
         }
