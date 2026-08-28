@@ -436,6 +436,21 @@ describe('Settings Screen Acceptance', () => {
     })
   })
 
+  // ── About section header spacing (BLD-4579) ──────────────────────────────────
+
+  it('About version row has no paddingTop so header gap equals a single spacing.sm (BLD-4579)', async () => {
+    const { getByTestId } = renderScreen(<Settings />)
+    const versionRow = getByTestId('settings-version-row')
+    const flat = StyleSheet.flatten(versionRow.props.style)
+    // SettingsTile title applies marginBottom: spacing.sm already.
+    // versionRow must NOT add any paddingTop — otherwise the About header gap is 2×spacing.sm.
+    expect(flat.paddingTop ?? 0).toBe(0)
+    // Bottom padding kept for visual rhythm below the row.
+    expect(flat.paddingBottom).toBe(spacing.sm)
+    // Touch target height must remain accessible (>= 48dp).
+    expect(flat.minHeight).toBeGreaterThanOrEqual(48)
+  })
+
   // ── Accessibility ──────────────────────────────────
 
   it('all switches have accessibilityRole="switch" and accessibilityHint text', async () => {

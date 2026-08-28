@@ -508,7 +508,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
+    // BLD-4579: SettingsTile title already applies `marginBottom: spacing.sm`; using
+    // paddingVertical here doubled the gap to 2×spacing.sm. Drop paddingTop and keep
+    // only paddingBottom so the header-to-first-row gap equals every other section.
+    paddingBottom: spacing.sm,
     minHeight: 48,
   },
   versionRowRight: {
