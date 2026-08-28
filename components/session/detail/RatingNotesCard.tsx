@@ -6,6 +6,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import RatingWidget from "@/components/RatingWidget";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   rating: number | null;
@@ -32,7 +33,7 @@ export function RatingNotesCard({
       <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
         <CardContent style={{ alignItems: "center" }}>
           <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
-            Rating
+            {t({ id: "components.session.detail.rating-notes.rating", message: "Rating" })}
           </Text>
           <RatingWidget value={rating} onChange={onRatingChange} />
         </CardContent>
@@ -43,14 +44,14 @@ export function RatingNotesCard({
           <View style={styles.notesHeader}>
             <MaterialCommunityIcons name="note-edit-outline" size={20} color={colors.primary} />
             <Text variant="subtitle" style={{ color: colors.onSurface, marginLeft: 8, flex: 1 }}>
-              Session notes
+              {t({ id: "components.session.detail.rating-notes.session-notes", message: "Session notes" })}
             </Text>
           </View>
           <Input
             type="textarea"
             variant="outline"
             rows={5}
-            placeholder="Add notes about this workout..."
+            placeholder={t({ id: "components.session.detail.rating-notes.placeholder", message: "Add notes about this workout..." })}
             placeholderTextColor={colors.onSurfaceVariant}
             value={notesText}
             onChangeText={(t) => onNotesChange(t.slice(0, 500))}
@@ -58,7 +59,7 @@ export function RatingNotesCard({
             maxLength={500}
             textAlignVertical="top"
             inputStyle={{ ...styles.notesInput, color: colors.onSurface }}
-            accessibilityLabel="Session notes"
+            accessibilityLabel={t({ id: "components.session.detail.rating-notes.session-notes-a11y", message: "Session notes" })}
           />
           <Text
             variant="caption"

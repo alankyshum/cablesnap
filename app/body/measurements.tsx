@@ -1,3 +1,6 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { useState, useCallback } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/button";
@@ -28,6 +31,21 @@ const FIELDS = [
 
 type FieldKey = (typeof FIELDS)[number]["key"];
 type FormState = Record<FieldKey | "body_fat", string>;
+
+function translatedFieldLabel(key: FieldKey): string {
+  switch (key) {
+    case "waist": return t({ id: "body.measurements.field.waist", message: "Waist" });
+    case "chest": return t({ id: "body.measurements.field.chest", message: "Chest" });
+    case "hips": return t({ id: "body.measurements.field.hips", message: "Hips" });
+    case "left_arm": return t({ id: "body.measurements.field.leftArm", message: "Left Arm" });
+    case "right_arm": return t({ id: "body.measurements.field.rightArm", message: "Right Arm" });
+    case "left_thigh": return t({ id: "body.measurements.field.leftThigh", message: "Left Thigh" });
+    case "right_thigh": return t({ id: "body.measurements.field.rightThigh", message: "Right Thigh" });
+    case "left_calf": return t({ id: "body.measurements.field.leftCalf", message: "Left Calf" });
+    case "right_calf": return t({ id: "body.measurements.field.rightCalf", message: "Right Calf" });
+    case "neck": return t({ id: "body.measurements.field.neck", message: "Neck" });
+  }
+}
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -119,15 +137,20 @@ export default function Measurements() {
   };
 
   const fieldInputs = FIELDS.map((f) => (
+    (() => {
+      const translatedLabel = translatedFieldLabel(f.key);
+      return (
     <Input
       key={f.key}
-      label={`${f.label} (${unit})`}
+       label={i18n._({ id: "body.measurements.field.label", message: "{label} ({unit})", values: { label: translatedLabel, unit } })}
       value={form[f.key]}
       onChangeText={(v) => update(f.key, v)}
       keyboardType="numeric"
       containerStyle={layout.atLeastMedium ? styles.wideInput : styles.input}
-      accessibilityLabel={`${f.label} in ${unit}`}
+       accessibilityLabel={i18n._({ id: "body.measurements.field.a11y", message: "{label} in {unit}", values: { label: translatedLabel, unit } })}
     />
+      );
+    })()
   ));
 
   return (
@@ -140,15 +163,15 @@ export default function Measurements() {
       ListHeaderComponent={
         <>
           <Text variant="title" style={{ color: colors.onBackground, marginBottom: 16 }}>
-            Log Measurements
+             <Trans id="body.measurements.title">Log Measurements</Trans>
           </Text>
 
           <Input
-            label="Date (YYYY-MM-DD)"
+             label={t({ id: "body.measurements.date.label", message: "Date (YYYY-MM-DD)" })}
             value={date}
             onChangeText={setDate}
             containerStyle={styles.input}
-            accessibilityLabel="Measurement date"
+             accessibilityLabel={t({ id: "body.measurements.date.a11y", message: "Measurement date" })}
           />
 
           {layout.atLeastMedium ? (
@@ -160,20 +183,20 @@ export default function Measurements() {
           )}
 
           <Input
-            label="Body Fat %"
+             label={t({ id: "body.measurements.bodyFat.label", message: "Body Fat %" })}
             value={form.body_fat}
             onChangeText={(v) => update("body_fat", v)}
             keyboardType="numeric"
             containerStyle={styles.input}
-            accessibilityLabel="Body fat percentage"
+             accessibilityLabel={t({ id: "body.measurements.bodyFat.a11y", message: "Body fat percentage" })}
           />
 
           <Input
-            label="Notes (optional)"
+             label={t({ id: "body.measurements.notes.label", message: "Notes (optional)" })}
             value={notes}
             onChangeText={setNotes}
             containerStyle={styles.input}
-            accessibilityLabel="Optional notes"
+             accessibilityLabel={t({ id: "body.measurements.notes.a11y", message: "Optional notes" })}
           />
 
           <View style={styles.buttons}>
@@ -181,8 +204,8 @@ export default function Measurements() {
               variant="outline"
               onPress={() => router.back()}
               style={{ flex: 1, marginRight: 8 }}
-              accessibilityLabel="Cancel measurement log"
-              label="Cancel"
+               accessibilityLabel={t({ id: "body.measurements.cancel.a11y", message: "Cancel measurement log" })}
+               label={t({ id: "body.measurements.cancel.label", message: "Cancel" })}
             />
             <Button
               variant="default"
@@ -190,8 +213,8 @@ export default function Measurements() {
               loading={saving}
               disabled={saving}
               style={{ flex: 1 }}
-              accessibilityLabel="Save measurements"
-              label="Save"
+               accessibilityLabel={t({ id: "body.measurements.save.a11y", message: "Save measurements" })}
+               label={t({ id: "body.measurements.save.label", message: "Save" })}
             />
           </View>
         </>

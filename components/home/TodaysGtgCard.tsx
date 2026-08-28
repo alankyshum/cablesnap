@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { TodayGtgSummaryRow } from "@/lib/db/day-session";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   colors: ThemeColors;
@@ -104,7 +105,7 @@ export default function TodaysGtgCard({ colors, rows, onRowPress }: Props) {
             onPress={() => onRowPress(row.day_session_id)}
             accessible
             accessibilityRole="button"
-            accessibilityLabel={`${row.exercise_name}, ${row.total_reps} total reps across ${row.set_count} sets. Tap to view details.`}
+            accessibilityLabel={t({ id: "home.gtg.entryA11y", message: `${row.exercise_name}, ${row.total_reps} total reps across ${row.set_count} sets. Tap to view details.` })}
             style={({ pressed }) => [
               styles.row,
               { borderTopColor: colors.outline, opacity: pressed ? 0.7 : 1 },
@@ -127,7 +128,7 @@ export default function TodaysGtgCard({ colors, rows, onRowPress }: Props) {
               <View style={styles.stats}>
                 <Text
                   style={[styles.statValue, { color: colors.primary }]}
-                  accessibilityLabel={`${row.total_reps} total reps`}
+                  accessibilityLabel={t({ id: "home.gtg.repsA11y", message: `${row.total_reps} total reps` })}
                 >
                   {row.total_reps}
                 </Text>
@@ -138,7 +139,7 @@ export default function TodaysGtgCard({ colors, rows, onRowPress }: Props) {
               <View style={styles.stats}>
                 <Text
                   style={[styles.statValue, { color: colors.onSurface }]}
-                  accessibilityLabel={`${row.set_count} sets`}
+                  accessibilityLabel={t({ id: "home.gtg.setsA11y", message: `${row.set_count} sets` })}
                 >
                   {row.set_count}
                 </Text>

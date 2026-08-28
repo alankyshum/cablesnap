@@ -4,6 +4,7 @@ import { Text } from "@/components/ui/text";
 import { spacing } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@/lib/i18n";
 
 type Props = {
   duration: string;
@@ -29,7 +30,7 @@ export function ShareCardStats({ duration, sets, volume, unit }: Props) {
         <Text
           style={[styles.statLabel, { color: colors.onSurfaceVariant }]}
         >
-          Duration
+          {t({ id: "share.stats.duration", message: "Duration" })}
         </Text>
       </View>
       <View style={[styles.statDivider, { backgroundColor: colors.outline }]} />
@@ -40,7 +41,7 @@ export function ShareCardStats({ duration, sets, volume, unit }: Props) {
         <Text
           style={[styles.statLabel, { color: colors.onSurfaceVariant }]}
         >
-          Sets
+          {t({ id: "share.stats.sets", message: "Sets" })}
         </Text>
       </View>
       <View style={[styles.statDivider, { backgroundColor: colors.outline }]} />
@@ -51,7 +52,7 @@ export function ShareCardStats({ duration, sets, volume, unit }: Props) {
         <Text
           style={[styles.statLabel, { color: colors.onSurfaceVariant }]}
         >
-          Volume ({unit})
+          {t({ id: "share.stats.volume", message: "Volume ({unit})" }, { unit })}
         </Text>
       </View>
     </View>

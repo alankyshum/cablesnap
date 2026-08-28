@@ -1,4 +1,5 @@
 const React = require('react');
+const ReactNative = require('react-native');
 
 const BottomSheet = React.forwardRef(({ children, ...props }, ref) => {
   React.useImperativeHandle(ref, () => ({
@@ -34,11 +35,11 @@ const BottomSheetModalProvider = ({ children }) =>
   React.createElement(React.Fragment, null, children);
 
 const BottomSheetFlatList = React.forwardRef((props, ref) =>
-  React.createElement('FlatList', { ...props, ref })
+  React.createElement(ReactNative.FlatList, { ...props, ref })
 );
 
 const BottomSheetScrollView = React.forwardRef((props, ref) =>
-  React.createElement('ScrollView', { ...props, ref })
+  React.createElement(ReactNative.ScrollView, { ...props, ref })
 );
 
 const BottomSheetBackdrop = (props) =>

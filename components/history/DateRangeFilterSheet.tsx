@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Check } from "lucide-react-native";
@@ -13,12 +15,14 @@ type DateRangeFilterSheetProps = {
   onSelect: (preset: DatePreset | null) => void;
 };
 
-const PRESETS: { value: DatePreset; label: string }[] = [
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-  { value: "90d", label: "Last 90 days" },
-  { value: "year", label: "This year" },
-];
+function getPresets(): { value: DatePreset; label: string }[] {
+  return [
+  { value: "7d", label: t({ id: "history.dateRange.last7", message: "Last 7 days" }) },
+  { value: "30d", label: t({ id: "history.dateRange.last30", message: "Last 30 days" }) },
+  { value: "90d", label: t({ id: "history.dateRange.last90", message: "Last 90 days" }) },
+  { value: "year", label: t({ id: "history.dateRange.thisYear", message: "This year" }) },
+  ];
+}
 
 /**
  * Bottom-sheet for the Date Range filter (BLD-938). Single-select,
@@ -32,6 +36,7 @@ export function DateRangeFilterSheet({
   onSelect,
 }: DateRangeFilterSheetProps) {
   const colors = useThemeColors();
+  const presets = getPresets();
 
   const handleSelect = (preset: DatePreset) => {
     onSelect(preset);
@@ -47,24 +52,24 @@ export function DateRangeFilterSheet({
     <BottomSheet
       isVisible={isVisible}
       onClose={onClose}
-      title="Filter by date range"
+      title={t({ id: "history.dateRange.title", message: "Filter by date range" })}
       snapPoints={[0.45, 0.7]}
     >
       <View style={styles.header}>
         <Pressable
           onPress={handleClear}
           style={styles.clearButton}
-          accessibilityLabel="Clear date range filter"
+          accessibilityLabel={t({ id: "history.dateRange.clearA11y", message: "Clear date range filter" })}
           accessibilityRole="button"
         >
           <Text variant="body" style={{ color: colors.primary }}>
-            Clear
+            {t({ id: "history.dateRange.clear", message: "Clear" })}
           </Text>
         </Pressable>
       </View>
 
       <View>
-        {PRESETS.map((p) => {
+        {presets.map((p) => {
           const isSelected = p.value === selectedPreset;
           return (
             <Pressable
@@ -74,7 +79,7 @@ export function DateRangeFilterSheet({
                 styles.row,
                 isSelected && { backgroundColor: colors.primaryContainer },
               ]}
-              accessibilityLabel={`${p.label}${isSelected ? ", selected" : ""}`}
+              accessibilityLabel={i18n._({ id: "history.dateRange.optionA11y", message: "{label}{selected, select, true {, selected} false {}}", values: { label: p.label, selected: isSelected } })}
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
             >

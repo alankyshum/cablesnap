@@ -20,6 +20,7 @@ import { X } from "lucide-react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type Source = number | { uri: string };
 
@@ -97,7 +98,7 @@ function ZoomContents({ source, accessibilityLabel, safetyNote, onClose }: { sou
       <View style={[styles.backdrop, { backgroundColor: "rgba(0,0,0,0.92)" }]}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Close zoomed image"
+          accessibilityLabel={t({ id: "components.exercises.image-zoom.close", message: "Close zoomed image" })}
           onPress={handleClose}
           style={styles.closeBtn}
           hitSlop={12}

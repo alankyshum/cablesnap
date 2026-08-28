@@ -9,6 +9,8 @@ import { toDisplay } from "@/lib/units";
 import { MUSCLE_LABELS } from "@/lib/types";
 import type { MonthlyReportData } from "@/lib/db";
 import { formatVolume } from "@/hooks/useMonthlyReport";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 // ─── Stat Pill ─────────────────────────────────────────────────────
 
@@ -29,7 +31,7 @@ function StatValue({
   return (
     <View
       style={styles.statItem}
-      accessibilityLabel={`${label}: ${value}${unit ? ` ${unit}` : ""}${delta ? `, ${delta} compared to last month` : ""}`}
+       accessibilityLabel={i18n._({ id: "components.progress.monthlyReport.statA11y", message: "{label}: {value}{unit, select, none {} other { {unit}}}{delta, select, none {} other {, {delta} compared to last month}}", values: { label, value, unit: unit || "none", delta: delta || "none" } })}
     >
       <Text style={[styles.statLabel, { color: colors.onSurfaceVariant }]}>{label}</Text>
       <Text style={[styles.statValue, { color: colors.onSurface }]}>
@@ -62,18 +64,18 @@ export function HeroStatsCard({
     <Card>
       <CardContent style={styles.heroContainer}>
         <StatValue
-          label="Workouts"
+           label={t({ id: "components.progress.monthlyReport.workouts", message: "Workouts" })}
           value={String(workouts.sessionCount)}
           delta={sessionDelta}
         />
         <StatValue
-          label="Volume"
+           label={t({ id: "components.progress.monthlyReport.volume", message: "Volume" })}
           value={vol}
           unit={unit}
           delta={volChange}
         />
         <StatValue
-          label="Duration"
+           label={t({ id: "components.progress.monthlyReport.duration", message: "Duration" })}
           value={formatDuration(workouts.totalDurationSeconds)}
         />
       </CardContent>
@@ -101,20 +103,20 @@ export function ConsistencyCard({
           style={[styles.sectionTitle, { color: colors.onSurface }]}
           accessibilityRole="header"
         >
-          Consistency
+          {t({ id: "components.progress.monthlyReport.consistency", message: "Consistency" })}
         </Text>
         <View style={styles.consistencyRow}>
           <Text
             style={[styles.consistencyValue, { color: colors.onSurface }]}
-            accessibilityLabel={`${trainingDays} out of ${daysInMonth} days trained`}
+             accessibilityLabel={t({ id: "components.progress.monthlyReport.trainingDaysA11y", message: `${trainingDays} out of ${daysInMonth} days trained` })}
           >
-            {trainingDays}/{daysInMonth} days trained
+            {trainingDays}/{daysInMonth} {t({ id: "components.progress.monthlyReport.daysTrained", message: "days trained" })}
           </Text>
           <Text
             style={[styles.consistencyValue, { color: colors.onSurface }]}
-            accessibilityLabel={`Best streak: ${longestStreak} consecutive days`}
+             accessibilityLabel={t({ id: "components.progress.monthlyReport.bestStreakA11y", message: `Best streak: ${longestStreak} consecutive days` })}
           >
-            Best streak: {longestStreak} {longestStreak === 1 ? "day" : "days"}
+            {t({ id: "components.progress.monthlyReport.bestStreak", message: "Best streak" })}: {longestStreak} {longestStreak === 1 ? t({ id: "components.progress.monthlyReport.day", message: "day" }) : t({ id: "components.progress.monthlyReport.days", message: "days" })}
           </Text>
         </View>
       </CardContent>
@@ -141,13 +143,13 @@ export function PRsCard({
           style={[styles.sectionTitle, { color: colors.onSurface }]}
           accessibilityRole="header"
         >
-          PRs This Month
+          {t({ id: "components.progress.monthlyReport.prsThisMonth", message: "PRs This Month" })}
         </Text>
         {prs.slice(0, 5).map((pr) => (
           <View
             key={pr.exerciseId}
             style={styles.prRow}
-            accessibilityLabel={`${pr.exerciseName}: ${toDisplay(pr.weight, unit)} ${unit} personal record`}
+             accessibilityLabel={t({ id: "components.progress.monthlyReport.prA11y", message: `${pr.exerciseName}: ${toDisplay(pr.weight, unit)} ${unit} personal record` })}
           >
             <Text style={[styles.prName, { color: colors.onSurface }]}>
               {pr.exerciseName}
@@ -181,7 +183,7 @@ export function MuscleBalanceCard({
           style={[styles.sectionTitle, { color: colors.onSurface }]}
           accessibilityRole="header"
         >
-          Sets by Muscle Group
+          {t({ id: "components.progress.monthlyReport.setsByMuscle", message: "Sets by Muscle Group" })}
         </Text>
         {distribution.slice(0, 8).map((item) => {
           const pct = Math.round((item.sets / maxSets) * 100);
@@ -190,7 +192,7 @@ export function MuscleBalanceCard({
             <View
               key={item.muscle}
               style={styles.muscleRow}
-              accessibilityLabel={`${label}: ${item.sets} sets`}
+               accessibilityLabel={t({ id: "components.progress.monthlyReport.muscleSetsA11y", message: `${label}: ${item.sets} sets` })}
             >
               <Text style={[styles.muscleLabel, { color: colors.onSurface }]}>
                 {label}
@@ -231,11 +233,11 @@ export function MostImprovedCard({
           style={[styles.sectionTitle, { color: colors.onSurface }]}
           accessibilityRole="header"
         >
-          Most Improved
+          {t({ id: "components.progress.monthlyReport.mostImproved", message: "Most Improved" })}
         </Text>
         <Text
           style={[styles.improvedText, { color: colors.onSurface }]}
-          accessibilityLabel={`${data.exerciseName}: estimated one rep max increased by ${data.percentChange} percent`}
+           accessibilityLabel={t({ id: "components.progress.monthlyReport.improvedA11y", message: `${data.exerciseName}: estimated one rep max increased by ${data.percentChange} percent` })}
         >
           {data.exerciseName}: +{data.percentChange}% e1RM
         </Text>
@@ -269,11 +271,11 @@ export function BodyCard({
           style={[styles.sectionTitle, { color: colors.onSurface }]}
           accessibilityRole="header"
         >
-          Body Weight
+          {t({ id: "components.progress.monthlyReport.bodyWeight", message: "Body Weight" })}
         </Text>
         <Text
           style={[styles.bodyText, { color: colors.onSurface }]}
-          accessibilityLabel={`Body weight changed from ${start} to ${end} ${unit}, ${sign}${delta}`}
+           accessibilityLabel={t({ id: "components.progress.monthlyReport.bodyWeightA11y", message: `Body weight changed from ${start} to ${end} ${unit}, ${sign}${delta}` })}
         >
           {start} → {end} {unit}{" "}
           <Text style={{ color: deltaColor }}>({sign}{delta})</Text>
@@ -300,13 +302,13 @@ export function NutritionCard({
           style={[styles.sectionTitle, { color: colors.onSurface }]}
           accessibilityRole="header"
         >
-          Nutrition
+          {t({ id: "components.progress.monthlyReport.nutrition", message: "Nutrition" })}
         </Text>
         <Text
           style={[styles.nutritionText, { color: colors.onSurface }]}
-          accessibilityLabel={`${data.daysOnTarget} out of ${data.daysTracked} tracked days on calorie target`}
+           accessibilityLabel={t({ id: "components.progress.monthlyReport.nutritionA11y", message: `${data.daysOnTarget} out of ${data.daysTracked} tracked days on calorie target` })}
         >
-          {data.daysOnTarget}/{data.daysTracked} days on target
+           {t({ id: "components.progress.monthlyReport.daysOnTarget", message: `${data.daysOnTarget}/${data.daysTracked} days on target` })}
         </Text>
       </CardContent>
     </Card>

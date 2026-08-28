@@ -6,6 +6,7 @@ import { spacing, fontSizes } from "@/constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { GITHUB_REPO_URL } from "@/constants/github";
+import { t } from "@lingui/core/macro";
 
 export type MonthlyShareCardProps = {
   monthLabel: string;
@@ -83,10 +84,10 @@ export default function MonthlyShareCard({
 
       {/* Stats grid */}
       <View style={shareStyles.statsGrid}>
-        <StatBlock label="Workouts" value={String(sessionCount)} />
-        <StatBlock label={`Volume (${unit})`} value={volume} />
-        <StatBlock label="PRs" value={String(prCount)} />
-        <StatBlock label="Best Streak" value={`${longestStreak}d`} />
+         <StatBlock label={t({ id: "share.monthly.workouts", message: "Workouts" })} value={String(sessionCount)} />
+         <StatBlock label={t({ id: "share.monthly.volume", message: `Volume (${unit})` })} value={volume} />
+         <StatBlock label={t({ id: "share.monthly.prs", message: "PRs" })} value={String(prCount)} />
+         <StatBlock label={t({ id: "share.monthly.bestStreak", message: "Best Streak" })} value={`${longestStreak}d`} />
       </View>
 
       {/* Footer */}

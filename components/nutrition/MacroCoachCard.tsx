@@ -38,6 +38,8 @@ import {
 } from "@/lib/db/macro-coach-settings";
 import { clearMacroCoachMemo } from "@/lib/db/macro-coach";
 import type { CoachSuggestion } from "@/lib/macro-coach";
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -106,7 +108,7 @@ export function MacroCoachCard({
     clearMacroCoachMemo();
     setSubmitted(true);
     onDismiss?.();
-    AccessibilityInfo.announceForAccessibility(`Target updated to ${suggTarget} calories per day.`);
+    AccessibilityInfo.announceForAccessibility(t({ id: "components.nutrition.coach.targetUpdated", message: `Target updated to ${suggTarget} calories per day.` }));
   }
 
   async function handleSetOwn() {
@@ -116,7 +118,7 @@ export function MacroCoachCard({
     // Reject below-floor input with inline error — do not silently clamp (preserves user agency).
     if (parsed < safetyFloorKcal) {
       setCustomKcalError(
-        `Minimum safe target is ${safetyFloorKcal.toLocaleString()} kcal/day`
+        t({ id: "components.nutrition.coach.minimumTarget", message: `Minimum safe target is ${safetyFloorKcal.toLocaleString()} kcal/day` })
       );
       return;
     }
@@ -179,11 +181,11 @@ export function MacroCoachCard({
             style={{ color: colors.onSurface, flex: 1 }}
             accessibilityRole="header"
           >
-            Macro Coach — {weekLabel}
+            <Trans id="components.nutrition.coach.header">Macro Coach — {weekLabel}</Trans>
           </Text>
           <TouchableOpacity
             onPress={() => setShowInfo(true)}
-            accessibilityLabel="How this is computed"
+            accessibilityLabel={t({ id: "components.nutrition.coach.howComputedA11y", message: "How this is computed" })}
             hitSlop={8}
           >
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>ⓘ</Text>
@@ -191,14 +193,14 @@ export function MacroCoachCard({
         </View>
 
         <Text variant="body" style={[styles.tagline, { color: colors.onSurfaceVariant }]}>
-          Here&apos;s what your data suggests. You set your target.
+          <Trans id="components.nutrition.coach.tagline">Here&apos;s what your data suggests. You set your target.</Trans>
         </Text>
 
         {/* Post-decision check-in */}
         {showPostDecisionCheckin && lastAcceptedTarget && (
           <View style={styles.section}>
             <Text variant="body" style={{ color: colors.onSurface }}>
-              Last Sunday you set {roundTo50(lastAcceptedTarget).toLocaleString()} kcal/day. How did the week feel?
+              <Trans id="components.nutrition.coach.lastWeekFeel">Last Sunday you set {roundTo50(lastAcceptedTarget).toLocaleString()} kcal/day. How did the week feel?</Trans>
             </Text>
             <RightWhyButtons
               selected={rightWhy}
@@ -213,10 +215,10 @@ export function MacroCoachCard({
 
         {/* Data summary */}
         <View style={styles.section}>
-          <DataRow label="Trend weight" value={`${suggestion.trendWeight.toFixed(1)} kg`} colors={colors} />
-          <DataRow label="Avg intake this week" value={`~${suggestion.avgIntake.toLocaleString()} kcal/day`} colors={colors} />
+          <DataRow label={t({ id: "components.nutrition.coach.trendWeight", message: "Trend weight" })} value={`${suggestion.trendWeight.toFixed(1)} kg`} colors={colors} />
+          <DataRow label={t({ id: "components.nutrition.coach.avgIntake", message: "Avg intake this week" })} value={`~${suggestion.avgIntake.toLocaleString()} kcal/day`} colors={colors} />
           <DataRow
-            label="Estimated TDEE"
+            label={t({ id: "components.nutrition.coach.tdee", message: "Estimated TDEE" })}
             value={`~${suggestion.estimatedTDEELow.toLocaleString()}–${suggestion.estimatedTDEEHigh.toLocaleString()} kcal`}
             colors={colors}
           />
@@ -226,22 +228,22 @@ export function MacroCoachCard({
         {!infoOnly && suggestion.stabilityClass !== "stable" && (
           <View style={styles.section}>
             <Text variant="subtitle" style={{ color: colors.onSurface }}>
-              Suggested target:{" "}
+              <Trans id="components.nutrition.coach.suggestedTarget">Suggested target:</Trans>{" "}
               <Text variant="subtitle" style={{ color: colors.onSurface }}>
                 {suggTarget.toLocaleString()} kcal/day
               </Text>
             </Text>
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-              (you&apos;re currently at {suggestion.currentTarget.toLocaleString()})
+              <Trans id="components.nutrition.coach.currentTarget">(you&apos;re currently at {suggestion.currentTarget.toLocaleString()})</Trans>
             </Text>
             {suggestion.floorActive && (
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                Held at your safety floor ({suggTarget.toLocaleString()} kcal).
+                <Trans id="components.nutrition.coach.safetyFloor">Held at your safety floor ({suggTarget.toLocaleString()} kcal).</Trans>
               </Text>
             )}
             {suggestion.capActive && (
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                Limited to ±300 kcal/week.
+                <Trans id="components.nutrition.coach.cap">Limited to ±300 kcal/week.</Trans>
               </Text>
             )}
           </View>
@@ -250,7 +252,7 @@ export function MacroCoachCard({
         {suggestion.stabilityClass === "stable" && (
           <View style={styles.section}>
             <Text variant="body" style={{ color: colors.onSurface }}>
-              Weight stable — no change suggested.
+              <Trans id="components.nutrition.coach.stable">Weight stable — no change suggested.</Trans>
             </Text>
           </View>
         )}
@@ -258,7 +260,7 @@ export function MacroCoachCard({
         {infoOnly && (
           <View style={styles.section}>
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-              Showing TDEE info only this week.
+              <Trans id="components.nutrition.coach.infoOnly">Showing TDEE info only this week.</Trans>
             </Text>
           </View>
         )}
@@ -267,7 +269,7 @@ export function MacroCoachCard({
         {!infoOnly && !showPostDecisionCheckin && suggestion.stabilityClass !== "stable" && (
           <View style={styles.section}>
             <Text variant="body" style={{ color: colors.onSurface }}>
-              How did your training feel this week?
+              <Trans id="components.nutrition.coach.trainingFeel">How did your training feel this week?</Trans>
             </Text>
             <RightWhyButtons selected={rightWhy} onSelect={setRightWhy} colors={colors} />
           </View>
@@ -277,20 +279,20 @@ export function MacroCoachCard({
         {!infoOnly && suggestion.stabilityClass !== "stable" && (
           <View style={styles.actionRow}>
             <ActionButton
-              label="Use this number"
+              label={t({ id: "components.nutrition.coach.useNumber", message: "Use this number" })}
               onPress={handleUseThisNumber}
               disabled={rightWhy === null}
               primary
               colors={colors}
-              accessibilityHint={rightWhy === null ? "Select how training felt first" : undefined}
+              accessibilityHint={rightWhy === null ? t({ id: "components.nutrition.coach.selectFeelHint", message: "Select how training felt first" }) : undefined}
             />
             <ActionButton
-              label="Set my own"
+              label={t({ id: "components.nutrition.coach.setOwn", message: "Set my own" })}
               onPress={() => setShowSetOwn(true)}
               colors={colors}
             />
             <ActionButton
-              label="Not this week"
+              label={t({ id: "components.nutrition.coach.notThisWeek", message: "Not this week" })}
               onPress={handleNotThisWeek}
               colors={colors}
             />
@@ -302,10 +304,9 @@ export function MacroCoachCard({
           <Text
             variant="caption"
             style={{ color: colors.onSurfaceVariant, fontStyle: "italic" }}
-            accessibilityLabel={`Logging consistency this month: ${suggestion.loggingConsistencyDays} of 30 days. That consistency is doing more for you than any number on this card.`}
+            accessibilityLabel={t({ id: "components.nutrition.coach.consistencyA11y", message: `Logging consistency this month: ${suggestion.loggingConsistencyDays} of 30 days. That consistency is doing more for you than any number on this card.` })}
           >
-            Logging consistency this month: {suggestion.loggingConsistencyDays}/30 days.{"\n"}
-            That consistency is doing more for you than any number on this card.
+            <Trans id="components.nutrition.coach.consistency">Logging consistency this month: {suggestion.loggingConsistencyDays}/30 days.{"\n"}That consistency is doing more for you than any number on this card.</Trans>
           </Text>
         </View>
 
@@ -314,16 +315,16 @@ export function MacroCoachCard({
           <View style={styles.modalOverlay}>
             <View style={[styles.modalBox, { backgroundColor: colors.surface }]}>
               <Text variant="subtitle" style={{ color: colors.onSurface }}>
-                Enter your target (kcal/day)
+                <Trans id="components.nutrition.coach.enterTarget">Enter your target (kcal/day)</Trans>
               </Text>
               <TextInput
                 style={[styles.textInput, { color: colors.onSurface, borderColor: colors.onSurfaceVariant }]}
                 keyboardType="number-pad"
                 value={customKcal}
                 onChangeText={(v) => { setCustomKcal(v); setCustomKcalError(null); }}
-                placeholder="e.g. 2100"
+                 placeholder={t({ id: "components.nutrition.coach.targetPlaceholder", message: "e.g. 2100" })}
                 placeholderTextColor={colors.onSurfaceVariant}
-                accessibilityLabel="Enter calorie target"
+                accessibilityLabel={t({ id: "components.nutrition.coach.enterTargetA11y", message: "Enter calorie target" })}
                 allowFontScaling
                 maxLength={5}
               />
@@ -337,8 +338,8 @@ export function MacroCoachCard({
                 </Text>
               )}
               <View style={styles.actionRow}>
-                <ActionButton label="Confirm" onPress={handleSetOwn} primary colors={colors} />
-                <ActionButton label="Cancel" onPress={() => setShowSetOwn(false)} colors={colors} />
+                <ActionButton label={t({ id: "components.nutrition.coach.confirm", message: "Confirm" })} onPress={handleSetOwn} primary colors={colors} />
+                <ActionButton label={t({ id: "components.nutrition.coach.cancel", message: "Cancel" })} onPress={() => setShowSetOwn(false)} colors={colors} />
               </View>
             </View>
           </View>
@@ -348,21 +349,21 @@ export function MacroCoachCard({
         {showPausePrompt && (
           <View style={[styles.section, { borderTopWidth: 1, borderTopColor: colors.onSurfaceVariant + "30" }]}>
             <Text variant="body" style={{ color: colors.onSurface }}>
-              You&apos;ve passed twice. Want to pause this for a while?
+              <Trans id="components.nutrition.coach.pausePrompt">You&apos;ve passed twice. Want to pause this for a while?</Trans>
             </Text>
             <TouchableOpacity
               onPress={handlePause1Month}
               style={styles.pauseButton}
-              accessibilityLabel="Pause coach for 1 month"
+              accessibilityLabel={t({ id: "components.nutrition.coach.pauseA11y", message: "Pause coach for 1 month" })}
               accessibilityRole="button"
             >
               <Text variant="body" style={{ color: colors.onSurface }}>
-                Pause 1 month
+                <Trans id="components.nutrition.coach.pause">Pause 1 month</Trans>
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onDismiss} accessibilityLabel="Dismiss" hitSlop={8}>
+            <TouchableOpacity onPress={onDismiss} accessibilityLabel={t({ id: "components.nutrition.coach.dismissA11y", message: "Dismiss" })} hitSlop={8}>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                No thanks, just hide for now
+                <Trans id="components.nutrition.coach.dismissForNow">No thanks, just hide for now</Trans>
               </Text>
             </TouchableOpacity>
           </View>
@@ -373,36 +374,29 @@ export function MacroCoachCard({
           <View style={styles.modalOverlay}>
             <ScrollView>
               <View style={[styles.modalBox, { backgroundColor: colors.surface }]}>
-                <Text variant="subtitle" style={{ color: colors.onSurface }}>
-                  How this is computed
+                 <Text variant="subtitle" style={{ color: colors.onSurface }}>
+                   <Trans id="components.nutrition.coach.howComputed">How this is computed</Trans>
+                 </Text>
+                <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
+                  <Trans id="components.nutrition.coach.explainerWeight">Your trend weight is an exponentially-weighted moving average (EWMA) of your daily weigh-ins. This smooths out water-weight fluctuations so that one heavy day doesn&apos;t distort your estimate.</Trans>
                 </Text>
                 <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
-                  Your trend weight is an exponentially-weighted moving average (EWMA) of your
-                  daily weigh-ins. This smooths out water-weight fluctuations so that one
-                  heavy day doesn&apos;t distort your estimate.
+                  <Trans id="components.nutrition.coach.explainerTdee">Your estimated TDEE uses the energy-balance equation: if you ate an average of X kcal/day and your weight changed by ΔW kg over 14 days, then your TDEE ≈ X + (ΔW × 7700) / 14. Note: lean-tissue gain on a bulk will slightly underestimate TDEE.</Trans>
                 </Text>
                 <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
-                  Your estimated TDEE uses the energy-balance equation: if you ate an average
-                  of X kcal/day and your weight changed by ΔW kg over 14 days, then your TDEE
-                  ≈ X + (ΔW × 7700) / 14. Note: lean-tissue gain on a bulk will slightly
-                  underestimate TDEE.
+                  <Trans id="components.nutrition.coach.explainerRounding">All numbers are rounded to the nearest 50 kcal. TDEE is shown as a range (±125 kcal) to reflect real-world estimation uncertainty.</Trans>
                 </Text>
                 <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
-                  All numbers are rounded to the nearest 50 kcal. TDEE is shown as a range
-                  (±125 kcal) to reflect real-world estimation uncertainty.
-                </Text>
-                <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
-                  This is advisory only. The target is never changed without your tap.
-                  You can disable this in Settings → Nutrition → Adaptive Macro Coach.
+                  <Trans id="components.nutrition.coach.explainerAdvisory">This is advisory only. The target is never changed without your tap. You can disable this in Settings → Nutrition → Adaptive Macro Coach.</Trans>
                 </Text>
                 <TouchableOpacity
                   onPress={() => setShowInfo(false)}
                   style={styles.pauseButton}
-                  accessibilityLabel="Close"
+                  accessibilityLabel={t({ id: "components.nutrition.coach.closeA11y", message: "Close" })}
                   accessibilityRole="button"
                 >
                   <Text variant="body" style={{ color: colors.onSurface }}>
-                    Close
+                    <Trans id="components.nutrition.coach.close">Close</Trans>
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -452,9 +446,9 @@ function RightWhyButtons({
   colors: ReturnType<typeof useThemeColors>;
 }) {
   const options: Array<{ key: RightWhyAnswer; label: string }> = [
-    { key: "strong", label: "Strong" },
-    { key: "ok", label: "OK" },
-    { key: "drained", label: "Drained" },
+    { key: "strong", label: t({ id: "components.nutrition.coach.strong", message: "Strong" }) },
+    { key: "ok", label: t({ id: "components.nutrition.coach.ok", message: "OK" }) },
+    { key: "drained", label: t({ id: "components.nutrition.coach.drained", message: "Drained" }) },
   ];
   return (
     <View style={styles.rightWhyRow}>

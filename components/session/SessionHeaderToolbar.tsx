@@ -1,3 +1,7 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Modal,
@@ -243,7 +247,7 @@ function SessionHeaderToolbarInner({
                   color={colors.onSurfaceVariant}
                 />
               }
-              accessibilityLabel={`Adaptive rest reason: ${chipLabel}. Tap to see breakdown.`}
+              accessibilityLabel={t({ id: "session.sessionheadertoolbar.dynamic1", message: `Adaptive rest reason: ${chipLabel}. Tap to see breakdown.` })}
               accessibilityRole="button"
             >
               {chipLabel}
@@ -295,7 +299,7 @@ function SessionHeaderToolbarInner({
         {/* Wrench / toolbox button */}
         <Pressable
           onPress={onOpenToolbox}
-          accessibilityLabel="Open workout toolbox"
+          accessibilityLabel={t({ id: "session.sessionheadertoolbar.str1", message: "Open workout toolbox" })}
           accessibilityRole="button"
           style={styles.toolboxButton}
         >
@@ -368,7 +372,7 @@ function RestDurationPicker({
       animationType="fade"
       onRequestClose={onDismiss}
     >
-      <Pressable style={styles.modalOverlay} onPress={onDismiss} accessibilityLabel="Dismiss rest settings" accessibilityRole="button">
+      <Pressable style={styles.modalOverlay} onPress={onDismiss} accessibilityLabel={t({ id: "session.sessionheadertoolbar.str2", message: "Dismiss rest settings" })} accessibilityRole="button">
         <Pressable
           style={[styles.pickerContainer, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}
           onPress={(e) => e.stopPropagation()}
@@ -377,17 +381,11 @@ function RestDurationPicker({
           <Text
             variant="subtitle"
             style={{ color: colors.onSurface, marginBottom: 4 }}
-          >
-            Rest Duration
-          </Text>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
-            Applies to every set this session · overrides template defaults
-          </Text>
+          >{t({ id: "session.sessionheadertoolbar.str3", message: "Rest Duration" })}</Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>{t({ id: "session.sessionheadertoolbar.str4", message: "Applies to every set this session · overrides template defaults" })}</Text>
 
           <View style={styles.selectionSummary}>
-            <Text variant="body" style={{ color: colors.onSurface }}>
-              Current: {presetLabel(selectedDurationSeconds)}
-            </Text>
+            <Text variant="body" style={{ color: colors.onSurface }}>{t({ id: "session.sessionheadertoolbar.str5", message: `Current: ${presetLabel(selectedDurationSeconds)}` })}</Text>
           </View>
 
           <View style={styles.presetsRow}>
@@ -401,7 +399,7 @@ function RestDurationPicker({
                     selected={isSelected}
                     onPress={() => onSelectPreset(seconds)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Set rest to ${presetLabel(seconds)}${isSelected ? ". Currently selected." : ""}`}
+                    accessibilityLabel={i18n._({ id: "session.sessionheadertoolbar.dynamic2", message: "Set rest to {duration}{selected, select, true {. Currently selected.} false {}}", values: { duration: presetLabel(seconds), selected: isSelected ? "true" : "false" } })}
                   >
                     {presetLabel(seconds)}
                   </Chip>
@@ -416,9 +414,7 @@ function RestDurationPicker({
           </View>
 
           <View style={styles.settingRow}>
-            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
-              Vibrate on complete
-            </Text>
+            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>{t({ id: "session.sessionheadertoolbar.str6", message: "Vibrate on complete" })}</Text>
             <Switch
               value={vibrateSetting}
               onValueChange={onVibrateToggle}
@@ -427,9 +423,7 @@ function RestDurationPicker({
           </View>
 
           <View style={styles.settingRow}>
-            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
-              Sound on complete
-            </Text>
+            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>{t({ id: "session.sessionheadertoolbar.str7", message: "Sound on complete" })}</Text>
             <Switch
               value={soundSetting}
               onValueChange={onSoundToggle}
@@ -518,9 +512,7 @@ function ElapsedDisplay({
           variant="body"
           testID="elapsed-not-started-caption"
           style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}
-        >
-          Starts when you log your first set
-        </Text>
+        >{t({ id: "session.sessionheadertoolbar.str8", message: "Starts when you log your first set" })}</Text>
       )}
     </Pressable>
   );

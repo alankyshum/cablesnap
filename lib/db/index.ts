@@ -34,6 +34,8 @@ export {
 
 export {
   createTemplate,
+  createTemplateWithExercises,
+  type CreateTemplateExerciseInput,
   getTemplates,
   getTemplateById,
   updateTemplateName,
@@ -269,6 +271,9 @@ export type {
   BackupV3,
   BackupV7,
   BackupFile,
+  BackupV8,
+  ExportOptions,
+  ImportOptions,
   BackupCategoryName,
   BackupTableName,
   ExportProgress,

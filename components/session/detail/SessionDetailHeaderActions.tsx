@@ -3,6 +3,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import { stravaLog } from "../../../lib/strava-telemetry";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   editing: boolean;
@@ -49,18 +50,18 @@ export function SessionDetailHeaderActions({
     const saveDisabled = !dirty || saving;
     return (
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <TouchableOpacity onPress={onCancel} accessibilityLabel="Cancel edits" hitSlop={8} style={{ padding: 8 }}>
-          <Text style={{ color: colors.onSurface }}>Cancel</Text>
+        <TouchableOpacity onPress={onCancel} accessibilityLabel={t({ id: "components.session.detail.header.cancel-a11y", message: "Cancel edits" })} hitSlop={8} style={{ padding: 8 }}>
+          <Text style={{ color: colors.onSurface }}>{t({ id: "components.session.detail.header.cancel", message: "Cancel" })}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={onSave}
           disabled={saveDisabled}
-          accessibilityLabel="Save edits"
+          accessibilityLabel={t({ id: "components.session.detail.header.save-a11y", message: "Save edits" })}
           hitSlop={8}
           style={{ padding: 8 }}
         >
           <Text style={{ color: saveDisabled ? colors.onSurfaceDisabled : colors.primary, fontWeight: "700" }}>
-            Save
+            {t({ id: "components.session.detail.header.save", message: "Save" })}
           </Text>
         </TouchableOpacity>
       </View>
@@ -78,8 +79,8 @@ export function SessionDetailHeaderActions({
               if (__DEV__) console.warn("Failed to open Strava link:", err);
             });
           }}
-          accessibilityLabel="View on Strava"
-          accessibilityHint="Open this activity on Strava"
+          accessibilityLabel={t({ id: "components.session.detail.header.strava-a11y", message: "View on Strava" })}
+          accessibilityHint={t({ id: "components.session.detail.header.strava-hint", message: "Open this activity on Strava" })}
           hitSlop={8}
           style={{ padding: 8 }}
         >
@@ -88,21 +89,21 @@ export function SessionDetailHeaderActions({
       )}
       <TouchableOpacity
         onPress={onShare}
-        accessibilityLabel="Share workout"
-        accessibilityHint="Share this workout session as text or image"
+        accessibilityLabel={t({ id: "components.session.detail.header.share-a11y", message: "Share workout" })}
+        accessibilityHint={t({ id: "components.session.detail.header.share-hint", message: "Share this workout session as text or image" })}
         hitSlop={8}
         style={{ padding: 8 }}
       >
         <MaterialCommunityIcons name="share-variant-outline" size={22} color={colors.onSurface} />
       </TouchableOpacity>
-      <TouchableOpacity onPress={onEnterEdit} accessibilityLabel="Edit workout" hitSlop={8} style={{ padding: 8 }}>
+      <TouchableOpacity onPress={onEnterEdit} accessibilityLabel={t({ id: "components.session.detail.header.edit-a11y", message: "Edit workout" })} hitSlop={8} style={{ padding: 8 }}>
         <MaterialCommunityIcons name="pencil-outline" size={22} color={colors.onSurface} />
       </TouchableOpacity>
       <TouchableOpacity
         onPress={onOpenTemplate}
         disabled={completedSetCount === 0}
-        accessibilityLabel="Save as template"
-        accessibilityHint={completedSetCount === 0 ? "No exercises to save" : "Save this workout as a reusable template"}
+        accessibilityLabel={t({ id: "components.session.detail.header.template-a11y", message: "Save as template" })}
+        accessibilityHint={completedSetCount === 0 ? t({ id: "components.session.detail.header.template-disabled", message: "No exercises to save" }) : t({ id: "components.session.detail.header.template-hint", message: "Save this workout as a reusable template" })}
         hitSlop={8}
         style={{ padding: 8 }}
       >

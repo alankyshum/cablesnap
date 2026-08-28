@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -28,7 +31,7 @@ function SetAttachmentChipInner({ attachment }: SetAttachmentChipProps) {
     <View
       style={[styles.chip, { backgroundColor: colors.surfaceVariant }]}
       accessible
-      accessibilityLabel={`Attachment: ${label}`}
+      accessibilityLabel={t({ id: "session.setattachmentchip.dynamic1", message: `Attachment: ${label}` })}
     >
       <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>
         {`Att: ${label}`}

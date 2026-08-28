@@ -4,6 +4,8 @@ import { useColor } from "@/hooks/useColor";
 import { formatDuration } from "@/lib/format";
 import { toDisplay } from "@/lib/units";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 type Props = {
   colors: ThemeColors;
@@ -38,17 +40,17 @@ function buildAccessibilityLabel(
   delta: { text: string; positive: boolean } | null,
   totalDurationSeconds: number,
 ): string {
-  if (sessionCount === 0) return "This week: no training data yet";
+  if (sessionCount === 0) return t({ id: "home.weeklySummary.emptyA11y", message: "This week: no training data yet" });
 
   const vol = toDisplay(totalVolume, unitSystem);
-  const unitLabel = unitSystem === "lb" ? "pounds" : "kilograms";
+  const unitLabel = unitSystem === "lb" ? t({ id: "home.weeklySummary.pounds", message: "pounds" }) : t({ id: "home.weeklySummary.kilograms", message: "kilograms" });
   const dur = formatDuration(totalDurationSeconds);
 
-  let label = `This week: ${vol.toLocaleString()} ${unitLabel} total volume`;
+  let label = t({ id: "home.weeklySummary.volumeA11y", message: `This week: ${vol.toLocaleString()} ${unitLabel} total volume` });
   if (delta) {
-    label += `, ${delta.positive ? "up" : "down"} ${delta.text.replace(/[↑↓]/, "")} from last week`;
+    label += `, ${i18n._({ id: "home.weeklySummary.delta", message: "{direction, select, up {up} down {down}} {percent} from last week", values: { direction: delta.positive ? "up" : "down", percent: delta.text.replace(/[↑↓]/, "") } })}`;
   }
-  label += `, ${dur} total training time`;
+  label += `, ${t({ id: "home.weeklySummary.durationA11y", message: `${dur} total training time` })}`;
   return label;
 }
 
@@ -71,11 +73,11 @@ export default function WeeklySummaryCard({
       accessibilityLabel={buildAccessibilityLabel(sessionCount, totalVolume, unitSystem, delta, totalDurationSeconds)}
     >
       <Text variant="caption" style={[styles.title, { color: colors.onSurfaceVariant }]}>
-        This Week
+        {t({ id: "home.weeklySummary.title", message: "This Week" })}
       </Text>
       {isEmpty ? (
         <Text style={[styles.emptyText, { color: colors.onSurfaceVariant }]}>
-          No training data yet
+          {t({ id: "home.weeklySummary.empty", message: "No training data yet" })}
         </Text>
       ) : (
         <View style={styles.metricsRow}>
@@ -94,7 +96,7 @@ export default function WeeklySummaryCard({
           )}
           <Text style={[styles.separator, { color: colors.onSurfaceVariant }]}>·</Text>
           <Text style={[styles.duration, { color: colors.onSurfaceVariant }]}>
-            {formatDuration(totalDurationSeconds)} this week
+            {t({ id: "home.weeklySummary.duration", message: `${formatDuration(totalDurationSeconds)} this week` })}
           </Text>
         </View>
       )}
