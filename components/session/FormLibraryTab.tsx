@@ -755,7 +755,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: radii.md,
-    marginTop: 4,
     borderWidth: 1,
   },
   grid: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 32 },
