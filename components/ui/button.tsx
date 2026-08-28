@@ -74,6 +74,8 @@ export const Button = forwardRef<View, ButtonProps>(
     const destructiveForegroundColor = useColor('destructiveForeground');
     const greenColor = useColor('green');
     const borderColor = useColor('border');
+    const buttonOutlineBorder = useColor('buttonOutlineBorder');
+    const buttonOutlineText = useColor('buttonOutlineText');
 
     const { animatedStyle, onPressIn, onPressOut } = useAnimatedPress({ haptic });
 
@@ -115,7 +117,7 @@ export const Button = forwardRef<View, ButtonProps>(
             ...baseStyle,
             backgroundColor: 'transparent',
             borderWidth: 1,
-            borderColor,
+            borderColor: buttonOutlineBorder,
           };
         case 'secondary':
           return { ...baseStyle, backgroundColor: secondaryColor };
@@ -145,7 +147,7 @@ export const Button = forwardRef<View, ButtonProps>(
         case 'success':
           return { ...baseTextStyle, color: destructiveForegroundColor };
         case 'outline':
-          return { ...baseTextStyle, color: primaryColor };
+          return { ...baseTextStyle, color: buttonOutlineText };
         case 'secondary':
           return { ...baseTextStyle, color: secondaryForegroundColor };
         case 'ghost':
@@ -168,7 +170,7 @@ export const Button = forwardRef<View, ButtonProps>(
         case 'success':
           return destructiveForegroundColor;
         case 'outline':
-          return primaryColor;
+          return buttonOutlineText;
         case 'secondary':
           return secondaryForegroundColor;
         case 'ghost':
