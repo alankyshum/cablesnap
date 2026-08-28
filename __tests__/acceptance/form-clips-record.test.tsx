@@ -13,6 +13,7 @@
  * downstream component becomes visible — not just state/prop assertions.
  */
 import React from "react";
+import { StyleSheet } from "react-native";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
 import { FormLibraryTab } from "../../components/session/FormLibraryTab";
 import { FormClipsStorageRow } from "../../components/settings/FormClipsStorageRow";
@@ -180,6 +181,26 @@ describe("AC1 — Record CTA tap opens FormVideoSheet (BLD-1105)", () => {
       expect(getByTestId("form-video-sheet")).toBeTruthy();
       expect(getByTestId("fvs-set-id").props.children).toBe("set-ulid-2");
     });
+  });
+
+  it("verifies the 'Record a clip' button meets the touch-target size requirements (BLD-4540)", async () => {
+    const freeSet = { id: "set-ulid-3", set_number: 1, completed_at: Date.now() };
+    mockGetMostRecentCompletedSetForExercise.mockResolvedValue(freeSet);
+    mockGetClipsForExercise.mockResolvedValue([]);
+
+    const { getByLabelText } = render(
+      <FormLibraryTab exerciseId="ex-abc" />,
+    );
+
+    await waitFor(() => getByLabelText("Record a clip"));
+    const btn = getByLabelText("Record a clip");
+    const flattenedStyle = StyleSheet.flatten(btn.props.style);
+
+    expect(flattenedStyle).toBeDefined();
+    expect(flattenedStyle.minHeight).toBeGreaterThanOrEqual(44);
+    expect(flattenedStyle.minWidth).toBeGreaterThanOrEqual(44);
+    expect(flattenedStyle.justifyContent).toBe("center");
+    expect(flattenedStyle.alignItems).toBe("center");
   });
 });
 

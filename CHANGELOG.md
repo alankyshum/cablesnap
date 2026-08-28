@@ -21,8 +21,7 @@ sidecar emission. The `publish-release` skill prepends a new section (with
 marker) at release time.
 
 ## Unreleased
-
-_No user-facing changes yet._
+- **'Record a clip' empty-state button now meets 44dp minimum touch-target**, ensuring accessibility compliance and easier interaction on mobile viewports. ([BLD-4540](/BLD/issues/BLD-4540))
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->
@@ -127,7 +126,6 @@ _No user-facing changes yet._
 
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->
-
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
