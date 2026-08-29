@@ -163,7 +163,13 @@ case "$cmd" in
         --description)       body=$(echo "$body" | jq --arg v "$2" '. + {description: $v}'); shift 2;;
         --status)            body=$(echo "$body" | jq --arg v "$2" '. + {status: $v}'); shift 2;;
         --priority)          body=$(echo "$body" | jq --arg v "$2" '. + {priority: $v}'); shift 2;;
-        --assignee-agent-id) body=$(echo "$body" | jq --arg v "$2" '. + {assigneeAgentId: $v}'); shift 2;;
+        --assignee-agent-id) 
+          if [[ "$2" == "null" ]]; then
+            body=$(echo "$body" | jq '. + {assigneeAgentId: null}');
+          else
+            body=$(echo "$body" | jq --arg v "$2" '. + {assigneeAgentId: $v}');
+          fi
+          shift 2;;
         --assignee-user-id)  body=$(echo "$body" | jq --arg v "$2" '. + {assigneeUserId: $v}'); shift 2;;
         --project-id)        body=$(echo "$body" | jq --arg v "$2" '. + {projectId: $v}'); shift 2;;
         --goal-id)           body=$(echo "$body" | jq --arg v "$2" '. + {goalId: $v}'); shift 2;;
@@ -186,6 +192,12 @@ case "$cmd" in
       esac
     done
     api_post "/issues/$issue_id/comments" "{\"body\":$(echo "$body" | jq -Rs '.'),\"reopen\":$reopen}" | jq_or_cat '.'
+    ;;
+
+  link-approval)
+    issue_id="$1"
+    approval_id="$2"
+    api_post "/issues/$issue_id/approvals" "{\"approvalId\":\"$approval_id\"}" | jq_or_cat '.'
     ;;
 
   checkout-issue)
@@ -458,6 +470,7 @@ ISSUES:
   create-issue --title T [--description D] [--status S] [--priority P] [--goal-id G]
   update-issue <ID> [--title T] [--status S] [--priority P] [--comment C]
   comment-issue <ID> --body TEXT [--reopen]
+  link-approval <ID> <APPROVAL_ID>
   checkout-issue <ID> [--expected-status S] ... [run-id]
                     Checkout an issue. --expected-status (repeatable) restricts
                     checkout to issues in the given status(es). Default: all
