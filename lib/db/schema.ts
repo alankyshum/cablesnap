@@ -451,6 +451,8 @@ export const coachMessages = sqliteTable("coach_messages", {
   session_id: text("session_id").notNull().references(() => coachSessions.id),
   role: text("role").notNull(),
   content: text("content").notNull(),
+  // Nullable for messages written before model attribution was introduced.
+  model_id: text("model_id"),
   tool_calls: text("tool_calls"),
   created_at: integer("created_at").notNull(),
   error: text("error"),

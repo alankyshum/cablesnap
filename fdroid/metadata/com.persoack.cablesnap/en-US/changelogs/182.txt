@@ -1,0 +1,2 @@
+- Improved AI Coach replies with a typing indicator and correctly aligned table columns.
+- AI Coach can now create workout templates when asked.

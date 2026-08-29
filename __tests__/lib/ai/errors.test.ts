@@ -124,10 +124,44 @@ describe("AI error taxonomy", () => {
       providerName: "Chutes",
     });
     expect(toChatErrorState(upstream)).toEqual(expect.objectContaining({
-      message: "The selected model's upstream providers (Chutes) are unavailable.",
+      message: "The selected model's upstream provider is unavailable.",
       recovery: expect.objectContaining({ kind: "pick_another_model", label: "Open model picker" }),
     }));
-    expect(toChatErrorState({ kind: "rate_limited", status: 429 }).message).not.toContain("upstream providers");
+    expect(toChatErrorState({ kind: "rate_limited", status: 429 }).message).not.toContain("upstream provider");
+  });
+
+  it.each([
+    [502, "provider_unavailable"],
+    [503, "provider_overloaded"],
+  ] as const)("maps %i provider envelopes before the generic 5xx fallback", (status, errorType) => {
+    expect(parseOpenRouterError(status, {
+      error: {
+        code: status,
+        message: "Provider unavailable",
+        metadata: { error_type: errorType, provider_name: "Chutes" },
+      },
+    })).toEqual({
+      kind: "upstream_provider_unavailable",
+      status,
+      providerName: "Chutes",
+    });
+  });
+
+  it("keeps a plain OpenRouter 5xx as a server error", () => {
+    expect(parseOpenRouterError(500, {
+      error: { code: 500, message: "Internal server error" },
+    })).toEqual({ kind: "server_error", status: 500 });
+  });
+
+  it("keeps a transport failure with no HTTP status as a network error", () => {
+    expect(parseOpenRouterError(undefined, new TypeError("Network request failed")))
+      .toEqual({ kind: "network_error" });
+  });
+
+  it("does not treat an untyped 502 as an upstream provider failure", () => {
+    expect(parseOpenRouterError(502, {
+      error: { code: 502, message: "Bad gateway" },
+    })).toEqual({ kind: "server_error", status: 502 });
   });
 
   it("renders parsed retry-at guidance", () => {

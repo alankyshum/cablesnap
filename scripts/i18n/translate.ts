@@ -55,7 +55,7 @@ export function placeholderNames(message: string): string {
 }
 
 function isPlaceholderOnly(message: string): boolean {
-  return message.replace(/\{[^{}]*\}/g, "").replace(/[\s,():+./%–—-]/g, "").trim() === "";
+  return message.replace(/\{[^{}]*\}/g, "").replace(/[\s,():+./%×–—-]/g, "").trim() === "";
 }
 
 function getMessage(entry: Catalog[string]): string {

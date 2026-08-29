@@ -28,3 +28,4 @@ executionOrder:
     - log-set
     - start-workout
     - view-progress
+    - ai-coach

@@ -34,6 +34,28 @@ describe("coach data layer", () => {
     expect(renamed.title).toBe("Renamed");
   });
 
+  it("persists model changes to both the active session and last-used default", async () => {
+    const coach = require("../../../lib/db/coach") as typeof import("../../../lib/db/coach");
+    mockDrizzleGet({ id: sessionId, title: "Training", model_id: "stealth/ox-alpha", created_at: 1, updated_at: 2 });
+
+    await expect(coach.saveCoachModelSelection(sessionId, "stealth/ox-alpha"))
+      .resolves.toEqual(expect.objectContaining({ model_id: "stealth/ox-alpha" }));
+
+    expect(mockDb.withTransactionAsync).toHaveBeenCalled();
+    expect(mockDrizzleDb.update.mock.results.at(-1)?.value.set)
+      .toHaveBeenCalledWith(expect.objectContaining({ model_id: "stealth/ox-alpha" }));
+    expect(mockDrizzleDb.insert.mock.results.at(-1)?.value.values).toHaveBeenCalledWith({
+      key: coach.LAST_COACH_MODEL_KEY,
+      value: "stealth/ox-alpha",
+    });
+  });
+
+  it("restores the persisted last-used model", async () => {
+    const coach = require("../../../lib/db/coach") as typeof import("../../../lib/db/coach");
+    mockDrizzleGet({ value: "stealth/ox-alpha" });
+    await expect(coach.getLastCoachModel()).resolves.toBe("stealth/ox-alpha");
+  });
+
   it("orders messages and deletes them with their session", async () => {
     const coach = require("../../../lib/db/coach") as typeof import("../../../lib/db/coach");
     mockDrizzleGet({ id: "message-1", session_id: sessionId, role: "user", content: "Hello", tool_calls: null, created_at: 2, error: null });

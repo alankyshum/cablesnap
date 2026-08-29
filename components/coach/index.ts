@@ -9,7 +9,8 @@ export {
 export { CoachSidebar, type CoachSidebarProps } from "./CoachSidebar";
 export { CoachHeader, type CoachHeaderProps } from "./CoachHeader";
 export { CoachConversation, type CoachConversationProps } from "./CoachConversation";
-export { CoachComposer, type CoachComposerProps } from "./CoachComposer";
-export { CoachMessageBubble, type CoachMessageBubbleProps } from "./CoachMessageBubble";
 export { CoachErrorCard, type CoachErrorCardProps } from "./CoachErrorCard";
 export { CoachEmptyState, type CoachEmptyStateProps } from "./CoachEmptyState";
+export { CoachThinkingIndicator, type CoachThinkingIndicatorProps } from "./CoachThinkingIndicator";
+export { CoachToolBadge, type CoachToolBadgeProps } from "./CoachToolBadge";
+
