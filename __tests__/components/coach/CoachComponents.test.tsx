@@ -1,19 +1,31 @@
 import React from "react";
-import { fireEvent, render } from "@testing-library/react-native";
+import { act, fireEvent, render, waitFor } from "@testing-library/react-native";
 import { Linking } from "react-native";
 import { useRouter } from "expo-router";
+import { Chat } from "@kesha-antonov/react-native-chat";
 import {
-  CoachComposer,
   CoachConversation,
   CoachEmptyState,
   CoachErrorCard,
   CoachHeader,
-  CoachMessageBubble,
   CoachSidebar,
 } from "@/components/coach";
 import { toChatErrorState } from "@/lib/ai/errors";
 import { confirmAction } from "@/lib/confirm";
-import type { CoachSession } from "@/lib/db/coach";
+import type { CoachMessage, CoachSession } from "@/lib/db/coach";
+
+const mockStartCoachAgent = jest.fn();
+const mockAppendCoachMessage = jest.fn();
+
+jest.mock("@/lib/ai/agent", () => ({
+  startCoachAgent: (...args: unknown[]) => mockStartCoachAgent(...args),
+}));
+
+jest.mock("@/hooks/useCoachSessions", () => ({
+  coachQueryKeys: { messages: (id: string) => ["coach", "messages", id] },
+  useAppendCoachMessage: () => ({ mutateAsync: mockAppendCoachMessage }),
+  useCreateCoachSession: () => ({ mutateAsync: jest.fn() }),
+}));
 
 jest.mock("expo-router", () => ({
   useRouter: jest.fn(),
@@ -27,6 +39,13 @@ const mockPush = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockAppendCoachMessage.mockImplementation(async (input) => ({
+    id: "persisted-user",
+    ...input,
+    tool_calls: null,
+    error: null,
+    created_at: 2,
+  }));
   (useRouter as jest.Mock).mockReturnValue({
     push: mockPush,
   });
@@ -140,6 +159,50 @@ describe("CoachSidebar", () => {
     fireEvent.press(getByText("New Chat"));
     expect(onNewChat).toHaveBeenCalled();
   });
+
+  it("renders and handles sidebar collapse button at the sidebar boundary", () => {
+    const onToggleSidebar = jest.fn();
+    const { getByLabelText } = render(
+      <CoachSidebar
+        sessions={sampleSessions}
+        activeSessionId="session-1"
+        onSelectSession={jest.fn()}
+        onNewChat={jest.fn()}
+        onRenameSession={jest.fn()}
+        onDeleteSession={jest.fn()}
+        onToggleSidebar={onToggleSidebar}
+      />
+    );
+
+    const collapseBtn = getByLabelText("Collapse sessions sidebar");
+    expect(collapseBtn).toBeTruthy();
+    fireEvent.press(collapseBtn);
+    expect(onToggleSidebar).toHaveBeenCalled();
+  });
+
+  it("regression: sidebar buttons have token-aligned padding divisible by 4", () => {
+    const { getByLabelText } = render(
+      <CoachSidebar
+        sessions={sampleSessions}
+        activeSessionId="session-1"
+        onSelectSession={jest.fn()}
+        onNewChat={jest.fn()}
+        onRenameSession={jest.fn()}
+        onDeleteSession={jest.fn()}
+      />
+    );
+
+    const newChatBtn = getByLabelText("Start a new chat");
+    const newChatStyle = Array.isArray(newChatBtn.props.style)
+      ? Object.assign({}, ...newChatBtn.props.style)
+      : newChatBtn.props.style;
+
+    expect(newChatStyle.paddingHorizontal).toBe(16);
+    expect(newChatStyle.paddingHorizontal % 4).toBe(0);
+    expect(newChatStyle.paddingVertical).toBe(8);
+    expect(newChatStyle.paddingVertical % 4).toBe(0);
+    expect(newChatStyle.minHeight).toBe(44);
+  });
 });
 
 describe("CoachHeader", () => {
@@ -183,6 +246,21 @@ describe("CoachHeader", () => {
     expect(getByText("Cached catalog")).toBeTruthy();
     fireEvent.press(getByLabelText("Catalog is cached. Tap to refresh."));
     expect(onRefreshCatalog).toHaveBeenCalled();
+  });
+
+  it("renders and toggles the tablet sidebar affordance", () => {
+    const onToggleSidebar = jest.fn();
+    const { getByLabelText } = render(
+      <CoachHeader
+        selectedModelId="openai/gpt-4o"
+        onOpenModelPicker={jest.fn()}
+        sidebarCollapsed={false}
+        onToggleSidebar={onToggleSidebar}
+      />,
+    );
+
+    fireEvent.press(getByLabelText("Collapse sessions sidebar"));
+    expect(onToggleSidebar).toHaveBeenCalled();
   });
 });
 
@@ -243,125 +321,259 @@ describe("CoachErrorCard", () => {
     fireEvent.press(getByLabelText(errorState.recovery.label));
     expect(onRetry).toHaveBeenCalled();
   });
-});
 
-describe("CoachComposer", () => {
-  it("disables send button when empty and enables on typing", () => {
-    const onSend = jest.fn();
-    const onChangeText = jest.fn();
+  it("regression: error card and recovery button have non-zero token-aligned padding", () => {
+    const errorState = toChatErrorState({ kind: "empty_response" });
+    const { getByLabelText } = render(<CoachErrorCard error={errorState} />);
 
-    const { getByLabelText, rerender } = render(
-      <CoachComposer
-        value=""
-        onChangeText={onChangeText}
-        onSend={onSend}
-      />
-    );
+    const alertCard = getByLabelText(`Error: ${errorState.message}`);
+    const cardStyle = Array.isArray(alertCard.props.style)
+      ? Object.assign({}, ...alertCard.props.style)
+      : alertCard.props.style;
 
-    const sendButton = getByLabelText("Send message");
-    fireEvent.press(sendButton);
-    expect(onSend).not.toHaveBeenCalled();
+    // Card must have positive padding divisible by 4
+    expect(cardStyle.padding).toBe(16);
+    expect(cardStyle.padding % 4).toBe(0);
+    expect(cardStyle.marginHorizontal).toBe(16);
+    expect(cardStyle.gap).toBe(12);
 
-    rerender(
-      <CoachComposer
-        value="What is my max volume?"
-        onChangeText={onChangeText}
-        onSend={onSend}
-      />
-    );
+    const button = getByLabelText(errorState.recovery.label);
+    const buttonStyle = Array.isArray(button.props.style)
+      ? Object.assign({}, ...button.props.style)
+      : button.props.style;
 
-    fireEvent.press(sendButton);
-    expect(onSend).toHaveBeenCalled();
-  });
-
-  it("renders stop button when streaming", () => {
-    const onStop = jest.fn();
-    const { getByLabelText } = render(
-      <CoachComposer
-        value="Thinking"
-        onChangeText={jest.fn()}
-        onSend={jest.fn()}
-        onStop={onStop}
-        isStreaming={true}
-      />
-    );
-
-    const stopButton = getByLabelText("Stop generating");
-    fireEvent.press(stopButton);
-    expect(onStop).toHaveBeenCalled();
-  });
-});
-
-describe("CoachMessageBubble", () => {
-  it("renders user message", () => {
-    const { getByText } = render(
-      <CoachMessageBubble
-        message={{
-          role: "user",
-          content: "How is my bench progress?",
-          created_at: 1700000000000,
-        }}
-      />
-    );
-
-    expect(getByText("How is my bench progress?")).toBeTruthy();
-  });
-
-  it("renders assistant message with in-flight tool indicator", () => {
-    const { getByText } = render(
-      <CoachMessageBubble
-        message={{
-          role: "assistant",
-          content: "Let me check your stats...",
-        }}
-        isStreaming={true}
-        inFlightTool="recent_sessions"
-      />
-    );
-
-    expect(getByText("Reading workout history...")).toBeTruthy();
-    expect(getByText("Let me check your stats...")).toBeTruthy();
-    expect(getByText("Thinking...")).toBeTruthy();
-  });
-
-  it("renders assistant message with persisted tool badge", () => {
-    const { getByText } = render(
-      <CoachMessageBubble
-        message={{
-          role: "assistant",
-          content: "Your bench increased 5kg this month.",
-          tool_calls: '[{"name":"exercise_history"}]',
-        }}
-      />
-    );
-
-    expect(getByText("Data consulted: local records")).toBeTruthy();
-    expect(getByText("Your bench increased 5kg this month.")).toBeTruthy();
+    expect(buttonStyle.paddingHorizontal).toBe(16);
+    expect(buttonStyle.paddingVertical).toBe(8);
+    expect(buttonStyle.minHeight).toBe(44);
   });
 });
 
 describe("CoachConversation", () => {
+  const conversationProps = {
+    messages: [],
+    activeSessionId: "session-b",
+    selectedModelId: "provider/model",
+    isMissingKey: false,
+    activeError: null,
+    onOpenModelPicker: jest.fn(),
+    onDismissError: jest.fn(),
+    onSessionCreated: jest.fn(),
+    onError: jest.fn(),
+  };
+
+  it("regression: un-inverts empty state container to prevent mirrored text", () => {
+    render(<CoachConversation {...conversationProps} />);
+
+    const chatProps = (Chat as unknown as jest.Mock).mock.calls.at(-1)?.[0];
+    expect(chatProps.isInverted).toBe(false);
+
+    // Call renderChatEmpty and verify the returned tree contains counter-transform
+    const emptyElement = chatProps.renderChatEmpty();
+    const emptyWrapperStyle = Array.isArray(emptyElement.props.style)
+      ? Object.assign({}, ...emptyElement.props.style)
+      : emptyElement.props.style;
+
+    expect(emptyWrapperStyle.transform).toEqual([{ scaleY: -1 }]);
+  });
+
+  it("regression: chronological message ordering in non-inverted list", () => {
+    const orderedMessages: CoachMessage[] = [
+      { id: "msg-1", session_id: "s-1", role: "user", content: "First", tool_calls: null, error: null, created_at: 1000 },
+      { id: "msg-2", session_id: "s-1", role: "assistant", content: "Second", tool_calls: null, error: null, created_at: 2000 },
+    ];
+
+    render(<CoachConversation {...conversationProps} messages={orderedMessages} />);
+
+    const chatProps = (Chat as unknown as jest.Mock).mock.calls.at(-1)?.[0];
+    expect(chatProps.isInverted).toBe(false);
+    expect(chatProps.messages[0]._id).toBe("msg-1");
+    expect(chatProps.messages[1]._id).toBe("msg-2");
+  });
+
   it("does not render another session's streaming reply", () => {
     const props = {
       messages: [{ id: "message-1", session_id: "session-b", role: "user", content: "Hello", tool_calls: null, error: null, created_at: 1 }],
       activeSessionId: "session-b",
       selectedModelId: "provider/model",
       isMissingKey: false,
-      isStreaming: true,
-      streamingSessionId: "session-a",
-      streamingText: "Reply from session A",
-      inFlightTool: null,
       activeError: null,
-      inputText: "",
-      onChangeInputText: jest.fn(),
-      onSend: jest.fn(),
-      onStop: jest.fn(),
       onOpenModelPicker: jest.fn(),
       onDismissError: jest.fn(),
+      onSessionCreated: jest.fn(),
+      onError: jest.fn(),
     };
     const { queryByText } = render(<CoachConversation {...props} />);
 
     expect(queryByText("Reply from session A")).toBeNull();
+  });
+
+  it("enables the library's streaming-safe markdown renderer for live and persisted replies", () => {
+    render(<CoachConversation {...conversationProps} />);
+
+    const chatProps = (Chat as unknown as jest.Mock).mock.calls.at(-1)?.[0];
+    expect(chatProps.messageTextProps).toEqual({ markdown: true });
+    expect(chatProps.theme.colors).toEqual(expect.objectContaining({
+      incomingText: expect.any(String),
+      accent: expect.any(String),
+      incomingBubble: expect.any(String),
+    }));
+    expect(chatProps.keyboardAvoidingViewProps).toBeUndefined();
+    expect(chatProps.isMessageGestureEnabled({ text: "| Exercise | Sets |\n| --- | --- |" })).toBe(false);
+    expect(chatProps.isMessageGestureEnabled({ text: "| Not a table |" })).toBe(true);
+    expect(chatProps.isMessageGestureEnabled({ text: "```\n| code |\n```" })).toBe(true);
+    expect(chatProps.isMessageGestureEnabled({ text: "Regular message" })).toBe(true);
+  });
+
+  it("uses most of the available width for message bubbles on narrow screens", () => {
+    render(<CoachConversation {...conversationProps} />);
+
+    const chatProps = (Chat as unknown as jest.Mock).mock.calls.at(-1)?.[0];
+    const bubble = chatProps.renderBubble({
+      currentMessage: { _id: "message", text: "Hello", user: { _id: 2 } },
+      position: "left",
+    });
+
+    expect(bubble.props.wrapperStyle.left.maxWidth).toBe("92%");
+    expect(bubble.props.wrapperStyle.right.maxWidth).toBe("92%");
+  });
+
+  it("keeps and grows the streaming bubble across query hydration renders", async () => {
+    let emit!: (event: { type: "delta"; text: string }) => void;
+    let resolveDone!: (message: { id: string }) => void;
+    const done = new Promise<{ id: string }>((resolve) => { resolveDone = resolve; });
+    mockStartCoachAgent.mockImplementation((options) => {
+      emit = options.onEvent;
+      return { done, abort: jest.fn() };
+    });
+
+    const view = render(<CoachConversation {...conversationProps} />);
+    const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    fireEvent.changeText(input, "Review my training");
+    fireEvent.press(view.getByLabelText("Send message"));
+    await waitFor(() => expect(mockStartCoachAgent).toHaveBeenCalledTimes(1));
+
+    act(() => emit({ type: "delta", text: "**Reviewing" }));
+    expect(view.getByText("**Reviewing")).toBeTruthy();
+
+    view.rerender(<CoachConversation
+      {...conversationProps}
+      messages={[{
+        id: "persisted-user",
+        session_id: "session-b",
+        role: "user",
+        content: "Review my training",
+        tool_calls: null,
+        error: null,
+        created_at: 2,
+      }]}
+    />);
+    act(() => emit({ type: "delta", text: " your workouts**" }));
+
+    expect(view.getByText("Reviewing your workouts")).toBeTruthy();
+    expect(view.queryByText("**Reviewing")).toBeNull();
+    expect(view.getAllByText("Review my training")).toHaveLength(1);
+    await act(async () => resolveDone({ id: "assistant-1" }));
+  });
+
+  it("shows thinking indicator after send and before first delta, hides once delta arrives", async () => {
+    let emit!: (event: { type: "delta"; text: string }) => void;
+    let resolveDone!: (message: { id: string }) => void;
+    const done = new Promise<{ id: string }>((resolve) => { resolveDone = resolve; });
+    mockStartCoachAgent.mockImplementation((options) => {
+      emit = options.onEvent;
+      return { done, abort: jest.fn() };
+    });
+
+    const view = render(<CoachConversation {...conversationProps} />);
+    const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    fireEvent.changeText(input, "What is my plan?");
+    fireEvent.press(view.getByLabelText("Send message"));
+    await waitFor(() => expect(mockStartCoachAgent).toHaveBeenCalledTimes(1));
+
+    // Thinking indicator is visible before any delta
+    expect(view.getByTestId("coach-thinking-indicator")).toBeTruthy();
+    expect(view.getByText("Thinking...")).toBeTruthy();
+
+    // First delta arrives -> thinking indicator disappears and text takes over
+    act(() => emit({ type: "delta", text: "Here is your plan" }));
+    expect(view.queryByTestId("coach-thinking-indicator")).toBeNull();
+    expect(view.getByText("Here is your plan")).toBeTruthy();
+
+    await act(async () => resolveDone({ id: "assistant-done" }));
+  });
+
+  it("shows tool-specific label in thinking indicator during tool execution", async () => {
+    let emit!: (event: { type: string; name?: string; text?: string }) => void;
+    let resolveDone!: (message: { id: string }) => void;
+    const done = new Promise<{ id: string }>((resolve) => { resolveDone = resolve; });
+    mockStartCoachAgent.mockImplementation((options) => {
+      emit = options.onEvent;
+      return { done, abort: jest.fn() };
+    });
+
+    const view = render(<CoachConversation {...conversationProps} />);
+    const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    fireEvent.changeText(input, "Analyze my exercises");
+    fireEvent.press(view.getByLabelText("Send message"));
+    await waitFor(() => expect(mockStartCoachAgent).toHaveBeenCalledTimes(1));
+
+    expect(view.getByText("Thinking...")).toBeTruthy();
+
+    // Tool call event fires
+    act(() => emit({ type: "tool-call", name: "exercise_history" }));
+    expect(view.getByText("Analyzing exercise progress...")).toBeTruthy();
+    expect(view.queryByTestId("coach-tool-badge")).toBeNull();
+    expect(view.getByTestId("coach-thinking-indicator")).toBeTruthy();
+
+    // Tool finishes
+    act(() => emit({ type: "tool-result", name: "exercise_history" }));
+    expect(view.getByText("Thinking...")).toBeTruthy();
+    expect(view.queryByTestId("coach-tool-badge")).toBeNull();
+
+    // First delta arrives
+    act(() => emit({ type: "delta", text: "Analysis complete." }));
+    expect(view.queryByTestId("coach-thinking-indicator")).toBeNull();
+    expect(view.getByText("Analysis complete.")).toBeTruthy();
+
+    await act(async () => resolveDone({ id: "assistant-done" }));
+  });
+
+  it("hides thinking indicator when agent run fails with an error", async () => {
+    const onError = jest.fn();
+    mockStartCoachAgent.mockReturnValue({
+      done: Promise.reject({ kind: "network_error" }),
+      abort: jest.fn(),
+    });
+
+    const view = render(<CoachConversation {...conversationProps} onError={onError} />);
+    const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    fireEvent.changeText(input, "Will this fail?");
+    fireEvent.press(view.getByLabelText("Send message"));
+
+    await waitFor(() => expect(onError).toHaveBeenCalled());
+    expect(view.queryByTestId("coach-thinking-indicator")).toBeNull();
+  });
+
+  it("hides thinking indicator when streaming is stopped or aborted by user", async () => {
+    const mockAbort = jest.fn();
+    let resolveDone!: (value: unknown) => void;
+    const done = new Promise<unknown>((resolve) => { resolveDone = resolve; });
+    mockStartCoachAgent.mockReturnValue({ done, abort: mockAbort });
+
+    const view = render(<CoachConversation {...conversationProps} />);
+    const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    fireEvent.changeText(input, "Stop me now");
+    fireEvent.press(view.getByLabelText("Send message"));
+
+    await waitFor(() => expect(mockStartCoachAgent).toHaveBeenCalledTimes(1));
+    expect(view.getByTestId("coach-thinking-indicator")).toBeTruthy();
+
+    const stopButton = view.getByLabelText("Stop generating");
+    fireEvent.press(stopButton);
+
+    expect(mockAbort).toHaveBeenCalled();
+    expect(view.queryByTestId("coach-thinking-indicator")).toBeNull();
+    resolveDone({ id: "aborted", role: "assistant", content: "" });
   });
 });
 

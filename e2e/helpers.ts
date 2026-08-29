@@ -119,6 +119,23 @@ export async function enableImportBackupFixture(page: Page, backupJson: string) 
   }, backupJson);
 }
 
+/** A minimal v8 fixture for import-flow coverage, including the AI Coach section. */
+export function aiCoachBackupFixture(): string {
+  return JSON.stringify({
+    version: 8,
+    app_version: "e2e",
+    exported_at: new Date(0).toISOString(),
+    data: {
+      ai_coach: {
+        last_model_id: "e2e/model",
+        coach_sessions: [{ id: "e2e-coach-session", title: "E2E Coach", model_id: "e2e/model", created_at: 1, updated_at: 1 }],
+        coach_messages: [{ id: "e2e-coach-message", session_id: "e2e-coach-session", role: "user", content: "E2E message", tool_calls: null, created_at: 2, error: null }],
+      },
+    },
+    counts: {},
+  });
+}
+
 /**
  * Run axe-core and assert zero critical accessibility violations.
  * Serious violations are attached as annotations (warnings) to the test.

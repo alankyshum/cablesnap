@@ -204,6 +204,8 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // Keeping this invocation in Phase 2 makes the additive chat DDL part of the
   // migration phase without changing the existing extension-table ordering.
   await createExtensionTables(database);
+  // BLD: assistant attribution. Nullable so all existing messages remain valid.
+  await addColumnIfMissing(database, "coach_messages", "model_id", "TEXT DEFAULT NULL");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Migration phase 2 failed: ${msg}`, { cause: err });

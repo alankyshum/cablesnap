@@ -28,7 +28,7 @@ import {
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
-import { ATTACHMENT_LABELS, type Attachment, type Category, type Difficulty } from "../../lib/types";
+import type { Category, Difficulty } from "../../lib/types";
 import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
@@ -45,7 +45,7 @@ import { PlateauStatusCard } from "@/components/exercise/PlateauStatusCard";
 import { usePlateauStatus } from "@/hooks/usePlateauStatus";
 import { FormVideoSheet } from "@/components/session/FormVideoSheet";
 import { getMostRecentCompletedSetForExercise, getLatestUnilateralInsight } from "@/lib/db/session-sets";
-import { ATTACHMENT_VALUES, isCableExercise } from "@/lib/cable-variant";
+import { getAttachmentLabel, isCableExercise } from "@/lib/cable-variant";
 import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
 import { useStrengthLevel } from "@/hooks/useStrengthLevel";
 import { useStrengthGoal } from "@/hooks/useStrengthGoals";
@@ -79,19 +79,6 @@ function difficultyLabel(difficulty: Difficulty): string {
     case "intermediate": return t({ id: "app.exercise.id.difficulty.intermediate", message: "Intermediate" });
     case "advanced": return t({ id: "app.exercise.id.difficulty.advanced", message: "Advanced" });
   }
-}
-
-function attachmentLabel(attachment: Attachment): string {
-  switch (attachment) {
-    case ATTACHMENT_VALUES[0]: return t({ id: "app.exercise.id.attachment.handle", message: "Handle" });
-    case ATTACHMENT_VALUES[1]: return t({ id: "app.exercise.id.attachment.ringHandle", message: "Ring Handle" });
-    case ATTACHMENT_VALUES[2]: return t({ id: "app.exercise.id.attachment.ankleStrap", message: "Ankle Strap" });
-    case ATTACHMENT_VALUES[3]: return t({ id: "app.exercise.id.attachment.rope", message: "Rope" });
-    case ATTACHMENT_VALUES[4]: return t({ id: "app.exercise.id.attachment.bar", message: "Bar" });
-    case ATTACHMENT_VALUES[5]: return t({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
-    case ATTACHMENT_VALUES[6]: return t({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
-  }
-  return ATTACHMENT_LABELS[attachment];
 }
 
 function formatDateLong(ts: number): string {
@@ -278,7 +265,7 @@ export default function ExerciseDetail() {
 
       {exercise.attachment && (
           <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>{t({ id: "app.exercise.id.attachment", message: "Attachment" })}</Text>
-           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: attachmentLabel(exercise.attachment) } })}>{attachmentLabel(exercise.attachment)}</Text></View>
+            <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: getAttachmentLabel(exercise.attachment) } })}>{getAttachmentLabel(exercise.attachment)}</Text></View>
       )}
 
       {layout.atLeastMedium ? (

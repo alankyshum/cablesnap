@@ -31,6 +31,13 @@ export type InitialSetSeed = {
   side?: "left" | "right" | null;
 };
 
+export type CreateTemplateExerciseInput = {
+  exerciseId: string;
+  targetSets: number;
+  targetReps: string;
+  restSeconds: number;
+};
+
 export function normalizeTemplateSetTypes(setTypes: SetType[] | undefined, targetSets: number): SetType[] {
   return Array.from({ length: targetSets }, (_, index) => setTypes?.[index] ?? "normal");
 }
@@ -131,6 +138,59 @@ export async function createTemplate(name: string): Promise<WorkoutTemplate> {
   const db = await getDrizzle();
   await db.insert(workoutTemplates).values({ id, name, created_at: now, updated_at: now, source: null });
   return { id, name, created_at: now, updated_at: now, source: null };
+}
+
+/** Creates a complete template atomically so a failed exercise insert cannot leave an empty template. */
+export async function createTemplateWithExercises(
+  name: string,
+  inputs: CreateTemplateExerciseInput[],
+): Promise<WorkoutTemplate> {
+  const id = uuid();
+  const now = Date.now();
+  const db = await getDrizzle();
+  const createdExercises: TemplateExercise[] = inputs.map((input, position) => ({
+    id: uuid(),
+    template_id: id,
+    exercise_id: input.exerciseId,
+    position,
+    target_sets: input.targetSets,
+    target_reps: input.targetReps,
+    rest_seconds: input.restSeconds,
+    link_id: null,
+    link_label: "",
+    target_duration_seconds: null,
+    set_types: normalizeTemplateSetTypes(undefined, input.targetSets),
+  }));
+
+  await withTransaction(async () => {
+    await db.insert(workoutTemplates).values({
+      id,
+      name,
+      created_at: now,
+      updated_at: now,
+      source: "coach",
+    });
+    for (const exercise of createdExercises) {
+      await db.insert(templateExercises).values({
+        id: exercise.id,
+        template_id: exercise.template_id,
+        exercise_id: exercise.exercise_id,
+        position: exercise.position,
+        target_sets: exercise.target_sets,
+        target_reps: exercise.target_reps,
+        rest_seconds: exercise.rest_seconds,
+        set_types: JSON.stringify(exercise.set_types),
+      });
+    }
+  });
+
+  // Expo SQLite can report an implicit rollback without propagating the
+  // callback error. Verify the durable write before the agent reports success.
+  const persisted = await getTemplateById(id);
+  if (!persisted || persisted.exercises?.length !== createdExercises.length) {
+    throw new Error("Workout template transaction did not persist completely");
+  }
+  return persisted;
 }
 
 export async function getTemplates(): Promise<WorkoutTemplate[]> {

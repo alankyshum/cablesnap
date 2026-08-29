@@ -1,11 +1,12 @@
 import { useMemo, useState, useEffect } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, Switch, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import {
   importData,
   getImportCompletionMessage,
   getBackupCategoryCounts,
+  getBackupCounts,
   BACKUP_CATEGORY_LABELS,
   BACKUP_CATEGORY_ORDER,
   BACKUP_TABLE_LABELS,
@@ -27,11 +28,14 @@ type ImportResult = {
   inserted: number;
   skipped: number;
   perTable: Record<string, { inserted: number; skipped: number; skipped_existing?: number }>;
+  credentialWarning?: "invalid" | "failed";
 };
 
 function PreviewList({
   categoriesToShow, categoryCounts, version, totalRecords, exportedAt, appVersion,
   importProgress, loading, onImport, onCancel,
+  hasCredentials, confirmCredentials, onConfirmCredentials,
+  aiCoachCounts,
 }: {
   categoriesToShow: BackupCategoryName[];
   categoryCounts: Partial<Record<BackupCategoryName, number>>;
@@ -43,9 +47,16 @@ function PreviewList({
   loading: boolean;
   onImport: () => void;
   onCancel: () => void;
+  hasCredentials: boolean;
+  confirmCredentials: boolean;
+  onConfirmCredentials: (value: boolean) => void;
+  aiCoachCounts: { sessions: number; messages: number };
 }) {
   const colors = useThemeColors();
   const layout = useLayout();
+  const categoryLabel = (category: BackupCategoryName) => category === "ai_coach"
+    ? t({ id: "components.coach.aiCoachName", message: "AI Coach" })
+    : BACKUP_CATEGORY_LABELS[category];
   return (
     <FlatList
       data={categoriesToShow}
@@ -88,10 +99,15 @@ function PreviewList({
         const count = categoryCounts[category] ?? 0;
         return (
           <View style={{ paddingHorizontal: 0 }}>
-            <View style={{ flexDirection: "row", paddingVertical: 10 }} accessibilityLabel={`${BACKUP_CATEGORY_LABELS[category]}: ${count} records`}>
-              <Text variant="body" style={{ flex: 1, color: colors.onSurface }}>{BACKUP_CATEGORY_LABELS[category]}</Text>
-              <Text variant="body" style={{ width: 60, textAlign: "right", color: colors.onSurface }}>{count}</Text>
-            </View>
+            <View style={{ flexDirection: "row", paddingVertical: 10 }} accessibilityLabel={`${categoryLabel(category)}: ${count} records`}>
+                <Text variant="body" style={{ flex: 1, color: colors.onSurface }}>{categoryLabel(category)}</Text>
+                <Text variant="body" style={{ width: 60, textAlign: "right", color: colors.onSurface }}>{count}</Text>
+              </View>
+              {category === "ai_coach" && (
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant, paddingBottom: 8 }}>
+                  {aiCoachCounts.sessions} {t({ id: "history.templateFilter.sessions", message: "sessions" })} · {aiCoachCounts.messages} {t({ id: "components.coach.loadEarlier", message: "Load earlier messages" })}
+                </Text>
+              )}
             <Separator />
           </View>
         );
@@ -104,6 +120,20 @@ function PreviewList({
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
                    Existing history and seeded content remain idempotent. User preferences from the backup are restored.
           </Text>
+          {hasCredentials && (
+            <View style={[styles.credentialRow, { backgroundColor: colors.surfaceVariant }]}>
+              <View style={{ flex: 1 }}>
+                <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>
+                  {t({ id: "settings.importBackup.importCredentials", message: "Import API credential" })}
+                </Text>
+                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+                  {t({ id: "settings.importBackup.credentialsWarning", message: "Only confirm if you trust this backup. The key will be stored securely." })}
+                </Text>
+              </View>
+              <Switch value={confirmCredentials} onValueChange={onConfirmCredentials}
+                accessibilityRole="switch" accessibilityLabel={t({ id: "settings.importBackup.importCredentialsA11y", message: "Confirm importing API credential" })} />
+            </View>
+          )}
           {importProgress && (
             <Text variant="caption" style={{ color: colors.primary, marginBottom: 8 }} accessibilityLiveRegion="polite" accessibilityLabel={importProgress}>
               {importProgress}
@@ -126,6 +156,9 @@ function PreviewList({
 function ResultList({ result, onDone }: { result: ImportResult; onDone: () => void }) {
   const colors = useThemeColors();
   const layout = useLayout();
+  const categoryLabel = (category: BackupCategoryName) => category === "ai_coach"
+    ? t({ id: "components.coach.aiCoachName", message: "AI Coach" })
+    : BACKUP_CATEGORY_LABELS[category];
   const resultTables = useMemo(
     () => IMPORT_TABLE_ORDER.filter((t) => (result.perTable[t]?.inserted ?? 0) > 0 || (result.perTable[t]?.skipped ?? 0) > 0),
     [result],
@@ -168,7 +201,7 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
               <Separator />
               {categoryResults.map(({ category, inserted, skipped }) => (
                 <View key={category} style={{ flexDirection: "row", paddingVertical: 8 }}>
-                  <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>{BACKUP_CATEGORY_LABELS[category]}</Text>
+                  <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>{categoryLabel(category)}</Text>
                   <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>{inserted}</Text>
                   <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>{skipped}</Text>
                 </View>
@@ -244,6 +277,7 @@ export default function ImportBackup() {
   const [loading, setLoading] = useState(false);
   const [importProgress, setImportProgress] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [confirmCredentials, setConfirmCredentials] = useState(false);
   const { parsed, fileLoading, fileError } = useBackupData(filePath, importToken);
 
   const version = parsed ? Number(parsed.version ?? 0) : 0;
@@ -261,6 +295,14 @@ export default function ImportBackup() {
     () => (parsed ? getBackupCategoryCounts(parsed) : ({} as Partial<Record<BackupCategoryName, number>>)),
     [parsed],
   );
+  const backupCounts = useMemo<Record<string, number>>(
+    () => (parsed ? getBackupCounts(parsed) : {}),
+    [parsed],
+  );
+  const aiCoachCounts = {
+    sessions: backupCounts.coach_sessions ?? 0,
+    messages: backupCounts.coach_messages ?? 0,
+  };
   const categoriesToShow = useMemo(() => {
     if (!parsed) return [];
     const base = selectedCategories.length > 0
@@ -272,6 +314,11 @@ export default function ImportBackup() {
     () => categoriesToShow.reduce((sum, category) => sum + (categoryCounts[category] ?? 0), 0),
     [categoriesToShow, categoryCounts],
   );
+  const aiSection = parsed?.data && typeof parsed.data === "object"
+    ? (parsed.data as Record<string, unknown>).ai_coach
+    : undefined;
+  const hasCredentials = version >= 8 && typeof aiSection === "object" && aiSection !== null
+    && typeof (aiSection as Record<string, unknown>).openrouter_api_key === "string";
 
   if (fileLoading) {
     return (
@@ -319,9 +366,14 @@ export default function ImportBackup() {
         setImportProgress(i18n._({ id: "settings.importBackup.progress", message: "Importing {label}... ({tableIndex}/{totalTables}){hasRows, select, true { {rowIndex}/{rowCount}} false {}}", values: { label, tableIndex: progress.tableIndex + 1, totalTables: progress.totalTables, hasRows: progress.rowCount ? "true" : "false", rowIndex: progress.rowIndex ?? 0, rowCount: progress.rowCount ?? 0 } }));
           }
         },
-        selectedCategories.length > 0 ? { selectedCategories } : undefined,
+        selectedCategories.length > 0 ? { selectedCategories, confirmCredentials } : { confirmCredentials },
       );
       setResult(importResult);
+      if (importResult.credentialWarning === "invalid") {
+        toast.info(t({ id: "settings.importBackup.invalidCredential", message: "The API credential was invalid and was skipped; other data was imported." }));
+      } else if (importResult.credentialWarning === "failed") {
+        toast.info(t({ id: "settings.importBackup.credentialFailed", message: "The API credential could not be saved; other data was imported." }));
+      }
        toast.success(t({ id: "settings.importBackup.completeToast", message: `Import complete — ${getImportCompletionMessage(importResult.inserted, importResult.skipped)}` }));
     } catch {
        toast.error(t({ id: "settings.importBackup.failed", message: "Import failed — all changes have been rolled back" }));
@@ -345,6 +397,10 @@ export default function ImportBackup() {
           loading={loading}
           onImport={handleImport}
           onCancel={() => router.back()}
+          hasCredentials={hasCredentials}
+          confirmCredentials={confirmCredentials}
+          onConfirmCredentials={setConfirmCredentials}
+          aiCoachCounts={aiCoachCounts}
         />
       ) : (
         <ResultList result={result} onDone={() => router.back()} />
@@ -372,5 +428,13 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     minWidth: 120,
+  },
+  credentialRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    marginBottom: 16,
+    borderRadius: 12,
+    minHeight: 64,
   },
 });

@@ -132,6 +132,14 @@ async function insertRow(database: any, tableName: BackupTableName, row: Record<
     case "program_schedule": return run(database, "INSERT OR IGNORE INTO program_schedule (program_id, day_of_week, template_id) VALUES (?, ?, ?)", [row.program_id, row.day_of_week, row.template_id]);
     case "meal_templates": return run(database, "INSERT OR IGNORE INTO meal_templates (id, name, meal, cached_calories, cached_protein, cached_carbs, cached_fat, last_used_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [row.id, row.name, row.meal, row.cached_calories ?? 0, row.cached_protein ?? 0, row.cached_carbs ?? 0, row.cached_fat ?? 0, row.last_used_at ?? null, row.created_at, row.updated_at]);
     case "meal_template_items": return run(database, "INSERT OR IGNORE INTO meal_template_items (id, template_id, food_entry_id, servings, sort_order) VALUES (?, ?, ?, ?, ?)", [row.id, row.template_id, row.food_entry_id, row.servings ?? 1, row.sort_order ?? 0]);
+    case "coach_sessions":
+    case "coach_messages": {
+      const columns = (await database.getAllAsync(`PRAGMA table_info(${tableName})`) as { name: string }[])
+        .map((column) => column.name).filter((column) => column in row);
+      if (!columns.length) return false;
+      const values = columns.map((column) => row[column] ?? null);
+      return run(database, `INSERT OR IGNORE INTO ${tableName} (${columns.join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`, values);
+    }
     default: return false;
   }
 }

@@ -397,6 +397,13 @@ export default function Settings() {
             <Text variant="caption">
               {t({ id: 'settings.about.description', message: 'Free & open-source workout tracker — optimized for cable machines, supports all major exercises.' })}
             </Text>
+            <SettingsLinkRow
+              title={t({ id: 'settings.about.releases', message: 'GitHub Releases' })}
+              onPress={() => Linking.openURL('https://github.com/alankyshum/cablesnap/releases')}
+              accessibilityLabel={t({ id: 'settings.about.releasesA11y', message: 'Open GitHub Releases' })}
+              colors={colors}
+              testID="settings-about-releases"
+            />
             <Text
               variant="body"
               style={{ color: colors.primary, marginTop: spacing.xs }}
@@ -476,9 +483,9 @@ export default function Settings() {
         initialSelected={BACKUP_CATEGORY_ORDER}
         loading={loading}
         onClose={() => setExportSheetVisible(false)}
-        onConfirm={(selectedCategories) => {
+        onConfirm={(selectedCategories, includeCredentials) => {
           setExportSheetVisible(false);
-          void handleExport(deps, selectedCategories);
+          void handleExport(deps, selectedCategories, includeCredentials);
         }}
       />
       <BackupCategorySheet
