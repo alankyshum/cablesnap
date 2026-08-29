@@ -40,7 +40,7 @@
     "origin": "machine"
   },
   "components.progress.calendarDayDetail.sessionSummary": {
-    "message": "{0} · {1} {2, plural, 一 {exercise} 其他 {exercises}} · {3} {4, plural, 一 {set} 其他 {sets}}",
+    "message": "{0} · {1} {2, plural, one {个动作} other {个动作}} · {3} {4, plural, one {组} other {组}}",
     "srcHash": "718282445ed6",
     "origin": "machine"
   },
@@ -6855,8 +6855,8 @@
     "origin": "machine"
   },
   "settings.hydration.preset": {
-    "message": "预设值 {number} ({unit, select, ml {ml} fl oz {液量盎司}})",
-    "srcHash": "d2f7139c776e",
+    "message": "预设值 {number} ({unit, select, ml {ml} fl_oz {液量盎司}})",
+    "srcHash": "a8379470affb",
     "origin": "machine"
   },
   "settings.hydration.presetPositive": {
@@ -10144,14 +10144,19 @@
     "srcHash": "8e13016f890d",
     "origin": "machine"
   },
+  "settings.about.releases": {
+    "message": "GitHub 发行版本",
+    "srcHash": "717660ea399c",
+    "origin": "machine"
+  },
+  "settings.about.releasesA11y": {
+    "message": "开启 GitHub 发行版本",
+    "srcHash": "87156ad62bc6",
+    "origin": "machine"
+  },
   "app.exercise.id.attachment.ankleStrap": {
     "message": "脚踝带",
     "srcHash": "8bba731d66db",
-    "origin": "machine"
-  },
-  "app.tools.cableFinder.attachment.ankleStrap": {
-    "message": "脚踝带",
-    "srcHash": "7110c5a7e4d4",
     "origin": "machine"
   },
   "app.exercise.id.category.arms": {
@@ -10184,11 +10189,6 @@
     "srcHash": "38dc0000fc3d",
     "origin": "machine"
   },
-  "app.tools.cableFinder.attachment.bar": {
-    "message": "杠铃",
-    "srcHash": "812ca392d8a1",
-    "origin": "machine"
-  },
   "app.exercise.id.difficulty.beginner": {
     "message": "初阶",
     "srcHash": "a661ce2b6c1d",
@@ -10212,11 +10212,6 @@
   "app.exercise.id.attachment.carabiner": {
     "message": "快扣环",
     "srcHash": "8b4e72accb31",
-    "origin": "machine"
-  },
-  "app.tools.cableFinder.attachment.carabiner": {
-    "message": "快扣",
-    "srcHash": "0ae8053f7fa3",
     "origin": "machine"
   },
   "app.exercise.id.category.chest": {
@@ -10274,11 +10269,6 @@
     "srcHash": "7bc225973e21",
     "origin": "machine"
   },
-  "app.tools.cableFinder.attachment.handle": {
-    "message": "握把",
-    "srcHash": "bdb229c391cc",
-    "origin": "machine"
-  },
   "app.tools.cableFinder.mount.high": {
     "message": "高",
     "srcHash": "3df2c5e97c01",
@@ -10334,19 +10324,9 @@
     "srcHash": "b20414584167",
     "origin": "machine"
   },
-  "app.tools.cableFinder.attachment.ringHandle": {
-    "message": "环状握把",
-    "srcHash": "954b552e6bca",
-    "origin": "machine"
-  },
   "app.exercise.id.attachment.rope": {
     "message": "绳索",
     "srcHash": "bfe4cecdeab9",
-    "origin": "machine"
-  },
-  "app.tools.cableFinder.attachment.rope": {
-    "message": "绳索",
-    "srcHash": "47c0c4a7bc34",
     "origin": "machine"
   },
   "settings.backups.shareA11y": {
@@ -10372,11 +10352,6 @@
   "app.exercise.id.attachment.squatHarness": {
     "message": "深蹲带",
     "srcHash": "8764279fc5ac",
-    "origin": "machine"
-  },
-  "app.tools.cableFinder.attachment.squatHarness": {
-    "message": "深蹲带",
-    "srcHash": "0a435ac9087a",
     "origin": "machine"
   },
   "app.tools.cableFinder.muscle.traps": {
@@ -10423,5 +10398,1320 @@
     "message": "删除 {count, plural, one {# 个影片} other {# 个影片}}？这将永久从此装置中删除它们。此操作无法撤销。",
     "srcHash": "f81081a70568",
     "origin": "machine"
+  },
+  "floatingTabBar.tabs.aiCoach": {
+    "message": "AI 教练",
+    "srcHash": "07cacebdf686",
+    "origin": "machine"
+  },
+  "tabs.workouts.exercisesA11y": {
+    "message": "动作",
+    "srcHash": "fe34e979251c",
+    "origin": "machine"
+  },
+  "common.deleting": {
+    "message": "删除中...",
+    "srcHash": "517d142eca23",
+    "origin": "machine"
+  },
+  "common.retry": {
+    "message": "重试",
+    "srcHash": "2f3eac393010",
+    "origin": "machine"
+  },
+  "components.bodyProfile.loadFailed": {
+    "message": "无法载入个人资料",
+    "srcHash": "ce78629867e2",
+    "origin": "machine"
+  },
+  "components.bodyProfile.loading": {
+    "message": "正在载入个人资料…",
+    "srcHash": "857b4c386b47",
+    "origin": "machine"
+  },
+  "components.bodyProfile.retryA11y": {
+    "message": "重新载入个人资料",
+    "srcHash": "d5c12c556ee2",
+    "origin": "machine"
+  },
+  "components.bodyProfile.title": {
+    "message": "身体概况",
+    "srcHash": "69375aee8c2b",
+    "origin": "machine"
+  },
+  "components.foodSearch.onlineResults": {
+    "message": "线上结果",
+    "srcHash": "577a691392f8",
+    "origin": "machine"
+  },
+  "components.foodSearch.placeholder": {
+    "message": "搜寻食物...",
+    "srcHash": "03095e442c31",
+    "origin": "machine"
+  },
+  "components.foodSearch.scanBarcodeA11y": {
+    "message": "扫描条码",
+    "srcHash": "2ecc26280ffe",
+    "origin": "machine"
+  },
+  "components.foodSearch.searchA11y": {
+    "message": "搜寻食物",
+    "srcHash": "5f1f2e59a253",
+    "origin": "machine"
+  },
+  "components.manualFood.calories": {
+    "message": "卡路里",
+    "srcHash": "4412579538e8",
+    "origin": "machine"
+  },
+  "components.manualFood.closeA11y": {
+    "message": "关闭手动输入",
+    "srcHash": "bacec535974c",
+    "origin": "machine"
+  },
+  "components.manualFood.foodName": {
+    "message": "食物名称",
+    "srcHash": "d7a01cce5008",
+    "origin": "machine"
+  },
+  "components.manualFood.log": {
+    "message": "记录食物",
+    "srcHash": "443602116200",
+    "origin": "machine"
+  },
+  "components.manualFood.logA11y": {
+    "message": "手动记录",
+    "srcHash": "8213f600b325",
+    "origin": "machine"
+  },
+  "components.manualFood.open": {
+    "message": "手动输入",
+    "srcHash": "7b846f5d353e",
+    "origin": "machine"
+  },
+  "components.manualFood.openA11y": {
+    "message": "手动输入",
+    "srcHash": "157f7bc8060e",
+    "origin": "machine"
+  },
+  "components.manualFood.removeFavoriteA11y": {
+    "message": "从最爱清单中移除手动输入",
+    "srcHash": "db185b51853f",
+    "origin": "machine"
+  },
+  "components.manualFood.saveFavorite": {
+    "message": "设为最爱",
+    "srcHash": "add06334b39d",
+    "origin": "machine"
+  },
+  "components.manualFood.saveFavoriteA11y": {
+    "message": "将手动输入设为最爱",
+    "srcHash": "342804af19d9",
+    "origin": "machine"
+  },
+  "components.manualFood.servingSize": {
+    "message": "份量",
+    "srcHash": "f47384963113",
+    "origin": "machine"
+  },
+  "components.manualFood.title": {
+    "message": "手动食物输入",
+    "srcHash": "ae5b083ba9a9",
+    "origin": "machine"
+  },
+  "components.shareSheet.achievement": {
+    "message": "分享成就摘要",
+    "srcHash": "ae248b4d4195",
+    "origin": "machine"
+  },
+  "components.shareSheet.achievementHint": {
+    "message": "生成成就概要卡片图像",
+    "srcHash": "83598287d9c8",
+    "origin": "machine"
+  },
+  "components.shareSheet.connectStrava": {
+    "message": "连接Strava",
+    "srcHash": "f2188c061544",
+    "origin": "machine"
+  },
+  "components.shareSheet.connectStravaHint": {
+    "message": "开启设定以连接Strava",
+    "srcHash": "2c412234d38e",
+    "origin": "machine"
+  },
+  "components.shareSheet.image": {
+    "message": "以图片形式分享",
+    "srcHash": "7a5cf7e4a528",
+    "origin": "machine"
+  },
+  "components.shareSheet.imageHint": {
+    "message": "生成训练卡图片",
+    "srcHash": "2f0bd98084dd",
+    "origin": "machine"
+  },
+  "components.shareSheet.stravaImage": {
+    "message": "分享Strava图片",
+    "srcHash": "017005e341d6",
+    "origin": "machine"
+  },
+  "components.shareSheet.stravaImageHint": {
+    "message": "生成Strava训练卡片图片",
+    "srcHash": "bed934f5271d",
+    "origin": "machine"
+  },
+  "components.shareSheet.syncStrava": {
+    "message": "同步至Strava",
+    "srcHash": "74e0b5b522ed",
+    "origin": "machine"
+  },
+  "components.shareSheet.syncStravaHint": {
+    "message": "直接将训练活动数据上传至Strava",
+    "srcHash": "cdfa42029656",
+    "origin": "machine"
+  },
+  "components.shareSheet.text": {
+    "message": "以文字分享",
+    "srcHash": "ef1b0d866131",
+    "origin": "machine"
+  },
+  "components.shareSheet.textHint": {
+    "message": "复制工作训练摘要为文字",
+    "srcHash": "495523f4976a",
+    "origin": "machine"
+  },
+  "components.shareSheet.title": {
+    "message": "分享训练",
+    "srcHash": "f01674ac06fc",
+    "origin": "machine"
+  },
+  "exerciseTutorialLink.copyLink": {
+    "message": "复制此连结以手动搜寻：\n\n{url}",
+    "srcHash": "46e8639af69e",
+    "origin": "machine"
+  },
+  "exerciseTutorialLink.openBrowserFailed": {
+    "message": "无法打开浏览器",
+    "srcHash": "2f2b665d6484",
+    "origin": "machine"
+  },
+  "insights.balance.accessibilityLabel": {
+    "message": "{title}. 按下以查看肌肉体积细节。",
+    "srcHash": "748ae6a28528",
+    "origin": "machine"
+  },
+  "insights.balance.mixed": {
+    "message": "本周{underCount}次未达目标，{overCount}次超出上限。",
+    "srcHash": "d00b797dbbc2",
+    "origin": "machine"
+  },
+  "insights.balance.overMany": {
+    "message": "{count}块肌肉超过了本周的上限",
+    "srcHash": "edacb87fc3d3",
+    "origin": "machine"
+  },
+  "insights.balance.overOne": {
+    "message": "这周的上限有一个肌肉超过了",
+    "srcHash": "5daea65eef83",
+    "origin": "machine"
+  },
+  "insights.balance.underMany": {
+    "message": "{count}块肌肉未达本周目标",
+    "srcHash": "5613bec29313",
+    "origin": "machine"
+  },
+  "insights.balance.underOne": {
+    "message": "本周目标以下的肌肉有1组",
+    "srcHash": "ac6a0d6c952d",
+    "origin": "machine"
+  },
+  "insights.consistency.accessibilityLabel": {
+    "message": "训练洞察：{title}",
+    "srcHash": "1890fa59bf66",
+    "origin": "machine"
+  },
+  "insights.consistency.title": {
+    "message": "{count}次训练，本周 — 你连续{weeks}周表现最佳！",
+    "srcHash": "8b5446f15f01",
+    "origin": "machine"
+  },
+  "insights.goal.accessibilityLabel": {
+    "message": "训练洞察：{title}。点击查看详细资讯。",
+    "srcHash": "837b4d0e9c6a",
+    "origin": "machine"
+  },
+  "insights.goal.title": {
+    "message": "你离你的{exerciseName}目标还剩{progressPct}%！",
+    "srcHash": "ca66ce07c035",
+    "origin": "machine"
+  },
+  "insights.muscle.fullBody": {
+    "message": "全身",
+    "srcHash": "5caec90081ac",
+    "origin": "machine"
+  },
+  "insights.returning.accessibilityLabel": {
+    "message": "训练洞察：{title}",
+    "srcHash": "ce7433afd491",
+    "origin": "machine"
+  },
+  "insights.returning.title": {
+    "message": "欢迎回来！你今天表现得非常出色。",
+    "srcHash": "0321d163b20e",
+    "origin": "machine"
+  },
+  "insights.strength.accessibilityLabel": {
+    "message": "训练洞察：{title}。点击查看详细资讯。",
+    "srcHash": "8ecb00012518",
+    "origin": "machine"
+  },
+  "insights.strength.title": {
+    "message": "本月您的{exerciseName}增加了{delta}公斤",
+    "srcHash": "6a24a5c46f66",
+    "origin": "machine"
+  },
+  "insights.volume.accessibilityLabel": {
+    "message": "训练洞察：{title}。点击查看详细资讯。",
+    "srcHash": "15506102905d",
+    "origin": "machine"
+  },
+  "insights.volume.title": {
+    "message": "训练量增加 {pct}% 与上个月比较",
+    "srcHash": "a36f4ec0ebb3",
+    "origin": "machine"
+  },
+  "notifications.channel.restComplete": {
+    "message": "休息完成",
+    "srcHash": "1d21d63c1b87",
+    "origin": "machine"
+  },
+  "notifications.channel.restCue": {
+    "message": "休息前提示",
+    "srcHash": "229c530e97b9",
+    "origin": "machine"
+  },
+  "notifications.channel.restOngoing": {
+    "message": "休息计时器（持续中）",
+    "srcHash": "fabead1d8b2b",
+    "origin": "machine"
+  },
+  "notifications.complete.lastSet": {
+    "message": "最后一组完成",
+    "srcHash": "86fd87a30c79",
+    "origin": "machine"
+  },
+  "notifications.complete.nextSet": {
+    "message": "轮到你做下一组了。",
+    "srcHash": "0ab17991dd7d",
+    "origin": "machine"
+  },
+  "notifications.complete.title": {
+    "message": "休息完成",
+    "srcHash": "407b43bb45fe",
+    "origin": "machine"
+  },
+  "notifications.live.resting": {
+    "message": "休息中...",
+    "srcHash": "c46915a134f1",
+    "origin": "machine"
+  },
+  "notifications.live.title": {
+    "message": "休息中 · {time} 剩余",
+    "srcHash": "89637c00573b",
+    "origin": "machine"
+  },
+  "notifications.preEnd.next": {
+    "message": "下一个：{preview}",
+    "srcHash": "8f1c45255092",
+    "origin": "machine"
+  },
+  "notifications.preEnd.nextSet": {
+    "message": "下一组在{seconds}s后",
+    "srcHash": "33a5ce29c259",
+    "origin": "machine"
+  },
+  "notifications.preEnd.title": {
+    "message": "休息 {seconds}s 即将结束",
+    "srcHash": "af14dee7c1ef",
+    "origin": "machine"
+  },
+  "notifications.preEnd.workoutEnding": {
+    "message": "训练结束倒计时{seconds}s",
+    "srcHash": "20baa3b02790",
+    "origin": "machine"
+  },
+  "notifications.preview.bodyweight": {
+    "message": "{exerciseName} — 重量训练 × {reps}",
+    "srcHash": "9e0954117e18",
+    "origin": "machine"
+  },
+  "notifications.preview.distance": {
+    "message": "{exerciseName} — {distance}",
+    "srcHash": "c5630bdf1011",
+    "origin": "machine"
+  },
+  "notifications.preview.duration": {
+    "message": "{exerciseName} — {duration}",
+    "srcHash": "66f59d34ebc2",
+    "origin": "machine"
+  },
+  "notifications.preview.kilometers": {
+    "message": "{value} 公里",
+    "srcHash": "fb0641830834",
+    "origin": "machine"
+  },
+  "notifications.preview.meters": {
+    "message": "{value} 米",
+    "srcHash": "f0efb1e18905",
+    "origin": "machine"
+  },
+  "notifications.preview.weighted": {
+    "message": "{exerciseName} — {weight} {unit} × {reps}",
+    "srcHash": "602fbc460a12",
+    "origin": "machine"
+  },
+  "notifications.reminder.body": {
+    "message": "{template} 预定今天进行",
+    "srcHash": "d9a004962985",
+    "origin": "machine"
+  },
+  "notifications.reminder.title": {
+    "message": "训练时间到了！",
+    "srcHash": "0a590f6908a5",
+    "origin": "machine"
+  },
+  "notifications.response.templateMissing": {
+    "message": "预定的模板已不存在",
+    "srcHash": "eb5716a57806",
+    "origin": "machine"
+  },
+  "notifications.test.body": {
+    "message": "通知正常运作。一切就绪！",
+    "srcHash": "5e274f528aba",
+    "origin": "machine"
+  },
+  "notifications.test.title": {
+    "message": "CableSnap测试 🔔",
+    "srcHash": "7b71bcf60254",
+    "origin": "machine"
+  },
+  "settings.autoBackup.createA11y": {
+    "message": "立即创建备份",
+    "srcHash": "3861b8c2fce5",
+    "origin": "machine"
+  },
+  "settings.autoBackup.created": {
+    "message": "备份成功建立",
+    "srcHash": "2482a7bc4784",
+    "origin": "machine"
+  },
+  "settings.autoBackup.decreaseA11y": {
+    "message": "减少备份保留时间",
+    "srcHash": "7dac1c316ceb",
+    "origin": "machine"
+  },
+  "settings.autoBackup.failed": {
+    "message": "备份失败",
+    "srcHash": "5ba9485cc7b2",
+    "origin": "machine"
+  },
+  "settings.autoBackup.increaseA11y": {
+    "message": "增加备份保留时间",
+    "srcHash": "fdf693440d71",
+    "origin": "machine"
+  },
+  "settings.autoBackup.infoA11y": {
+    "message": "自动备份。点击以获取更多资讯",
+    "srcHash": "bf4e1651e479",
+    "origin": "machine"
+  },
+  "settings.autoBackup.lastDate": {
+    "message": "最后备份：{dateText} {time}",
+    "srcHash": "8284f5efb2dd",
+    "origin": "machine"
+  },
+  "settings.autoBackup.lastToday": {
+    "message": "最后备份：今天 {time}",
+    "srcHash": "ef6d1a760156",
+    "origin": "machine"
+  },
+  "settings.autoBackup.lastYesterday": {
+    "message": "最后备份：昨天 {time}",
+    "srcHash": "4284b84009af",
+    "origin": "machine"
+  },
+  "settings.autoBackup.noBackups": {
+    "message": "尚未备份",
+    "srcHash": "75c63571586c",
+    "origin": "machine"
+  },
+  "settings.autoBackup.retentionFailed": {
+    "message": "更新保留失败",
+    "srcHash": "081fa241a4b4",
+    "origin": "machine"
+  },
+  "settings.autoBackup.toggleA11y": {
+    "message": "运动后开关自动备份",
+    "srcHash": "461901bc639d",
+    "origin": "machine"
+  },
+  "settings.autoBackup.updateFailed": {
+    "message": "更新设定失败",
+    "srcHash": "67782859060e",
+    "origin": "machine"
+  },
+  "settings.autoBackup.viewA11y": {
+    "message": "查看所有备份",
+    "srcHash": "635f1282f3a1",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteAll": {
+    "message": "删除所有影片",
+    "srcHash": "f7ef8f1b592e",
+    "origin": "machine"
+  },
+  "settings.formClips.deleteHint": {
+    "message": "从您的装置中移除此片段",
+    "srcHash": "5077d25254cf",
+    "origin": "machine"
+  },
+  "settings.formClips.manageA11y": {
+    "message": "管理表单片段",
+    "srcHash": "59ad460b32f4",
+    "origin": "machine"
+  },
+  "settings.formClips.manageHint": {
+    "message": "开启所有已录制的动作片段清单，您可以删除单个或全部片段",
+    "srcHash": "1a38a45da58b",
+    "origin": "machine"
+  },
+  "settings.formClips.title": {
+    "message": "姿势片段",
+    "srcHash": "8c6b7e520a70",
+    "origin": "machine"
+  },
+  "settings.language.enGB": {
+    "message": "英国 英语",
+    "srcHash": "3201054d7410",
+    "origin": "machine"
+  },
+  "settings.language.enUS": {
+    "message": "美国英语",
+    "srcHash": "2d2b8c03b8b6",
+    "origin": "machine"
+  },
+  "settings.language.zhCN": {
+    "message": "简体中文",
+    "srcHash": "bbf624832eaa",
+    "origin": "machine"
+  },
+  "settings.language.zhTW": {
+    "message": "繁体中文",
+    "srcHash": "49cc2a206c85",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.captureRpe": {
+    "message": "记录训练中的组数RPE",
+    "srcHash": "c28612a45f9d",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.captureRpeA11y": {
+    "message": "完成每组后显示努力芯片",
+    "srcHash": "b655125493c8",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.captureRpeHint": {
+    "message": "每组结束后点选芯片记录感受。驱动智能休息计时器和进步建议。",
+    "srcHash": "f14aeef8a0a1",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.enableRpeHint": {
+    "message": "启用上方的「捕捉组数RPE」以使用此设定。",
+    "srcHash": "7b9c918807c7",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.intensityScale": {
+    "message": "强度刻度",
+    "srcHash": "778e7fefe9c9",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.rirHint": {
+    "message": "RIR = 剩余可做次数。RPE = 10 - RIR。",
+    "srcHash": "a80e208d11e0",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.saveIntensityFailed": {
+    "message": "保存强度比例设定失败",
+    "srcHash": "36a991b785a1",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.savePulleyFailed": {
+    "message": "滑轮轨迹设定储存失败",
+    "srcHash": "96bb5a40b573",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.saveRpeFailed": {
+    "message": "RPE捕获设定储存失败",
+    "srcHash": "2c6b77961f76",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.trackPulley": {
+    "message": "记录滑轮轴心位置",
+    "srcHash": "e26c4f0c55b6",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.trackPulleyA11y": {
+    "message": "显示或隐藏缆绳训练组中的滑轮插销标签",
+    "srcHash": "7aacae763248",
+    "origin": "machine"
+  },
+  "settings.sessionPreferences.trackPulleyHint": {
+    "message": "在缆索组数上显示一个针码贴纸，用于记录您使用了哪个滑轮针码。",
+    "srcHash": "d1465246e903",
+    "origin": "machine"
+  },
+  "settings.units.measurements": {
+    "message": "测量",
+    "srcHash": "f5760e8bbd96",
+    "origin": "machine"
+  },
+  "settings.units.saveUnitFailed": {
+    "message": "无法储存单位",
+    "srcHash": "d30374b8bd51",
+    "origin": "machine"
+  },
+  "settings.units.saveWeightStepFailed": {
+    "message": "无法储存重量步骤设定",
+    "srcHash": "e2d5c1d90c10",
+    "origin": "machine"
+  },
+  "settings.units.title": {
+    "message": "单位",
+    "srcHash": "68aecbd99beb",
+    "origin": "machine"
+  },
+  "settings.units.weight": {
+    "message": "重量",
+    "srcHash": "a54504946498",
+    "origin": "machine"
+  },
+  "settings.units.weightStep": {
+    "message": "重量步骤",
+    "srcHash": "a262bbec57ec",
+    "origin": "machine"
+  },
+  "settings.units.weightStepHint": {
+    "message": "输入运动的步长细度。适用于新会话。",
+    "srcHash": "7ee8f1e039b9",
+    "origin": "machine"
+  },
+  "share.achievement.more": {
+    "message": "+{extraCount} 更多",
+    "srcHash": "4d147e061d8e",
+    "origin": "machine"
+  },
+  "share.achievement.unlocked": {
+    "message": "{achievementCount} {achievementCount, plural, one {成就} other {成就}} 解锁！",
+    "srcHash": "bada375e3db9",
+    "origin": "machine"
+  },
+  "share.exercises.more": {
+    "message": "和{remaining}更多",
+    "srcHash": "7eb6caecd9c7",
+    "origin": "machine"
+  },
+  "share.exercises.newPrs": {
+    "message": "🏆 新PR",
+    "srcHash": "7f875fc27a9b",
+    "origin": "machine"
+  },
+  "share.exercises.title": {
+    "message": "运动",
+    "srcHash": "a3cce693f041",
+    "origin": "machine"
+  },
+  "share.stats.duration": {
+    "message": "时间",
+    "srcHash": "48dea83849a4",
+    "origin": "machine"
+  },
+  "share.stats.sets": {
+    "message": "组数",
+    "srcHash": "1f42d6b75dd2",
+    "origin": "machine"
+  },
+  "share.stats.volume": {
+    "message": "音量 ({unit})",
+    "srcHash": "0bcf00bb62dc",
+    "origin": "machine"
+  },
+  "stravaError.appInactive": {
+    "message": "Strava应用程式存取已停用。请联系支援。",
+    "srcHash": "6f562a18c437",
+    "origin": "machine"
+  },
+  "stravaError.config": {
+    "message": "Strava设定不正确。请联系支援。",
+    "srcHash": "c2da5de7f117",
+    "origin": "machine"
+  },
+  "stravaError.connectionExpired": {
+    "message": "连线已过期。请再试一次。",
+    "srcHash": "ed163b8c6ebd",
+    "origin": "machine"
+  },
+  "stravaError.getHelp": {
+    "message": "获得帮助",
+    "srcHash": "a7c8f02d8bd1",
+    "origin": "machine"
+  },
+  "stravaError.localRead": {
+    "message": "无法读取训练数据。请再试一次。",
+    "srcHash": "657bd0694ae3",
+    "origin": "machine"
+  },
+  "stravaError.network": {
+    "message": "检查您的网路连线并再试一次。",
+    "srcHash": "9798814d02a4",
+    "origin": "machine"
+  },
+  "stravaError.rateLimit": {
+    "message": "请求过多。请稍后再试。",
+    "srcHash": "f6c3624e0daf",
+    "origin": "machine"
+  },
+  "stravaError.server": {
+    "message": "Strava 目前遇到问题。请稍后再试。",
+    "srcHash": "4f0870f7221f",
+    "origin": "machine"
+  },
+  "stravaError.unknown": {
+    "message": "与Strava连线时发生错误。请再试一次。",
+    "srcHash": "24375bf260f1",
+    "origin": "machine"
+  },
+  "components.coach.activeModelA11y": {
+    "message": "目前模型：{modelId}。点击以变更模型。",
+    "srcHash": "a26ab7f3dec3",
+    "origin": "human"
+  },
+  "ai.errors.addCredits": {
+    "message": "新增 额度 at openrouter.ai",
+    "srcHash": "c17b8121cca5",
+    "origin": "human"
+  },
+  "ai.errors.addKey": {
+    "message": "新增 金钥",
+    "srcHash": "73bd58e899fb",
+    "origin": "human"
+  },
+  "ai.errors.missingKey": {
+    "message": "新增 your 开启Router 金钥 to use AI 教练.",
+    "srcHash": "24ad06b9f83b",
+    "origin": "human"
+  },
+  "components.coach.deleteConversationBody": {
+    "message": "Are you sure you want to delete \"{title}\"? This cannot be undone.（AI 教练）",
+    "srcHash": "e0a94a64820e",
+    "origin": "human"
+  },
+  "ai.errors.checkKey": {
+    "message": "Check 金钥",
+    "srcHash": "98509f3288cc",
+    "origin": "human"
+  },
+  "components.ui.sheet.close": {
+    "message": "关闭 sheet",
+    "srcHash": "c1100d93c22e",
+    "origin": "human"
+  },
+  "components.coach.deleteSessionA11y": {
+    "message": "删除 {title}",
+    "srcHash": "ab5a7dd9578d",
+    "origin": "human"
+  },
+  "ai.errors.dismiss": {
+    "message": "Dismiss（AI 教练）",
+    "srcHash": "2101bfd447f7",
+    "origin": "human"
+  },
+  "components.coach.errorA11y": {
+    "message": "错误：{message}",
+    "srcHash": "187ddc51cbbe",
+    "origin": "human"
+  },
+  "components.coach.noModelsMatching": {
+    "message": "没有模型s matching \"{query}\"",
+    "srcHash": "bc562255b034",
+    "origin": "human"
+  },
+  "ai.errors.openModelPicker": {
+    "message": "开启 模型 picker",
+    "srcHash": "d8dddb7b2765",
+    "origin": "human"
+  },
+  "ai.errors.serverError": {
+    "message": "开启Router encountered a 伺服器 错误. 重试 shortly or choose another 模型.",
+    "srcHash": "286eedd410a4",
+    "origin": "human"
+  },
+  "ai.errors.rateLimitedReset": {
+    "message": "开启Router rate limit reached. 重试 after {resetAt}.",
+    "srcHash": "95558d7c6e63",
+    "origin": "human"
+  },
+  "ai.errors.rateLimitedGeneric": {
+    "message": "开启Router rate limit reached. 重试 later; free-tier limits are 20 rpm, 50/day under $10 purchased, or 1000/day at $10+.",
+    "srcHash": "e7dc0a36dfc7",
+    "origin": "human"
+  },
+  "ai.errors.forbidden": {
+    "message": "开启Router refused this request. Check 金钥 permissions or 模型 access.",
+    "srcHash": "5fcd919d62b1",
+    "origin": "human"
+  },
+  "ai.errors.pickAnotherModel": {
+    "message": "Pick another 模型",
+    "srcHash": "910719260300",
+    "origin": "human"
+  },
+  "components.coach.refreshCatalog": {
+    "message": "Refresh 目录",
+    "srcHash": "6d6f528e9652",
+    "origin": "human"
+  },
+  "components.coach.renameSessionA11y": {
+    "message": "Rename {title}（AI 教练）",
+    "srcHash": "4213f4ac4a07",
+    "origin": "human"
+  },
+  "ai.errors.retry": {
+    "message": "重试",
+    "srcHash": "caf5b375ea52",
+    "origin": "human"
+  },
+  "ai.errors.retryLater": {
+    "message": "重试 later",
+    "srcHash": "df5e18f6d072",
+    "origin": "human"
+  },
+  "components.coach.selectedModel": {
+    "message": "已选择：{modelId}",
+    "srcHash": "c3d361beb6ee",
+    "origin": "human"
+  },
+  "components.coach.sessionA11y": {
+    "message": "工作阶段: {title}",
+    "srcHash": "32b5b5300516",
+    "origin": "human"
+  },
+  "components.coach.cachedCatalogDescription": {
+    "message": "Showing cached 模型s from {time}. 选择ions may have changed.",
+    "srcHash": "df55395d635e",
+    "origin": "human"
+  },
+  "components.coach.suggestionA11y": {
+    "message": "Suggestion: {title}（AI 教练）",
+    "srcHash": "0c99481f6208",
+    "origin": "human"
+  },
+  "ai.errors.modelLacksTools": {
+    "message": "That 模型 does not 支援 the tools AI 教练 needs.",
+    "srcHash": "3de9ee7d5863",
+    "origin": "human"
+  },
+  "ai.errors.modelNotInCatalog": {
+    "message": "That 模型 is no longer in the live 目录.",
+    "srcHash": "1e4727d1056a",
+    "origin": "human"
+  },
+  "ai.errors.invalidKey": {
+    "message": "That 开启Router 金钥 was rejected. Check it and try again.",
+    "srcHash": "f2806b55a0ae",
+    "origin": "human"
+  },
+  "ai.errors.networkError": {
+    "message": "The AI request could not reach 开启Router.",
+    "srcHash": "33dcc1873b43",
+    "origin": "human"
+  },
+  "ai.errors.abortedByUser": {
+    "message": "The AI request was stopped.（AI 教练）",
+    "srcHash": "8f410afdd2fb",
+    "origin": "human"
+  },
+  "ai.errors.stepLimitReached": {
+    "message": "The coach reached its data-checking limit before writing an answer. 重试 the question.",
+    "srcHash": "82f84617c8cd",
+    "origin": "human"
+  },
+  "ai.errors.staleCatalogWarning": {
+    "message": "The 模型 目录 is stale; selections may have changed.",
+    "srcHash": "c7e202479bbe",
+    "origin": "human"
+  },
+  "ai.errors.catalogUnavailable": {
+    "message": "The 模型 目录 is 无法使用, so no 模型 can be 已选 安全ly.",
+    "srcHash": "86b94b7325fe",
+    "origin": "human"
+  },
+  "ai.errors.emptyResponse": {
+    "message": "The 模型 returned nothing. 重试 or try another 模型.",
+    "srcHash": "1e1cdf69c8f4",
+    "origin": "human"
+  },
+  "ai.errors.upstreamProviderUnavailable": {
+    "message": "The 已选 模型's upstream 供应商 is 无法使用.",
+    "srcHash": "580960bb7bb1",
+    "origin": "human"
+  },
+  "ai.errors.insufficientCredits": {
+    "message": "This 金钥 has insufficient 额度. Key-scoped usage is shown in Settings.",
+    "srcHash": "a33015498858",
+    "origin": "human"
+  },
+  "ai.errors.useCachedCatalog": {
+    "message": "Use cached 目录",
+    "srcHash": "4317b5d9a79d",
+    "origin": "human"
+  },
+  "components.coach.toggleSidebar": {
+    "message": "Toggle sessions sidebar（AI 教练）",
+    "srcHash": "fab4b855ff73",
+    "origin": "human"
+  },
+  "components.coach.expandSidebar": {
+    "message": "Expand sessions sidebar（AI 教练）",
+    "srcHash": "7f5c2c39997b",
+    "origin": "human"
+  },
+  "components.coach.newChatA11y": {
+    "message": "开始 a new chat",
+    "srcHash": "e162fbffaa1d",
+    "origin": "human"
+  },
+  "components.coach.you": {
+    "message": "你",
+    "srcHash": "2e197779f01c",
+    "origin": "human"
+  },
+  "components.coach.aiCoachName": {
+    "message": "AI 教练",
+    "srcHash": "f1b99654eaa5",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt1": {
+    "message": "How have my 最近 few 训练s gone?",
+    "srcHash": "1c33c9e16eae",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt2": {
+    "message": "What did I eat this week?（AI 教练）",
+    "srcHash": "80684bb8dc35",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt3": {
+    "message": "Show my bench press progression（AI 教练）",
+    "srcHash": "0fe02584d84c",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt4": {
+    "message": "How can I optimize my recovery?（AI 教练）",
+    "srcHash": "6e486f5dbfd6",
+    "origin": "human"
+  },
+  "components.coach.dataConsulted": {
+    "message": "Data consulted: local records（AI 教练）",
+    "srcHash": "5cd082650add",
+    "origin": "human"
+  },
+  "components.coach.stop": {
+    "message": "停止 generating",
+    "srcHash": "4bd8ce5fb79d",
+    "origin": "human"
+  },
+  "components.coach.sendA11y": {
+    "message": "传送 讯息",
+    "srcHash": "c735f7c7c45b",
+    "origin": "human"
+  },
+  "components.coach.missingKeyPlaceholder": {
+    "message": "新增 your 开启Router 金钥 to chat...",
+    "srcHash": "e9697caf7b88",
+    "origin": "human"
+  },
+  "components.coach.selectModelPlaceholder": {
+    "message": "选择 a 模型 above to begin...",
+    "srcHash": "e38d78982ee3",
+    "origin": "human"
+  },
+  "components.coach.placeholder": {
+    "message": "Ask your AI 教练 anything...",
+    "srcHash": "674ac03de896",
+    "origin": "human"
+  },
+  "components.coach.send": {
+    "message": "传送",
+    "srcHash": "baf47c24d04b",
+    "origin": "human"
+  },
+  "components.coach.cancel": {
+    "message": "取消",
+    "srcHash": "e17cc0149ff8",
+    "origin": "human"
+  },
+  "components.coach.loadEarlier": {
+    "message": "Load earlier 讯息s",
+    "srcHash": "d57d796217a6",
+    "origin": "human"
+  },
+  "components.coach.today": {
+    "message": "今天",
+    "srcHash": "541f4f7ccabf",
+    "origin": "human"
+  },
+  "components.coach.promptReviewWorkoutTitle": {
+    "message": "Review Workout Progress（AI 教练）",
+    "srcHash": "00c1cf3632e5",
+    "origin": "human"
+  },
+  "components.coach.promptReviewWorkoutBody": {
+    "message": "How is my strength and volume progressing over my recent 训练s?",
+    "srcHash": "20bcd3257642",
+    "origin": "human"
+  },
+  "components.coach.promptNutritionTitle": {
+    "message": "Nutrition & Macros（AI 教练）",
+    "srcHash": "cc71393626bc",
+    "origin": "human"
+  },
+  "components.coach.promptNutritionBody": {
+    "message": "What should I focus on eating today to hit my macro targets?（AI 教练）",
+    "srcHash": "41f1f53b1e25",
+    "origin": "human"
+  },
+  "components.coach.promptTechniqueTitle": {
+    "message": "Exercise Technique（AI 教练）",
+    "srcHash": "e93661b6a38e",
+    "origin": "human"
+  },
+  "components.coach.promptTechniqueBody": {
+    "message": "What are the 金钥 cues for a strong and 安全 cable chest press?",
+    "srcHash": "fa67270520d5",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequired": {
+    "message": "API Key Required（AI 教练）",
+    "srcHash": "e363f9015237",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequiredDescription": {
+    "message": "新增 your 开启Router 金钥 in Settings to chat with AI 教练 and receive personalized 训练 insights.",
+    "srcHash": "254035cfc384",
+    "origin": "human"
+  },
+  "components.coach.addApiKeyA11y": {
+    "message": "新增 开启Router API Key",
+    "srcHash": "70981d2f0049",
+    "origin": "human"
+  },
+  "components.coach.addKey": {
+    "message": "新增 Key",
+    "srcHash": "43aeb402b013",
+    "origin": "human"
+  },
+  "components.coach.selectAnAIModel": {
+    "message": "选择 an AI 模型",
+    "srcHash": "9f63af535fb6",
+    "origin": "human"
+  },
+  "components.coach.selectAIModelDescription": {
+    "message": "选择 a 模型 from the 开启Router 目录 to power your AI 教练 conversations.",
+    "srcHash": "bbbf57805a38",
+    "origin": "human"
+  },
+  "components.coach.selectModel": {
+    "message": "选择 模型",
+    "srcHash": "5864fecf3ebb",
+    "origin": "human"
+  },
+  "components.coach.howCanIHelp": {
+    "message": "How can I help you today?（AI 教练）",
+    "srcHash": "961223d90e8b",
+    "origin": "human"
+  },
+  "components.coach.howCanIHelpSubtitle": {
+    "message": "Ask anything about your 训练s, progression, 营养, or exercise technique.",
+    "srcHash": "37d9b67c26f9",
+    "origin": "human"
+  },
+  "components.coach.privacyDisclaimer": {
+    "message": "Aggregated 训练 and 营养 fields are sent to 开启Router for your request; food names are not.",
+    "srcHash": "544bdade1ed9",
+    "origin": "human"
+  },
+  "components.coach.dismissError": {
+    "message": "Dismiss 错误",
+    "srcHash": "b230c2afbbf4",
+    "origin": "human"
+  },
+  "components.coach.selectAIModel": {
+    "message": "选择 AI 模型",
+    "srcHash": "45e3e17a8e39",
+    "origin": "human"
+  },
+  "components.coach.cachedCatalogA11y": {
+    "message": "目录 is cached. Tap to refresh.",
+    "srcHash": "86e531cf9e87",
+    "origin": "human"
+  },
+  "components.coach.cachedCatalog": {
+    "message": "Cached 目录",
+    "srcHash": "d9c09bb513f6",
+    "origin": "human"
+  },
+  "components.coach.collapseSidebar": {
+    "message": "Collapse sessions sidebar（AI 教练）",
+    "srcHash": "7373e5d55073",
+    "origin": "human"
+  },
+  "components.coach.deleteConversationTitle": {
+    "message": "删除 对话",
+    "srcHash": "638a1e0c8304",
+    "origin": "human"
+  },
+  "components.coach.deleteConfirm": {
+    "message": "删除",
+    "srcHash": "3ab321300556",
+    "origin": "human"
+  },
+  "components.coach.conversations": {
+    "message": "对话s",
+    "srcHash": "4288ad037d50",
+    "origin": "human"
+  },
+  "components.coach.newChat": {
+    "message": "New 聊天",
+    "srcHash": "927a8580f047",
+    "origin": "human"
+  },
+  "components.coach.noConversations": {
+    "message": "没有conversations yet",
+    "srcHash": "2334f42117bb",
+    "origin": "human"
+  },
+  "components.coach.startNewChatSubtitle": {
+    "message": "开始 a new chat to consult your AI 教练.",
+    "srcHash": "48240f045885",
+    "origin": "human"
+  },
+  "components.coach.renameConversation": {
+    "message": "Rename 对话",
+    "srcHash": "d49f19cc9afb",
+    "origin": "human"
+  },
+  "components.coach.conversationTitlePlaceholder": {
+    "message": "对话 title",
+    "srcHash": "a31b65027713",
+    "origin": "human"
+  },
+  "components.coach.cancelRenameA11y": {
+    "message": "取消 rename",
+    "srcHash": "6634cc20bb21",
+    "origin": "human"
+  },
+  "components.coach.saveRenameA11y": {
+    "message": "储存 rename",
+    "srcHash": "5c5e89733323",
+    "origin": "human"
+  },
+  "components.coach.save": {
+    "message": "储存",
+    "srcHash": "4ed0adfcce40",
+    "origin": "human"
+  },
+  "components.coach.modelsSourcedCatalog": {
+    "message": "模型s sourced from live 开启Router 目录",
+    "srcHash": "0976fc048d3e",
+    "origin": "human"
+  },
+  "components.coach.closeModelPicker": {
+    "message": "关闭 模型 picker",
+    "srcHash": "1e8d61812706",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequiredBanner": {
+    "message": "API 金钥 required",
+    "srcHash": "2ad6ee3ab6ce",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequiredPickerDescription": {
+    "message": "新增 your 开启Router API 金钥 to use AI 教练 and browse all 模型s.",
+    "srcHash": "b791176d647a",
+    "origin": "human"
+  },
+  "components.coach.configureApiKeyA11y": {
+    "message": "Configure 开启Router API 金钥",
+    "srcHash": "5c73abf8f321",
+    "origin": "human"
+  },
+  "components.coach.configureApiKey": {
+    "message": "Configure API Key（AI 教练）",
+    "srcHash": "ce8489f7b978",
+    "origin": "human"
+  },
+  "components.coach.refresh": {
+    "message": "Refresh（AI 教练）",
+    "srcHash": "60980447fce1",
+    "origin": "human"
+  },
+  "components.coach.noModelSelected": {
+    "message": "没有模型 已选. 选择 a 模型 below to start coaching.",
+    "srcHash": "ded26f820bc4",
+    "origin": "human"
+  },
+  "components.coach.searchModelsPlaceholder": {
+    "message": "Search by 模型 id or name…",
+    "srcHash": "72f6d9cff015",
+    "origin": "human"
+  },
+  "components.coach.searchModelsA11y": {
+    "message": "Search 模型s by id or name",
+    "srcHash": "4cdbdec02b2a",
+    "origin": "human"
+  },
+  "components.coach.clearModelSearch": {
+    "message": "清除 模型 search",
+    "srcHash": "97c6d11f4239",
+    "origin": "human"
+  },
+  "components.coach.toolCallingOnly": {
+    "message": "Tool-calling only（AI 教练）",
+    "srcHash": "a6efff3e2c95",
+    "origin": "human"
+  },
+  "components.coach.toolCallingDescription": {
+    "message": "Coach needs tool calling to read logs and manage 训练s",
+    "srcHash": "a92648e50f12",
+    "origin": "human"
+  },
+  "components.coach.filterToolsA11y": {
+    "message": "Filter by tool calling 支援",
+    "srcHash": "fdd3ee943974",
+    "origin": "human"
+  },
+  "components.coach.toolCallingWarning": {
+    "message": "Tool Calling Warning（AI 教练）",
+    "srcHash": "9ca286f0b2aa",
+    "origin": "human"
+  },
+  "components.coach.toolCallingWarningDescription": {
+    "message": "Tools will not work on 模型s without tool-calling 支援. AI 教练 will not be able to log sets, retrieve exercises, or analyze 训练 历史纪录.",
+    "srcHash": "c67e45657a6c",
+    "origin": "human"
+  },
+  "components.coach.catalogUnavailable": {
+    "message": "目录 Unavailable",
+    "srcHash": "0b7d03cc1619",
+    "origin": "human"
+  },
+  "components.coach.loadingCatalog": {
+    "message": "Loading live 模型 目录…",
+    "srcHash": "72f04bcc72a0",
+    "origin": "human"
+  },
+  "components.coach.toolsBadge": {
+    "message": "Tools（AI 教练）",
+    "srcHash": "9a6b0766590f",
+    "origin": "human"
+  },
+  "components.coach.noModelsAvailable": {
+    "message": "没有模型s available in 目录.",
+    "srcHash": "ef1e9f20d3f9",
+    "origin": "human"
+  },
+  "components.coach.tryDifferentSearch": {
+    "message": "Try searching for a different 供应商 or 模型 name.",
+    "srcHash": "f8ba938b0fc5",
+    "origin": "human"
+  },
+  "components.coach.checkNetworkOrRefresh": {
+    "message": "Check your 网路 connection or refresh the 目录.",
+    "srcHash": "8d4f276fca6a",
+    "origin": "human"
+  },
+  "components.coach.toolReadingHistory": {
+    "message": "读取训练历史",
+    "srcHash": "76e65755eb81",
+    "origin": "human"
+  },
+  "components.coach.toolExerciseProgress": {
+    "message": "分析动作进度",
+    "srcHash": "7abafbed717a",
+    "origin": "human"
+  },
+  "components.coach.toolNutritionMacros": {
+    "message": "检视营养与巨量营养素",
+    "srcHash": "029b553ebb5a",
+    "origin": "human"
+  },
+  "components.coach.toolCreateTemplate": {
+    "message": "正在建立训练范本",
+    "srcHash": "c71e91ff884b",
+    "origin": "human"
+  },
+  "components.coach.thinking": {
+    "message": "思考中...",
+    "srcHash": "57cceac7e7c8",
+    "origin": "human"
+  },
+  "components.coach.thinkingA11y": {
+    "message": "AI 教练正在思考",
+    "srcHash": "5e8d14850447",
+    "origin": "human"
+  },
+  "components.coach.usingTool": {
+    "message": "使用工具：{tool}",
+    "srcHash": "91bec32f3e3c",
+    "origin": "human"
+  },
+  "settings.backup.credentialsWarning": {
+    "message": "此即时且可能产生费用的金钥将以未加密形式写入分享档案。",
+    "srcHash": "0cd5f6f975da",
+    "origin": "human"
+  },
+  "settings.backup.includeCredentials": {
+    "message": "包含 API 凭证",
+    "srcHash": "6ccc1a42f2be",
+    "origin": "human"
+  },
+  "settings.backup.includeCredentialsA11y": {
+    "message": "在汇出中包含即时 API 凭证",
+    "srcHash": "c16e4caafd4f",
+    "origin": "human"
+  },
+  "settings.importBackup.credentialsWarning": {
+    "message": "请只在信任此备份时确认。金钥将安全储存。",
+    "srcHash": "57784665f8b0",
+    "origin": "human"
+  },
+  "settings.importBackup.importCredentials": {
+    "message": "汇入 API 凭证",
+    "srcHash": "4ab4d7352536",
+    "origin": "human"
+  },
+  "settings.importBackup.importCredentialsA11y": {
+    "message": "确认汇入 API 凭证",
+    "srcHash": "7b1422a9d2cd",
+    "origin": "human"
+  },
+  "settings.importBackup.credentialFailed": {
+    "message": "API 凭证无法储存；其他资料已汇入。",
+    "srcHash": "7e252a1e9ce4",
+    "origin": "human"
+  },
+  "settings.importBackup.invalidCredential": {
+    "message": "API 凭证无效，已略过；其他资料已汇入。",
+    "srcHash": "e43f4a144f16",
+    "origin": "human"
   }
 }

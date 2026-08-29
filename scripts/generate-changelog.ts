@@ -37,6 +37,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { stripHtmlComments } from "../lib/release-notes-markdown";
 
 const TRUNCATION_SUFFIX = "…see in-app release notes";
 const FDROID_MAX_BYTES = 500;
@@ -119,8 +120,7 @@ function parseSection(
 
   // Strip the versionCode marker line from the body and trim trailing
   // blank lines so emitted files don't carry the HTML comment.
-  const cleanedBody = body
-    .replace(/^\s*<!--\s*versionCode:\s*\d+\s*-->\s*\n?/gm, "")
+  const cleanedBody = stripHtmlComments(body)
     .replace(/\s+$/g, "")
     .replace(/^\s+/, "");
 
@@ -164,9 +164,14 @@ export function truncateForFdroid(body: string, maxBytes = FDROID_MAX_BYTES): st
   let text = slice.toString("utf8");
   // If the tail is a replacement char due to a split codepoint, strip it.
   text = text.replace(/\uFFFD+$/g, "");
-  // Prefer a clean break at newline / space boundary (within last 80 chars).
-  const boundary = Math.max(text.lastIndexOf("\n"), text.lastIndexOf(" "));
-  if (boundary > 0 && boundary > text.length - 80) {
+  // Prefer a clean break at a word or bullet boundary. If there is no
+  // boundary nearby, use the last available whitespace rather than cutting a
+  // word in the middle.
+  const whitespace = /\s/g;
+  let boundary = -1;
+  let match: RegExpExecArray | null;
+  while ((match = whitespace.exec(text)) !== null) boundary = match.index;
+  if (boundary > 0) {
     text = text.slice(0, boundary);
   }
   text = text.replace(/\s+$/g, "");

@@ -13,6 +13,7 @@ import { join } from "path";
 import { SCREEN_CONFIGS } from "@/constants/screen-config";
 import { TAB_ORDER } from "@/components/FloatingTabBar";
 import { TAB_ICONS, TAB_LABELS } from "@/components/floating-tab-bar/TabButton";
+import { i18n } from "@/lib/i18n";
 
 const ROOT = join(__dirname, "..");
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
@@ -80,7 +81,12 @@ describe("Navigation tab configuration stays in lockstep", () => {
   it("registers the AI Coach route and title", () => {
     const tabLayout = read("app/(tabs)/_layout.tsx");
     expect(tabLayout).toContain('name="ai-coach"');
-    expect(tabLayout).toContain('title: "AI Coach"');
+     expect(tabLayout).toContain('id: "floatingTabBar.tabs.aiCoach"');
+  });
+
+  it("resolves the AI Coach label without the macro default message", () => {
+    expect(i18n._({ id: "floatingTabBar.tabs.aiCoach" })).toBe("AI Coach");
+    expect(i18n._({ id: "floatingTabBar.tabs.aiCoach" })).not.toContain("floatingTabBar.tabs.aiCoach");
   });
 
   it("keeps the exercises breadcrumb title registration", () => {

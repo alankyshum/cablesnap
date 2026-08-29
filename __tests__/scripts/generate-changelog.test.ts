@@ -81,6 +81,17 @@ describe('parseChangelog', () => {
     });
   });
 
+  it('strips HTML comment markers from the generated release body', () => {
+    const { entries } = parseChangelog(`## v1.0.0 — 2026-01-01
+<!-- versionCode: 173 -->
+- Visible release note
+
+<!-- internal marker -->
+`);
+    expect(entries[0].body).toBe('- Visible release note');
+    expect(entries[0].body).not.toContain('<!--');
+  });
+
   it('skips malformed sections with a warning but continues parsing', () => {
     const source = `## Something not a version
 - body
@@ -128,10 +139,12 @@ describe('truncateForFdroid', () => {
   });
 
   it('truncates with the overflow suffix when over 500 bytes, staying ≤500 bytes', () => {
-    const body = `${'x'.repeat(800)}`;
+    const body = `${'- A deliberately long release note with enough words to overflow the F-Droid limit.\n'.repeat(20)}`;
     const out = truncateForFdroid(body);
     expect(Buffer.byteLength(out, 'utf8')).toBeLessThanOrEqual(500);
     expect(out).toMatch(/…see in-app release notes$/);
+    const prefix = out.slice(0, out.indexOf('\n…see in-app release notes'));
+    expect(body[prefix.length]).toMatch(/\s/);
   });
 
   it('handles a body exactly at the 500-byte boundary without truncation', () => {
