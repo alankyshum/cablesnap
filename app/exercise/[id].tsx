@@ -28,7 +28,7 @@ import {
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
-import type { Attachment, Category, Difficulty } from "../../lib/types";
+import type { Category, Difficulty } from "../../lib/types";
 import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
@@ -45,7 +45,7 @@ import { PlateauStatusCard } from "@/components/exercise/PlateauStatusCard";
 import { usePlateauStatus } from "@/hooks/usePlateauStatus";
 import { FormVideoSheet } from "@/components/session/FormVideoSheet";
 import { getMostRecentCompletedSetForExercise, getLatestUnilateralInsight } from "@/lib/db/session-sets";
-import { ATTACHMENT_VALUES, isCableExercise } from "@/lib/cable-variant";
+import { getAttachmentLabel, isCableExercise } from "@/lib/cable-variant";
 import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
 import { useStrengthLevel } from "@/hooks/useStrengthLevel";
 import { useStrengthGoal } from "@/hooks/useStrengthGoals";
@@ -81,18 +81,6 @@ function difficultyLabel(difficulty: Difficulty): string {
   }
 }
 
-function attachmentLabel(attachment: Attachment): string {
-  switch (ATTACHMENT_VALUES.indexOf(attachment)) {
-    case 0: return t({ id: "app.exercise.id.attachment.handle", message: "Handle" });
-    case 1: return t({ id: "app.exercise.id.attachment.ringHandle", message: "Ring Handle" });
-    case 2: return t({ id: "app.exercise.id.attachment.ankleStrap", message: "Ankle Strap" });
-    case 3: return t({ id: "app.exercise.id.attachment.rope", message: "Rope" });
-    case 4: return t({ id: "app.exercise.id.attachment.bar", message: "Bar" });
-    case 5: return t({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
-    case 6: return t({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
-    default: return "";
-  }
-}
 
 function formatDateLong(ts: number): string {
   return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(new Date(ts));
@@ -278,7 +266,7 @@ export default function ExerciseDetail() {
 
       {exercise.attachment && (
           <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>{t({ id: "app.exercise.id.attachment", message: "Attachment" })}</Text>
-           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: attachmentLabel(exercise.attachment) } })}>{attachmentLabel(exercise.attachment)}</Text></View>
+            <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: getAttachmentLabel(exercise.attachment) } })}>{getAttachmentLabel(exercise.attachment)}</Text></View>
       )}
 
       {layout.atLeastMedium ? (

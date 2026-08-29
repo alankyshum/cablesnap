@@ -12,6 +12,7 @@ const VALID_TABLES = new Set([
   "meal_templates", "meal_template_items", "app_settings",
   "program_schedule", "strength_goals", "water_logs",
   "gym_profiles", "cable_stacks", "stack_calibrations",
+  "coach_sessions", "coach_messages",
 ]);
 
 function assertValidTable(table: string): void {
@@ -289,6 +290,7 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
       session_id TEXT NOT NULL REFERENCES coach_sessions(id),
       role TEXT NOT NULL,
       content TEXT NOT NULL,
+      model_id TEXT,
       tool_calls TEXT,
       created_at INTEGER NOT NULL,
       error TEXT

@@ -100,7 +100,7 @@ export function ShareCardExercises({
                 { color: colors.onSurfaceVariant },
               ]}
             >
-              {t({ id: "share.exercises.more", message: `and ${remaining} more` })}
+              {t({ id: "share.exercises.more", message: "and {remaining} more" }, { remaining })}
             </Text>
           )}
         </View>

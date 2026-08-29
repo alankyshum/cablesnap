@@ -10,7 +10,7 @@ import { appendMessage, getMessages, type CoachMessage } from "../db/coach";
 
 const OPENROUTER_API = "https://openrouter.ai/api/v1";
 export const MAX_HISTORY_MESSAGES = 20;
-export const COACH_SYSTEM_PROMPT = "You are a practical, supportive fitness coach. Use the available local-data tools when a question depends on workout or nutrition history; never invent data. Give safe, actionable guidance, acknowledge uncertainty, and do not diagnose medical conditions. This is a BYOK app with no server relay; only allowlisted aggregate fitness fields are available through tools.";
+export const COACH_SYSTEM_PROMPT = "You are a practical, supportive fitness coach. Use the available local-data tools when a question depends on workout or nutrition history; never invent data. Create a workout template only when the user clearly asks you to save or create one, and claim it was created only when the tool reports success. Give safe, actionable guidance, acknowledge uncertainty, and do not diagnose medical conditions. This is a BYOK app with no server relay; only allowlisted fitness fields and explicitly requested template writes are available through tools.";
 
 /** The only seam T12 needs: add a named AI SDK tool to this object. */
 // AI SDK tool inputs and outputs are intentionally heterogeneous in this registry.
@@ -94,19 +94,30 @@ export function persistedMessagesToModelMessages(persisted: CoachMessage[]): Mod
   });
 }
 
+// The SDK exposes distinct pre-response and in-band stream error shapes.
+// eslint-disable-next-line complexity
 function asAIError(error: unknown): AIError {
   if (error && typeof error === "object" && "kind" in error) return error as AIError;
-  const status = error && typeof error === "object" && "statusCode" in error
+  const statusCode = error && typeof error === "object" && "statusCode" in error
     ? (error as { statusCode?: unknown }).statusCode
     : undefined;
+  // Pre-response API failures use APICallError.statusCode/responseBody. Once a
+  // stream has started, the AI SDK instead surfaces OpenRouter's in-band error
+  // object directly ({ code, message, metadata }). Preserve both wire shapes.
+  const inBandCode = error && typeof error === "object" && "code" in error
+    ? (error as { code?: unknown }).code
+    : undefined;
+  const status = typeof statusCode === "number" && statusCode >= 400 && statusCode <= 599
+    ? statusCode
+    : typeof inBandCode === "number" && inBandCode >= 400 && inBandCode <= 599 ? inBandCode : undefined;
   const body = error && typeof error === "object" && "responseBody" in error
     ? (error as { responseBody?: unknown }).responseBody
     : undefined;
-  let envelope: unknown = body;
+  let envelope: unknown = body ?? (typeof inBandCode === "number" ? { error } : undefined);
   if (typeof body === "string") {
     try { envelope = JSON.parse(body); } catch { envelope = undefined; }
   }
-  return typeof status === "number" ? parseOpenRouterError(status, envelope) : { kind: "network_error" };
+  return parseOpenRouterError(status, envelope);
 }
 
 // eslint-disable-next-line complexity
@@ -129,45 +140,69 @@ async function executeCoachAgent(options: CoachAgentOptions, controller?: AbortC
     compatibility: "strict",
     fetch: expoFetch,
   });
-  const result = streamText({
-    model: openrouter.chat(modelId),
-    system: COACH_SYSTEM_PROMPT,
-    messages: [...history, { role: "user", content: prompt }],
-    tools,
-    toolChoice: "auto",
-    stopWhen: stepCountIs(3),
-    abortSignal: signal,
-    maxRetries: 0,
-    onChunk: async ({ chunk }) => {
-      if (chunk.type === "tool-call") {
-        toolCalls.push({ name: chunk.toolName, input: chunk.input });
-        onEvent?.({ type: "tool-call", name: chunk.toolName, input: chunk.input });
-      } else if (chunk.type === "tool-result") {
-        const call = toolCalls.find((item) => item.name === chunk.toolName && item.output === undefined);
-        if (call) call.output = chunk.output;
-        onEvent?.({ type: "tool-result", name: chunk.toolName, output: chunk.output });
-      }
-    },
-  });
-
   let text = "";
-  try {
-    for await (const part of result.fullStream) {
-      if (part.type === "error") throw asAIError(part.error);
-      if (part.type === "text-delta") {
-        text += part.text;
-        if (part.text) onEvent?.({ type: "delta", text: part.text });
+  let activeTools = tools;
+  let usedToolCompatibilityFallback = false;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let reasoning = "";
+    let finishReason: string | undefined;
+    const result = streamText({
+      model: openrouter.chat(modelId),
+      system: usedToolCompatibilityFallback
+        ? `${COACH_SYSTEM_PROMPT} Local data tools are unavailable for this response; do not claim to have read local records.`
+        : COACH_SYSTEM_PROMPT,
+      messages: [...history, { role: "user", content: prompt }],
+      tools: activeTools,
+      toolChoice: "auto",
+      stopWhen: stepCountIs(3),
+      abortSignal: signal,
+      maxRetries: 0,
+      onChunk: async ({ chunk }) => {
+        if (chunk.type === "tool-call") {
+          toolCalls.push({ name: chunk.toolName, input: chunk.input });
+          onEvent?.({ type: "tool-call", name: chunk.toolName, input: chunk.input });
+        } else if (chunk.type === "tool-result") {
+          const call = toolCalls.find((item) => item.name === chunk.toolName && item.output === undefined);
+          if (call) call.output = chunk.output;
+          onEvent?.({ type: "tool-result", name: chunk.toolName, output: chunk.output });
+        }
+      },
+    });
+
+    try {
+      for await (const part of result.fullStream) {
+        if (part.type === "error") throw asAIError(part.error);
+        if (part.type === "reasoning-delta") reasoning += part.text;
+        else if (part.type === "finish") finishReason = part.finishReason;
+        else if (part.type === "text-delta") {
+          text += part.text;
+          if (part.text) onEvent?.({ type: "delta", text: part.text });
+        }
       }
+    } catch (error) {
+      if (signal?.aborted) throw { kind: "aborted_by_user" } satisfies AIError;
+      throw asAIError(error);
     }
-  } catch (error) {
     if (signal?.aborted) throw { kind: "aborted_by_user" } satisfies AIError;
-    throw asAIError(error);
+    if (text.trim() !== "") break;
+
+    // Some catalog entries advertise tool support but silently return a 200
+    // completion with null content, no usage, and no tool call whenever tools
+    // are present. Retry that exact protocol failure once without advertising
+    // tools; real tool runs, reasoning-only responses, and non-stop finishes do
+    // not qualify and retain their existing error behavior.
+    const canRetryWithoutTools = !usedToolCompatibilityFallback
+      && Object.keys(activeTools).length > 0
+      && toolCalls.length === 0
+      && reasoning.trim() === ""
+      && finishReason === "stop";
+    if (!canRetryWithoutTools) throw { kind: "empty_response" } satisfies AIError;
+    activeTools = {};
+    usedToolCompatibilityFallback = true;
   }
-  if (signal?.aborted) throw { kind: "aborted_by_user" } satisfies AIError;
-  if (text.trim() === "") throw { kind: "empty_response" } satisfies AIError;
 
   // This is deliberately the sole assistant write, after the stream is complete.
-  return appendMessage({ session_id: sessionId, role: "assistant", content: text, ...(toolCalls.length > 0 ? { tool_calls: JSON.stringify(toolCalls) } : {}) });
+  return appendMessage({ session_id: sessionId, role: "assistant", content: text, model_id: modelId, ...(toolCalls.length > 0 ? { tool_calls: JSON.stringify(toolCalls) } : {}) });
 }
 
 export function startCoachAgent(options: CoachAgentOptions): CoachAgentRun {

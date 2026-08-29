@@ -11,6 +11,9 @@
 // app's `com.persoack.cablesnap`) per PLAN-BLD-716.md
 // §"Watch APK distribution (decided per TL-3)".
 
+import java.io.File
+import java.util.Properties
+
 plugins {
   id("com.android.application")
   id("org.jetbrains.kotlin.android")
@@ -28,13 +31,48 @@ android {
     versionName = "0.1.0"
   }
 
+  // Production signing comes from android/keystore.properties, written by CI.
+  // The debug fallback is deliberate for local development; silent regression
+  // is prevented by the "Verify APK signature matches committed fingerprint"
+  // step in scheduled-release.yml.
+  val keystorePropertiesFile = rootProject.file("keystore.properties")
+  val keystoreProperties = Properties()
+  if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+  }
+  val storeFileProperty = keystoreProperties.getProperty("storeFile")
+  val storePassword = keystoreProperties.getProperty("storePassword")
+  val keyAlias = keystoreProperties.getProperty("keyAlias")
+  val keyPassword = keystoreProperties.getProperty("keyPassword")
+  val hasReleaseKeystore = !storeFileProperty.isNullOrBlank()
+
   buildTypes {
     getByName("release") {
       isMinifyEnabled = false
-      // The release build is signed by Play App Signing on Google Play.
-      // Locally and in CI we sign with the same release keystore as the
-      // phone app — see scheduled-release.yml.
-      signingConfig = signingConfigs.getByName("debug")
+      val releaseKeystore = if (hasReleaseKeystore) {
+        val releaseSigningConfig = signingConfigs.maybeCreate("release")
+        val configuredStoreFile = File(requireNotNull(storeFileProperty))
+        releaseSigningConfig.storeFile = if (configuredStoreFile.isAbsolute) {
+          configuredStoreFile
+        } else {
+          // The phone app resolves relative storeFile values from android/app.
+          rootProject.file("app").resolve(configuredStoreFile)
+        }
+        fun requireProp(value: String?, key: String) = requireNotNull(value?.takeIf(String::isNotBlank)) {
+          "android/keystore.properties has storeFile but '$key' is missing/blank — refusing to sign."
+        }
+        releaseSigningConfig.storePassword = requireProp(storePassword, "storePassword")
+        releaseSigningConfig.keyAlias = requireProp(keyAlias, "keyAlias")
+        releaseSigningConfig.keyPassword = requireProp(keyPassword, "keyPassword")
+        releaseSigningConfig
+      } else {
+        null
+      }
+      signingConfig = if (hasReleaseKeystore) {
+        requireNotNull(releaseKeystore)
+      } else {
+        signingConfigs.getByName("debug")
+      }
     }
   }
 

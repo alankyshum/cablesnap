@@ -10,6 +10,90 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.115",
+    "date": "2026-08-27",
+    "versionCode": 183,
+    "body": "- AI Coach messages now support full CommonMark and GitHub-flavored Markdown, including rich table cells, line breaks, nested lists, and task checkboxes.\n- Improved AI Coach chat on narrow screens with wider bubbles, horizontally scrollable tables, and a mobile composer that stays above the keyboard."
+  },
+  {
+    "version": "0.26.114",
+    "date": "2026-08-27",
+    "versionCode": 182,
+    "body": "- Improved AI Coach replies with a typing indicator and correctly aligned table columns.\n- AI Coach can now create workout templates when asked."
+  },
+  {
+    "version": "0.26.113",
+    "date": "2026-08-23",
+    "versionCode": 181,
+    "body": "- The AI Coach model picker now scrolls properly on tablets and phones.\n- AI Coach now shows an animated indicator while it is thinking or running a tool."
+  },
+  {
+    "version": "0.26.112",
+    "date": "2026-08-23",
+    "versionCode": 180,
+    "body": "- Update checks now run every 6 hours instead of once per day, so new releases are surfaced sooner.\n- AI Coach replies work again with models that reject tool requests.\n- Fixed mirrored message text and out-of-order conversation dates.\n- Fixed Coach layout issues, including navbar overlap, sidebar height and alignment, collapse button placement, and layer shadows.\n- Added consistent padding to warning cards, sidebar buttons, and the empty state."
+  },
+  {
+    "version": "0.26.111",
+    "date": "2026-08-23",
+    "versionCode": 179,
+    "body": "- Improved AI Coach dark-mode text and table readability with theme-aware colors.\n- Kept AI Coach tables inside the message bubble while allowing horizontal scrolling for wide tables.\n- Removed the large empty gap at the top of the AI Coach screen."
+  },
+  {
+    "version": "0.26.110",
+    "date": "2026-08-23",
+    "versionCode": 178,
+    "body": "- AI Coach markdown now renders tables, horizontally scrollable code blocks, and clearer headings.\n- Fixed tablet AI Coach layout issues, including header overlap and quick-prompt chip overflow.\n- AI Coach now records and displays the model that produced each response, and preserves model selections across reloads and new chats.\n- The model picker now scrolls reliably to offscreen models and dismisses after selection.\n- Backups can include AI Coach chat history and the selected model, with an optional API key protected by explicit opt-in; automatic backups never include credentials."
+  },
+  {
+    "version": "0.26.109",
+    "date": "2026-08-22",
+    "versionCode": 177,
+    "body": "- Improved AI Coach reliability when an upstream provider is unavailable or a selected model cannot support Coach tools.\n- Improved translation robustness by validating ICU messages before release builds."
+  },
+  {
+    "version": "0.26.108",
+    "date": "2026-08-22",
+    "versionCode": 176,
+    "body": "- Rebuilt the AI Coach chat experience with live-streaming responses and formatted markdown.\n- The model picker now scrolls properly, and your selected model is used for requests and remembered for later.\n- Added clearer messages when an AI provider is unavailable.\n- Improved accessibility and dark-mode contrast across the AI Coach experience.\n- Expanded translation coverage for AI Coach and related app labels."
+  },
+  {
+    "version": "0.26.107",
+    "date": "2026-08-21",
+    "versionCode": 175,
+    "body": "- Localized the AI Coach navigation label in the app's supported languages.\n- Fixed hydration preset labels when displaying fluid ounces."
+  },
+  {
+    "version": "0.26.106",
+    "date": "2026-08-21",
+    "versionCode": 174,
+    "body": "- Keep cable setup labels in sync when switching app language.\n\n_No user-facing changes yet._"
+  },
+  {
+    "version": "0.26.105",
+    "date": "2026-08-21",
+    "versionCode": 173,
+    "body": "- Fixed text that showed raw placeholders instead of real values. Most visibly, the Settings About row now displays the actual version number instead of “CableSnap v{version}”; this also fixes interpolated text throughout the app in release builds.\n- Fixed labels that showed internal identifiers instead of translated text, including the AI Coach tab.\n- Improved the update prompt so release notes render as formatted text with proper headings and bullets, hidden internal markers, and scrolling for longer notes."
+  },
+  {
+    "version": "0.26.104",
+    "date": "2026-08-20",
+    "versionCode": 172,
+    "body": "- Fixed Wear OS release builds shipping with a debug signing certificate; release APKs now use the production signing key."
+  },
+  {
+    "version": "0.26.103",
+    "date": "2026-08-20",
+    "versionCode": 171,
+    "body": "- Added: link to GitHub Releases from the About screen, and documented the F-Droid repo install path.\n- Fixed: GitHub release APKs retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.\n- Added recovery links in Settings and documentation for users on v0.26.100 or v0.26.101 whose in-app update check cannot run."
+  },
+  {
+    "version": "0.26.102",
+    "date": "2026-08-19",
+    "versionCode": 170,
+    "body": "- GitHub release APKs now retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users."
+  },
+  {
     "version": "0.26.101",
     "date": "2026-08-19",
     "versionCode": 169,

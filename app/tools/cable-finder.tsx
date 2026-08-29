@@ -13,7 +13,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing } from "@/constants/design-tokens";
 import type { MountPosition, Attachment, MuscleGroup } from "@/lib/types";
-import { ATTACHMENT_VALUES, MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
+import { getAttachmentLabel, getMountPositionLabel, MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
 import {
   getCableExercises,
   getAvailableAttachments,
@@ -22,6 +22,7 @@ import {
 } from "@/lib/db/cable-finder";
 import { plural, t } from "@lingui/core/macro";
 import { i18n } from "@lingui/core";
+import { useLingui } from "@lingui/react/macro";
 
 function muscleLabel(muscle: MuscleGroup): string {
   switch (muscle) {
@@ -42,28 +43,6 @@ function muscleLabel(muscle: MuscleGroup): string {
   }
 }
 
-function mountPositionLabel(position: MountPosition): string {
-  switch (MOUNT_POSITION_VALUES.indexOf(position)) {
-    case 0: return t({ id: "app.tools.cableFinder.mount.high", message: "High" });
-    case 1: return t({ id: "app.tools.cableFinder.mount.mid", message: "Mid" });
-    case 2: return t({ id: "app.tools.cableFinder.mount.low", message: "Low" });
-    case 3: return t({ id: "app.tools.cableFinder.mount.floor", message: "Floor" });
-    default: return "";
-  }
-}
-
-function attachmentLabel(attachment: Attachment): string {
-  switch (ATTACHMENT_VALUES.indexOf(attachment)) {
-    case 0: return t({ id: "app.tools.cableFinder.attachment.handle", message: "Handle" });
-    case 1: return t({ id: "app.tools.cableFinder.attachment.ringHandle", message: "Ring Handle" });
-    case 2: return t({ id: "app.tools.cableFinder.attachment.ankleStrap", message: "Ankle Strap" });
-    case 3: return t({ id: "app.tools.cableFinder.attachment.rope", message: "Rope" });
-    case 4: return t({ id: "app.tools.cableFinder.attachment.bar", message: "Bar" });
-    case 5: return t({ id: "app.tools.cableFinder.attachment.squatHarness", message: "Squat Harness" });
-    case 6: return t({ id: "app.tools.cableFinder.attachment.carabiner", message: "Carabiner" });
-    default: return "";
-  }
-}
 
 type Section = {
   title: string;
@@ -94,6 +73,8 @@ function buildSections(exercises: CableExercise[]): Section[] {
 }
 
 export default function CableSetupFinder() {
+  const { i18n: linguiI18n } = useLingui();
+  const locale = linguiI18n.locale;
   const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
@@ -121,7 +102,10 @@ export default function CableSetupFinder() {
     });
   }, [mountFilter, attachmentFilter]);
 
-  const sections = useMemo(() => buildSections(exercises), [exercises]);
+  const sections = useMemo(() => {
+    void locale;
+    return buildSections(exercises);
+  }, [exercises, locale]);
 
   const toggleMount = useCallback(
     (pos: MountPosition) => {
@@ -162,7 +146,9 @@ export default function CableSetupFinder() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: CableExercise }) => (
+    ({ item }: { item: CableExercise }) => {
+      void locale;
+      return (
       <Pressable
         style={[styles.exerciseRow, { borderBottomColor: colors.outline }]}
         onPress={() => handleExercisePress(item.id)}
@@ -178,10 +164,10 @@ export default function CableSetupFinder() {
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
               {[
                 item.mount_position
-                ? mountPositionLabel(item.mount_position)
+                ? getMountPositionLabel(item.mount_position)
                   : null,
                 item.attachment
-                  ? attachmentLabel(item.attachment)
+                  ? getAttachmentLabel(item.attachment)
                   : null,
               ]
                 .filter(Boolean)
@@ -190,14 +176,17 @@ export default function CableSetupFinder() {
           )}
         </View>
       </Pressable>
-    ),
-    [colors, handleExercisePress]
+      );
+    },
+    [colors, handleExercisePress, locale]
   );
 
   const keyExtractor = useCallback((item: CableExercise) => item.id, []);
 
   const listHeader = useMemo(
-    () => (
+    () => {
+      void locale;
+      return (
       <View style={styles.filtersContainer}>
         {/* Mount Position */}
         <View>
@@ -219,9 +208,9 @@ export default function CableSetupFinder() {
                 onPress={() => toggleMount(pos)}
                 accessibilityRole="checkbox"
                 accessibilityState={{ selected: mountFilter === pos }}
-                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.mountPositionA11yValueLocalized", message: "Mount position: {position}", values: { position: mountPositionLabel(pos) } })}
+                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.mountPositionA11yValueLocalized", message: "Mount position: {position}", values: { position: getMountPositionLabel(pos) } })}
               >
-                {mountPositionLabel(pos)}
+                {getMountPositionLabel(pos)}
               </Chip>
             ))}
           </ScrollView>
@@ -248,16 +237,17 @@ export default function CableSetupFinder() {
                   onPress={() => toggleAttachment(att)}
                   accessibilityRole="checkbox"
                   accessibilityState={{ selected: attachmentFilter === att }}
-                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.attachmentA11yValue", message: "Attachment: {attachment}", values: { attachment: attachmentLabel(att) } })}
+                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.attachmentA11yValue", message: "Attachment: {attachment}", values: { attachment: getAttachmentLabel(att) } })}
                 >
-                  {attachmentLabel(att)}
+                  {getAttachmentLabel(att)}
                 </Chip>
               ))}
             </ScrollView>
           </View>
         )}
       </View>
-    ),
+      );
+    },
     [
       mountFilter,
       attachmentFilter,
@@ -265,6 +255,7 @@ export default function CableSetupFinder() {
       colors,
       toggleMount,
       toggleAttachment,
+      locale,
     ]
   );
 

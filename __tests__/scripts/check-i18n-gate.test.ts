@@ -2,6 +2,7 @@ import { makeCatalogEntry } from "../../scripts/i18n/catalog-entry";
 import { tw2sp } from "../../scripts/i18n/opencc";
 import {
   checkCatalog,
+  checkCatalogIcu,
   checkRedundantOverrides,
   checkZhCnGenerated,
   generateMessageKeys,
@@ -9,6 +10,7 @@ import {
   runI18nGateCheck,
   checkConditionalMessages,
   checkScriptPurity,
+  checkSourceCatalogCompleteness,
 } from "../../scripts/check-i18n-gate";
 import fs from "node:fs";
 import os from "node:os";
@@ -96,6 +98,14 @@ describe("gate and MessageKey codegen", () => {
   });
 });
 
+describe("runtime catalog ICU validation", () => {
+  it("accepts valid ICU and rejects invalid ICU before a bundle can be built", () => {
+    expect(checkCatalogIcu({ greeting: "Hello {name}" }, "en-US")).toEqual([]);
+    expect(checkCatalogIcu({ greeting: "{unit, select, fl oz {fl oz}}" }, "en-US")[0])
+      .toMatchObject({ class: "I18N_INVALID_ICU", key: "greeting" });
+  });
+});
+
 describe("source conditional-message gate", () => {
   function scan(source: string) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "i18n-gate-"));
@@ -118,6 +128,53 @@ describe("source conditional-message gate", () => {
 
   it("does not flag simple template interpolation", () => {
     expect(scan('import { t } from "@lingui/core/macro"; t({ id: "a", message: `Hello ${name}` });')).toEqual([]);
+  });
+
+  it("does not flag translated expressions as conditional messages", () => {
+    const findings = scan(
+      'const b = <Button accessibilityLabel={t({ id: "close", message: "Close" })} />;',
+    );
+    expect(findings).toEqual([]);
+  });
+});
+
+describe("source catalog completeness gate", () => {
+  it("reports ids from macro, runtime facade, wrapped macro, and Trans calls", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "i18n-completeness-"));
+    fs.mkdirSync(path.join(root, "app"));
+    fs.writeFileSync(path.join(root, "app", "fixture.tsx"), [
+      'import { t } from "@lingui/core/macro";',
+      'import { t as runtimeT } from "@/lib/i18n";',
+      'import { t as linguiT } from "@lingui/core/macro";',
+      'import { Trans } from "@lingui/react/macro";',
+      'const wrappedT = (descriptor: { id: string; message: string }) =>',
+      '  (linguiT as unknown as (value: typeof descriptor) => string)(descriptor);',
+      't({ id: "missing.call", message: "Missing" });',
+      'const nested = <Text>{runtimeT({',
+      '  id: "common.retry",',
+      '  message: "Retry",',
+      '})}</Text>;',
+      'wrappedT({ id: "stravaError.network", message: "Check your internet and try again." });',
+      '<Trans id="missing.trans">Missing</Trans>;',
+    ].join("\n"));
+    const violations = checkSourceCatalogCompleteness({
+      "present.call": makeCatalogEntry("present.call", "Present", "Present"),
+    }, root);
+    expect(violations.map(violation => violation.key)).toEqual([
+      "common.retry", "missing.call", "missing.trans", "stravaError.network",
+    ]);
+  });
+
+  it("fails closed on genuinely dynamic ids instead of silently skipping them", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "i18n-dynamic-id-"));
+    fs.mkdirSync(path.join(root, "app"));
+    fs.writeFileSync(path.join(root, "app", "fixture.ts"), [
+      'import { t } from "@/lib/i18n";',
+      't({ id: dynamicId, message: "Dynamic" });',
+    ].join("\n"));
+    expect(checkSourceCatalogCompleteness({}, root).map(violation => violation.class)).toEqual([
+      "I18N_DYNAMIC_ID",
+    ]);
   });
 });
 
