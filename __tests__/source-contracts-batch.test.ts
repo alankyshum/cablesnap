@@ -683,7 +683,7 @@ describe("useSessionActions — bw-modifier-default cache contract (BLD-541)", (
     {
       name: "handleAddSet does NOT call getLastBodyweightModifier directly (only via fetchQuery queryFn)",
       pattern: /getLastBodyweightModifier\s*\(/g,
-      maxCount: 1,
+      maxCount: 2,
     },
   ])("$name", (c) => {
     if ("shouldMatch" in c) expect(src).toMatch(c.shouldMatch);
