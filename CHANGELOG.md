@@ -22,7 +22,9 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Consistent spacing in Progress tab** — Aligns the Progress tab navigation and view-mode toggle spacing to resolve inconsistent vertical and horizontal gaps. ([BLD-3648](/BLD/issues/BLD-3648))
+- **Nutrition card link padding** — Adds consistent edge padding to the Edit Targets and Meal Templates link rows in the nutrition card for better touch targets and visual alignment. ([BLD-4043](/BLD/issues/BLD-4043))
+- **Aligned water quick-add buttons** — Water quick-add chips now stay vertically centered on each row, fixing a slight misalignment visible on mobile. ([BLD-4042](/BLD/issues/BLD-4042))
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->
@@ -288,8 +290,6 @@ _No user-facing changes yet._
 <!-- versionCode: 157 -->
 
 - **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
-- **Nutrition card link padding** — Adds consistent edge padding to the Edit Targets and Meal Templates link rows in the nutrition card for better touch targets and visual alignment. ([BLD-4043](/BLD/issues/BLD-4043))
-- **Aligned water quick-add buttons** — Water quick-add chips now stay vertically centered on each row, fixing a slight misalignment visible on mobile. ([BLD-4042](/BLD/issues/BLD-4042))
 
 ## v0.26.88 — 2026-07-26
 <!-- versionCode: 156 -->
@@ -308,6 +308,7 @@ _No user-facing changes yet._
 - **Heatmap legend accessibility under deuteranopia** — Adjusts the workout-frequency heatmap legend colors to ensure steps are distinct and distinguishable under deuteranopia. ([BLD-3874](/BLD/issues/BLD-3874))
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
+- **Consistent spacing in Progress tab** — Aligns the Progress tab navigation and view-mode toggle spacing to resolve inconsistent vertical and horizontal gaps. ([BLD-3648](/BLD/issues/BLD-3648))
 
 ## v0.26.85 — 2026-07-25
 <!-- versionCode: 153 -->

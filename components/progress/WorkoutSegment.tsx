@@ -131,6 +131,7 @@ export default function WorkoutSegment() {
     : screenWidth - 48;
 
   const empty = sessions.length === 0 && freq.length === 0;
+  const isListView = viewMode === "list" && !empty;
   const showGymUI = activeGymCount >= 2;
 
   const toggleButton = (
@@ -186,7 +187,18 @@ export default function WorkoutSegment() {
   if (viewMode === "calendar") {
     return (
       <View style={{ flex: 1 }}>
-        <View style={styles.toggleRow}>{toggleButton}</View>
+        <View
+          testID="workout-toggle-row"
+          style={[
+            styles.toggleRow,
+            {
+              paddingHorizontal: isListView ? 0 : 16,
+              paddingTop: 0,
+            },
+          ]}
+        >
+          {toggleButton}
+        </View>
         {gymFilter}
         <CalendarView weekStartDay={weekStartDay} />
       </View>
@@ -196,7 +208,18 @@ export default function WorkoutSegment() {
   if (empty) {
     return (
       <View style={{ flex: 1 }}>
-        <View style={styles.toggleRow}>{toggleButton}</View>
+        <View
+          testID="workout-toggle-row"
+          style={[
+            styles.toggleRow,
+            {
+              paddingHorizontal: isListView ? 0 : 16,
+              paddingTop: 0,
+            },
+          ]}
+        >
+          {toggleButton}
+        </View>
         {gymFilter}
         <View style={[styles.center, { flex: 1 }]}>
           <WorkoutEmptyState />
@@ -268,7 +291,18 @@ export default function WorkoutSegment() {
       ListHeaderComponent={
         layout.atLeastMedium ? (
           <>
-            <View style={styles.toggleRow}>{toggleButton}</View>
+            <View
+              testID="workout-toggle-row"
+              style={[
+                styles.toggleRow,
+                {
+                  paddingHorizontal: isListView ? 0 : 16,
+                  paddingTop: 0,
+                },
+              ]}
+            >
+              {toggleButton}
+            </View>
             {gymFilter}
             <WeeklySummary />
             {achievementsCard}
@@ -291,7 +325,18 @@ export default function WorkoutSegment() {
           </>
         ) : (
           <>
-            <View style={styles.toggleRow}>{toggleButton}</View>
+            <View
+              testID="workout-toggle-row"
+              style={[
+                styles.toggleRow,
+                {
+                  paddingHorizontal: isListView ? 0 : 16,
+                  paddingTop: 0,
+                },
+              ]}
+            >
+              {toggleButton}
+            </View>
             {gymFilter}
             <WeeklySummary />
             {achievementsCard}
@@ -322,7 +367,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 0,
     paddingBottom: 80,
   },
   card: {
@@ -332,7 +378,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 0,
+    paddingBottom: 8,
   },
   filterRow: {
     paddingHorizontal: 16,
