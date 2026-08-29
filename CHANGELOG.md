@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+ - **Centered calendar workout dots** — The date indicator dots on the workout history calendar are now precisely centered within each day cell, fixing a slight left-bias misalignment visible on mobile. ([BLD-3643](/BLD/issues/BLD-3643))
+ - **Tritanopia-safe heatmap luminance ramp** — Implements a tritanopia-safe luminance ramp for the workout-history heatmap, keeping all frequency cells perceptually distinct. ([BLD-3877](/BLD/issues/BLD-3877))
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->
@@ -315,7 +316,6 @@ _No user-facing changes yet._
 - **Estimated pacing bar now distinguishable under tritanopia** — the Working and Rest segments on the post-workout Estimated pacing card previously used two colours (coral and blue) that collapsed to near-identical luminance under blue-yellow colour vision deficiency, making the segments hard to tell apart. The Rest segment now uses a dedicated CVD-hardened colour (deep petrol blue in light theme, pale cyan in dark theme) that stays visually distinct from the Working coral under tritanopia while remaining distinguishable under deuteranopia, protanopia, and grayscale. Segment labels, overlays, and the RecoveryHeatmap surface are unchanged. ([BLD-3872](/BLD/issues/BLD-3872))
 - **Distinct CVD pattern for Rest pacing segment** — Adds a vertical-dash hatch pattern to the "Rest" pacing segment on the completed-workout summary pacing bar and matching legend dot, improving readability for users with color vision deficiencies. ([BLD-3879](/BLD/issues/BLD-3879))
 - **Inline Plate Calculator** — A plate calculator is now accessible directly from the active set row while logging. Tap the weight hint to open a bottom-sheet calculator without leaving the workout. ([BLD-3820](/BLD/issues/BLD-3820))
-- **Tritanopia-safe heatmap luminance ramp** — Implements a tritanopia-safe luminance ramp for the workout-history heatmap, keeping all frequency cells perceptually distinct. ([BLD-3877](/BLD/issues/BLD-3877))
 
 ## v0.26.84 — 2026-07-25
 <!-- versionCode: 152 -->
@@ -352,7 +352,7 @@ _No user-facing changes yet._
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
-- **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
+
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->
