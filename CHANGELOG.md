@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Consistent section spacing on History** — Standardises the vertical gap between section headers and their content across the workout-history screen for a more even visual rhythm. ([BLD-4051](/BLD/issues/BLD-4051))
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->
@@ -290,6 +290,7 @@ _No user-facing changes yet._
 - **Aligned heatmap spacing** — Aligns the workout-frequency heatmap cells and spacing on the history screen for a cleaner layout. ([BLD-3642](/BLD/issues/BLD-3642))
 - **Nutrition card link padding** — Adds consistent edge padding to the Edit Targets and Meal Templates link rows in the nutrition card for better touch targets and visual alignment. ([BLD-4043](/BLD/issues/BLD-4043))
 - **Aligned water quick-add buttons** — Water quick-add chips now stay vertically centered on each row, fixing a slight misalignment visible on mobile. ([BLD-4042](/BLD/issues/BLD-4042))
+- **Consistent section spacing on History** — Standardises the vertical gap between section headers and their content across the workout-history screen for a more even visual rhythm. ([BLD-4051](/BLD/issues/BLD-4051))
 
 ## v0.26.88 — 2026-07-26
 <!-- versionCode: 156 -->

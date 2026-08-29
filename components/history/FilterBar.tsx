@@ -18,6 +18,7 @@ import { ChevronDown, X } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { spacing } from "@/constants/design-tokens";
 import type { HistoryFilters, TemplateOption } from "@/lib/db";
 import type { HistoryFilterKey } from "@/hooks/useHistoryFilters";
 import { MUSCLE_LABELS, type MuscleGroup } from "@/lib/types";
@@ -194,8 +195,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
     // BLD-1055: without flex:1 the container grows with its children on
     // RN Web, so the inner ScrollView's flexShrink/flexGrow resolves
     // against an oversized parent and the rightmost chip clips instead

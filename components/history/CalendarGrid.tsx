@@ -211,7 +211,7 @@ export default function CalendarGrid({
 }
 
 const styles = StyleSheet.create({
-  monthNav: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginBottom: 8 },
+  monthNav: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginBottom: spacing.sm },
   monthSummary: { textAlign: "center", marginBottom: spacing.sm },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" },
   cell: { alignItems: "center", justifyContent: "center", marginVertical: 2, minHeight: MIN_TOUCH_TARGET },
