@@ -1,5 +1,10 @@
 flows:
-  - flows/*
+  # CI is intentionally secret-free; list only flows executable by its release APK.
+  - flows/onboarding.yaml
+  - flows/add-food.yaml
+  - flows/log-set.yaml
+  - flows/start-workout.yaml
+  - flows/view-progress.yaml
 
 # Deterministic flow order for the CI regression gate (BLD-1735).
 #
@@ -13,12 +18,12 @@ flows:
 # and fails.
 #
 # `executionOrder.flowsOrder` (supported since well before the pinned Maestro
-# 1.39.0 — see WorkspaceConfig.ExecutionOrder) runs the named flows first, in
-# this exact sequence, before any remaining flows. We put onboarding first so it
-# clears state and leaves the app on the main tabs; the four leaf flows then run
-# against that established state. Names are the flow file stems (these flows set
-# no `name:`). continueOnFailure:false makes onboarding a hard prerequisite — if
-# it fails there is no point cascading the dependent flows, and the gate fails
+# 1.39.0 — see WorkspaceConfig.ExecutionOrder) runs this explicit CI flow list
+# in a deterministic sequence. We put onboarding first so it clears state and
+# leaves the app on the main tabs; the four leaf flows then run against that
+# established state. Names are the flow file stems (these flows set no `name:`).
+# continueOnFailure:false makes onboarding a hard prerequisite — if it fails,
+# there is no point cascading the dependent flows, and the gate fails
 # fast and deterministically.
 executionOrder:
   continueOnFailure: false
@@ -28,4 +33,3 @@ executionOrder:
     - log-set
     - start-workout
     - view-progress
-    - ai-coach
