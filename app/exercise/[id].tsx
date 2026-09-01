@@ -81,6 +81,7 @@ function difficultyLabel(difficulty: Difficulty): string {
   }
 }
 
+
 function formatDateLong(ts: number): string {
   return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" }).format(new Date(ts));
 }

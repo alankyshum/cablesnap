@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Calendar highlight fix** — The orange highlight circle on the workout-history calendar now centers correctly over the date digit on all screen widths. Previously the touch target spanned the full column width, causing the highlight ring to appear offset to the right. ([BLD-3654](/BLD/issues/BLD-3654))
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->
@@ -352,7 +352,7 @@ _No user-facing changes yet._
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
-- **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
+
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->
