@@ -32,7 +32,7 @@ export default function SetsCard({ grouped, colors }: Props) {
             Sets
           </Text>
         </View>
-        <View style={styles.exerciseGroups}>
+        <View style={styles.exerciseGroupsContainer}>
         {grouped.map((group) => (
           <View key={group.name}>
             <Text
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   // BLD-3660: Use `gap` on the wrapping container so spacing between exercise groups
   // is consistent and no trailing margin leaks past the last group.
-  exerciseGroups: { gap: 8 },
+  exerciseGroupsContainer: { gap: 8 },
   setRow: {
     flexDirection: "row",
     alignItems: "center",
