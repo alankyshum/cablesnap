@@ -66,7 +66,10 @@ function findAncestorWithWidth(node: RNNode | null): unknown {
   let cur: RNNode | null = node;
   while (cur) {
     const w = flattenWidth(cur.props?.style);
-    if (w !== undefined) return w;
+    // BLD-3654: Skip numeric (pixel) widths such as the inner highlight View's
+    // `width: cellSize`. We want the percent-based column width on the outer
+    // Pressable / header View, which is a string like "14.285714285714285%".
+    if (typeof w === "string") return w;
     cur = cur.parent;
   }
   return undefined;

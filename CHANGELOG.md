@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Equal spacing for streak stat items** — Standardizes the horizontal spacing and gaps for streak stats items on the history screen. ([BLD-3655](/BLD/issues/BLD-3655))
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->
