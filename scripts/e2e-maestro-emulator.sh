@@ -134,11 +134,13 @@ echo "Maestro driver startup timeout: ${MAESTRO_DRIVER_STARTUP_TIMEOUT}ms"
 # surface it explicitly and exit non-zero so the job (and PR) fail fast instead
 # of burning the full runner allocation.
 MAESTRO_TEST_TIMEOUT="${MAESTRO_TEST_TIMEOUT:-25m}"
-echo "--- Running maestro test .maestro/ (hard cap: $MAESTRO_TEST_TIMEOUT) ---"
-# `.maestro/` resolves flows via .maestro/config.yaml (flows: flows/*), so all
-# five flows run. Any failing flow makes `maestro test` exit non-zero, which
-# (set -e) fails this script and the CI job — that is the gate. We intentionally
-# do NOT swallow the exit code.
+echo "--- Running maestro test .maestro/flows/ (hard cap: $MAESTRO_TEST_TIMEOUT) ---"
+# Point Maestro at the actual scenario directory. Passing the workspace root
+# (`.maestro/`) makes the CLI treat config.yaml as the selection target and it
+# can resolve zero runnable flows; that aborts before any scenario runs. The
+# config remains available from the parent directory for execution ordering.
+# Any failing flow makes `maestro test` exit non-zero, which (set -e) fails this
+# script — that is the gate. We intentionally do NOT swallow the exit code.
 #
 # Flags are pinned to what Maestro 1.39.0 actually supports (verified against
 # TestCommand.kt @ tag cli-1.39.0). NOTE: `--test-output-dir` does NOT exist in
@@ -153,7 +155,7 @@ echo "--- Running maestro test .maestro/ (hard cap: $MAESTRO_TEST_TIMEOUT) ---"
 # can distinguish a hang (124) from a normal flow failure (non-zero, non-124).
 set +e
 timeout --kill-after=30s "$MAESTRO_TEST_TIMEOUT" \
-  maestro test .maestro/ \
+  maestro test .maestro/flows/ \
     --format junit \
     --output "$MAESTRO_RESULTS_DIR/report.xml" \
     --debug-output "$MAESTRO_RESULTS_DIR" \
