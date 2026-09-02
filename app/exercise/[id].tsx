@@ -28,7 +28,7 @@ import {
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
-import type { Attachment, Category, Difficulty } from "../../lib/types";
+import { ATTACHMENT_LABELS, type Category, type Difficulty } from "../../lib/types";
 import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
@@ -78,18 +78,6 @@ function difficultyLabel(difficulty: Difficulty): string {
     case "beginner": return t({ id: "app.exercise.id.difficulty.beginner", message: "Beginner" });
     case "intermediate": return t({ id: "app.exercise.id.difficulty.intermediate", message: "Intermediate" });
     case "advanced": return t({ id: "app.exercise.id.difficulty.advanced", message: "Advanced" });
-  }
-}
-
-function attachmentLabel(attachment: Attachment): string {
-  switch (attachment) {
-    case "handle": return t({ id: "app.exercise.id.attachment.handle", message: "Handle" });
-    case "ring_handle": return t({ id: "app.exercise.id.attachment.ringHandle", message: "Ring Handle" });
-    case "ankle_strap": return t({ id: "app.exercise.id.attachment.ankleStrap", message: "Ankle Strap" });
-    case "rope": return t({ id: "app.exercise.id.attachment.rope", message: "Rope" });
-    case "bar": return t({ id: "app.exercise.id.attachment.bar", message: "Bar" });
-    case "squat_harness": return t({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
-    case "carabiner": return t({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
   }
 }
 
@@ -277,7 +265,7 @@ export default function ExerciseDetail() {
 
       {exercise.attachment && (
           <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>{t({ id: "app.exercise.id.attachment", message: "Attachment" })}</Text>
-           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: attachmentLabel(exercise.attachment) } })}>{attachmentLabel(exercise.attachment)}</Text></View>
+           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: ATTACHMENT_LABELS[exercise.attachment] } })}>{ATTACHMENT_LABELS[exercise.attachment]}</Text></View>
       )}
 
       {layout.atLeastMedium ? (
