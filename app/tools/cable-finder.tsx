@@ -12,7 +12,13 @@ import { Chip } from "@/components/ui/chip";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing } from "@/constants/design-tokens";
-import type { MountPosition, Attachment, MuscleGroup } from "@/lib/types";
+import {
+  ATTACHMENT_LABELS,
+  MOUNT_POSITION_LABELS,
+  type MountPosition,
+  type Attachment,
+  type MuscleGroup,
+} from "@/lib/types";
 import { MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
 import {
   getCableExercises,
@@ -43,24 +49,11 @@ function muscleLabel(muscle: MuscleGroup): string {
 }
 
 function mountPositionLabel(position: MountPosition): string {
-  switch (position) {
-    case "high": return t({ id: "app.tools.cableFinder.mount.high", message: "High" });
-    case "mid": return t({ id: "app.tools.cableFinder.mount.mid", message: "Mid" });
-    case "low": return t({ id: "app.tools.cableFinder.mount.low", message: "Low" });
-    case "floor": return t({ id: "app.tools.cableFinder.mount.floor", message: "Floor" });
-  }
+  return MOUNT_POSITION_LABELS[position];
 }
 
 function attachmentLabel(attachment: Attachment): string {
-  switch (attachment) {
-    case "handle": return t({ id: "app.tools.cableFinder.attachment.handle", message: "Handle" });
-    case "ring_handle": return t({ id: "app.tools.cableFinder.attachment.ringHandle", message: "Ring Handle" });
-    case "ankle_strap": return t({ id: "app.tools.cableFinder.attachment.ankleStrap", message: "Ankle Strap" });
-    case "rope": return t({ id: "app.tools.cableFinder.attachment.rope", message: "Rope" });
-    case "bar": return t({ id: "app.tools.cableFinder.attachment.bar", message: "Bar" });
-    case "squat_harness": return t({ id: "app.tools.cableFinder.attachment.squatHarness", message: "Squat Harness" });
-    case "carabiner": return t({ id: "app.tools.cableFinder.attachment.carabiner", message: "Carabiner" });
-  }
+  return ATTACHMENT_LABELS[attachment];
 }
 
 type Section = {
