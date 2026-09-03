@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Chip } from "@/components/ui/chip";
 import type { Equipment } from "../../lib/types";
 import { EQUIPMENT_LABELS } from "../../lib/types";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   availableEquipment: Equipment[];
@@ -14,13 +15,13 @@ export function EquipmentFilter({ availableEquipment, equipmentFilter, onFilterC
   if (availableEquipment.length <= 1) return null;
 
   return (
-    <View style={styles.filterRow} accessibilityRole="toolbar" accessibilityLabel="Equipment filter">
+    <View style={styles.filterRow} accessibilityRole="toolbar" accessibilityLabel={t({ id: "components.substitution.equipment-filter.label", message: "Equipment filter" })}>
       <Chip
         selected={equipmentFilter === null}
         onPress={() => onFilterChange(null)}
         compact
         style={styles.filterChip}
-        accessibilityLabel="Show all equipment"
+        accessibilityLabel={t({ id: "components.substitution.equipment-filter.all-a11y", message: "Show all equipment" })}
       >
         All
       </Chip>

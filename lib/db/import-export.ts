@@ -15,6 +15,7 @@ import type {
 } from "../types";
 import { getDatabase, withTransaction } from "./helpers";
 import { importTable } from "./import-table";
+import * as keyVault from "../ai/key-vault";
 
 // --------------- Backup Format Types ---------------
 
@@ -40,7 +41,9 @@ export type BackupTableName =
   | "program_log"
   | "program_schedule"
   | "meal_templates"
-  | "meal_template_items";
+  | "meal_template_items"
+  | "coach_sessions"
+  | "coach_messages";
 
 export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   exercises: "Exercises",
@@ -65,6 +68,8 @@ export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   program_schedule: "Program Schedule",
   meal_templates: "Meal Templates",
   meal_template_items: "Meal Template Items",
+  coach_sessions: "AI Coach Sessions",
+  coach_messages: "AI Coach Messages",
 };
 
 // FK-dependency order for import — parents before children
@@ -92,6 +97,8 @@ export const IMPORT_TABLE_ORDER: BackupTableName[] = [
   "program_schedule",
   "meal_templates",
   "meal_template_items",
+  "coach_sessions",
+  "coach_messages",
 ];
 
 import type { AppSettingRow, AchievementEarnedRow, ProgramScheduleRow } from "./schema";
@@ -129,7 +136,8 @@ export type BackupCategoryName =
   | "plate_calculator_settings"
   | "rest_timer_settings"
   | "app_preferences"
-  | "achievements";
+  | "achievements"
+  | "ai_coach";
 
 export const BACKUP_CATEGORY_ORDER: BackupCategoryName[] = [
   "workout_templates",
@@ -142,6 +150,7 @@ export const BACKUP_CATEGORY_ORDER: BackupCategoryName[] = [
   "rest_timer_settings",
   "app_preferences",
   "achievements",
+  "ai_coach",
 ];
 
 export const BACKUP_CATEGORY_LABELS: Record<BackupCategoryName, string> = {
@@ -155,6 +164,7 @@ export const BACKUP_CATEGORY_LABELS: Record<BackupCategoryName, string> = {
   rest_timer_settings: "Rest timer settings",
   app_preferences: "App preferences",
   achievements: "Achievements",
+  ai_coach: "AI Coach",
 };
 
 export const BACKUP_CATEGORY_TABLES: Record<BackupCategoryName, BackupTableName[]> = {
@@ -168,10 +178,12 @@ export const BACKUP_CATEGORY_TABLES: Record<BackupCategoryName, BackupTableName[
   rest_timer_settings: ["app_settings"],
   app_preferences: ["app_settings"],
   achievements: ["achievements_earned"],
+  ai_coach: ["coach_sessions", "coach_messages"],
 };
 
 type BackupCategorySection = Partial<Record<BackupTableName, unknown[]>>;
 export type BackupV7Data = Partial<Record<BackupCategoryName, BackupCategorySection>>;
+export type BackupV8Data = BackupV7Data & { ai_coach?: BackupCategorySection & { last_model_id?: string | null; openrouter_api_key?: string } };
 
 export type BackupV3 = {
   version: 3 | 4 | 5 | 6;
@@ -188,8 +200,9 @@ export type BackupV7 = {
   data: BackupV7Data;
   counts: Record<string, number>;
 };
+export type BackupV8 = Omit<BackupV7, "version" | "data"> & { version: 8; data: BackupV8Data };
 
-export type BackupFile = BackupV3 | BackupV7;
+export type BackupFile = BackupV3 | BackupV7 | BackupV8;
 
 export type ExportProgress = {
   table: string;
@@ -209,6 +222,7 @@ export type ImportResult = {
   inserted: number;
   skipped: number;
   perTable: Record<string, { inserted: number; skipped: number; skipped_existing?: number }>;
+  credentialWarning?: "invalid" | "failed";
 };
 
 /** Honest wording for the common idempotent re-import case. */
@@ -219,12 +233,14 @@ export function getImportCompletionMessage(inserted: number, skipped: number): s
   return `${inserted} records imported${skipped > 0 ? `, ${skipped} already present` : ""}`;
 }
 
-type ExportOptions = {
+export type ExportOptions = {
   selectedCategories?: BackupCategoryName[];
+  includeCredentials?: boolean;
 };
 
-type ImportOptions = {
+export type ImportOptions = {
   selectedCategories?: BackupCategoryName[];
+  confirmCredentials?: boolean;
 };
 
 function getDefaultSelectedCategories(): BackupCategoryName[] {
@@ -238,9 +254,10 @@ function getSelectedCategorySet(selectedCategories?: BackupCategoryName[]): Set<
   return new Set(selectedCategories.filter((category): category is BackupCategoryName => BACKUP_CATEGORY_ORDER.includes(category)));
 }
 
-function getSelectedTableOrder(selectedCategories?: BackupCategoryName[]): BackupTableName[] {
+function getSelectedTableOrder(selectedCategories?: BackupCategoryName[], includeAiCoach = true): BackupTableName[] {
   const selected = getSelectedCategorySet(selectedCategories);
   return IMPORT_TABLE_ORDER.filter((table) =>
+    (includeAiCoach || (table !== "coach_sessions" && table !== "coach_messages")) &&
     BACKUP_CATEGORY_ORDER.some((category) => selected.has(category) && BACKUP_CATEGORY_TABLES[category].includes(table))
   );
 }
@@ -273,6 +290,9 @@ function getTableData(data: Record<string, unknown>, version: number): Partial<R
     const merged: Partial<Record<BackupTableName, unknown[]>> = {};
 
     for (const category of BACKUP_CATEGORY_ORDER) {
+      // The AI Coach section is introduced by v8; keep v7 parsing exactly as
+      // it was even if a hand-edited file contains an unexpected section.
+      if (version < 8 && category === "ai_coach") continue;
       const rawSection = categoryData[category];
       if (typeof rawSection !== "object" || rawSection === null) continue;
       const section = rawSection as Record<string, unknown>;
@@ -308,7 +328,9 @@ function buildCategoryData(tableData: Partial<Record<BackupTableName, unknown[]>
     for (const tableName of BACKUP_CATEGORY_TABLES[category]) {
       const rows = tableData[tableName] ?? [];
       section[tableName] = tableName === "app_settings"
-        ? filterAppSettingsRowsForCategory(rows, category)
+        ? filterAppSettingsRowsForCategory(rows, category).filter((row) =>
+          category !== "app_preferences" || typeof row !== "object" || row === null ||
+          (row as Record<string, unknown>).key !== "ai_coach.last_model_id")
         : rows;
     }
     data[category] = section;
@@ -339,7 +361,8 @@ export function getPresentBackupCategories(data: Record<string, unknown>): Backu
   const version = Number(data.version ?? 0);
   if (version >= 7) {
     const categoryData = (data.data as Record<string, unknown> | undefined) ?? {};
-    return BACKUP_CATEGORY_ORDER.filter((category) => category in categoryData);
+    return BACKUP_CATEGORY_ORDER.filter((category) => version >= 8 || category !== "ai_coach")
+      .filter((category) => category in categoryData);
   }
 
   const counts = getBackupCategoryCounts(data);
@@ -406,7 +429,7 @@ export function validateBackupData(data: unknown): ValidationError | null {
   }
 
   const version = Number(obj.version);
-  if (version >= 8) {
+  if (version >= 9) {
     return { type: "future_version", message: "This backup was created with a newer version of CableSnap. Please update the app first." };
   }
 
@@ -496,7 +519,7 @@ export async function exportAllData(
 ): Promise<BackupFile> {
   const { options, onProgress } = parseExportArgs(optionsOrProgress, maybeProgress);
   const database = await getDatabase();
-  const tables = getSelectedTableOrder(options.selectedCategories);
+  const tables = getSelectedTableOrder(options.selectedCategories, true);
   const tableData: Partial<Record<BackupTableName, unknown[]>> = {};
   const counts: Record<string, number> = Object.fromEntries(IMPORT_TABLE_ORDER.map((table) => [table, 0]));
 
@@ -532,11 +555,21 @@ export async function exportAllData(
 
   onProgress?.({ table: "done", tableIndex: tables.length, totalTables: tables.length });
 
+  const categoryData = buildCategoryData(tableData, options.selectedCategories) as BackupV8Data;
+  if (getSelectedCategorySet(options.selectedCategories).has("ai_coach")) {
+    const ai = categoryData.ai_coach ?? {};
+    ai.last_model_id = (await database.getFirstAsync<{ value: string }>("SELECT value FROM app_settings WHERE key = ?", ["ai_coach.last_model_id"]))?.value ?? null;
+    if (options.includeCredentials) {
+      const key = await keyVault.get();
+      if (key) ai.openrouter_api_key = key;
+    }
+    categoryData.ai_coach = ai;
+  }
   return {
-    version: 7,
+    version: 8,
     app_version: "1.0.0",
     exported_at: new Date().toISOString(),
-    data: buildCategoryData(tableData, options.selectedCategories),
+    data: categoryData,
     counts,
   };
 }
@@ -551,7 +584,8 @@ export async function importData(
   const { options, onProgress } = parseImportArgs(progressOrOptions, maybeOptions);
   const version = Number(data.version ?? 0);
   const tableData = getTableData(data, version);
-  const tables = getSelectedTableOrder(options.selectedCategories);
+  // v2-v7 imports must retain their historical table set.
+  const tables = getSelectedTableOrder(options.selectedCategories, version >= 8);
   let totalInserted = 0;
   let totalSkipped = 0;
   const perTable: Record<string, { inserted: number; skipped: number; skipped_existing?: number }> = {};
@@ -568,9 +602,13 @@ export async function importData(
     for (let i = 0; i < tables.length; i++) {
       const tableName = tables[i];
       const allRows = tableData[tableName] ?? [];
-      const rows = tableName === "app_settings"
+      let rows = tableName === "app_settings"
         ? filterAppSettingsRowsForSelectedCategories(allRows, options.selectedCategories)
         : allRows;
+      if (version >= 8 && tableName === "app_settings") {
+        rows = rows.filter((row) =>
+          typeof row !== "object" || row === null || (row as Record<string, unknown>).key !== "ai_coach.last_model_id");
+      }
 
       onProgress?.({ table: tableName, tableIndex: i, totalTables: tables.length });
 
@@ -586,7 +624,27 @@ export async function importData(
       totalSkipped += skipped;
       perTable[tableName] = { inserted, skipped, skipped_existing };
     }
+    const ai = (data.data as Record<string, unknown> | undefined)?.ai_coach as Record<string, unknown> | undefined;
+    if (version >= 8 && ai?.last_model_id && getSelectedCategorySet(options.selectedCategories).has("ai_coach")) {
+      await database.runAsync("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", ["ai_coach.last_model_id", String(ai.last_model_id)]);
+    }
   });
+
+  const ai = (data.data as Record<string, unknown> | undefined)?.ai_coach as Record<string, unknown> | undefined;
+  let credentialWarning: ImportResult["credentialWarning"];
+  const aiSelected = getSelectedCategorySet(options.selectedCategories).has("ai_coach");
+  if (version >= 8 && aiSelected && options.confirmCredentials && ai && "openrouter_api_key" in ai) {
+    if (typeof ai.openrouter_api_key !== "string" || !keyVault.keyFormat(ai.openrouter_api_key)) {
+      credentialWarning = "invalid";
+    } else {
+      try {
+        // SecureStore is intentionally outside the SQLite transaction.
+        await keyVault.set(ai.openrouter_api_key);
+      } catch {
+        credentialWarning = "failed";
+      }
+    }
+  }
 
   for (const tableName of IMPORT_TABLE_ORDER) {
     perTable[tableName] ??= { inserted: 0, skipped: 0, skipped_existing: 0 };
@@ -594,5 +652,5 @@ export async function importData(
 
   onProgress?.({ table: "done", tableIndex: tables.length, totalTables: tables.length });
 
-  return { inserted: totalInserted, skipped: totalSkipped, perTable };
+  return { inserted: totalInserted, skipped: totalSkipped, perTable, credentialWarning };
 }

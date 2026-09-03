@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * FormClipsPlayer.tsx
  *
@@ -117,9 +120,9 @@ function PlayerBody({ clip, weightLabel, reps, onDelete, siblingClipCount, onReq
           style={[styles.deleteBtn, { borderColor: colors.error }]}
           onPress={() => onDelete(clip!)}
           accessibilityRole="button"
-          accessibilityLabel="Delete this clip"
+          accessibilityLabel={t({ id: "session.formclipsplayer.str1", message: "Delete this clip" })}
         >
-          <Text style={{ color: colors.error, fontWeight: "600" }}>Delete clip</Text>
+          <Text style={{ color: colors.error, fontWeight: "600" }}>{t({ id: "session.formclipsplayer.str3", message: "Delete clip" })}</Text>
         </Pressable>
       )}
       {/* AC2/AC7: "Compare with another set…" entry point */}
@@ -131,7 +134,7 @@ function PlayerBody({ clip, weightLabel, reps, onDelete, siblingClipCount, onReq
             onPress={canCompare && onRequestCompare ? () => onRequestCompare(clip!) : undefined}
             disabled={!canCompare}
             accessibilityRole="button"
-            accessibilityLabel="Compare with another set…"
+            accessibilityLabel={t({ id: "session.formclipsplayer.str2", message: "Compare with another set…" })}
             accessibilityState={{ disabled: !canCompare }}
             accessibilityHint={
               !canCompare
@@ -139,7 +142,7 @@ function PlayerBody({ clip, weightLabel, reps, onDelete, siblingClipCount, onReq
                 : "Opens a side-by-side comparison with a clip you pick"
             }
           >
-            <Text style={{ color: colors.primary, fontWeight: "600" }}>Compare with another set…</Text>
+            <Text style={{ color: colors.primary, fontWeight: "600" }}>{t({ id: "session.formclipsplayer.str4", message: "Compare with another set…" })}</Text>
           </Pressable>
         );
       })()}

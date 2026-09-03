@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type Level = "beginner" | "intermediate" | "advanced";
 
@@ -20,31 +21,34 @@ function detectUnits(): { weight: "kg" | "lb"; measurement: "cm" | "in" } {
   return { weight: "kg", measurement: "cm" };
 }
 
-const LEVELS: { value: Level; label: string; description: string; icon: string }[] = [
+function getLevels(): { value: Level; label: string; description: string; icon: string }[] {
+  return [
   {
     value: "beginner",
-    label: "Beginner",
-    description: "I'm just getting started with gym workouts",
+    label: t({ id: "app.onboarding.setup.beginner", message: "Beginner" }),
+    description: t({ id: "app.onboarding.setup.beginnerDescription", message: "I'm just getting started with gym workouts" }),
     icon: "weight-lifter",
   },
   {
     value: "intermediate",
-    label: "Intermediate",
-    description: "I've been working out regularly for a few months",
+    label: t({ id: "app.onboarding.setup.intermediate", message: "Intermediate" }),
+    description: t({ id: "app.onboarding.setup.intermediateDescription", message: "I've been working out regularly for a few months" }),
     icon: "arm-flex",
   },
   {
     value: "advanced",
-    label: "Advanced",
-    description: "I design my own workout routines",
+    label: t({ id: "app.onboarding.setup.advanced", message: "Advanced" }),
+    description: t({ id: "app.onboarding.setup.advancedDescription", message: "I design my own workout routines" }),
     icon: "trophy",
   },
-];
+  ];
+}
 
 export default function Setup() {
   const colors = useThemeColors();
   const router = useRouter();
   const defaults = detectUnits();
+  const levels = getLevels();
   const [weight, setWeight] = useState<"kg" | "lb">(defaults.weight);
   const [measurement, setMeasurement] = useState<"cm" | "in">(defaults.measurement);
   const [level, setLevel] = useState<Level | null>(null);
@@ -52,41 +56,41 @@ export default function Setup() {
   const header = (
     <>
       <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
-        Set Up Your Preferences
+        {t({ id: "app.onboarding.setup.title", message: "Set Up Your Preferences" })}
       </Text>
 
       <Text variant="title" style={[styles.section, { color: colors.onBackground }]}>
-        Weight Unit
+        {t({ id: "app.onboarding.setup.weightUnit", message: "Weight Unit" })}
       </Text>
-      <View accessibilityRole="radiogroup" accessibilityLabel="Weight unit">
+      <View accessibilityRole="radiogroup" accessibilityLabel={t({ id: "app.onboarding.setup.weightUnitA11y", message: "Weight unit" })}>
         <SegmentedControl
           value={weight}
           onValueChange={(v) => setWeight(v as "kg" | "lb")}
           buttons={[
-            { value: "kg", label: "kg", accessibilityLabel: "Kilograms" },
-            { value: "lb", label: "lb", accessibilityLabel: "Pounds" },
+            { value: "kg", label: "kg", accessibilityLabel: t({ id: "app.onboarding.setup.kilograms", message: "Kilograms" }) },
+            { value: "lb", label: "lb", accessibilityLabel: t({ id: "app.onboarding.setup.pounds", message: "Pounds" }) },
           ]}
           style={styles.segment}
         />
       </View>
 
       <Text variant="title" style={[styles.section, { color: colors.onBackground }]}>
-        Measurement Unit
+        {t({ id: "app.onboarding.setup.measurementUnit", message: "Measurement Unit" })}
       </Text>
-      <View accessibilityRole="radiogroup" accessibilityLabel="Measurement unit">
+      <View accessibilityRole="radiogroup" accessibilityLabel={t({ id: "app.onboarding.setup.measurementUnitA11y", message: "Measurement unit" })}>
         <SegmentedControl
           value={measurement}
           onValueChange={(v) => setMeasurement(v as "cm" | "in")}
           buttons={[
-            { value: "cm", label: "cm", accessibilityLabel: "Centimeters" },
-            { value: "in", label: "in", accessibilityLabel: "Inches" },
+            { value: "cm", label: "cm", accessibilityLabel: t({ id: "app.onboarding.setup.centimeters", message: "Centimeters" }) },
+            { value: "in", label: "in", accessibilityLabel: t({ id: "app.onboarding.setup.inches", message: "Inches" }) },
           ]}
           style={styles.segment}
         />
       </View>
 
       <Text variant="title" style={[styles.section, { color: colors.onBackground }]}>
-        Experience Level
+        {t({ id: "app.onboarding.setup.experienceLevel", message: "Experience Level" })}
       </Text>
     </>
   );
@@ -102,21 +106,21 @@ export default function Setup() {
         });
       }}
       style={styles.btn}
-      accessibilityLabel={level ? "Continue to recommendations" : "Select an experience level to continue"}
-      label="Continue"
+      accessibilityLabel={level ? t({ id: "app.onboarding.setup.continueA11y", message: "Continue to recommendations" }) : t({ id: "app.onboarding.setup.selectLevelA11y", message: "Select an experience level to continue" })}
+      label={t({ id: "app.onboarding.setup.continue", message: "Continue" })}
     />
   );
 
   return (
     <FlatList
-      data={LEVELS}
+      data={levels}
       keyExtractor={(item) => item.value}
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={styles.scroll}
       ListHeaderComponent={header}
       ListFooterComponent={footer}
       accessibilityRole="radiogroup"
-      accessibilityLabel="Experience level"
+       accessibilityLabel={t({ id: "app.onboarding.setup.experienceLevelA11y", message: "Experience level" })}
       renderItem={({ item }) => {
         const selected = level === item.value;
         return (
@@ -124,7 +128,7 @@ export default function Setup() {
             onPress={() => setLevel(item.value)}
             accessibilityRole="radio"
             accessibilityState={{ checked: selected }}
-            accessibilityLabel={`${item.label}: ${item.description}`}
+              accessibilityLabel={t({ id: "app.onboarding.setup.levelA11y", message: `${item.label}: ${item.description}` })}
             style={[
               styles.card,
               {

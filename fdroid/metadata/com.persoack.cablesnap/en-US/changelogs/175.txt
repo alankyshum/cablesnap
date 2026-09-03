@@ -1,0 +1,2 @@
+- Localized the AI Coach navigation label in the app's supported languages.
+- Fixed hydration preset labels when displaying fluid ounces.

@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -20,7 +21,7 @@ export function MealSectionHeader({ section, colors, onSaveAsTemplate }: Props) 
       {section.data.length > 0 && (
         <TouchableOpacity
           onPress={() => onSaveAsTemplate(section.meal, section.data)}
-          accessibilityLabel={`Save ${section.title} as template`}
+           accessibilityLabel={t({ id: "components.nutrition.mealHeader.saveA11y", message: `Save ${section.title} as template` })}
           accessibilityRole="button"
           hitSlop={8}
           style={{ padding: 8, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}

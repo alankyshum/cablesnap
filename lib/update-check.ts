@@ -5,7 +5,9 @@ export type DistributionChannel = "github" | "fdroid";
 export const ASSET_NAMES: Record<DistributionChannel, string | undefined> = { github: "cablesnap.apk", fdroid: undefined };
 const DISMISSED_TAG_KEY = "update.dismissedTag";
 const LAST_CHECKED_AT_KEY = "update.lastCheckedAt";
-const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
+// The bridge checks on mount and whenever the app returns to the foreground;
+// this interval only rate-limits the GitHub API call.
+const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 export type Release = { tag_name: string; name?: string | null; body?: string | null; html_url: string; assets?: { name: string; browser_download_url: string }[] };
 export type AvailableUpdate = { currentVersion: string; tag: string; version: string; name: string; body: string; url: string };

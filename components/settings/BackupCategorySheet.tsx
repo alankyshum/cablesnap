@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, View } from 'react-native';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,6 +10,7 @@ import {
   BACKUP_CATEGORY_LABELS,
   type BackupCategoryName,
 } from '@/lib/db';
+import { t } from '@lingui/core/macro';
 
 const EMPTY_COUNTS: Partial<Record<BackupCategoryName, number>> = {};
 
@@ -21,7 +22,7 @@ type Props = {
   counts?: Partial<Record<BackupCategoryName, number>>;
   loading?: boolean;
   onClose: () => void;
-  onConfirm: (selected: BackupCategoryName[]) => void;
+  onConfirm: (selected: BackupCategoryName[], includeCredentials?: boolean) => void;
 };
 
 export default function BackupCategorySheet({
@@ -36,9 +37,16 @@ export default function BackupCategorySheet({
 }: Props) {
   const colors = useThemeColors();
   const [draftSelected, setDraftSelected] = useState<Set<BackupCategoryName> | null>(null);
-  const selected = draftSelected ?? new Set(initialSelected);
+  const [includeCredentials, setIncludeCredentials] = useState(false);
+  const selected = useMemo(
+    () => draftSelected ?? new Set(initialSelected),
+    [draftSelected, initialSelected],
+  );
 
   const selectedCount = selected.size;
+  const categoryLabel = (category: BackupCategoryName) => category === "ai_coach"
+    ? t({ id: "components.coach.aiCoachName", message: "AI Coach" })
+    : BACKUP_CATEGORY_LABELS[category];
   const title = mode === 'import' ? 'Choose what to import' : 'Choose what to export';
   const confirmLabel = mode === 'import' ? 'Import Selected' : 'Export Selected';
   const helperText = mode === 'import'
@@ -63,10 +71,11 @@ export default function BackupCategorySheet({
   const clearAll = () => setDraftSelected(new Set());
   const handleClose = () => {
     setDraftSelected(null);
+    setIncludeCredentials(false);
     onClose();
   };
   const handleConfirm = () => {
-    onConfirm(orderedSelected);
+    onConfirm(orderedSelected, includeCredentials);
     setDraftSelected(null);
   };
 
@@ -87,7 +96,7 @@ export default function BackupCategorySheet({
           size="sm"
           onPress={selectAll}
           disabled={loading || categories.length === 0}
-          accessibilityLabel="Select all backup categories"
+          accessibilityLabel={t({ id: "settings.backup.selectAllA11y", message: "Select all backup categories" })}
         >
           Select all
         </Button>
@@ -96,7 +105,7 @@ export default function BackupCategorySheet({
           size="sm"
           onPress={clearAll}
           disabled={loading || categories.length === 0}
-          accessibilityLabel="Clear all backup categories"
+          accessibilityLabel={t({ id: "settings.backup.clearAllA11y", message: "Clear all backup categories" })}
         >
           Clear all
         </Button>
@@ -121,12 +130,12 @@ export default function BackupCategorySheet({
               onPress={() => toggleCategory(category)}
               accessibilityRole="checkbox"
               accessibilityState={{ checked }}
-              accessibilityLabel={`${BACKUP_CATEGORY_LABELS[category]}${mode === 'import' ? `, ${countLabel} in file` : ''}`}
+              accessibilityLabel={`${categoryLabel(category)}${mode === 'import' ? `, ${countLabel} in file` : ''}`}
             >
               <Checkbox checked={checked} onCheckedChange={() => toggleCategory(category)} />
               <View style={styles.rowText}>
                 <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm, fontWeight: '600' }}>
-                  {BACKUP_CATEGORY_LABELS[category]}
+                  {categoryLabel(category)}
                 </Text>
                 <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                   {mode === 'import' ? countLabel : 'Include in backup'}
@@ -136,6 +145,21 @@ export default function BackupCategorySheet({
           );
         })}
       </View>
+
+      {mode === 'export' && (
+        <View style={[styles.credentialRow, { backgroundColor: colors.surfaceVariant }]}>
+          <View style={styles.rowText}>
+            <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600' }}>
+              {t({ id: "settings.backup.includeCredentials", message: "Include API credentials" })}
+            </Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+              {t({ id: "settings.backup.credentialsWarning", message: "This live, billable key will be written unencrypted to the shared file." })}
+            </Text>
+          </View>
+          <Switch value={includeCredentials} onValueChange={setIncludeCredentials} accessibilityRole="switch"
+            accessibilityLabel={t({ id: "settings.backup.includeCredentialsA11y", message: "Include live API credential in export" })} />
+        </View>
+      )}
 
       <View style={styles.footer}>
         <Button
@@ -191,5 +215,13 @@ const styles = StyleSheet.create({
   },
   footerButton: {
     flex: 1,
+  },
+  credentialRow: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 64,
   },
 });

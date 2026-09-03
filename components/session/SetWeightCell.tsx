@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * SetWeightCell — thin selector that picks between StackMarkerPill, WeightPicker,
  * and the "↕ to marker" affordance based on AC1 logic.
@@ -168,7 +171,7 @@ export function SetWeightCell({
             hitSlop={8}
             style={[styles.upsellBtn, { borderColor: colors.outlineVariant }]}
             accessibilityRole="button"
-            accessibilityLabel="Switch to stack marker mode for this set"
+            accessibilityLabel={t({ id: "session.setweightcell.str1", message: "Switch to stack marker mode for this set" })}
             testID={`set-${setId}-marker-upsell`}
           >
             <Text style={[styles.upsellText, { color: colors.onSurfaceVariant }]}>↕</Text>

@@ -7,6 +7,7 @@ import { spacing, radii } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 import { stravaLog } from "../lib/strava-telemetry";
+import { t } from "@/lib/i18n";
 
 type Props = {
   sheetRef: React.RefObject<BottomSheetModal | null>;
@@ -135,12 +136,12 @@ export default function ShareSheet({
         <Text
           style={[styles.title, { color: colors.onSurface }]}
         >
-          Share Workout
+          {t({ id: "components.shareSheet.title", message: "Share Workout" })}
         </Text>
         <ShareOption
           icon="text-long"
-          label="Share as Text"
-          description="Copy workout summary as text"
+          label={t({ id: "components.shareSheet.text", message: "Share as Text" })}
+          description={t({ id: "components.shareSheet.textHint", message: "Copy workout summary as text" })}
           onPress={() => {
             sheetRef.current?.dismiss();
             onShareText();
@@ -149,8 +150,8 @@ export default function ShareSheet({
         {showImageOption && (
           <ShareOption
             icon="image-outline"
-            label="Share as Image"
-            description="Generate a workout card image"
+             label={t({ id: "components.shareSheet.image", message: "Share as Image" })}
+             description={t({ id: "components.shareSheet.imageHint", message: "Generate a workout card image" })}
             onPress={() => {
               sheetRef.current?.dismiss();
               onShareImage();
@@ -161,11 +162,11 @@ export default function ShareSheet({
         {showImageOption && (
           <ShareOption
             icon="run-fast"
-            label={stravaConnected ? "Share Strava Image" : "Connect Strava"}
+             label={stravaConnected ? t({ id: "components.shareSheet.stravaImage", message: "Share Strava Image" }) : t({ id: "components.shareSheet.connectStrava", message: "Connect Strava" })}
             description={
               stravaConnected
-                ? "Generate a Strava workout card image"
-                : "Open settings to connect Strava"
+                 ? t({ id: "components.shareSheet.stravaImageHint", message: "Generate a Strava workout card image" })
+                 : t({ id: "components.shareSheet.connectStravaHint", message: "Open settings to connect Strava" })
             }
             onPress={() => {
               sheetRef.current?.dismiss();
@@ -182,8 +183,8 @@ export default function ShareSheet({
         {showImageOption && stravaConnected && onSyncToStrava && (
           <ShareOption
             icon="sync"
-            label={syncToStravaLabel || "Sync to Strava"}
-            description="Upload workout activity data directly to Strava"
+             label={syncToStravaLabel || t({ id: "components.shareSheet.syncStrava", message: "Sync to Strava" })}
+             description={t({ id: "components.shareSheet.syncStravaHint", message: "Upload workout activity data directly to Strava" })}
             onPress={() => {
               sheetRef.current?.dismiss();
               onSyncToStrava();
@@ -194,8 +195,8 @@ export default function ShareSheet({
         {showImageOption && hasAchievements && (
           <ShareOption
             icon="trophy-variant"
-            label="Share Achievement Recap"
-            description="Generate an achievement recap card image"
+             label={t({ id: "components.shareSheet.achievement", message: "Share Achievement Recap" })}
+             description={t({ id: "components.shareSheet.achievementHint", message: "Generate an achievement recap card image" })}
             onPress={() => {
               sheetRef.current?.dismiss();
               onShareAchievementImage?.();

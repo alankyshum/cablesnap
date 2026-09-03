@@ -7,6 +7,7 @@ import { createCustomExercise } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
 import type { Exercise } from "../../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 export default function CreateExercise() {
   const colors = useThemeColors();
@@ -18,7 +19,7 @@ export default function CreateExercise() {
       await createCustomExercise(data);
       bumpQueryVersion("exercises");
       bumpQueryVersion("session");
-      success("Exercise created");
+       success(t({ id: "app.exercise.create.created", message: "Exercise created" }));
       setTimeout(() => router.back(), 400);
     },
     [router, success]
@@ -26,8 +27,8 @@ export default function CreateExercise() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Stack.Screen options={{ title: "New Exercise" }} />
-      <ExerciseForm title="exercise" onSave={save} />
+      <Stack.Screen options={{ title: t({ id: "app.exercise.create.title", message: "New Exercise" }) }} />
+      <ExerciseForm title={t({ id: "app.exercise.create.exercise", message: "exercise" })} onSave={save} />
     </View>
   );
 }
