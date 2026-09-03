@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Form Library / Compare grid: increased the overflow (⋮) menu button inset from 4dp to 8dp so it no longer looks cramped against the card corner; touch target unchanged. (BLD-4550)
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->
@@ -127,7 +127,6 @@ _No user-facing changes yet._
 
 ## v0.26.100 — 2026-08-18
 <!-- versionCode: 168 -->
-
  - Sponsorship links in Settings now have visible borders for improved contrast in light and dark themes.
  - Fixed exercise selection scrolling on compact screens.
 
@@ -352,7 +351,6 @@ _No user-facing changes yet._
 - **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
 - **Release notes now hide internal project references**, keeping issue tracker IDs and links out of the What's New modal.
 - **What's New now supports inline code and tappable web or email links** in release notes.
-- **Estimated pacing bar legend chips are now more spaced out** — increased horizontal spacing between legend chips (Working / Rest / Other) and added breathing room between legend dots and text for improved clarity and readability. (BLD-3468)
 
 ## v0.26.78 — 2026-07-22
 <!-- versionCode: 146 -->
