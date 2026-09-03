@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Increased the size of form clip thumbnail duration and date labels for better readability.
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->

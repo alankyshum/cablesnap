@@ -80,6 +80,7 @@ export function CoachEmptyState({
             })}
           </Text>
           <Button
+            testID="coach-add-key"
             variant="default"
             onPress={() => router.push("/settings/ai-key")}
             accessibilityLabel={t({ id: "components.coach.addApiKeyA11y", message: "Add OpenRouter API Key" })}

@@ -494,6 +494,7 @@ export function CoachConversation({
             send: ({ color, size }) => <ArrowUp color={color} size={size} />,
           }}
           textInputProps={{
+            testID: "coach-composer",
             maxLength: 4000,
             editable: !isMissingKey,
           }}

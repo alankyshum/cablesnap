@@ -1,18 +1,47 @@
 appId: com.persoack.cablesnap
 ---
-# Native-only regression flow. The release APK cannot safely receive a test key:
-# SecureStore validation is intentionally unchanged. Before running this flow,
-# save a valid OpenRouter key in Settings > AI Provider on the emulator (or use
-# a dev build with the normal settings UI). Never put a key in this repository.
+# Onboarding's clearState launch leaves the CI emulator without an API key.
+# Save a format-valid synthetic key through the real settings UI. The four
+# chunks make its known non-secret test data explicit without resembling a
+# real credential, and CI sends no AI completion request.
 - launchApp
 - tapOn: "AI Coach"
 - extendedWaitUntil:
-    visible: "AI Coach"
-    timeout: 90000
-- assertVisible: "Ask your AI Coach anything..."
-- tapOn: "Active Model: .*"
+    visible: "API Key Required"
+    timeout: 30000
+- tapOn:
+    id: "coach-add-key"
 - extendedWaitUntil:
-    visible: "Select AI Model"
+    visible:
+      id: "openrouter-key-input"
+    timeout: 30000
+- tapOn:
+    id: "openrouter-key-input"
+- inputText: "sk-or-v1-"
+- inputText: "aaaaaaaaaaaaaaaa"
+- inputText: "aaaaaaaaaaaaaaaa"
+- inputText: "aaaaaaaaaaaaaaaa"
+- inputText: "aaaaaaaaaaaaaaaa"
+- hideKeyboard
+- tapOn:
+    id: "save-openrouter-key"
+- extendedWaitUntil:
+    visible: "Saved securely on this device"
+    timeout: 30000
+# The prior query has cached the empty state. Relaunch to initialize the
+# status query against the saved local key before testing the composer.
+- stopApp
+- launchApp
+- tapOn: "AI Coach"
+- extendedWaitUntil:
+    visible:
+      id: "coach-model-picker"
+    timeout: 30000
+- tapOn:
+    id: "coach-model-picker"
+- extendedWaitUntil:
+    visible:
+      id: "model-catalog-list"
     timeout: 30000
 # Native-only gesture regression. Option 9 starts outside the viewport on both
 # phone portrait and tablet landscape. Swipe from the registered Gorhom list so
@@ -28,23 +57,14 @@ appId: com.persoack.cablesnap
 - tapOn:
     id: model-catalog-option-9
 - extendedWaitUntil:
-    notVisible: "Select AI Model"
+    notVisible:
+      id: "model-catalog-list"
     timeout: 30000
 - assertVisible: "Active Model: .*"
-- tapOn: "Ask your AI Coach anything..."
-- inputText: "How did my last workout go?"
-- hideKeyboard
-- tapOn:
-    point: "95%,82%"
-- extendedWaitUntil:
-    visible: "Stop generating"
-    timeout: 90000
-- tapOn:
-    point: "95%,82%"
-- assertNotVisible: "Stop generating"
-# Kill and relaunch after cancellation. This verifies a clean native remount
-# without being blocked by Expo's dev-only canceled-fetch error overlay.
-- stopApp
-- launchApp
-- tapOn: "AI Coach"
+# The exact prompt assertion is the regression: it only appears when the
+# stored key and selected model make the native composer usable.
 - assertVisible: "Ask your AI Coach anything..."
+- tapOn:
+    id: "coach-composer"
+- inputText: "How did my last workout go?"
+- assertVisible: "How did my last workout go?"
