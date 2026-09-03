@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **In-card spacing on completed-workout summary screen is centralized**, using FlatList's ItemSeparatorComponent to provide consistent 16px gaps between cards instead of hardcoded margins. ([BLD-4544](/BLD/issues/BLD-4544))
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->

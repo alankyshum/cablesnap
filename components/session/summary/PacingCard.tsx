@@ -770,7 +770,7 @@ function LabelChip({
 const BAR_HEIGHT = 18;
 
 const styles = StyleSheet.create({
-  card: { marginBottom: 16 },
+  card: {},
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
   infoButton: { padding: 4 },
   disclosure: { marginBottom: 8, lineHeight: 18 },

@@ -3,6 +3,7 @@ initializeI18n();
 import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, Share, StyleSheet, View, FlatList } from "react-native";
+import { spacing } from "@/constants/design-tokens";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
@@ -193,6 +194,7 @@ function Summary() {
             onNotesSave={actions.handleNotesSave}
           />
         }
+        ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
         renderItem={({ item }) => {
           if (item.key === "achievements") return <AchievementsCard achievements={newAchievements} colors={colors} />;
           if (item.key === "prs") return <PRsCard prs={prs} repPrs={repPrs} unit={unit} colors={colors} />;
@@ -365,4 +367,5 @@ const styles = StyleSheet.create({
   section: { marginBottom: 16 },
   notesHeader: { flexDirection: "row", alignItems: "center", minHeight: 40, marginBottom: 8 },
   notesInput: { fontSize: fontSizes.lg, lineHeight: 24, minHeight: 140 },
+  cardSeparator: { height: spacing.base },
 });

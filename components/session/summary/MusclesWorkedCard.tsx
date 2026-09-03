@@ -61,7 +61,7 @@ export default function MusclesWorkedCard(props: Props) {
 }
 
 const styles = StyleSheet.create({
-  section: { marginBottom: 16 },
+  section: {},
   sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
   mapContainer: { alignItems: "center" },
 });
