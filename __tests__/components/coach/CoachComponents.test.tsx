@@ -208,7 +208,7 @@ describe("CoachSidebar", () => {
 describe("CoachHeader", () => {
   it("renders model name and handles picker press", () => {
     const onOpenModelPicker = jest.fn();
-    const { getByText, getByLabelText } = render(
+    const { getByText, getByLabelText, getByTestId } = render(
       <CoachHeader
         selectedModelId="openai/gpt-4o"
         onOpenModelPicker={onOpenModelPicker}
@@ -216,6 +216,7 @@ describe("CoachHeader", () => {
     );
 
     expect(getByText("gpt-4o")).toBeTruthy();
+    expect(getByTestId("coach-model-picker")).toBeTruthy();
     fireEvent.press(getByLabelText("Active Model: openai/gpt-4o. Tap to change model."));
     expect(onOpenModelPicker).toHaveBeenCalled();
   });
@@ -448,6 +449,7 @@ describe("CoachConversation", () => {
 
     const view = render(<CoachConversation {...conversationProps} />);
     const input = view.getByPlaceholderText("Ask your AI Coach anything...");
+    expect(view.getByTestId("coach-composer").props.placeholder).toBe("Ask your AI Coach anything...");
     fireEvent.changeText(input, "Review my training");
     fireEvent.press(view.getByLabelText("Send message"));
     await waitFor(() => expect(mockStartCoachAgent).toHaveBeenCalledTimes(1));
@@ -579,7 +581,7 @@ describe("CoachConversation", () => {
 
 describe("CoachEmptyState", () => {
   it("renders missing key card with add key button", () => {
-    const { getByText } = render(
+    const { getByText, getByTestId } = render(
       <CoachEmptyState
         isMissingKey={true}
         selectedModelId="openai/gpt-4o"
@@ -589,7 +591,8 @@ describe("CoachEmptyState", () => {
     );
 
     expect(getByText("API Key Required")).toBeTruthy();
-    fireEvent.press(getByText("Add Key"));
+    expect(getByText("Add Key")).toBeTruthy();
+    fireEvent.press(getByTestId("coach-add-key"));
     expect(mockPush).toHaveBeenCalledWith("/settings/ai-key");
   });
 

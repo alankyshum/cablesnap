@@ -51,7 +51,7 @@ describe("AI provider key settings", () => {
     await waitFor(() => expect(getByText("Save key")).toBeTruthy());
     fireEvent(getByTestId("openrouter-key-input"), "onChangeText", rawKey);
     await waitFor(() => expect(getByTestId("openrouter-key-input").props.value).toBe(rawKey));
-    fireEvent.press(getByLabelText("Save key"));
+    fireEvent.press(getByTestId("save-openrouter-key"));
     await waitFor(() => expect(getByText("Saved securely on this device")).toBeTruthy());
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ["ai", "key-status"] });
     expect(queryByText(rawKey)).toBeNull();
