@@ -52,7 +52,7 @@ export function ShareCardStats({ duration, sets, volume, unit }: Props) {
         <Text
           style={[styles.statLabel, { color: colors.onSurfaceVariant }]}
         >
-          {t({ id: "share.stats.volume", message: `Volume (${unit})` })}
+          {t({ id: "share.stats.volume", message: "Volume ({unit})" }, { unit })}
         </Text>
       </View>
     </View>

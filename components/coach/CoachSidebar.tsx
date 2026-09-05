@@ -8,12 +8,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Bot, Edit2, MessageSquare, Plus, Trash2 } from "lucide-react-native";
+import { Bot, ChevronLeft, Edit2, MessageSquare, Plus, Trash2 } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
-import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes, radii, spacing } from "@/constants/design-tokens";
 import { confirmAction } from "@/lib/confirm";
+import { i18n, t } from "@/lib/i18n";
 import type { CoachSession } from "@/lib/db/coach";
 
 export type CoachSidebarProps = {
@@ -23,6 +23,7 @@ export type CoachSidebarProps = {
   onNewChat: () => void;
   onRenameSession: (id: string, newTitle: string) => void;
   onDeleteSession: (id: string) => void;
+  onToggleSidebar?: () => void;
 };
 
 export function CoachSidebar({
@@ -32,6 +33,7 @@ export function CoachSidebar({
   onNewChat,
   onRenameSession,
   onDeleteSession,
+  onToggleSidebar,
 }: CoachSidebarProps) {
   const colors = useThemeColors();
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -57,11 +59,15 @@ export function CoachSidebar({
 
   const handleDelete = (session: CoachSession) => {
     confirmAction(
-      "Delete Conversation",
-      `Are you sure you want to delete "${session.title}"? This cannot be undone.`,
+      t({ id: "components.coach.deleteConversationTitle", message: "Delete Conversation" }),
+      i18n._({
+        id: "components.coach.deleteConversationBody",
+        message: 'Are you sure you want to delete "{title}"? This cannot be undone.',
+        values: { title: session.title },
+      }),
       () => onDeleteSession(session.id),
       true,
-      "Delete",
+      t({ id: "components.coach.deleteConfirm", message: "Delete" }),
     );
   };
 
@@ -81,24 +87,37 @@ export function CoachSidebar({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
-      {/* Header with New Chat CTA */}
-      <View style={styles.header}>
+      {/* Header with Title, Collapse Button, and New Chat CTA */}
+      <View style={[styles.header, { borderBottomColor: colors.outlineVariant }]}>
         <View style={styles.titleRow}>
-          <Bot size={20} color={colors.primary} />
-          <Text variant="title" style={[styles.headerTitle, { color: colors.onSurface }]}>
-            Conversations
-          </Text>
+          <View style={styles.titleWithIcon}>
+            <Bot size={20} color={colors.primary} />
+            <Text variant="title" style={[styles.headerTitle, { color: colors.onSurface }]}>
+              {t({ id: "components.coach.conversations", message: "Conversations" })}
+            </Text>
+          </View>
+          {onToggleSidebar && (
+            <TouchableOpacity
+              onPress={onToggleSidebar}
+              accessibilityRole="button"
+              accessibilityLabel={t({ id: "components.coach.collapseSidebar", message: "Collapse sessions sidebar" })}
+              style={styles.collapseButton}
+            >
+              <ChevronLeft size={20} color={colors.onSurface} />
+            </TouchableOpacity>
+          )}
         </View>
-        <Button
-          variant="default"
-          size="sm"
+        <TouchableOpacity
           onPress={onNewChat}
-          accessibilityLabel="Start a new chat"
-          style={styles.newChatButton}
+          accessibilityRole="button"
+          accessibilityLabel={t({ id: "components.coach.newChatA11y", message: "Start a new chat" })}
+          style={[styles.newChatButton, { backgroundColor: colors.primary }]}
         >
-          <Plus size={16} color={colors.onPrimary} style={styles.buttonIcon} />
-          <Text style={[styles.newChatText, { color: colors.onPrimary }]}>New Chat</Text>
-        </Button>
+          <Plus size={16} color={colors.onPrimary} />
+          <Text style={[styles.newChatText, { color: colors.onPrimary }]}>
+            {t({ id: "components.coach.newChat", message: "New Chat" })}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Sessions List */}
@@ -106,10 +125,13 @@ export function CoachSidebar({
         <View style={styles.emptyContainer}>
           <MessageSquare size={32} color={colors.onSurfaceVariant} />
           <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>
-            No conversations yet
+            {t({ id: "components.coach.noConversations", message: "No conversations yet" })}
           </Text>
           <Text style={[styles.emptySubtitle, { color: colors.onSurfaceVariant }]}>
-            Start a new chat to consult your AI Coach.
+            {t({
+              id: "components.coach.startNewChatSubtitle",
+              message: "Start a new chat to consult your AI Coach.",
+            })}
           </Text>
         </View>
       ) : (
@@ -120,11 +142,7 @@ export function CoachSidebar({
           renderItem={({ item }) => {
             const isActive = item.id === activeSessionId;
             return (
-              <Pressable
-                onPress={() => onSelectSession(item.id)}
-                accessibilityRole="button"
-                accessibilityLabel={`Session: ${item.title}`}
-                accessibilityState={{ selected: isActive }}
+              <View
                 style={[
                   styles.sessionItem,
                   {
@@ -135,7 +153,17 @@ export function CoachSidebar({
                   },
                 ]}
               >
-                <View style={styles.sessionInfo}>
+                <Pressable
+                  onPress={() => onSelectSession(item.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={i18n._({
+                    id: "components.coach.sessionA11y",
+                    message: "Session: {title}",
+                    values: { title: item.title },
+                  })}
+                  accessibilityState={{ selected: isActive }}
+                  style={styles.sessionInfo}
+                >
                   <Text
                     numberOfLines={1}
                     style={[
@@ -162,13 +190,17 @@ export function CoachSidebar({
                   >
                     {formatDate(item.updated_at)}
                   </Text>
-                </View>
+                </Pressable>
 
                 {/* Actions */}
                 <View style={styles.itemActions}>
                   <TouchableOpacity
                     onPress={() => handleStartRename(item)}
-                    accessibilityLabel={`Rename ${item.title}`}
+                    accessibilityLabel={i18n._({
+                      id: "components.coach.renameSessionA11y",
+                      message: "Rename {title}",
+                      values: { title: item.title },
+                    })}
                     accessibilityRole="button"
                     style={styles.actionButton}
                     hitSlop={{ top: spacing.xs, bottom: spacing.xs, left: spacing.xs, right: spacing.xs }}
@@ -181,7 +213,11 @@ export function CoachSidebar({
 
                   <TouchableOpacity
                     onPress={() => handleDelete(item)}
-                    accessibilityLabel={`Delete ${item.title}`}
+                    accessibilityLabel={i18n._({
+                      id: "components.coach.deleteSessionA11y",
+                      message: "Delete {title}",
+                      values: { title: item.title },
+                    })}
                     accessibilityRole="button"
                     style={styles.actionButton}
                     hitSlop={{ top: spacing.xs, bottom: spacing.xs, left: spacing.xs, right: spacing.xs }}
@@ -192,7 +228,7 @@ export function CoachSidebar({
                     />
                   </TouchableOpacity>
                 </View>
-              </Pressable>
+              </View>
             );
           }}
         />
@@ -208,12 +244,15 @@ export function CoachSidebar({
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <Text variant="title" style={[styles.modalTitle, { color: colors.onSurface }]}>
-              Rename Conversation
+              {t({ id: "components.coach.renameConversation", message: "Rename Conversation" })}
             </Text>
             <TextInput
               value={editTitle}
               onChangeText={setEditTitle}
-              placeholder="Conversation title"
+              placeholder={t({
+                id: "components.coach.conversationTitlePlaceholder",
+                message: "Conversation title",
+              })}
               placeholderTextColor={colors.onSurfaceVariant}
               style={[
                 styles.modalInput,
@@ -228,23 +267,36 @@ export function CoachSidebar({
               onSubmitEditing={handleSaveRename}
             />
             <View style={styles.modalButtons}>
-              <Button
-                variant="outline"
-                size="sm"
+              <TouchableOpacity
                 onPress={handleCancelRename}
-                accessibilityLabel="Cancel rename"
+                accessibilityRole="button"
+                accessibilityLabel={t({ id: "components.coach.cancelRenameA11y", message: "Cancel rename" })}
+                style={[
+                  styles.modalCancelButton,
+                  { borderColor: colors.outline },
+                ]}
               >
-                Cancel
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
+                <Text style={[styles.modalButtonText, { color: colors.onSurface }]}>
+                  {t({ id: "components.coach.cancel", message: "Cancel" })}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={handleSaveRename}
                 disabled={editTitle.trim().length === 0}
-                accessibilityLabel="Save rename"
+                accessibilityRole="button"
+                accessibilityLabel={t({ id: "components.coach.saveRenameA11y", message: "Save rename" })}
+                style={[
+                  styles.modalSaveButton,
+                  {
+                    backgroundColor: colors.primary,
+                    opacity: editTitle.trim().length === 0 ? 0.5 : 1,
+                  },
+                ]}
               >
-                Save
-              </Button>
+                <Text style={[styles.modalButtonText, { color: colors.onPrimary }]}>
+                  {t({ id: "components.coach.save", message: "Save" })}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -258,12 +310,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: spacing.xxl,
     paddingHorizontal: spacing.base,
-    paddingBottom: spacing.md,
+    paddingVertical: spacing.sm,
     gap: spacing.sm,
+    borderBottomWidth: 1,
   },
   titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 44,
+  },
+  titleWithIcon: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
@@ -272,21 +330,33 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.lg,
     fontWeight: "700",
   },
+  collapseButton: {
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.md,
+  },
   newChatButton: {
-    minHeight: 48,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-  },
-  buttonIcon: {
-    marginRight: spacing.xs,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    gap: spacing.xs,
   },
   newChatText: {
     fontSize: fontSizes.sm,
     fontWeight: "600",
+    textAlign: "center",
   },
   listContent: {
     paddingHorizontal: spacing.base,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
     gap: spacing.sm,
   },
@@ -294,21 +364,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: spacing.md,
     borderRadius: radii.md,
     borderWidth: 1,
     minHeight: 56,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   sessionInfo: {
     flex: 1,
-    marginRight: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.xs,
+    justifyContent: "center",
   },
   sessionTitle: {
     fontSize: fontSizes.sm,
   },
   sessionDate: {
     fontSize: fontSizes.xs,
-    marginTop: spacing.xxs,
+    marginTop: spacing.xs,
   },
   itemActions: {
     flexDirection: "row",
@@ -316,8 +390,10 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   actionButton: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: radii.sm,
@@ -367,5 +443,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: spacing.sm,
+  },
+  modalCancelButton: {
+    minHeight: 44,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalSaveButton: {
+    minHeight: 44,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalButtonText: {
+    fontSize: fontSizes.sm,
+    fontWeight: "600",
   },
 });

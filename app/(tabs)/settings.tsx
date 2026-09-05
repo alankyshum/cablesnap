@@ -483,9 +483,9 @@ export default function Settings() {
         initialSelected={BACKUP_CATEGORY_ORDER}
         loading={loading}
         onClose={() => setExportSheetVisible(false)}
-        onConfirm={(selectedCategories) => {
+        onConfirm={(selectedCategories, includeCredentials) => {
           setExportSheetVisible(false);
-          void handleExport(deps, selectedCategories);
+          void handleExport(deps, selectedCategories, includeCredentials);
         }}
       />
       <BackupCategorySheet

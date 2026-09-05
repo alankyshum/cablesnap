@@ -1094,7 +1094,8 @@ jobs:
             $0 ~ "^## v"v"([^0-9]|$)" { in_section=1; next }
             in_section && /^## / { exit }
             in_section { print }
-          ' CHANGELOG.md)
+          ' CHANGELOG.md \
+            | npx tsx scripts/strip-release-notes-comments.ts)
           if [ -z "$(printf '%s' "$BODY" | tr -d '[:space:]')" ]; then
             echo "::error::CHANGELOG.md has an empty body for v$VERSION — refusing to ship."
             exit 1

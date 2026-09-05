@@ -34,7 +34,7 @@ function formatLastBackup(iso: string | null): string {
     date.getDate() === now.getDate();
 
   const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  if (isToday) return t({ id: "settings.autoBackup.lastToday", message: `Last backup: Today at ${time}` });
+  if (isToday) return t({ id: "settings.autoBackup.lastToday", message: "Last backup: Today at {time}" }, { time });
 
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -42,9 +42,12 @@ function formatLastBackup(iso: string | null): string {
     date.getFullYear() === yesterday.getFullYear() &&
     date.getMonth() === yesterday.getMonth() &&
     date.getDate() === yesterday.getDate();
-  if (isYesterday) return t({ id: "settings.autoBackup.lastYesterday", message: `Last backup: Yesterday at ${time}` });
+  if (isYesterday) return t({ id: "settings.autoBackup.lastYesterday", message: "Last backup: Yesterday at {time}" }, { time });
 
-  return t({ id: "settings.autoBackup.lastDate", message: `Last backup: ${date.toLocaleDateString()} at ${time}` });
+  return t(
+    { id: "settings.autoBackup.lastDate", message: "Last backup: {dateText} at {time}" },
+    { dateText: date.toLocaleDateString(), time },
+  );
 }
 
 export default function AutoBackupSection({ colors, toast, bareContent = false }: Props) {

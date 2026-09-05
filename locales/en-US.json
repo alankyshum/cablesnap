@@ -969,6 +969,11 @@
     "srcHash": "f0e01bbc428b",
     "origin": "human"
   },
+  "components.coach.activeModelA11y": {
+    "message": "Active Model: {modelId}. Tap to change model.",
+    "srcHash": "a26ab7f3dec3",
+    "origin": "human"
+  },
   "components.profile.activity.levelValueA11y": {
     "message": "Activity level: {0}",
     "srcHash": "3a8a860c5ba9",
@@ -1027,6 +1032,11 @@
   "settings.gymProfiles.addStack": {
     "message": "Add cable stack",
     "srcHash": "9a121dfc157b",
+    "origin": "human"
+  },
+  "ai.errors.addCredits": {
+    "message": "Add credits at openrouter.ai",
+    "srcHash": "c17b8121cca5",
     "origin": "human"
   },
   "tabs.exercises.addA11y": {
@@ -1107,6 +1117,11 @@
   "settings.gymProfiles.intro": {
     "message": "Add gyms here if you train across multiple locations.",
     "srcHash": "e7851ff477d1",
+    "origin": "human"
+  },
+  "ai.errors.addKey": {
+    "message": "Add key",
+    "srcHash": "73bd58e899fb",
     "origin": "human"
   },
   "components.session.detail.rating-notes.placeholder": {
@@ -1199,6 +1214,11 @@
     "srcHash": "6017fea8cc12",
     "origin": "human"
   },
+  "ai.errors.missingKey": {
+    "message": "Add your OpenRouter key to use AI Coach.",
+    "srcHash": "24ad06b9f83b",
+    "origin": "human"
+  },
   "components.exercises.illustration.add": {
     "message": "Add your own illustration — coming soon",
     "srcHash": "77be64c39235",
@@ -1264,14 +1284,14 @@
     "srcHash": "8e13016f890d",
     "origin": "human"
   },
-  "settings.about.releases": {
-    "message": "GitHub Releases",
-    "srcHash": "717660ea399c",
+  "floatingTabBar.tabs.aiCoach": {
+    "message": "AI Coach",
+    "srcHash": "07cacebdf686",
     "origin": "human"
   },
-  "settings.about.releasesA11y": {
-    "message": "Open GitHub Releases",
-    "srcHash": "87156ad62bc6",
+  "components.coach.aiCoachName": {
+    "message": "AI Coach",
+    "srcHash": "f1b99654eaa5",
     "origin": "human"
   },
   "home.programs.all": {
@@ -1334,11 +1354,6 @@
     "srcHash": "8bba731d66db",
     "origin": "human"
   },
-  "app.tools.cableFinder.attachment.ankleStrap": {
-    "message": "Ankle Strap",
-    "srcHash": "7110c5a7e4d4",
-    "origin": "human"
-  },
   "home.quickAdd.logHint": {
     "message": "Announces result after logging",
     "srcHash": "25e35e418609",
@@ -1387,6 +1402,11 @@
   "settings.gymProfiles.applyBulk": {
     "message": "Apply Bulk Paste",
     "srcHash": "c5243bdffbef",
+    "origin": "human"
+  },
+  "components.coach.deleteConversationBody": {
+    "message": "Are you sure you want to delete \"{title}\"? This cannot be undone.",
+    "srcHash": "e0a94a64820e",
     "origin": "human"
   },
   "components.exercise.goal-progress.delete-confirm": {
@@ -1557,11 +1577,6 @@
   "components.plates.calculator.bar": {
     "message": "Bar",
     "srcHash": "76131ff75b35",
-    "origin": "human"
-  },
-  "app.tools.cableFinder.attachment.bar": {
-    "message": "Bar",
-    "srcHash": "812ca392d8a1",
     "origin": "human"
   },
   "components.plates.calculator.barValueA11y": {
@@ -1797,11 +1812,6 @@
   "settings.gymProfiles.bulkPaste": {
     "message": "Bulk paste",
     "srcHash": "a3a875255504",
-    "origin": "human"
-  },
-  "settings.about.buyCoffeeA11y": {
-    "message": "Buy me a coffee",
-    "srcHash": "168a66f9a115",
     "origin": "human"
   },
   "components.progress.nutritionCards.carbsShort": {
@@ -2149,11 +2159,6 @@
     "srcHash": "8b4e72accb31",
     "origin": "human"
   },
-  "app.tools.cableFinder.attachment.carabiner": {
-    "message": "Carabiner",
-    "srcHash": "0ae8053f7fa3",
-    "origin": "human"
-  },
   "components.nutrition.header.carbs": {
     "message": "Carbs",
     "srcHash": "760850caaf53",
@@ -2227,6 +2232,11 @@
   "settings.macroCoach.whenever": {
     "message": "Check it whenever",
     "srcHash": "80e44ad47a32",
+    "origin": "human"
+  },
+  "ai.errors.checkKey": {
+    "message": "Check key",
+    "srcHash": "98509f3288cc",
     "origin": "human"
   },
   "body.measurements.field.chest": {
@@ -2544,6 +2554,11 @@
     "srcHash": "f611d230d851",
     "origin": "human"
   },
+  "components.ui.sheet.close": {
+    "message": "Close sheet",
+    "srcHash": "c1100d93c22e",
+    "origin": "human"
+  },
   "components.exercises.image-zoom.close": {
     "message": "Close zoomed image",
     "srcHash": "866bc9ccfde2",
@@ -2672,6 +2687,11 @@
   "components.nutrition.coach.confirm": {
     "message": "Confirm",
     "srcHash": "f5a9cb3bb7ae",
+    "origin": "human"
+  },
+  "settings.importBackup.importCredentialsA11y": {
+    "message": "Confirm importing API credential",
+    "srcHash": "7b1422a9d2cd",
     "origin": "human"
   },
   "session.pulleypinpickersheet.str3": {
@@ -3344,6 +3364,11 @@
     "srcHash": "ca3020503f28",
     "origin": "human"
   },
+  "components.coach.deleteSessionA11y": {
+    "message": "Delete {title}",
+    "srcHash": "ab5a7dd9578d",
+    "origin": "human"
+  },
   "settings.backups.deleteTitle": {
     "message": "Delete Backup",
     "srcHash": "6f9d50495f34",
@@ -3517,6 +3542,11 @@
   "settings.integrations.disconnectA11y": {
     "message": "Disconnect Strava account ({stravaAthlete})",
     "srcHash": "d244ef7960d4",
+    "origin": "human"
+  },
+  "ai.errors.dismiss": {
+    "message": "Dismiss",
+    "srcHash": "2101bfd447f7",
     "origin": "human"
   },
   "components.nutrition.coach.dismissA11y": {
@@ -4059,6 +4089,11 @@
     "srcHash": "e12f21cf4f72",
     "origin": "human"
   },
+  "components.coach.errorA11y": {
+    "message": "Error: {message}",
+    "srcHash": "187ddc51cbbe",
+    "origin": "human"
+  },
   "components.exercise.records.est-1rm": {
     "message": "Est 1RM",
     "srcHash": "aa4fd33c152f",
@@ -4139,6 +4174,11 @@
     "srcHash": "67747fb42d47",
     "origin": "human"
   },
+  "tabs.exercises.header": {
+    "message": "Exercises",
+    "srcHash": "8af98e8d3da1",
+    "origin": "human"
+  },
   "components.session.summary.pacing-breakdown.exercise": {
     "message": "Exercise",
     "srcHash": "ef5af2e0cedb",
@@ -4179,19 +4219,14 @@
     "srcHash": "cb1ba1a25176",
     "origin": "human"
   },
-  "floatingTabBar.tabs.exercises": {
-    "message": "Exercises",
-    "srcHash": "55a860e342e1",
-    "origin": "human"
-  },
   "tabs.exercises.title": {
     "message": "Exercises",
     "srcHash": "0fb7d657b43d",
     "origin": "human"
   },
-  "tabs.exercises.header": {
+  "tabs.workouts.exercisesA11y": {
     "message": "Exercises",
-    "srcHash": "8af98e8d3da1",
+    "srcHash": "fe34e979251c",
     "origin": "human"
   },
   "app.template.id.exercises": {
@@ -4499,14 +4534,14 @@
     "srcHash": "33f7761d2d3a",
     "origin": "human"
   },
-  "settingsHandlers.csv.fileTooLarge": {
-    "message": "File Too Large",
-    "srcHash": "4dfd10744e36",
-    "origin": "human"
-  },
   "settingsHandlers.import.fileTooLarge": {
     "message": "File Too Large",
     "srcHash": "091acb8702eb",
+    "origin": "human"
+  },
+  "settingsHandlers.csv.fileTooLarge": {
+    "message": "File Too Large",
+    "srcHash": "4dfd10744e36",
     "origin": "human"
   },
   "exercises.filters.by": {
@@ -4649,6 +4684,11 @@
     "srcHash": "68ee3ceec72c",
     "origin": "human"
   },
+  "settings.about.releases": {
+    "message": "GitHub Releases",
+    "srcHash": "717660ea399c",
+    "origin": "human"
+  },
   "app.tools.cableFinder.muscle.glutes": {
     "message": "Glutes",
     "srcHash": "06c9b5b89f47",
@@ -4772,11 +4812,6 @@
   "app.exercise.id.attachment.handle": {
     "message": "Handle",
     "srcHash": "7bc225973e21",
-    "origin": "human"
-  },
-  "app.tools.cableFinder.attachment.handle": {
-    "message": "Handle",
-    "srcHash": "bdb229c391cc",
     "origin": "human"
   },
   "session.setoptionssheet.str5": {
@@ -4934,6 +4969,11 @@
     "srcHash": "04674d6c2aa9",
     "origin": "human"
   },
+  "settings.importBackup.importCredentials": {
+    "message": "Import API credential",
+    "srcHash": "4ab4d7352536",
+    "origin": "human"
+  },
   "settings.importBackup.title": {
     "message": "Import Backup",
     "srcHash": "2ca8d787165f",
@@ -5004,9 +5044,19 @@
     "srcHash": "255ac62f77be",
     "origin": "human"
   },
+  "settings.backup.includeCredentials": {
+    "message": "Include API credentials",
+    "srcHash": "6ccc1a42f2be",
+    "origin": "human"
+  },
   "feedback.diagnostics.includeA11y": {
     "message": "Include diagnostic data",
     "srcHash": "16755a1552da",
+    "origin": "human"
+  },
+  "settings.backup.includeCredentialsA11y": {
+    "message": "Include live API credential in export",
+    "srcHash": "c16e4caafd4f",
     "origin": "human"
   },
   "components.muscleVolume.increaseA11y": {
@@ -5154,14 +5204,14 @@
     "srcHash": "b958feeeb3b0",
     "origin": "human"
   },
-  "settingsHandlers.csv.invalidFile": {
-    "message": "Invalid File",
-    "srcHash": "5bcce73aa274",
-    "origin": "human"
-  },
   "settingsHandlers.import.invalidFile": {
     "message": "Invalid File",
     "srcHash": "2c24d0ad83d0",
+    "origin": "human"
+  },
+  "settingsHandlers.csv.invalidFile": {
+    "message": "Invalid File",
+    "srcHash": "5bcce73aa274",
     "origin": "human"
   },
   "settings.reminders.invalidTime": {
@@ -5844,6 +5894,11 @@
     "srcHash": "4c11846ac1a2",
     "origin": "human"
   },
+  "components.coach.loadEarlier": {
+    "message": "Load earlier messages",
+    "srcHash": "d57d796217a6",
+    "origin": "human"
+  },
   "components.muscleVolume.mev": {
     "message": "MEV",
     "srcHash": "9edf7c6864a3",
@@ -6334,6 +6389,11 @@
     "srcHash": "da98ae85ce54",
     "origin": "human"
   },
+  "components.coach.noModelsMatching": {
+    "message": "No models matching \"{query}\"",
+    "srcHash": "bc562255b034",
+    "origin": "human"
+  },
   "history.muscleFilter.empty": {
     "message": "No muscle groups in your history yet",
     "srcHash": "3b654631fe3b",
@@ -6699,6 +6759,11 @@
     "srcHash": "6d6139801fd8",
     "origin": "human"
   },
+  "settings.importBackup.credentialsWarning": {
+    "message": "Only confirm if you trust this backup. The key will be stored securely.",
+    "srcHash": "57784665f8b0",
+    "origin": "human"
+  },
   "components.exercise.records.rm-a11y": {
     "message": "Open 1RM calculator",
     "srcHash": "c1be3effabaf",
@@ -6729,6 +6794,11 @@
     "srcHash": "bbf3f5b283aa",
     "origin": "human"
   },
+  "settings.about.releasesA11y": {
+    "message": "Open GitHub Releases",
+    "srcHash": "87156ad62bc6",
+    "origin": "human"
+  },
   "settings.training.gymProfilesA11y": {
     "message": "Open gym profiles settings",
     "srcHash": "adfbcc442d4b",
@@ -6742,6 +6812,11 @@
   "settings.language.a11y": {
     "message": "Open language settings",
     "srcHash": "37f63f7ab99e",
+    "origin": "human"
+  },
+  "ai.errors.openModelPicker": {
+    "message": "Open model picker",
+    "srcHash": "d8dddb7b2765",
     "origin": "human"
   },
   "feedback.github.open": {
@@ -6792,6 +6867,26 @@
   "session.sessionheadertoolbar.str1": {
     "message": "Open workout toolbox",
     "srcHash": "eb2804e741d1",
+    "origin": "human"
+  },
+  "ai.errors.serverError": {
+    "message": "OpenRouter encountered a server error. Retry shortly or choose another model.",
+    "srcHash": "286eedd410a4",
+    "origin": "human"
+  },
+  "ai.errors.rateLimitedReset": {
+    "message": "OpenRouter rate limit reached. Retry after {resetAt}.",
+    "srcHash": "95558d7c6e63",
+    "origin": "human"
+  },
+  "ai.errors.rateLimitedGeneric": {
+    "message": "OpenRouter rate limit reached. Retry later; free-tier limits are 20 rpm, 50/day under $10 purchased, or 1000/day at $10+.",
+    "srcHash": "e7dc0a36dfc7",
+    "origin": "human"
+  },
+  "ai.errors.forbidden": {
+    "message": "OpenRouter refused this request. Check key permissions or model access.",
+    "srcHash": "5fcd919d62b1",
     "origin": "human"
   },
   "components.session.summary.pacing.show-calculation-hint": {
@@ -6959,6 +7054,11 @@
     "srcHash": "7b35fb5caa3c",
     "origin": "human"
   },
+  "ai.errors.pickAnotherModel": {
+    "message": "Pick another model",
+    "srcHash": "910719260300",
+    "origin": "human"
+  },
   "session.compareview.str14": {
     "message": "Pick clip",
     "srcHash": "fddc349ab75c",
@@ -7085,8 +7185,8 @@
     "origin": "human"
   },
   "settings.hydration.preset": {
-    "message": "Preset {number} ({unit, select, ml {ml} fl oz {fl oz}})",
-    "srcHash": "d2f7139c776e",
+    "message": "Preset {number} ({unit, select, ml {ml} fl_oz {fl oz}})",
+    "srcHash": "a8379470affb",
     "origin": "human"
   },
   "settings.hydration.presetPositive": {
@@ -7454,6 +7554,11 @@
     "srcHash": "ebe0c700c844",
     "origin": "human"
   },
+  "components.coach.refreshCatalog": {
+    "message": "Refresh catalog",
+    "srcHash": "6d6f528e9652",
+    "origin": "human"
+  },
   "settings.reminders.timeA11y": {
     "message": "Reminder time",
     "srcHash": "3d3cbbf413cc",
@@ -7527,6 +7632,11 @@
   "session.bodyweightgrippickersheet.str2": {
     "message": "Removes the grip type and width values from this set",
     "srcHash": "27525b337cf3",
+    "origin": "human"
+  },
+  "components.coach.renameSessionA11y": {
+    "message": "Rename {title}",
+    "srcHash": "4213f4ac4a07",
     "origin": "human"
   },
   "app.program.id.reorder-hint": {
@@ -7819,6 +7929,11 @@
     "srcHash": "4eb51c9326a9",
     "origin": "human"
   },
+  "ai.errors.retry": {
+    "message": "Retry",
+    "srcHash": "caf5b375ea52",
+    "origin": "human"
+  },
   "components.progress.calendar.retry": {
     "message": "Retry",
     "srcHash": "cc02bbd6c728",
@@ -7867,6 +7982,11 @@
   "components.nutrition.search.retryBarcodeA11y": {
     "message": "Retry barcode scan",
     "srcHash": "bbb77f8d6768",
+    "origin": "human"
+  },
+  "ai.errors.retryLater": {
+    "message": "Retry later",
+    "srcHash": "df5e18f6d072",
     "origin": "human"
   },
   "app.tools.index.retryLoading": {
@@ -7929,19 +8049,9 @@
     "srcHash": "b20414584167",
     "origin": "human"
   },
-  "app.tools.cableFinder.attachment.ringHandle": {
-    "message": "Ring Handle",
-    "srcHash": "954b552e6bca",
-    "origin": "human"
-  },
   "app.exercise.id.attachment.rope": {
     "message": "Rope",
     "srcHash": "bfe4cecdeab9",
-    "origin": "human"
-  },
-  "app.tools.cableFinder.attachment.rope": {
-    "message": "Rope",
-    "srcHash": "47c0c4a7bc34",
     "origin": "human"
   },
   "session.exercisegroupcard.dynamic1": {
@@ -8384,6 +8494,11 @@
     "srcHash": "48075a9b74f6",
     "origin": "human"
   },
+  "components.coach.selectedModel": {
+    "message": "Selected: {modelId}",
+    "srcHash": "c3d361beb6ee",
+    "origin": "human"
+  },
   "settings.reminders.sendTestA11y": {
     "message": "Send test notification",
     "srcHash": "77e3954ceafa",
@@ -8437,6 +8552,11 @@
   "components.progress.trends.ratings": {
     "message": "Session Ratings (1–5)",
     "srcHash": "793c95f6bab1",
+    "origin": "human"
+  },
+  "components.coach.sessionA11y": {
+    "message": "Session: {title}",
+    "srcHash": "32b5b5300516",
     "origin": "human"
   },
   "history.templateFilter.sessions": {
@@ -8799,6 +8919,11 @@
     "srcHash": "d4ff185d4ee3",
     "origin": "human"
   },
+  "components.coach.cachedCatalogDescription": {
+    "message": "Showing cached models from {time}. Selections may have changed.",
+    "srcHash": "df55395d635e",
+    "origin": "human"
+  },
   "app.exercise.id.showingLastSessions": {
     "message": "Showing last {count} sessions",
     "srcHash": "b156eb404cc3",
@@ -8882,11 +9007,6 @@
   "app.exercise.id.attachment.squatHarness": {
     "message": "Squat Harness",
     "srcHash": "8764279fc5ac",
-    "origin": "human"
-  },
-  "app.tools.cableFinder.attachment.squatHarness": {
-    "message": "Squat Harness",
-    "srcHash": "0a435ac9087a",
     "origin": "human"
   },
   "settings.gymProfiles.stackDeleted": {
@@ -9067,6 +9187,11 @@
   "components.nutrition.coach.suggestedTarget": {
     "message": "Suggested target:",
     "srcHash": "4cbf91d6b012",
+    "origin": "human"
+  },
+  "components.coach.suggestionA11y": {
+    "message": "Suggestion: {title}",
+    "srcHash": "0c99481f6208",
     "origin": "human"
   },
   "settings.macroCoach.bounds": {
@@ -9374,6 +9499,66 @@
     "srcHash": "aba90b09837e",
     "origin": "human"
   },
+  "ai.errors.modelLacksTools": {
+    "message": "That model does not support the tools AI Coach needs.",
+    "srcHash": "3de9ee7d5863",
+    "origin": "human"
+  },
+  "ai.errors.modelNotInCatalog": {
+    "message": "That model is no longer in the live catalog.",
+    "srcHash": "1e4727d1056a",
+    "origin": "human"
+  },
+  "ai.errors.invalidKey": {
+    "message": "That OpenRouter key was rejected. Check it and try again.",
+    "srcHash": "f2806b55a0ae",
+    "origin": "human"
+  },
+  "ai.errors.networkError": {
+    "message": "The AI request could not reach OpenRouter.",
+    "srcHash": "33dcc1873b43",
+    "origin": "human"
+  },
+  "ai.errors.abortedByUser": {
+    "message": "The AI request was stopped.",
+    "srcHash": "8f410afdd2fb",
+    "origin": "human"
+  },
+  "settings.importBackup.credentialFailed": {
+    "message": "The API credential could not be saved; other data was imported.",
+    "srcHash": "7e252a1e9ce4",
+    "origin": "human"
+  },
+  "settings.importBackup.invalidCredential": {
+    "message": "The API credential was invalid and was skipped; other data was imported.",
+    "srcHash": "e43f4a144f16",
+    "origin": "human"
+  },
+  "ai.errors.stepLimitReached": {
+    "message": "The coach reached its data-checking limit before writing an answer. Retry the question.",
+    "srcHash": "82f84617c8cd",
+    "origin": "human"
+  },
+  "ai.errors.staleCatalogWarning": {
+    "message": "The model catalog is stale; selections may have changed.",
+    "srcHash": "c7e202479bbe",
+    "origin": "human"
+  },
+  "ai.errors.catalogUnavailable": {
+    "message": "The model catalog is unavailable, so no model can be selected safely.",
+    "srcHash": "86b94b7325fe",
+    "origin": "human"
+  },
+  "ai.errors.emptyResponse": {
+    "message": "The model returned nothing. Retry or try another model.",
+    "srcHash": "1e1cdf69c8f4",
+    "origin": "human"
+  },
+  "ai.errors.upstreamProviderUnavailable": {
+    "message": "The selected model's upstream provider is unavailable.",
+    "srcHash": "580960bb7bb1",
+    "origin": "human"
+  },
   "settings.appearance.theme": {
     "message": "Theme",
     "srcHash": "64c02eb8e837",
@@ -9402,6 +9587,16 @@
   "components.nutrition.coach.explainerAdvisory": {
     "message": "This is advisory only. The target is never changed without your tap. You can disable this in Settings → Nutrition → Adaptive Macro Coach.",
     "srcHash": "53c0a6a493e8",
+    "origin": "human"
+  },
+  "ai.errors.insufficientCredits": {
+    "message": "This key has insufficient credits. Key-scoped usage is shown in Settings.",
+    "srcHash": "a33015498858",
+    "origin": "human"
+  },
+  "settings.backup.credentialsWarning": {
+    "message": "This live, billable key will be written unencrypted to the shared file.",
+    "srcHash": "0cd5f6f975da",
     "origin": "human"
   },
   "home.stats.thisWeek": {
@@ -9787,6 +9982,11 @@
   "components.nutrition.targets.updateProfileA11y": {
     "message": "Update your body profile in settings",
     "srcHash": "e8d2afc1f43a",
+    "origin": "human"
+  },
+  "ai.errors.useCachedCatalog": {
+    "message": "Use cached catalog",
+    "srcHash": "4317b5d9a79d",
     "origin": "human"
   },
   "settings.hydration.useOz": {
@@ -10314,14 +10514,14 @@
     "srcHash": "692058b12cce",
     "origin": "human"
   },
-  "tabs.workouts.title": {
-    "message": "Workouts",
-    "srcHash": "8a28cbd69e41",
-    "origin": "human"
-  },
   "tabs.workouts.header": {
     "message": "Workouts",
     "srcHash": "2a256debc51d",
+    "origin": "human"
+  },
+  "tabs.workouts.title": {
+    "message": "Workouts",
+    "srcHash": "8a28cbd69e41",
     "origin": "human"
   },
   "components.weeklySummary.workouts": {
@@ -10429,9 +10629,1089 @@
     "srcHash": "87eeaff10e47",
     "origin": "human"
   },
+  "settings.about.buyCoffeeA11y": {
+    "message": "Buy me a coffee",
+    "srcHash": "168a66f9a115",
+    "origin": "human"
+  },
+  "floatingTabBar.tabs.exercises": {
+    "message": "Exercises",
+    "srcHash": "55a860e342e1",
+    "origin": "human"
+  },
+  "common.deleting": {
+    "message": "Deleting…",
+    "srcHash": "517d142eca23",
+    "origin": "human"
+  },
+  "common.retry": {
+    "message": "Retry",
+    "srcHash": "2f3eac393010",
+    "origin": "human"
+  },
+  "components.bodyProfile.loadFailed": {
+    "message": "Could not load profile",
+    "srcHash": "ce78629867e2",
+    "origin": "human"
+  },
+  "components.bodyProfile.loading": {
+    "message": "Loading profile…",
+    "srcHash": "857b4c386b47",
+    "origin": "human"
+  },
+  "components.bodyProfile.retryA11y": {
+    "message": "Retry loading profile",
+    "srcHash": "d5c12c556ee2",
+    "origin": "human"
+  },
+  "components.bodyProfile.title": {
+    "message": "Body Profile",
+    "srcHash": "69375aee8c2b",
+    "origin": "human"
+  },
+  "components.foodSearch.onlineResults": {
+    "message": "Online Results",
+    "srcHash": "577a691392f8",
+    "origin": "human"
+  },
+  "components.foodSearch.placeholder": {
+    "message": "Search foods...",
+    "srcHash": "03095e442c31",
+    "origin": "human"
+  },
+  "components.foodSearch.scanBarcodeA11y": {
+    "message": "Scan barcode",
+    "srcHash": "2ecc26280ffe",
+    "origin": "human"
+  },
+  "components.foodSearch.searchA11y": {
+    "message": "Search foods",
+    "srcHash": "5f1f2e59a253",
+    "origin": "human"
+  },
+  "components.manualFood.calories": {
+    "message": "Calories",
+    "srcHash": "4412579538e8",
+    "origin": "human"
+  },
+  "components.manualFood.closeA11y": {
+    "message": "Close manual entry",
+    "srcHash": "bacec535974c",
+    "origin": "human"
+  },
+  "components.manualFood.foodName": {
+    "message": "Food name",
+    "srcHash": "d7a01cce5008",
+    "origin": "human"
+  },
+  "components.manualFood.log": {
+    "message": "Log Food",
+    "srcHash": "443602116200",
+    "origin": "human"
+  },
+  "components.manualFood.logA11y": {
+    "message": "Log manual entry",
+    "srcHash": "8213f600b325",
+    "origin": "human"
+  },
+  "components.manualFood.open": {
+    "message": "Manual Entry",
+    "srcHash": "7b846f5d353e",
+    "origin": "human"
+  },
+  "components.manualFood.openA11y": {
+    "message": "Manual entry",
+    "srcHash": "157f7bc8060e",
+    "origin": "human"
+  },
+  "components.manualFood.removeFavoriteA11y": {
+    "message": "Remove manual entry from favorites",
+    "srcHash": "db185b51853f",
+    "origin": "human"
+  },
+  "components.manualFood.saveFavorite": {
+    "message": "Save as favorite",
+    "srcHash": "add06334b39d",
+    "origin": "human"
+  },
+  "components.manualFood.saveFavoriteA11y": {
+    "message": "Save manual entry as favorite",
+    "srcHash": "342804af19d9",
+    "origin": "human"
+  },
+  "components.manualFood.servingSize": {
+    "message": "Serving size",
+    "srcHash": "f47384963113",
+    "origin": "human"
+  },
+  "components.manualFood.title": {
+    "message": "Manual Food Entry",
+    "srcHash": "ae5b083ba9a9",
+    "origin": "human"
+  },
+  "components.shareSheet.achievement": {
+    "message": "Share Achievement Recap",
+    "srcHash": "ae248b4d4195",
+    "origin": "human"
+  },
+  "components.shareSheet.achievementHint": {
+    "message": "Generate an achievement recap card image",
+    "srcHash": "83598287d9c8",
+    "origin": "human"
+  },
+  "components.shareSheet.connectStrava": {
+    "message": "Connect Strava",
+    "srcHash": "f2188c061544",
+    "origin": "human"
+  },
+  "components.shareSheet.connectStravaHint": {
+    "message": "Open settings to connect Strava",
+    "srcHash": "2c412234d38e",
+    "origin": "human"
+  },
+  "components.shareSheet.image": {
+    "message": "Share as Image",
+    "srcHash": "7a5cf7e4a528",
+    "origin": "human"
+  },
+  "components.shareSheet.imageHint": {
+    "message": "Generate a workout card image",
+    "srcHash": "2f0bd98084dd",
+    "origin": "human"
+  },
+  "components.shareSheet.stravaImage": {
+    "message": "Share Strava Image",
+    "srcHash": "017005e341d6",
+    "origin": "human"
+  },
+  "components.shareSheet.stravaImageHint": {
+    "message": "Generate a Strava workout card image",
+    "srcHash": "bed934f5271d",
+    "origin": "human"
+  },
+  "components.shareSheet.syncStrava": {
+    "message": "Sync to Strava",
+    "srcHash": "74e0b5b522ed",
+    "origin": "human"
+  },
+  "components.shareSheet.syncStravaHint": {
+    "message": "Upload workout activity data directly to Strava",
+    "srcHash": "cdfa42029656",
+    "origin": "human"
+  },
+  "components.shareSheet.text": {
+    "message": "Share as Text",
+    "srcHash": "ef1b0d866131",
+    "origin": "human"
+  },
+  "components.shareSheet.textHint": {
+    "message": "Copy workout summary as text",
+    "srcHash": "495523f4976a",
+    "origin": "human"
+  },
+  "components.shareSheet.title": {
+    "message": "Share Workout",
+    "srcHash": "f01674ac06fc",
+    "origin": "human"
+  },
+  "exerciseTutorialLink.copyLink": {
+    "message": "Copy this link to search manually:\n\n{url}",
+    "srcHash": "46e8639af69e",
+    "origin": "human"
+  },
+  "exerciseTutorialLink.openBrowserFailed": {
+    "message": "Couldn't open browser",
+    "srcHash": "2f2b665d6484",
+    "origin": "human"
+  },
+  "insights.balance.accessibilityLabel": {
+    "message": "{title}. Tap to view muscle volume details.",
+    "srcHash": "748ae6a28528",
+    "origin": "human"
+  },
+  "insights.balance.mixed": {
+    "message": "{underCount} below target, {overCount} above cap this week.",
+    "srcHash": "d00b797dbbc2",
+    "origin": "human"
+  },
+  "insights.balance.overMany": {
+    "message": "{count} muscles are above this week's cap",
+    "srcHash": "edacb87fc3d3",
+    "origin": "human"
+  },
+  "insights.balance.overOne": {
+    "message": "1 muscle is above this week's cap",
+    "srcHash": "5daea65eef83",
+    "origin": "human"
+  },
+  "insights.balance.underMany": {
+    "message": "{count} muscles are below this week's target",
+    "srcHash": "5613bec29313",
+    "origin": "human"
+  },
+  "insights.balance.underOne": {
+    "message": "1 muscle is below this week's target",
+    "srcHash": "ac6a0d6c952d",
+    "origin": "human"
+  },
+  "insights.consistency.accessibilityLabel": {
+    "message": "Training insight: {title}",
+    "srcHash": "1890fa59bf66",
+    "origin": "human"
+  },
+  "insights.consistency.title": {
+    "message": "{count} workouts this week — your best in {weeks} weeks!",
+    "srcHash": "8b5446f15f01",
+    "origin": "human"
+  },
+  "insights.goal.accessibilityLabel": {
+    "message": "Training insight: {title}. Tap to view details.",
+    "srcHash": "837b4d0e9c6a",
+    "origin": "human"
+  },
+  "insights.goal.title": {
+    "message": "You're {progressPct}% of the way to your {exerciseName} goal!",
+    "srcHash": "ca66ce07c035",
+    "origin": "human"
+  },
+  "insights.muscle.fullBody": {
+    "message": "full body",
+    "srcHash": "5caec90081ac",
+    "origin": "human"
+  },
+  "insights.returning.accessibilityLabel": {
+    "message": "Training insight: {title}",
+    "srcHash": "ce7433afd491",
+    "origin": "human"
+  },
+  "insights.returning.title": {
+    "message": "Welcome back! You crushed it today.",
+    "srcHash": "0321d163b20e",
+    "origin": "human"
+  },
+  "insights.strength.accessibilityLabel": {
+    "message": "Training insight: {title}. Tap to view details.",
+    "srcHash": "8ecb00012518",
+    "origin": "human"
+  },
+  "insights.strength.title": {
+    "message": "Your {exerciseName} is up {delta}kg this month",
+    "srcHash": "6a24a5c46f66",
+    "origin": "human"
+  },
+  "insights.volume.accessibilityLabel": {
+    "message": "Training insight: {title}. Tap to view details.",
+    "srcHash": "15506102905d",
+    "origin": "human"
+  },
+  "insights.volume.title": {
+    "message": "Training volume up {pct}% vs last month",
+    "srcHash": "a36f4ec0ebb3",
+    "origin": "human"
+  },
+  "notifications.channel.restComplete": {
+    "message": "Rest complete",
+    "srcHash": "1d21d63c1b87",
+    "origin": "human"
+  },
+  "notifications.channel.restCue": {
+    "message": "Rest pre-end cue",
+    "srcHash": "229c530e97b9",
+    "origin": "human"
+  },
+  "notifications.channel.restOngoing": {
+    "message": "Rest timer (ongoing)",
+    "srcHash": "fabead1d8b2b",
+    "origin": "human"
+  },
+  "notifications.complete.lastSet": {
+    "message": "Last set complete",
+    "srcHash": "86fd87a30c79",
+    "origin": "human"
+  },
+  "notifications.complete.nextSet": {
+    "message": "Time for your next set.",
+    "srcHash": "0ab17991dd7d",
+    "origin": "human"
+  },
+  "notifications.complete.title": {
+    "message": "Rest complete",
+    "srcHash": "407b43bb45fe",
+    "origin": "human"
+  },
+  "notifications.live.resting": {
+    "message": "Resting…",
+    "srcHash": "c46915a134f1",
+    "origin": "human"
+  },
+  "notifications.live.title": {
+    "message": "Resting · {time} remaining",
+    "srcHash": "89637c00573b",
+    "origin": "human"
+  },
+  "notifications.preEnd.next": {
+    "message": "Next: {preview}",
+    "srcHash": "8f1c45255092",
+    "origin": "human"
+  },
+  "notifications.preEnd.nextSet": {
+    "message": "Next set in {seconds}s",
+    "srcHash": "33a5ce29c259",
+    "origin": "human"
+  },
+  "notifications.preEnd.title": {
+    "message": "Rest ending in {seconds}s",
+    "srcHash": "af14dee7c1ef",
+    "origin": "human"
+  },
+  "notifications.preEnd.workoutEnding": {
+    "message": "Workout ending in {seconds}s",
+    "srcHash": "20baa3b02790",
+    "origin": "human"
+  },
+  "notifications.preview.bodyweight": {
+    "message": "{exerciseName} — bodyweight × {reps}",
+    "srcHash": "9e0954117e18",
+    "origin": "human"
+  },
+  "notifications.preview.distance": {
+    "message": "{exerciseName} — {distance}",
+    "srcHash": "c5630bdf1011",
+    "origin": "human"
+  },
+  "notifications.preview.duration": {
+    "message": "{exerciseName} — {duration}",
+    "srcHash": "66f59d34ebc2",
+    "origin": "human"
+  },
+  "notifications.preview.kilometers": {
+    "message": "{value} km",
+    "srcHash": "fb0641830834",
+    "origin": "human"
+  },
+  "notifications.preview.meters": {
+    "message": "{value} m",
+    "srcHash": "f0efb1e18905",
+    "origin": "human"
+  },
+  "notifications.preview.weighted": {
+    "message": "{exerciseName} — {weight} {unit} × {reps}",
+    "srcHash": "602fbc460a12",
+    "origin": "human"
+  },
+  "notifications.reminder.body": {
+    "message": "{template} is scheduled for today",
+    "srcHash": "d9a004962985",
+    "origin": "human"
+  },
+  "notifications.reminder.title": {
+    "message": "Time to train!",
+    "srcHash": "0a590f6908a5",
+    "origin": "human"
+  },
+  "notifications.response.templateMissing": {
+    "message": "Scheduled template no longer exists",
+    "srcHash": "eb5716a57806",
+    "origin": "human"
+  },
+  "notifications.test.body": {
+    "message": "Notifications are working. You're all set!",
+    "srcHash": "5e274f528aba",
+    "origin": "human"
+  },
+  "notifications.test.title": {
+    "message": "CableSnap test 🔔",
+    "srcHash": "7b71bcf60254",
+    "origin": "human"
+  },
+  "settings.autoBackup.createA11y": {
+    "message": "Create a backup now",
+    "srcHash": "3861b8c2fce5",
+    "origin": "human"
+  },
+  "settings.autoBackup.created": {
+    "message": "Backup created successfully",
+    "srcHash": "2482a7bc4784",
+    "origin": "human"
+  },
+  "settings.autoBackup.decreaseA11y": {
+    "message": "Decrease backup retention",
+    "srcHash": "7dac1c316ceb",
+    "origin": "human"
+  },
+  "settings.autoBackup.failed": {
+    "message": "Backup failed",
+    "srcHash": "5ba9485cc7b2",
+    "origin": "human"
+  },
+  "settings.autoBackup.increaseA11y": {
+    "message": "Increase backup retention",
+    "srcHash": "fdf693440d71",
+    "origin": "human"
+  },
+  "settings.autoBackup.infoA11y": {
+    "message": "Auto-Backup. Tap for more info",
+    "srcHash": "bf4e1651e479",
+    "origin": "human"
+  },
+  "settings.autoBackup.lastDate": {
+    "message": "Last backup: {dateText} at {time}",
+    "srcHash": "8284f5efb2dd",
+    "origin": "human"
+  },
+  "settings.autoBackup.lastToday": {
+    "message": "Last backup: Today at {time}",
+    "srcHash": "ef6d1a760156",
+    "origin": "human"
+  },
+  "settings.autoBackup.lastYesterday": {
+    "message": "Last backup: Yesterday at {time}",
+    "srcHash": "4284b84009af",
+    "origin": "human"
+  },
+  "settings.autoBackup.noBackups": {
+    "message": "No backups yet",
+    "srcHash": "75c63571586c",
+    "origin": "human"
+  },
+  "settings.autoBackup.retentionFailed": {
+    "message": "Failed to update retention",
+    "srcHash": "081fa241a4b4",
+    "origin": "human"
+  },
+  "settings.autoBackup.toggleA11y": {
+    "message": "Toggle auto-backup after workouts",
+    "srcHash": "461901bc639d",
+    "origin": "human"
+  },
+  "settings.autoBackup.updateFailed": {
+    "message": "Failed to update setting",
+    "srcHash": "67782859060e",
+    "origin": "human"
+  },
+  "settings.autoBackup.viewA11y": {
+    "message": "View all backups",
+    "srcHash": "635f1282f3a1",
+    "origin": "human"
+  },
+  "settings.formClips.deleteAll": {
+    "message": "Delete all clips",
+    "srcHash": "f7ef8f1b592e",
+    "origin": "human"
+  },
+  "settings.formClips.deleteHint": {
+    "message": "Removes this clip from your device",
+    "srcHash": "5077d25254cf",
+    "origin": "human"
+  },
+  "settings.formClips.manageA11y": {
+    "message": "Manage form clips",
+    "srcHash": "59ad460b32f4",
+    "origin": "human"
+  },
+  "settings.formClips.manageHint": {
+    "message": "Opens a list of all recorded form clips where you can delete individual or all clips",
+    "srcHash": "1a38a45da58b",
+    "origin": "human"
+  },
+  "settings.formClips.title": {
+    "message": "Form clips",
+    "srcHash": "8c6b7e520a70",
+    "origin": "human"
+  },
+  "settings.language.enGB": {
+    "message": "English (UK)",
+    "srcHash": "3201054d7410",
+    "origin": "human"
+  },
+  "settings.language.enUS": {
+    "message": "English (US)",
+    "srcHash": "2d2b8c03b8b6",
+    "origin": "human"
+  },
+  "settings.language.zhCN": {
+    "message": "简体中文",
+    "srcHash": "bbf624832eaa",
+    "origin": "human"
+  },
+  "settings.language.zhTW": {
+    "message": "繁體中文",
+    "srcHash": "49cc2a206c85",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.captureRpe": {
+    "message": "Capture set RPE during workouts",
+    "srcHash": "c28612a45f9d",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.captureRpeA11y": {
+    "message": "Shows effort chips after each set you complete",
+    "srcHash": "b655125493c8",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.captureRpeHint": {
+    "message": "Tap a chip after each set to log how it felt. Powers the smart rest timer and progression suggestions.",
+    "srcHash": "f14aeef8a0a1",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.enableRpeHint": {
+    "message": "Enable \"Capture set RPE\" above to use this setting.",
+    "srcHash": "7b9c918807c7",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.intensityScale": {
+    "message": "Intensity scale",
+    "srcHash": "778e7fefe9c9",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.rirHint": {
+    "message": "RIR = reps left in reserve. RPE = 10 − RIR.",
+    "srcHash": "a80e208d11e0",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.saveIntensityFailed": {
+    "message": "Failed to save intensity scale setting",
+    "srcHash": "36a991b785a1",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.savePulleyFailed": {
+    "message": "Failed to save pulley pin tracking setting",
+    "srcHash": "96bb5a40b573",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.saveRpeFailed": {
+    "message": "Failed to save RPE capture setting",
+    "srcHash": "2c6b77961f76",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.trackPulley": {
+    "message": "Track pulley pin position",
+    "srcHash": "e26c4f0c55b6",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.trackPulleyA11y": {
+    "message": "Show or hide the pulley pin chip on cable exercise sets",
+    "srcHash": "7aacae763248",
+    "origin": "human"
+  },
+  "settings.sessionPreferences.trackPulleyHint": {
+    "message": "Show a pin-number chip on cable sets to log which pulley pin you used.",
+    "srcHash": "d1465246e903",
+    "origin": "human"
+  },
+  "settings.units.measurements": {
+    "message": "Measurements",
+    "srcHash": "f5760e8bbd96",
+    "origin": "human"
+  },
+  "settings.units.saveUnitFailed": {
+    "message": "Could not save unit",
+    "srcHash": "d30374b8bd51",
+    "origin": "human"
+  },
+  "settings.units.saveWeightStepFailed": {
+    "message": "Could not save weight step setting",
+    "srcHash": "e2d5c1d90c10",
+    "origin": "human"
+  },
+  "settings.units.title": {
+    "message": "Units",
+    "srcHash": "68aecbd99beb",
+    "origin": "human"
+  },
+  "settings.units.weight": {
+    "message": "Weight",
+    "srcHash": "a54504946498",
+    "origin": "human"
+  },
+  "settings.units.weightStep": {
+    "message": "Weight step",
+    "srcHash": "a262bbec57ec",
+    "origin": "human"
+  },
+  "settings.units.weightStepHint": {
+    "message": "Input step granularity for exercises. Applies to new sessions.",
+    "srcHash": "7ee8f1e039b9",
+    "origin": "human"
+  },
+  "share.achievement.more": {
+    "message": "+{extraCount} more",
+    "srcHash": "4d147e061d8e",
+    "origin": "human"
+  },
+  "share.achievement.unlocked": {
+    "message": "{achievementCount} {achievementCount, plural, one {Achievement} other {Achievements}} Unlocked!",
+    "srcHash": "bada375e3db9",
+    "origin": "human"
+  },
+  "share.exercises.more": {
+    "message": "and {remaining} more",
+    "srcHash": "7eb6caecd9c7",
+    "origin": "human"
+  },
+  "share.exercises.newPrs": {
+    "message": "🏆 New PRs",
+    "srcHash": "7f875fc27a9b",
+    "origin": "human"
+  },
+  "share.exercises.title": {
+    "message": "Exercises",
+    "srcHash": "a3cce693f041",
+    "origin": "human"
+  },
+  "share.stats.duration": {
+    "message": "Duration",
+    "srcHash": "48dea83849a4",
+    "origin": "human"
+  },
+  "share.stats.sets": {
+    "message": "Sets",
+    "srcHash": "1f42d6b75dd2",
+    "origin": "human"
+  },
+  "share.stats.volume": {
+    "message": "Volume ({unit})",
+    "srcHash": "0bcf00bb62dc",
+    "origin": "human"
+  },
+  "stravaError.appInactive": {
+    "message": "Strava app access is inactive. Please contact support.",
+    "srcHash": "6f562a18c437",
+    "origin": "human"
+  },
+  "stravaError.config": {
+    "message": "Strava isn't set up correctly. Please contact support.",
+    "srcHash": "c2da5de7f117",
+    "origin": "human"
+  },
+  "stravaError.connectionExpired": {
+    "message": "Connection expired. Please try again.",
+    "srcHash": "ed163b8c6ebd",
+    "origin": "human"
+  },
+  "stravaError.getHelp": {
+    "message": "Get help",
+    "srcHash": "a7c8f02d8bd1",
+    "origin": "human"
+  },
+  "stravaError.localRead": {
+    "message": "Failed to read workout data. Please try again.",
+    "srcHash": "657bd0694ae3",
+    "origin": "human"
+  },
+  "stravaError.network": {
+    "message": "Check your internet and try again.",
+    "srcHash": "9798814d02a4",
+    "origin": "human"
+  },
+  "stravaError.rateLimit": {
+    "message": "Too many requests. Please wait a moment and try again.",
+    "srcHash": "f6c3624e0daf",
+    "origin": "human"
+  },
+  "stravaError.server": {
+    "message": "Strava is having trouble right now. Please try again soon.",
+    "srcHash": "4f0870f7221f",
+    "origin": "human"
+  },
+  "stravaError.unknown": {
+    "message": "Something went wrong connecting to Strava. Please try again.",
+    "srcHash": "24375bf260f1",
+    "origin": "human"
+  },
   "settings.formClips.deleteAllMessage": {
     "message": "Delete {count, plural, one {# clip} other {# clips}}? This permanently removes them from this device. This cannot be undone.",
     "srcHash": "f81081a70568",
+    "origin": "human"
+  },
+  "components.coach.toggleSidebar": {
+    "message": "Toggle sessions sidebar",
+    "srcHash": "fab4b855ff73",
+    "origin": "human"
+  },
+  "components.coach.expandSidebar": {
+    "message": "Expand sessions sidebar",
+    "srcHash": "7f5c2c39997b",
+    "origin": "human"
+  },
+  "components.coach.newChatA11y": {
+    "message": "Start a new chat",
+    "srcHash": "e162fbffaa1d",
+    "origin": "human"
+  },
+  "components.coach.you": {
+    "message": "You",
+    "srcHash": "2e197779f01c",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt1": {
+    "message": "How have my last few workouts gone?",
+    "srcHash": "1c33c9e16eae",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt2": {
+    "message": "What did I eat this week?",
+    "srcHash": "80684bb8dc35",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt3": {
+    "message": "Show my bench press progression",
+    "srcHash": "0fe02584d84c",
+    "origin": "human"
+  },
+  "components.coach.quickPrompt4": {
+    "message": "How can I optimize my recovery?",
+    "srcHash": "6e486f5dbfd6",
+    "origin": "human"
+  },
+  "components.coach.dataConsulted": {
+    "message": "Data consulted: local records",
+    "srcHash": "5cd082650add",
+    "origin": "human"
+  },
+  "components.coach.stop": {
+    "message": "Stop generating",
+    "srcHash": "4bd8ce5fb79d",
+    "origin": "human"
+  },
+  "components.coach.sendA11y": {
+    "message": "Send message",
+    "srcHash": "c735f7c7c45b",
+    "origin": "human"
+  },
+  "components.coach.missingKeyPlaceholder": {
+    "message": "Add your OpenRouter key to chat...",
+    "srcHash": "e9697caf7b88",
+    "origin": "human"
+  },
+  "components.coach.selectModelPlaceholder": {
+    "message": "Select a model above to begin...",
+    "srcHash": "e38d78982ee3",
+    "origin": "human"
+  },
+  "components.coach.placeholder": {
+    "message": "Ask your AI Coach anything...",
+    "srcHash": "674ac03de896",
+    "origin": "human"
+  },
+  "components.coach.send": {
+    "message": "Send",
+    "srcHash": "baf47c24d04b",
+    "origin": "human"
+  },
+  "components.coach.cancel": {
+    "message": "Cancel",
+    "srcHash": "e17cc0149ff8",
+    "origin": "human"
+  },
+  "components.coach.today": {
+    "message": "Today",
+    "srcHash": "541f4f7ccabf",
+    "origin": "human"
+  },
+  "components.coach.promptReviewWorkoutTitle": {
+    "message": "Review Workout Progress",
+    "srcHash": "00c1cf3632e5",
+    "origin": "human"
+  },
+  "components.coach.promptReviewWorkoutBody": {
+    "message": "How is my strength and volume progressing over my recent workouts?",
+    "srcHash": "20bcd3257642",
+    "origin": "human"
+  },
+  "components.coach.promptNutritionTitle": {
+    "message": "Nutrition & Macros",
+    "srcHash": "cc71393626bc",
+    "origin": "human"
+  },
+  "components.coach.promptNutritionBody": {
+    "message": "What should I focus on eating today to hit my macro targets?",
+    "srcHash": "41f1f53b1e25",
+    "origin": "human"
+  },
+  "components.coach.promptTechniqueTitle": {
+    "message": "Exercise Technique",
+    "srcHash": "e93661b6a38e",
+    "origin": "human"
+  },
+  "components.coach.promptTechniqueBody": {
+    "message": "What are the key cues for a strong and safe cable chest press?",
+    "srcHash": "fa67270520d5",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequired": {
+    "message": "API Key Required",
+    "srcHash": "e363f9015237",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequiredDescription": {
+    "message": "Add your OpenRouter key in Settings to chat with AI Coach and receive personalized workout insights.",
+    "srcHash": "254035cfc384",
+    "origin": "human"
+  },
+  "components.coach.addApiKeyA11y": {
+    "message": "Add OpenRouter API Key",
+    "srcHash": "70981d2f0049",
+    "origin": "human"
+  },
+  "components.coach.addKey": {
+    "message": "Add Key",
+    "srcHash": "43aeb402b013",
+    "origin": "human"
+  },
+  "components.coach.selectAnAIModel": {
+    "message": "Select an AI Model",
+    "srcHash": "9f63af535fb6",
+    "origin": "human"
+  },
+  "components.coach.selectAIModelDescription": {
+    "message": "Choose a model from the OpenRouter catalog to power your AI Coach conversations.",
+    "srcHash": "bbbf57805a38",
+    "origin": "human"
+  },
+  "components.coach.selectModel": {
+    "message": "Select Model",
+    "srcHash": "5864fecf3ebb",
+    "origin": "human"
+  },
+  "components.coach.howCanIHelp": {
+    "message": "How can I help you today?",
+    "srcHash": "961223d90e8b",
+    "origin": "human"
+  },
+  "components.coach.howCanIHelpSubtitle": {
+    "message": "Ask anything about your workouts, progression, nutrition, or exercise technique.",
+    "srcHash": "37d9b67c26f9",
+    "origin": "human"
+  },
+  "components.coach.privacyDisclaimer": {
+    "message": "Aggregated workout and nutrition fields are sent to OpenRouter for your request; food names are not.",
+    "srcHash": "544bdade1ed9",
+    "origin": "human"
+  },
+  "components.coach.dismissError": {
+    "message": "Dismiss error",
+    "srcHash": "b230c2afbbf4",
+    "origin": "human"
+  },
+  "components.coach.selectAIModel": {
+    "message": "Select AI Model",
+    "srcHash": "45e3e17a8e39",
+    "origin": "human"
+  },
+  "components.coach.cachedCatalogA11y": {
+    "message": "Catalog is cached. Tap to refresh.",
+    "srcHash": "86e531cf9e87",
+    "origin": "human"
+  },
+  "components.coach.cachedCatalog": {
+    "message": "Cached catalog",
+    "srcHash": "d9c09bb513f6",
+    "origin": "human"
+  },
+  "components.coach.collapseSidebar": {
+    "message": "Collapse sessions sidebar",
+    "srcHash": "7373e5d55073",
+    "origin": "human"
+  },
+  "components.coach.deleteConversationTitle": {
+    "message": "Delete Conversation",
+    "srcHash": "638a1e0c8304",
+    "origin": "human"
+  },
+  "components.coach.deleteConfirm": {
+    "message": "Delete",
+    "srcHash": "3ab321300556",
+    "origin": "human"
+  },
+  "components.coach.conversations": {
+    "message": "Conversations",
+    "srcHash": "4288ad037d50",
+    "origin": "human"
+  },
+  "components.coach.newChat": {
+    "message": "New Chat",
+    "srcHash": "927a8580f047",
+    "origin": "human"
+  },
+  "components.coach.noConversations": {
+    "message": "No conversations yet",
+    "srcHash": "2334f42117bb",
+    "origin": "human"
+  },
+  "components.coach.startNewChatSubtitle": {
+    "message": "Start a new chat to consult your AI Coach.",
+    "srcHash": "48240f045885",
+    "origin": "human"
+  },
+  "components.coach.renameConversation": {
+    "message": "Rename Conversation",
+    "srcHash": "d49f19cc9afb",
+    "origin": "human"
+  },
+  "components.coach.conversationTitlePlaceholder": {
+    "message": "Conversation title",
+    "srcHash": "a31b65027713",
+    "origin": "human"
+  },
+  "components.coach.cancelRenameA11y": {
+    "message": "Cancel rename",
+    "srcHash": "6634cc20bb21",
+    "origin": "human"
+  },
+  "components.coach.saveRenameA11y": {
+    "message": "Save rename",
+    "srcHash": "5c5e89733323",
+    "origin": "human"
+  },
+  "components.coach.save": {
+    "message": "Save",
+    "srcHash": "4ed0adfcce40",
+    "origin": "human"
+  },
+  "components.coach.modelsSourcedCatalog": {
+    "message": "Models sourced from live OpenRouter catalog",
+    "srcHash": "0976fc048d3e",
+    "origin": "human"
+  },
+  "components.coach.closeModelPicker": {
+    "message": "Close model picker",
+    "srcHash": "1e8d61812706",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequiredBanner": {
+    "message": "API key required",
+    "srcHash": "2ad6ee3ab6ce",
+    "origin": "human"
+  },
+  "components.coach.apiKeyRequiredPickerDescription": {
+    "message": "Add your OpenRouter API key to use AI Coach and browse all models.",
+    "srcHash": "b791176d647a",
+    "origin": "human"
+  },
+  "components.coach.configureApiKeyA11y": {
+    "message": "Configure OpenRouter API key",
+    "srcHash": "5c73abf8f321",
+    "origin": "human"
+  },
+  "components.coach.configureApiKey": {
+    "message": "Configure API Key",
+    "srcHash": "ce8489f7b978",
+    "origin": "human"
+  },
+  "components.coach.refresh": {
+    "message": "Refresh",
+    "srcHash": "60980447fce1",
+    "origin": "human"
+  },
+  "components.coach.noModelSelected": {
+    "message": "No model selected. Choose a model below to start coaching.",
+    "srcHash": "ded26f820bc4",
+    "origin": "human"
+  },
+  "components.coach.searchModelsPlaceholder": {
+    "message": "Search by model id or name…",
+    "srcHash": "72f6d9cff015",
+    "origin": "human"
+  },
+  "components.coach.searchModelsA11y": {
+    "message": "Search models by id or name",
+    "srcHash": "4cdbdec02b2a",
+    "origin": "human"
+  },
+  "components.coach.clearModelSearch": {
+    "message": "Clear model search",
+    "srcHash": "97c6d11f4239",
+    "origin": "human"
+  },
+  "components.coach.toolCallingOnly": {
+    "message": "Tool-calling only",
+    "srcHash": "a6efff3e2c95",
+    "origin": "human"
+  },
+  "components.coach.toolCallingDescription": {
+    "message": "Coach needs tool calling to read logs and manage workouts",
+    "srcHash": "a92648e50f12",
+    "origin": "human"
+  },
+  "components.coach.filterToolsA11y": {
+    "message": "Filter by tool calling support",
+    "srcHash": "fdd3ee943974",
+    "origin": "human"
+  },
+  "components.coach.toolCallingWarning": {
+    "message": "Tool Calling Warning",
+    "srcHash": "9ca286f0b2aa",
+    "origin": "human"
+  },
+  "components.coach.toolCallingWarningDescription": {
+    "message": "Tools will not work on models without tool-calling support. AI Coach will not be able to log sets, retrieve exercises, or analyze workout history.",
+    "srcHash": "c67e45657a6c",
+    "origin": "human"
+  },
+  "components.coach.catalogUnavailable": {
+    "message": "Catalog Unavailable",
+    "srcHash": "0b7d03cc1619",
+    "origin": "human"
+  },
+  "components.coach.loadingCatalog": {
+    "message": "Loading live model catalog…",
+    "srcHash": "72f04bcc72a0",
+    "origin": "human"
+  },
+  "components.coach.toolsBadge": {
+    "message": "Tools",
+    "srcHash": "9a6b0766590f",
+    "origin": "human"
+  },
+  "components.coach.noModelsAvailable": {
+    "message": "No models available in catalog.",
+    "srcHash": "ef1e9f20d3f9",
+    "origin": "human"
+  },
+  "components.coach.tryDifferentSearch": {
+    "message": "Try searching for a different provider or model name.",
+    "srcHash": "f8ba938b0fc5",
+    "origin": "human"
+  },
+  "components.coach.checkNetworkOrRefresh": {
+    "message": "Check your network connection or refresh the catalog.",
+    "srcHash": "8d4f276fca6a",
+    "origin": "human"
+  },
+  "components.coach.toolReadingHistory": {
+    "message": "Reading workout history",
+    "srcHash": "76e65755eb81",
+    "origin": "human"
+  },
+  "components.coach.toolExerciseProgress": {
+    "message": "Analyzing exercise progress",
+    "srcHash": "7abafbed717a",
+    "origin": "human"
+  },
+  "components.coach.toolNutritionMacros": {
+    "message": "Reviewing nutrition & macros",
+    "srcHash": "029b553ebb5a",
+    "origin": "human"
+  },
+  "components.coach.toolCreateTemplate": {
+    "message": "Creating workout template",
+    "srcHash": "c71e91ff884b",
+    "origin": "human"
+  },
+  "components.coach.thinking": {
+    "message": "Thinking...",
+    "srcHash": "57cceac7e7c8",
+    "origin": "human"
+  },
+  "components.coach.thinkingA11y": {
+    "message": "AI Coach is thinking",
+    "srcHash": "5e8d14850447",
+    "origin": "human"
+  },
+  "components.coach.usingTool": {
+    "message": "Using tool: {tool}",
+    "srcHash": "91bec32f3e3c",
     "origin": "human"
   }
 }
