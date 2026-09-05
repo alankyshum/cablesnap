@@ -12,14 +12,8 @@ import { Chip } from "@/components/ui/chip";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
 import { spacing } from "@/constants/design-tokens";
-import {
-  ATTACHMENT_LABELS,
-  MOUNT_POSITION_LABELS,
-  type Attachment,
-  type MountPosition,
-  type MuscleGroup,
-} from "@/lib/types";
-import { MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
+import type { MountPosition, Attachment, MuscleGroup } from "@/lib/types";
+import { getAttachmentLabel, getMountPositionLabel, MOUNT_POSITION_VALUES } from "@/lib/cable-variant";
 import {
   getCableExercises,
   getAvailableAttachments,
@@ -28,6 +22,7 @@ import {
 } from "@/lib/db/cable-finder";
 import { plural, t } from "@lingui/core/macro";
 import { i18n } from "@lingui/core";
+import { useLingui } from "@lingui/react/macro";
 
 function muscleLabel(muscle: MuscleGroup): string {
   switch (muscle) {
@@ -77,6 +72,8 @@ function buildSections(exercises: CableExercise[]): Section[] {
 }
 
 export default function CableSetupFinder() {
+  const { i18n: linguiI18n } = useLingui();
+  const locale = linguiI18n.locale;
   const colors = useThemeColors();
   const layout = useLayout();
   const router = useRouter();
@@ -104,7 +101,10 @@ export default function CableSetupFinder() {
     });
   }, [mountFilter, attachmentFilter]);
 
-  const sections = useMemo(() => buildSections(exercises), [exercises]);
+  const sections = useMemo(() => {
+    void locale;
+    return buildSections(exercises);
+  }, [exercises, locale]);
 
   const toggleMount = useCallback(
     (pos: MountPosition) => {
@@ -145,7 +145,9 @@ export default function CableSetupFinder() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: CableExercise }) => (
+    ({ item }: { item: CableExercise }) => {
+      void locale;
+      return (
       <Pressable
         style={[styles.exerciseRow, { borderBottomColor: colors.outline }]}
         onPress={() => handleExercisePress(item.id)}
@@ -161,10 +163,10 @@ export default function CableSetupFinder() {
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
               {[
                 item.mount_position
-                ? MOUNT_POSITION_LABELS[item.mount_position]
+                ? getMountPositionLabel(item.mount_position)
                   : null,
                 item.attachment
-                ? ATTACHMENT_LABELS[item.attachment]
+                  ? getAttachmentLabel(item.attachment)
                   : null,
               ]
                 .filter(Boolean)
@@ -173,14 +175,17 @@ export default function CableSetupFinder() {
           )}
         </View>
       </Pressable>
-    ),
-    [colors, handleExercisePress]
+      );
+    },
+    [colors, handleExercisePress, locale]
   );
 
   const keyExtractor = useCallback((item: CableExercise) => item.id, []);
 
   const listHeader = useMemo(
-    () => (
+    () => {
+      void locale;
+      return (
       <View style={styles.filtersContainer}>
         {/* Mount Position */}
         <View>
@@ -202,9 +207,9 @@ export default function CableSetupFinder() {
                 onPress={() => toggleMount(pos)}
                 accessibilityRole="checkbox"
                 accessibilityState={{ selected: mountFilter === pos }}
-                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.mountPositionA11yValueLocalized", message: "Mount position: {position}", values: { position: MOUNT_POSITION_LABELS[pos] } })}
+                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.mountPositionA11yValueLocalized", message: "Mount position: {position}", values: { position: getMountPositionLabel(pos) } })}
               >
-                {MOUNT_POSITION_LABELS[pos]}
+                {getMountPositionLabel(pos)}
               </Chip>
             ))}
           </ScrollView>
@@ -231,16 +236,17 @@ export default function CableSetupFinder() {
                   onPress={() => toggleAttachment(att)}
                   accessibilityRole="checkbox"
                   accessibilityState={{ selected: attachmentFilter === att }}
-                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.attachmentA11yValue", message: "Attachment: {attachment}", values: { attachment: ATTACHMENT_LABELS[att] } })}
+                    accessibilityLabel={i18n._({ id: "app.tools.cableFinder.attachmentA11yValue", message: "Attachment: {attachment}", values: { attachment: getAttachmentLabel(att) } })}
                 >
-                  {ATTACHMENT_LABELS[att]}
+                  {getAttachmentLabel(att)}
                 </Chip>
               ))}
             </ScrollView>
           </View>
         )}
       </View>
-    ),
+      );
+    },
     [
       mountFilter,
       attachmentFilter,
@@ -248,6 +254,7 @@ export default function CableSetupFinder() {
       colors,
       toggleMount,
       toggleAttachment,
+      locale,
     ]
   );
 

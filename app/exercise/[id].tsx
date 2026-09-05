@@ -28,7 +28,7 @@ import {
   type ExerciseSession,
 } from "../../lib/db";
 import { bumpQueryVersion } from "../../lib/query";
-import { ATTACHMENT_LABELS, type Category, type Difficulty } from "../../lib/types";
+import type { Category, Difficulty } from "../../lib/types";
 import { DIFFICULTY_COLORS } from "../../constants/theme";
 import { MuscleMap } from "../../components/MuscleMap";
 import { rpeColor, rpeText } from "../../lib/rpe";
@@ -45,7 +45,7 @@ import { PlateauStatusCard } from "@/components/exercise/PlateauStatusCard";
 import { usePlateauStatus } from "@/hooks/usePlateauStatus";
 import { FormVideoSheet } from "@/components/session/FormVideoSheet";
 import { getMostRecentCompletedSetForExercise, getLatestUnilateralInsight } from "@/lib/db/session-sets";
-import { isCableExercise } from "@/lib/cable-variant";
+import { getAttachmentLabel, isCableExercise } from "@/lib/cable-variant";
 import StrengthLevelBadge from "@/components/exercise/StrengthLevelBadge";
 import { useStrengthLevel } from "@/hooks/useStrengthLevel";
 import { useStrengthGoal } from "@/hooks/useStrengthGoals";
@@ -265,7 +265,7 @@ export default function ExerciseDetail() {
 
       {exercise.attachment && (
           <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>{t({ id: "app.exercise.id.attachment", message: "Attachment" })}</Text>
-           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: ATTACHMENT_LABELS[exercise.attachment] } })}>{ATTACHMENT_LABELS[exercise.attachment]}</Text></View>
+           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: getAttachmentLabel(exercise.attachment) } })}>{getAttachmentLabel(exercise.attachment)}</Text></View>
       )}
 
       {layout.atLeastMedium ? (
