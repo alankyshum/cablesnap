@@ -102,10 +102,11 @@ module.exports = {
     '\\.[jt]sx?$|\\.mjs$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|react-native-reanimated|react-native-gesture-handler|victory-native|react-native-safe-area-context|@gorhom/bottom-sheet|d3-(shape|path)|@lingui|@formatjs|@messageformat)'
+     'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|@kesha-antonov/react-native-chat|react-native-keyboard-controller|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|react-native-reanimated|react-native-gesture-handler|victory-native|react-native-safe-area-context|@gorhom/bottom-sheet|d3-(shape|path)|@lingui|@formatjs|@messageformat)'
   ],
   moduleNameMapper: {
     'react-native-reanimated': '<rootDir>/__mocks__/react-native-reanimated.js',
+    'react-native-keyboard-controller': '<rootDir>/__mocks__/react-native-keyboard-controller.js',
     '^expo/fetch$': '<rootDir>/__mocks__/expo-fetch.js',
   },
   // BLD-2161: Exclude paperclip agent worktrees so jest does not RUN test

@@ -26,7 +26,7 @@ jest.mock("@/lib/update-check", () => ({
     tag: "v1.2.4",
     version: "1.2.4",
     name: "Release name",
-    body: "Release notes",
+    body: "## What's New\n<!-- versionCode: 172 -->\n- First bullet\n- " + "A".repeat(500),
     url: "https://example.test/app.apk",
   }),
   clearLastCheckedAt: jest.fn().mockResolvedValue(undefined),
@@ -62,6 +62,19 @@ describe("AlertDialog", () => {
 
 describe("UpdatePromptBridge", () => {
   const renderBridge = () => render(<ToastProvider><UpdatePromptBridge /></ToastProvider>);
+
+  it("renders full markdown release notes in a scrollable body", async () => {
+    const screen = renderBridge();
+    await waitFor(() => expect(screen.getByTestId("update-available-dialog")).toBeTruthy());
+
+    expect(screen.getByText("What's New")).toBeTruthy();
+    expect(screen.getByText("First bullet")).toBeTruthy();
+    expect(screen.getByTestId("update-release-notes-scroll")).toBeTruthy();
+    expect(screen.queryByText("## What's New")).toBeNull();
+    expect(screen.queryByText("<!-- versionCode: 172 -->")).toBeNull();
+    expect(screen.getByText("A".repeat(500))).toBeTruthy();
+    screen.unmount();
+  });
 
   it("writes one dismissal for cancel and confirm", async () => {
     const screen = renderBridge();

@@ -121,6 +121,26 @@ describe("coach agent", () => {
     expect(mockAppendMessage).not.toHaveBeenCalled();
   });
 
+  it("maps an in-band provider-unavailable stream error before transport fallback", async () => {
+    mockStreamText.mockReturnValue(result((async function* () {
+      yield {
+        type: "error",
+        error: {
+          code: 502,
+          message: "Service temporarily overloaded",
+          metadata: { error_type: "provider_unavailable" },
+        },
+      };
+    })()));
+
+    await expect(runCoachAgent({
+      sessionId: "session-1",
+      modelId: "provider/tool-model",
+      prompt: "Hello",
+    })).rejects.toEqual({ kind: "upstream_provider_unavailable", status: 502 });
+    expect(mockAppendMessage).not.toHaveBeenCalled();
+  });
+
   it("keeps a successful completion with no text as an empty response", async () => {
     mockStreamText.mockReturnValue(result((async function* () {
       yield { type: "finish", finishReason: "stop", totalUsage: {} };
@@ -131,6 +151,60 @@ describe("coach agent", () => {
       modelId: "provider/tool-model",
       prompt: "Hello",
     })).rejects.toEqual({ kind: "empty_response" });
+    expect(mockAppendMessage).not.toHaveBeenCalled();
+  });
+
+  it("retries once without advertised tools when a model silently returns an empty tool response", async () => {
+    const localTool = { description: "local" } as never;
+    mockStreamText
+      .mockReturnValueOnce(result((async function* () {
+        yield { type: "finish-step", finishReason: "stop", usage: {} };
+        yield { type: "finish", finishReason: "stop", totalUsage: {} };
+      })()))
+      .mockReturnValueOnce(result(deltas("Fallback answer")));
+
+    const answer = await runCoachAgent({
+      sessionId: "session-1",
+      modelId: "stealth/ox-alpha",
+      prompt: "How can I recover better?",
+      tools: { recent_sessions: localTool },
+    });
+
+    expect(answer).toEqual(expect.objectContaining({ role: "assistant" }));
+    expect(mockStreamText).toHaveBeenCalledTimes(2);
+    expect(mockStreamText.mock.calls[0][0]).toEqual(expect.objectContaining({
+      tools: { recent_sessions: localTool },
+    }));
+    expect(mockStreamText.mock.calls[1][0]).toEqual(expect.objectContaining({
+      tools: {},
+    }));
+    expect(mockAppendMessage).toHaveBeenCalledTimes(1);
+    expect(mockAppendMessage).toHaveBeenCalledWith(expect.objectContaining({
+      content: "Fallback answer",
+      model_id: "stealth/ox-alpha",
+    }));
+  });
+
+  it("does not discard a real tool interaction to use the compatibility fallback", async () => {
+    const localTool = { description: "local" } as never;
+    mockStreamText.mockImplementationOnce(((options: { onChunk: (event: { chunk: unknown }) => Promise<void> }) => {
+      void options.onChunk({ chunk: { type: "tool-call", toolName: "recent_sessions", input: {} } });
+      return result((async function* () {
+        yield { type: "tool-call", toolName: "recent_sessions", input: {} };
+        yield { type: "finish", finishReason: "stop", totalUsage: {} };
+      })());
+    // The mocked SDK callback only models the tool event fields used by this test.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any);
+
+    await expect(runCoachAgent({
+      sessionId: "session-1",
+      modelId: "provider/tool-model",
+      prompt: "Read my sessions",
+      tools: { recent_sessions: localTool },
+    })).rejects.toEqual({ kind: "empty_response" });
+
+    expect(mockStreamText).toHaveBeenCalledTimes(1);
     expect(mockAppendMessage).not.toHaveBeenCalled();
   });
 
@@ -243,6 +317,7 @@ describe("coach agent", () => {
       session_id: "session-1",
       role: "assistant",
       content: "The tool completed.",
+      model_id: "provider/tool-model",
       tool_calls: JSON.stringify([{ name: "record_probe", input: { marker: "ok" }, output: { completed: true } }]),
     });
   });

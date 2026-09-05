@@ -28,6 +28,7 @@ import {
   type Attachment,
   type MountPosition,
 } from "./types";
+import { i18n } from "@lingui/core";
 
 /**
  * Canonical ordering for the bottom-sheet picker. Mirrors the order of the
@@ -113,6 +114,29 @@ export function formatAttachmentLabel(value: Attachment | null | undefined): str
 export function formatMountPositionLabel(value: MountPosition | null | undefined): string {
   if (!value) return "None";
   return MOUNT_POSITION_LABELS[value];
+}
+
+/** Localized attachment label shared by all cable-vocabulary consumers. */
+export function getAttachmentLabel(attachment: Attachment): string {
+  switch (attachment) {
+    case "handle": return i18n._({ id: "app.exercise.id.attachment.handle", message: "Handle" });
+    case "ring_handle": return i18n._({ id: "app.exercise.id.attachment.ringHandle", message: "Ring Handle" });
+    case "ankle_strap": return i18n._({ id: "app.exercise.id.attachment.ankleStrap", message: "Ankle Strap" });
+    case "rope": return i18n._({ id: "app.exercise.id.attachment.rope", message: "Rope" });
+    case "bar": return i18n._({ id: "app.exercise.id.attachment.bar", message: "Bar" });
+    case "squat_harness": return i18n._({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
+    case "carabiner": return i18n._({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
+  }
+}
+
+/** Localized mount-position label shared by all cable-vocabulary consumers. */
+export function getMountPositionLabel(position: MountPosition): string {
+  switch (position) {
+    case "high": return i18n._({ id: "app.tools.cableFinder.mount.high", message: "High" });
+    case "mid": return i18n._({ id: "app.tools.cableFinder.mount.mid", message: "Mid" });
+    case "low": return i18n._({ id: "app.tools.cableFinder.mount.low", message: "Low" });
+    case "floor": return i18n._({ id: "app.tools.cableFinder.mount.floor", message: "Floor" });
+  }
 }
 
 /**

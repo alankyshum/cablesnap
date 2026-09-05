@@ -106,7 +106,7 @@ export default function WaterDetail() {
                accessibilityLabel={t({ id: "nutrition.water.add.a11y", message: "Add water entry" })}
               accessibilityRole="button"
               hitSlop={8}
-              style={{ padding: 8 }}
+              style={styles.addButton}
             >
               <MaterialCommunityIcons name="plus" size={24} color={colors.onSurface} />
             </TouchableOpacity>
@@ -167,6 +167,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 80 },
   card: { borderRadius: 12 },
+  addButton: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
   headerRowSummary: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
   bar: { height: 6, borderRadius: radii.sm },
 });
