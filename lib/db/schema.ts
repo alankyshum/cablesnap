@@ -436,6 +436,30 @@ export const shareSettings = sqliteTable("share_settings", {
   updated_at: integer("updated_at").notNull(),
 });
 
+// ─── AI Coach Tables ─────────────────────────────────────────────────────────
+
+export const coachSessions = sqliteTable("coach_sessions", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  model_id: text("model_id").notNull(),
+  created_at: integer("created_at").notNull(),
+  updated_at: integer("updated_at").notNull(),
+});
+
+export const coachMessages = sqliteTable("coach_messages", {
+  id: text("id").primaryKey(),
+  session_id: text("session_id").notNull().references(() => coachSessions.id),
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  // Nullable for messages written before model attribution was introduced.
+  model_id: text("model_id"),
+  tool_calls: text("tool_calls"),
+  created_at: integer("created_at").notNull(),
+  error: text("error"),
+}, (table) => [
+  index("idx_coach_messages_session_created_at").on(table.session_id, table.created_at),
+]);
+
 // ─── Strength Goals ─────────────────────────────────────────────────────────
 
 export const strengthGoals = sqliteTable("strength_goals", {
@@ -537,3 +561,5 @@ export type GymProfileRow = typeof gymProfiles.$inferSelect;
 export type CableStackRow = typeof cableStacks.$inferSelect;
 export type StackCalibrationRow = typeof stackCalibrations.$inferSelect;
 export type SetMediaRow = typeof setMedia.$inferSelect;
+export type CoachSessionRow = typeof coachSessions.$inferSelect;
+export type CoachMessageRow = typeof coachMessages.$inferSelect;

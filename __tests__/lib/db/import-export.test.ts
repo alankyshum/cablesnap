@@ -16,6 +16,12 @@ jest.mock("expo-sqlite", () => ({
   openDatabaseAsync: jest.fn(() => Promise.resolve(mockDb)),
 }));
 
+jest.mock("../../../lib/ai/key-vault", () => ({
+  get: jest.fn().mockResolvedValue(null),
+  set: jest.fn().mockResolvedValue(undefined),
+  keyFormat: (value: unknown) => typeof value === "string" && /^sk-or-v1-[a-f0-9]{64}$/.test(value),
+}));
+
 import {
   exportAllData,
   importData,
@@ -28,6 +34,11 @@ import {
   IMPORT_TABLE_ORDER,
   type BackupV7,
 } from "../../../lib/db/import-export";
+
+const mockVault = jest.requireMock("../../../lib/ai/key-vault") as {
+  get: jest.Mock;
+  set: jest.Mock;
+};
 
 describe("import completion messaging", () => {
   it("explains an idempotent already-imported backup", () => {
@@ -65,10 +76,86 @@ beforeEach(() => {
 // ---- Export v3 Format ----
 
 describe("exportAllData", () => {
+  it("never serializes the stored credential without explicit opt-in", async () => {
+    const credential = "sk-or-v1-" + "a".repeat(64);
+    mockVault.get.mockResolvedValue(credential);
+    mockDb.getAllAsync.mockResolvedValue([]);
+    const backup = await exportAllData();
+    expect(JSON.stringify(backup)).not.toContain(credential);
+    expect((backup.data as Record<string, unknown>).ai_coach).not.toHaveProperty("openrouter_api_key");
+  });
+
+  it("includes the stored credential only when explicitly opted in", async () => {
+    const credential = "sk-or-v1-" + "b".repeat(64);
+    mockVault.get.mockResolvedValue(credential);
+    mockDb.getAllAsync.mockResolvedValue([]);
+    const backup = await exportAllData({ includeCredentials: true });
+    expect((backup.data as Record<string, unknown>).ai_coach).toHaveProperty("openrouter_api_key", credential);
+  });
+
+  it("exports AI Coach rows and the selected default model", async () => {
+    mockDb.getAllAsync.mockImplementation(async (sql: string) => {
+      if (sql.includes("coach_sessions")) return [{ id: "cs-1", title: "Leg day", model_id: "openai/gpt-4o", created_at: 1, updated_at: 2 }];
+      if (sql.includes("coach_messages")) return [{ id: "cm-1", session_id: "cs-1", role: "user", content: "Hello", tool_calls: null, created_at: 3, error: null }];
+      return [];
+    });
+    mockDb.getFirstAsync.mockImplementation(async (sql: string) =>
+      sql.includes("SELECT value FROM app_settings") ? { value: "openai/gpt-4o" } : { cnt: 0 });
+    const backup = await exportAllData();
+    const ai = (backup.data as Record<string, unknown>).ai_coach as Record<string, unknown>;
+    expect(ai.last_model_id).toBe("openai/gpt-4o");
+    expect(ai.coach_sessions).toHaveLength(1);
+    expect(ai.coach_messages).toHaveLength(1);
+  });
+
+  it("imports AI Coach sessions before messages and writes a confirmed key after the DB transaction", async () => {
+    const credential = "sk-or-v1-" + "d".repeat(64);
+    mockVault.get.mockResolvedValue(null);
+    mockVault.set.mockClear();
+    mockDb.getAllAsync.mockImplementation(async (sql: string) => {
+      if (sql.includes("PRAGMA table_info(coach_sessions)")) return [
+        { name: "id" }, { name: "title" }, { name: "model_id" }, { name: "created_at" }, { name: "updated_at" },
+      ];
+      if (sql.includes("PRAGMA table_info(coach_messages)")) return [
+        { name: "id" }, { name: "session_id" }, { name: "role" }, { name: "content" }, { name: "tool_calls" }, { name: "created_at" }, { name: "error" },
+      ];
+      return [];
+    });
+    await importData({
+      version: 8,
+      data: { ai_coach: {
+        last_model_id: "openai/gpt-4o",
+        coach_sessions: [{ id: "cs-1", title: "Leg day", model_id: "openai/gpt-4o", created_at: 1, updated_at: 2 }],
+        coach_messages: [{ id: "cm-1", session_id: "cs-1", role: "user", content: "Hello", tool_calls: null, created_at: 3, error: null }],
+        openrouter_api_key: credential,
+      } },
+    }, { confirmCredentials: true });
+    const coachRuns = mockDb.runAsync.mock.calls.filter(([sql]) => String(sql).includes("coach_"));
+    expect(coachRuns[0][0]).toContain("coach_sessions");
+    expect(coachRuns[1][0]).toContain("coach_messages");
+    expect(mockVault.set).toHaveBeenCalledWith(credential);
+  });
+
+  it("skips malformed credentials while importing the rest of the AI Coach backup", async () => {
+    mockDb.getAllAsync.mockImplementation(async (sql: string) =>
+      sql.includes("PRAGMA table_info(coach_sessions)")
+        ? [{ name: "id" }, { name: "title" }, { name: "model_id" }, { name: "created_at" }, { name: "updated_at" }]
+        : sql.includes("PRAGMA table_info(coach_messages)")
+          ? [{ name: "id" }, { name: "session_id" }, { name: "role" }, { name: "content" }, { name: "created_at" }]
+          : [],
+    );
+    const result = await importData({ version: 8, data: { ai_coach: {
+      coach_sessions: [{ id: "cs-2", title: "Push", model_id: "model", created_at: 1, updated_at: 2 }],
+      openrouter_api_key: "not-a-key",
+    } } }, { confirmCredentials: true });
+    expect(result.credentialWarning).toBe("invalid");
+    expect(mockVault.set).not.toHaveBeenCalled();
+  });
+
   it("produces v7 category-keyed format with data wrapper and counts", async () => {
     mockDb.getAllAsync.mockResolvedValue([]);
     const result = await exportAllData();
-    expect(result.version).toBe(7);
+    expect(result.version).toBe(8);
     expect(result.data).toBeDefined();
     expect(result.counts).toBeDefined();
     expect(result.exported_at).toBeDefined();
@@ -172,8 +259,8 @@ describe("validateBackupData", () => {
     { name: "non-object data", payload: "not an object", type: "corrupt_json" },
     { name: "missing version", payload: { data: {} }, type: "missing_version" },
     {
-      name: "future version (v8+)",
-      payload: { version: 8, data: { exercises: [{ id: "1" }] } },
+      name: "future version (v9+)",
+      payload: { version: 9, data: { exercises: [{ id: "1" }] } },
       type: "future_version",
       messageContains: "update the app",
     },
@@ -587,7 +674,7 @@ describe("importData", () => {
     const exported = await exportAllData();
     const imported = await importData(exported);
 
-    expect(exported.version).toBe(7);
+    expect(exported.version).toBe(8);
     expect(imported.inserted).toBeGreaterThan(0);
     expect(imported.perTable.exercises.inserted).toBe(1);
     expect(imported.perTable.workout_templates.inserted).toBe(1);

@@ -9,14 +9,9 @@ import { type useTimerEngine } from "@/hooks/useTimerEngine"
 import { TimerRing } from "./TimerRing"
 import { PhaseIndicator } from "./PhaseIndicator"
 import { ConfigPanel } from "./ConfigPanel"
+import { t } from "@lingui/core/macro"
 
 type TimerEngine = ReturnType<typeof useTimerEngine>
-
-const modeButtons = [
-  { value: "tabata", label: "Tabata" },
-  { value: "emom", label: "EMOM" },
-  { value: "amrap", label: "AMRAP" },
-] as const
 
 interface TimerBodyProps {
   engine: TimerEngine
@@ -29,6 +24,11 @@ export function TimerBody({ engine, bgColor, ringProgress, colors }: TimerBodyPr
   const { state, active, mode, pauseMsg, handleAddRound, handleMode, adjust } = engine
   const { phase, status, remaining } = state
   const showRoundLabel = status === "running" || status === "paused"
+  const modeButtons = [
+    { value: "tabata", label: t({ id: "components.timer.timerBody.tabata", message: "Tabata" }) },
+    { value: "emom", label: t({ id: "components.timer.timerBody.emom", message: "EMOM" }) },
+    { value: "amrap", label: t({ id: "components.timer.timerBody.amrap", message: "AMRAP" }) },
+  ] as const
   return (
     <>
       {!active && (
@@ -53,7 +53,7 @@ export function TimerBody({ engine, bgColor, ringProgress, colors }: TimerBodyPr
 
       {status === "completed" && (
         <Text variant="heading" style={[styles.done, { color: colors.primary }]} accessibilityRole="text">
-          Complete!
+           {t({ id: "components.timer.timerBody.complete", message: "Complete!" })}
         </Text>
       )}
 
@@ -61,10 +61,10 @@ export function TimerBody({ engine, bgColor, ringProgress, colors }: TimerBodyPr
         <Pressable
           onPress={handleAddRound}
           style={[styles.addRound, { backgroundColor: colors.primaryContainer }]}
-          accessibilityLabel={`Add round. Current: ${state.amrapRounds} rounds`}
+           accessibilityLabel={t({ id: "components.timer.timerBody.addRoundA11y", message: `Add round. Current: ${state.amrapRounds} rounds` })}
           accessibilityRole="button"
         >
-          <Text variant="title" style={{ color: colors.onPrimaryContainer }}>+1 Round</Text>
+          <Text variant="title" style={{ color: colors.onPrimaryContainer }}>{t({ id: "components.timer.timerBody.addRound", message: "+1 Round" })}</Text>
         </Pressable>
       )}
     </>

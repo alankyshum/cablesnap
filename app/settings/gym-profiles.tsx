@@ -33,6 +33,8 @@ import {
   type StackCalibration,
 } from "@/lib/db";
 import { buildBulkPasteToast, generateCalibrations, parseCalibrationBulkPaste } from "@/lib/cable-stack";
+import { useLingui } from "@lingui/react/macro";
+import { i18n } from "@lingui/core";
 
 type GymDraft = { name: string; notes: string; isDefault: boolean };
 type StackDraft = { name: string; unit: "kg" | "lb" };
@@ -47,6 +49,7 @@ export default function GymProfilesScreen() {
   const colors = useThemeColors();
   const layout = useLayout();
   const toast = useToast();
+  const { t } = useLingui();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(true);
   const [gyms, setGyms] = useState<GymProfile[]>([]);
@@ -134,11 +137,11 @@ export default function GymProfilesScreen() {
         return next;
       });
     } catch {
-      toast.error("Failed to load gym profiles");
+      toast.error(t({ id: "settings.gymProfiles.loadFailed", message: "Failed to load gym profiles" }));
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [t, toast]);
 
   useFocusEffect(
     useCallback(() => {
@@ -192,7 +195,7 @@ export default function GymProfilesScreen() {
   const handleCreateGym = useCallback(async () => {
     const name = newGymName.trim();
     if (!name) {
-      toast.error("Gym name is required");
+      toast.error(t({ id: "settings.gymProfiles.nameRequired", message: "Gym name is required" }));
       return;
     }
     try {
@@ -201,17 +204,17 @@ export default function GymProfilesScreen() {
       setNewGymNotes("");
       setNewGymDefault(false);
       setShowAddGym(false);
-      toast.success("Gym saved");
+      toast.success(t({ id: "settings.gymProfiles.saved", message: "Gym saved" }));
       await load();
     } catch {
-      toast.error("Failed to save gym");
+      toast.error(t({ id: "settings.gymProfiles.saveFailed", message: "Failed to save gym" }));
     }
-  }, [load, newGymDefault, newGymName, newGymNotes, toast]);
+  }, [load, newGymDefault, newGymName, newGymNotes, t, toast]);
 
   const handleSaveGym = useCallback(async (gymId: string) => {
     const draft = gymDrafts[gymId];
     if (!draft?.name.trim()) {
-      toast.error("Gym name is required");
+      toast.error(t({ id: "settings.gymProfiles.nameRequired", message: "Gym name is required" }));
       return;
     }
     try {
@@ -220,115 +223,115 @@ export default function GymProfilesScreen() {
         notes: draft.notes.trim(),
         is_default: draft.isDefault,
       });
-      toast.success("Gym updated");
+      toast.success(t({ id: "settings.gymProfiles.updated", message: "Gym updated" }));
       await load();
     } catch {
-      toast.error("Failed to update gym");
+      toast.error(t({ id: "settings.gymProfiles.updateFailed", message: "Failed to update gym" }));
     }
-  }, [gymDrafts, load, toast]);
+  }, [gymDrafts, load, t, toast]);
 
   const handleSetDefault = useCallback(async (gymId: string) => {
     try {
       await setDefaultGym(gymId);
-      toast.success("Default gym updated");
+      toast.success(t({ id: "settings.gymProfiles.defaultUpdated", message: "Default gym updated" }));
       await load();
     } catch {
-      toast.error("Failed to update default gym");
+      toast.error(t({ id: "settings.gymProfiles.defaultUpdateFailed", message: "Failed to update default gym" }));
     }
-  }, [load, toast]);
+  }, [load, t, toast]);
 
   const confirmDeleteGym = useCallback((gym: GymProfile) => {
-    Alert.alert("Delete Gym", `Delete ${gym.name}? Existing logged sessions will keep their gym snapshot.`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t({ id: "settings.gymProfiles.deleteGymTitle", message: "Delete Gym" }), t({ id: "settings.gymProfiles.deleteGymMessage", message: `Delete ${gym.name}? Existing logged sessions will keep their gym snapshot.` }), [
+      { text: t({ id: "common.cancel", message: "Cancel" }), style: "cancel" },
       {
-        text: "Delete",
+        text: t({ id: "common.delete", message: "Delete" }),
         style: "destructive",
         onPress: async () => {
           try {
             await softDeleteGymProfile(gym.id);
-            toast.success("Gym deleted");
+            toast.success(t({ id: "settings.gymProfiles.deleted", message: "Gym deleted" }));
             await load();
           } catch {
-            toast.error("Failed to delete gym");
+            toast.error(t({ id: "settings.gymProfiles.deleteFailed", message: "Failed to delete gym" }));
           }
         },
       },
     ]);
-  }, [load, toast]);
+  }, [load, t, toast]);
 
   const handleCreateStack = useCallback(async (gymId: string) => {
     const draft = newStackDrafts[gymId] ?? { name: "", unit: "kg" as const };
     if (!draft.name.trim()) {
-      toast.error("Stack name is required");
+      toast.error(t({ id: "settings.gymProfiles.stackNameRequired", message: "Stack name is required" }));
       return;
     }
     try {
       await createCableStack({ gym_id: gymId, name: draft.name.trim(), unit: draft.unit });
       setNewStackDrafts((prev) => ({ ...prev, [gymId]: { name: "", unit: draft.unit } }));
-      toast.success("Stack saved");
+      toast.success(t({ id: "settings.gymProfiles.stackSaved", message: "Stack saved" }));
       setExpandedGyms((prev) => ({ ...prev, [gymId]: true }));
       await load();
     } catch {
-      toast.error("Failed to save stack");
+      toast.error(t({ id: "settings.gymProfiles.stackSaveFailed", message: "Failed to save stack" }));
     }
-  }, [load, newStackDrafts, toast]);
+  }, [load, newStackDrafts, t, toast]);
 
   const handleSaveStack = useCallback(async (stackId: string) => {
     const draft = stackDrafts[stackId];
     if (!draft?.name.trim()) {
-      toast.error("Stack name is required");
+      toast.error(t({ id: "settings.gymProfiles.stackNameRequired", message: "Stack name is required" }));
       return;
     }
     try {
       await updateCableStack(stackId, { name: draft.name.trim(), unit: draft.unit });
-      toast.success("Stack updated");
+      toast.success(t({ id: "settings.gymProfiles.stackUpdated", message: "Stack updated" }));
       await load();
     } catch {
-      toast.error("Failed to update stack");
+      toast.error(t({ id: "settings.gymProfiles.stackUpdateFailed", message: "Failed to update stack" }));
     }
-  }, [load, stackDrafts, toast]);
+  }, [load, stackDrafts, t, toast]);
 
   const confirmDeleteStack = useCallback((stack: CableStack) => {
-    Alert.alert("Delete Cable Stack", `Delete ${stack.name}? Historical sets keep the snapshotted stack name.`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t({ id: "settings.gymProfiles.deleteStackTitle", message: "Delete Cable Stack" }), t({ id: "settings.gymProfiles.deleteStackMessage", message: `Delete ${stack.name}? Historical sets keep the snapshotted stack name.` }), [
+      { text: t({ id: "common.cancel", message: "Cancel" }), style: "cancel" },
       {
-        text: "Delete",
+        text: t({ id: "common.delete", message: "Delete" }),
         style: "destructive",
         onPress: async () => {
           try {
             await softDeleteCableStack(stack.id);
-            toast.success("Stack deleted");
+            toast.success(t({ id: "settings.gymProfiles.stackDeleted", message: "Stack deleted" }));
             await load();
           } catch {
-            toast.error("Failed to delete stack");
+            toast.error(t({ id: "settings.gymProfiles.stackDeleteFailed", message: "Failed to delete stack" }));
           }
         },
       },
     ]);
-  }, [load, toast]);
+  }, [load, t, toast]);
 
   const handleSaveCalibration = useCallback(async (stackId: string) => {
     const draft = calibrationDrafts[stackId] ?? { marker: "", weight: "", bulk: "" };
     const marker = Number(draft.marker);
     const weight = Number(draft.weight);
     if (!Number.isInteger(marker) || marker <= 0) {
-      toast.error("Marker must be a whole number greater than 0");
+      toast.error(t({ id: "settings.gymProfiles.markerInvalid", message: "Marker must be a whole number greater than 0" }));
       return;
     }
     if (!Number.isFinite(weight) || weight <= 0) {
-      toast.error("Weight must be greater than 0");
+      toast.error(t({ id: "settings.gymProfiles.weightInvalid", message: "Weight must be greater than 0" }));
       return;
     }
     try {
       await upsertCalibration(stackId, marker, weight);
       updateCalibrationDraft(stackId, { marker: "", weight: "" });
-      toast.success("Marker saved");
+      toast.success(t({ id: "settings.gymProfiles.markerSaved", message: "Marker saved" }));
       queryClient.invalidateQueries({ queryKey: ["stack-calibrations"] });
       await load();
     } catch {
-      toast.error("Failed to save marker");
+      toast.error(t({ id: "settings.gymProfiles.markerSaveFailed", message: "Failed to save marker" }));
     }
-  }, [calibrationDrafts, load, queryClient, toast, updateCalibrationDraft]);
+  }, [calibrationDrafts, load, queryClient, t, toast, updateCalibrationDraft]);
 
   const handleBulkPaste = useCallback(async (stackId: string) => {
     const draft = calibrationDrafts[stackId] ?? { marker: "", weight: "", bulk: "" };
@@ -340,7 +343,7 @@ export default function GymProfilesScreen() {
         queryClient.invalidateQueries({ queryKey: ["stack-calibrations"] });
         await load();
       } catch {
-        toast.error("Failed to save pasted markers");
+        toast.error(t({ id: "settings.gymProfiles.bulkSaveFailed", message: "Failed to save pasted markers" }));
         return;
       }
     }
@@ -350,18 +353,18 @@ export default function GymProfilesScreen() {
       if (result.accepted.length > 0) toast.success(message);
       else toast.info(message);
     }
-  }, [calibrationDrafts, load, queryClient, toast, updateCalibrationDraft]);
+  }, [calibrationDrafts, load, queryClient, t, toast, updateCalibrationDraft]);
 
   const handleDeleteCalibration = useCallback(async (stackId: string, marker: number) => {
     try {
       await deleteCalibration(stackId, marker);
-      toast.success("Marker deleted");
+      toast.success(t({ id: "settings.gymProfiles.markerDeleted", message: "Marker deleted" }));
       queryClient.invalidateQueries({ queryKey: ["stack-calibrations"] });
       await load();
     } catch {
-      toast.error("Failed to delete marker");
+      toast.error(t({ id: "settings.gymProfiles.markerDeleteFailed", message: "Failed to delete marker" }));
     }
-  }, [load, queryClient, toast]);
+  }, [load, queryClient, t, toast]);
 
   /**
    * BLD-3816: Generates calibration rows from the generator params.
@@ -443,28 +446,28 @@ export default function GymProfilesScreen() {
   const listHeader = useMemo(() => (
     <View style={styles.headerBlock}>
       <Text variant="heading" style={{ color: colors.onSurface, marginBottom: 8 }}>
-        Gym Profiles
+        {t({ id: "settings.gymProfiles.title", message: "Gym Profiles" })}
       </Text>
       <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
-        Add gyms here if you train across multiple locations.
+        {t({ id: "settings.gymProfiles.intro", message: "Add gyms here if you train across multiple locations." })}
       </Text>
       {showAddGym ? (
         <Card style={styles.card}>
           <CardContent>
             <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
-              Add Gym
+              {t({ id: "settings.gymProfiles.addGym", message: "Add Gym" })}
             </Text>
             <Input
-              label="Gym name"
-              placeholder="Downtown Gym"
+              label={t({ id: "settings.gymProfiles.gymName", message: "Gym name" })}
+              placeholder={t({ id: "settings.gymProfiles.gymPlaceholder", message: "Downtown Gym" })}
               value={newGymName}
               onChangeText={setNewGymName}
               variant="outline"
             />
             <View style={styles.spacer} />
             <Input
-              label="Notes"
-              placeholder="Optional notes"
+              label={t({ id: "settings.gymProfiles.notes", message: "Notes" })}
+              placeholder={t({ id: "settings.gymProfiles.notesPlaceholder", message: "Optional notes" })}
               value={newGymNotes}
               onChangeText={setNewGymNotes}
               type="textarea"
@@ -472,12 +475,12 @@ export default function GymProfilesScreen() {
               variant="outline"
             />
             <View style={styles.switchRow}>
-              <Text variant="body" style={{ color: colors.onSurface }}>Default gym</Text>
+              <Text variant="body" style={{ color: colors.onSurface }}>{t({ id: "settings.gymProfiles.defaultGym", message: "Default gym" })}</Text>
               <Switch value={newGymDefault} onValueChange={setNewGymDefault} />
             </View>
             <View style={styles.buttonRow}>
-              <Button variant="outline" onPress={() => setShowAddGym(false)}>Cancel</Button>
-              <Button onPress={handleCreateGym}>Save Gym</Button>
+              <Button variant="outline" onPress={() => setShowAddGym(false)}>{t({ id: "common.cancel", message: "Cancel" })}</Button>
+              <Button onPress={handleCreateGym}>{t({ id: "settings.gymProfiles.saveGym", message: "Save Gym" })}</Button>
             </View>
           </CardContent>
         </Card>
@@ -486,17 +489,17 @@ export default function GymProfilesScreen() {
         <Card style={styles.card}>
           <CardContent>
             <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-              Add gyms here if you train across multiple locations.
+              {t({ id: "settings.gymProfiles.intro", message: "Add gyms here if you train across multiple locations." })}
             </Text>
           </CardContent>
         </Card>
       ) : null}
     </View>
-  ), [colors.onSurface, colors.onSurfaceVariant, gyms.length, handleCreateGym, loading, newGymDefault, newGymName, newGymNotes, showAddGym]);
+  ), [colors.onSurface, colors.onSurfaceVariant, gyms.length, handleCreateGym, loading, newGymDefault, newGymName, newGymNotes, showAddGym, t]);
 
   return (
     <>
-      <Stack.Screen options={{ title: "Gym Profiles" }} />
+      <Stack.Screen options={{ title: t({ id: "settings.gymProfiles.title", message: "Gym Profiles" }) }} />
       <View style={[styles.container, { backgroundColor: colors.background }]}> 
         <FlatList
           data={gyms}
@@ -506,7 +509,7 @@ export default function GymProfilesScreen() {
           ListEmptyComponent={loading ? (
             <Card style={styles.card}>
               <CardContent>
-                <Text variant="body" style={{ color: colors.onSurfaceVariant }}>Loading gym profiles…</Text>
+                <Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "settings.gymProfiles.loading", message: "Loading gym profiles…" })}</Text>
               </CardContent>
             </Card>
           ) : null}
@@ -522,19 +525,19 @@ export default function GymProfilesScreen() {
                       onPress={() => toggleGym(gym.id)}
                       style={styles.rowHeader}
                       accessibilityRole="button"
-                      accessibilityLabel={`${gym.name}, ${isExpanded ? "collapse" : "expand"}`}
+              accessibilityLabel={i18n._({ id: "settings.gymProfiles.toggleGymA11y", message: `{name}, {expanded, select, true {collapse} false {expand}}`, values: { name: gym.name, expanded: isExpanded } })}
                     >
                       <View style={{ flex: 1 }}>
                         <View style={styles.titleRow}>
                           <Text variant="subtitle" style={{ color: colors.onSurface }}>{gym.name}</Text>
                           {gym.is_default === 1 ? (
                             <View style={[styles.badge, { backgroundColor: colors.primaryContainer }]}> 
-                              <Text style={{ color: colors.onPrimaryContainer, fontSize: fontSizes.xs, fontWeight: "600" }}>Default</Text>
+                              <Text style={{ color: colors.onPrimaryContainer, fontSize: fontSizes.xs, fontWeight: "600" }}>{t({ id: "settings.gymProfiles.default", message: "Default" })}</Text>
                             </View>
                           ) : null}
                         </View>
                         <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                          Swipe to delete • tap to edit
+                           {t({ id: "settings.gymProfiles.editHint", message: "Swipe to delete • tap to edit" })}
                         </Text>
                       </View>
                       {isExpanded ? <ChevronDown size={18} color={colors.onSurfaceVariant} /> : <ChevronRight size={18} color={colors.onSurfaceVariant} />}
@@ -542,28 +545,28 @@ export default function GymProfilesScreen() {
 
                     {isExpanded ? (
                       <View style={styles.expandedSection}>
-                        <Input label="Gym name" value={gymDraft.name} onChangeText={(value) => updateGymDraft(gym.id, { name: value })} variant="outline" />
+                        <Input label={t({ id: "settings.gymProfiles.gymName", message: "Gym name" })} value={gymDraft.name} onChangeText={(value) => updateGymDraft(gym.id, { name: value })} variant="outline" />
                         <View style={styles.spacer} />
-                        <Input label="Notes" value={gymDraft.notes} onChangeText={(value) => updateGymDraft(gym.id, { notes: value })} type="textarea" rows={3} variant="outline" />
+                        <Input label={t({ id: "settings.gymProfiles.notes", message: "Notes" })} value={gymDraft.notes} onChangeText={(value) => updateGymDraft(gym.id, { notes: value })} type="textarea" rows={3} variant="outline" />
                         <View style={styles.switchRow}>
-                          <Text variant="body" style={{ color: colors.onSurface }}>Default gym</Text>
+                          <Text variant="body" style={{ color: colors.onSurface }}>{t({ id: "settings.gymProfiles.defaultGym", message: "Default gym" })}</Text>
                           <Switch value={gymDraft.isDefault} onValueChange={(value) => updateGymDraft(gym.id, { isDefault: value })} />
                         </View>
                         <View style={styles.buttonRow}>
-                          <Button variant="outline" onPress={() => handleSaveGym(gym.id)}>Save Gym Changes</Button>
-                          {gym.is_default !== 1 ? <Button variant="ghost" onPress={() => handleSetDefault(gym.id)}>Set as default</Button> : null}
+                          <Button variant="outline" onPress={() => handleSaveGym(gym.id)}>{t({ id: "settings.gymProfiles.saveGymChanges", message: "Save Gym Changes" })}</Button>
+                          {gym.is_default !== 1 ? <Button variant="ghost" onPress={() => handleSetDefault(gym.id)}>{t({ id: "settings.gymProfiles.setDefault", message: "Set as default" })}</Button> : null}
                         </View>
 
                         <View style={styles.sectionHeader}>
-                          <Text variant="subtitle" style={{ color: colors.onSurface }}>Cable Stacks</Text>
+                          <Text variant="subtitle" style={{ color: colors.onSurface }}>{t({ id: "settings.gymProfiles.cableStacks", message: "Cable Stacks" })}</Text>
                           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                            Markers are specific to this gym.
+                            {t({ id: "settings.gymProfiles.markersHint", message: "Markers are specific to this gym." })}
                           </Text>
                         </View>
 
                         {stacks.length === 0 ? (
                           <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
-                            No cable stacks yet.
+                            {t({ id: "settings.gymProfiles.noStacks", message: "No cable stacks yet." })}
                           </Text>
                         ) : null}
 
@@ -596,18 +599,18 @@ export default function GymProfilesScreen() {
                                   onPress={() => toggleStack(stack.id)}
                                   style={styles.rowHeader}
                                   accessibilityRole="button"
-                                  accessibilityLabel={`${stack.name}, ${stackExpanded ? "collapse" : "expand"}`}
+                                   accessibilityLabel={i18n._({ id: "settings.gymProfiles.toggleStackA11y", message: `{name}, {expanded, select, true {collapse} false {expand}}`, values: { name: stack.name, expanded: stackExpanded } })}
                                 >
                                   <View style={{ flex: 1 }}>
                                     <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>{stack.name}</Text>
-                                    <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{calibrations.length} marker{calibrations.length === 1 ? "" : "s"}</Text>
+                                     <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{i18n._({ id: "settings.gymProfiles.markerCount", message: `{count, plural, one {# marker} other {# markers}}`, values: { count: calibrations.length } })}</Text>
                                   </View>
                                   {stackExpanded ? <ChevronDown size={18} color={colors.onSurfaceVariant} /> : <ChevronRight size={18} color={colors.onSurfaceVariant} />}
                                 </Pressable>
 
                                 {stackExpanded ? (
                                   <View style={styles.expandedSection}>
-                                    <Input label="Stack name" value={stackDraft.name} onChangeText={(value) => updateStackDraft(stack.id, { name: value })} variant="outline" />
+                                    <Input label={t({ id: "settings.gymProfiles.stackName", message: "Stack name" })} value={stackDraft.name} onChangeText={(value) => updateStackDraft(stack.id, { name: value })} variant="outline" />
                                     <View style={styles.spacer} />
                                     <SegmentedControl
                                       value={stackDraft.unit}
@@ -615,11 +618,11 @@ export default function GymProfilesScreen() {
                                       buttons={[{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]}
                                     />
                                     <View style={styles.spacer} />
-                                    <Button variant="outline" onPress={() => handleSaveStack(stack.id)}>Save Stack</Button>
+                                    <Button variant="outline" onPress={() => handleSaveStack(stack.id)}>{t({ id: "settings.gymProfiles.saveStack", message: "Save Stack" })}</Button>
 
                                     {/* BLD-3816: Generate / Manual segmented control */}
                                     <View style={styles.sectionHeader}>
-                                      <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>Marker calibrations</Text>
+                                      <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>{t({ id: "settings.gymProfiles.markerCalibrations", message: "Marker calibrations" })}</Text>
                                     </View>
                                     <SegmentedControl
                                       value={stackMode}
@@ -707,17 +710,17 @@ export default function GymProfilesScreen() {
                                         {calibrations.map((calibration) => (
                                           <View key={`${stack.id}-${calibration.marker}`} style={styles.calibrationRow}>
                                             <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
-                                              Marker {calibration.marker} — {calibration.true_weight} {stack.unit}
+                                              {t({ id: "settings.gymProfiles.markerValue", message: `Marker ${calibration.marker} — ${calibration.true_weight} ${stack.unit}` })}
                                             </Text>
                                             <Button variant="ghost" size="sm" onPress={() => handleDeleteCalibration(stack.id, calibration.marker)}>
-                                              Delete
+                                              {t({ id: "common.delete", message: "Delete" })}
                                             </Button>
                                           </View>
                                         ))}
                                         <View style={styles.inlineInputs}>
                                           <View style={{ flex: 1 }}>
                                             <Input
-                                              label="Marker"
+                                              label={t({ id: "settings.gymProfiles.marker", message: "Marker" })}
                                               value={calibrationDraft.marker}
                                               onChangeText={(value) => updateCalibrationDraft(stack.id, { marker: value })}
                                               keyboardType="numeric"
@@ -734,11 +737,13 @@ export default function GymProfilesScreen() {
                                             />
                                           </View>
                                         </View>
-                                        <Button variant="outline" onPress={() => handleSaveCalibration(stack.id)}>Save Marker</Button>
+                                        <Button variant="outline" onPress={() => handleSaveCalibration(stack.id)}>
+                                          {t({ id: "settings.gymProfiles.saveMarker", message: "Save Marker" })}
+                                        </Button>
                                         <View style={styles.spacer} />
                                         <Input
-                                          label="Bulk paste"
-                                          placeholder="1=5\n2=7.5\n3=10"
+                                          label={t({ id: "settings.gymProfiles.bulkPaste", message: "Bulk paste" })}
+                                          placeholder={t({ id: "settings.gymProfiles.bulkPlaceholder", message: "1=5\n2=7.5\n3=10" })}
                                           value={calibrationDraft.bulk}
                                           onChangeText={(value) => updateCalibrationDraft(stack.id, { bulk: value })}
                                           type="textarea"
@@ -746,7 +751,9 @@ export default function GymProfilesScreen() {
                                           variant="outline"
                                         />
                                         <View style={styles.spacer} />
-                                        <Button variant="outline" onPress={() => handleBulkPaste(stack.id)}>Apply Bulk Paste</Button>
+                                        <Button variant="outline" onPress={() => handleBulkPaste(stack.id)}>
+                                          {t({ id: "settings.gymProfiles.applyBulk", message: "Apply Bulk Paste" })}
+                                        </Button>
                                       </View>
                                     )}
                                   </View>
@@ -758,10 +765,10 @@ export default function GymProfilesScreen() {
 
                         <View style={[styles.stackCard, { borderColor: colors.outlineVariant }]}> 
                           <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600", marginBottom: 8 }}>
-                            Add cable stack
+                             {t({ id: "settings.gymProfiles.addStack", message: "Add cable stack" })}
                           </Text>
                           <Input
-                            label="Stack name"
+                             label={t({ id: "settings.gymProfiles.stackName", message: "Stack name" })}
                             value={(newStackDrafts[gym.id] ?? { name: "", unit: "kg" }).name}
                             onChangeText={(value) => updateNewStackDraft(gym.id, { name: value })}
                             variant="outline"
@@ -773,7 +780,7 @@ export default function GymProfilesScreen() {
                             buttons={[{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]}
                           />
                           <View style={styles.spacer} />
-                          <Button variant="outline" onPress={() => handleCreateStack(gym.id)}>Add Stack</Button>
+                           <Button variant="outline" onPress={() => handleCreateStack(gym.id)}>{t({ id: "settings.gymProfiles.addStackButton", message: "Add Stack" })}</Button>
                         </View>
                       </View>
                     ) : null}

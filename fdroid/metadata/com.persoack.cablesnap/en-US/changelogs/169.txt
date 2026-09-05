@@ -1,0 +1,4 @@
+- The new AI Coach tab lets you chat with an AI fitness coach that can consult your workout, exercise, and nutrition history on-device. Bring your own OpenRouter API key, choose your model, and keep your key on this device while requests go directly to OpenRouter.
+- Exercises are now available from the top-right icons on the Workouts screen; AI Coach now occupies their place in the tab bar.
+- In-app language selection is now available in Settings for English (US),
+…see in-app release notes

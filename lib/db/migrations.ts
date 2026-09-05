@@ -59,7 +59,6 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   try {
     await createCoreTables(database);
     await createScheduleAndIndexes(database);
-    await createExtensionTables(database);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Migration phase 1 failed: ${msg}`, { cause: err });
@@ -201,12 +200,17 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
 
   // body_settings table
   await addColumnIfMissing(database, "body_settings", "sex", "TEXT NOT NULL DEFAULT 'male'");
-
+  // Chat tables are declared by createExtensionTables and are safe to re-run.
+  // Keeping this invocation in Phase 2 makes the additive chat DDL part of the
+  // migration phase without changing the existing extension-table ordering.
+  await createExtensionTables(database);
   // BLD-3816: generative cable stack definition metadata.
   // advisory only — resolution path never reads gen_* columns.
   await addColumnIfMissing(database, "cable_stacks", "gen_start_weight", "REAL NULL");
   await addColumnIfMissing(database, "cable_stacks", "gen_increment", "REAL NULL");
   await addColumnIfMissing(database, "cable_stacks", "gen_marker_count", "INTEGER NULL");
+  // BLD: assistant attribution. Nullable so all existing messages remain valid.
+  await addColumnIfMissing(database, "coach_messages", "model_id", "TEXT DEFAULT NULL");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Migration phase 2 failed: ${msg}`, { cause: err });

@@ -8,6 +8,7 @@ import { radii, typography } from "../../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { AchievementItem } from "../../hooks/useAchievements";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
 
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString(undefined, {
@@ -31,8 +32,8 @@ export function AchievementBadge({ item }: { item: AchievementItem }) {
       style={[styles.badge, { backgroundColor: badgeColor }]}
       accessibilityLabel={
         item.earned
-          ? `${item.name} achievement — Earned on ${formatDate(item.earnedAt!)}`
-          : `${item.name} achievement — Locked, ${Math.round(item.progress * 100)}% complete`
+          ? t({ id: "components.achievements.badge.earnedA11y", message: `${item.name} achievement — Earned on ${formatDate(item.earnedAt!)}` })
+          : t({ id: "components.achievements.badge.lockedA11y", message: `${item.name} achievement — Locked, ${Math.round(item.progress * 100)}% complete` })
       }
       accessibilityRole="summary"
     >
@@ -85,7 +86,7 @@ export function AchievementBadge({ item }: { item: AchievementItem }) {
               min: 0,
               max: 100,
               now: Math.round(item.progress * 100),
-              text: `${Math.round(item.progress * 100)}% complete`,
+              text: t({ id: "components.achievements.badge.progressA11y", message: `${Math.round(item.progress * 100)}% complete` }),
             }}
           >
             <Progress

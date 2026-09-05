@@ -58,6 +58,36 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+  i18n:
+    name: i18n Catalog Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Check i18n catalogs
+        # Deterministic filesystem/catalog comparison only. Translation and
+        # code generation remain explicit local steps; CI never runs them.
+        run: |
+          if ! npm run i18n:check; then
+            echo ""
+            echo "i18n catalog gate BLOCKED the merge. Update catalogs locally and re-run:"
+            echo "  npm run i18n:translate -- --locale <locale>"
+            echo "  npm run i18n:zhcn"
+            echo "  npm run i18n:codegen"
+            exit 1
+          fi
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
