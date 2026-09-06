@@ -265,7 +265,7 @@ export default function ExerciseDetail() {
 
       {exercise.attachment && (
           <View style={styles.section}><Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>{t({ id: "app.exercise.id.attachment", message: "Attachment" })}</Text>
-            <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: getAttachmentLabel(exercise.attachment) } })}>{getAttachmentLabel(exercise.attachment)}</Text></View>
+           <Text variant="body" style={[styles.value, { color: colors.onSurface }]} accessibilityLabel={i18n._({ id: "app.exercise.id.attachment-a11y-localized", message: "Attachment: {attachment}", values: { attachment: getAttachmentLabel(exercise.attachment) } })}>{getAttachmentLabel(exercise.attachment)}</Text></View>
       )}
 
       {layout.atLeastMedium ? (
