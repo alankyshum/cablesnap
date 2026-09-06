@@ -43,6 +43,7 @@ function muscleLabel(muscle: MuscleGroup): string {
   }
 }
 
+
 type Section = {
   title: string;
   count: number;
