@@ -508,6 +508,13 @@ export const cableStacks = sqliteTable("cable_stacks", {
   created_at: integer("created_at").notNull(),
   updated_at: integer("updated_at").notNull(),
   deleted_at: integer("deleted_at"),
+  // BLD-3816: generative stack definition metadata (advisory — resolution never reads these).
+  // NULL = stack was defined manually (pre-feature or user-entered).
+  // Non-null = stack was last generated via generateCalibrations(); values preserved across
+  // individual marker edits so the Generate UI can re-populate with prior params.
+  gen_start_weight: real("gen_start_weight"),
+  gen_increment: real("gen_increment"),
+  gen_marker_count: integer("gen_marker_count"),
 }, (table) => [
   index("idx_cable_stacks_gym").on(table.gym_id),
 ]);
