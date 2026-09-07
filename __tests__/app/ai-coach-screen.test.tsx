@@ -550,10 +550,11 @@ describe("AiCoachScreen Integration", () => {
       isLoading: false,
     });
 
-    const { getByText } = renderScreen(<AiCoachScreen />);
+    const { getByPlaceholderText, getByTestId, getByText } = renderScreen(<AiCoachScreen />);
 
     expect(getByText("API Key Required")).toBeTruthy();
-    fireEvent.press(getByText("Add Key"));
+    expect(getByPlaceholderText("Add your OpenRouter key to chat...")).toBeTruthy();
+    fireEvent.press(getByTestId("coach-add-api-key"));
     expect(mockPush).toHaveBeenCalledWith("/settings/ai-key");
   });
 

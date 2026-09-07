@@ -1,50 +1,19 @@
 appId: com.persoack.cablesnap
 ---
-# Native-only regression flow. The release APK cannot safely receive a test key:
-# SecureStore validation is intentionally unchanged. Before running this flow,
-# save a valid OpenRouter key in Settings > AI Provider on the emulator (or use
-# a dev build with the normal settings UI). Never put a key in this repository.
+# CI intentionally has no OpenRouter key. Onboarding runs first with
+# clearState: true, so this flow verifies the native missing-key recovery
+# rather than relying on a manually configured emulator.
 - launchApp
 - tapOn: "AI Coach"
 - extendedWaitUntil:
-    visible: "AI Coach"
+    visible: "API Key Required"
     timeout: 90000
-- assertVisible: "Ask your AI Coach anything..."
-- tapOn: "Active Model: .*"
+- assertVisible: "Add your OpenRouter key in Settings to chat with AI Coach and receive personalized workout insights."
+- assertVisible: "Add your OpenRouter key to chat..."
+- tapOn:
+    id: "coach-add-api-key"
 - extendedWaitUntil:
-    visible: "Select AI Model"
+    visible:
+      id: "openrouter-key-input"
     timeout: 30000
-# Native-only gesture regression. Option 9 starts outside the viewport on both
-# phone portrait and tablet landscape. Swipe from the registered Gorhom list so
-# this exercises RNGH touch coordination rather than DOM scrolling or adb input.
-- assertNotVisible:
-    id: model-catalog-option-9
-- swipe:
-    from:
-      id: model-catalog-list
-    direction: UP
-- assertVisible:
-    id: model-catalog-option-9
-- tapOn:
-    id: model-catalog-option-9
-- extendedWaitUntil:
-    notVisible: "Select AI Model"
-    timeout: 30000
-- assertVisible: "Active Model: .*"
-- tapOn: "Ask your AI Coach anything..."
-- inputText: "How did my last workout go?"
-- hideKeyboard
-- tapOn:
-    point: "95%,82%"
-- extendedWaitUntil:
-    visible: "Stop generating"
-    timeout: 90000
-- tapOn:
-    point: "95%,82%"
-- assertNotVisible: "Stop generating"
-# Kill and relaunch after cancellation. This verifies a clean native remount
-# without being blocked by Expo's dev-only canceled-fetch error overlay.
-- stopApp
-- launchApp
-- tapOn: "AI Coach"
-- assertVisible: "Ask your AI Coach anything..."
+- assertVisible: "Connect OpenRouter"
