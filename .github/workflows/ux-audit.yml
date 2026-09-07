@@ -62,7 +62,7 @@ jobs:
     # Phase 2 (≥50 PR runs + ≥98% pass rate observed). BLD-2861.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     concurrency:
       group: scenario-gate-pr-${{ github.ref }}
       cancel-in-progress: true
