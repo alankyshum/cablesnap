@@ -61,7 +61,7 @@ export async function pickAndPrepareGymPhoto(): Promise<PreparedGymPhoto> {
     const fixture = (globalThis as typeof globalThis & { __E2E_GYM_PHOTO_FIXTURE__?: unknown }).__E2E_GYM_PHOTO_FIXTURE__;
     if (fixture && typeof fixture === "object") {
       const value = fixture as { uri?: unknown; width?: unknown; height?: unknown };
-      const uri = typeof value.uri === "string" ? value.uri : "e2e://synthetic-gym-photo";
+      const uri = typeof value.uri === "string" ? value.uri : "e2e:synthetic-gym-photo";
       const width = typeof value.width === "number" ? value.width : 640;
       const height = typeof value.height === "number" ? value.height : 480;
       const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x45, 0x32, 0x45, 0x00, 0xff, 0xd9]);
