@@ -81,6 +81,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ["expo-secure-store", { configureAndroidBackup: false }],
     "expo-image",
     [
+      "expo-image-picker",
+      {
+        photosPermission:
+          "CableSnap uses your photo library only when you choose a gym photo to send to your selected AI Coach model.",
+      },
+    ],
+    [
       "expo-build-properties",
       {
         android: {

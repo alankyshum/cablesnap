@@ -21,13 +21,14 @@
  *      `expect(body[data-test-ready='true']).toBeVisible()` gate releases.
  *
  * Guards (all three must hold — any false => harness renders `null`):
- *   1. `__DEV__ === true`                                    (not a prod build)
+ *   1. `__DEV__ === true` or `EXPO_PUBLIC_E2E_SCENARIO_SEED === "1"`
  *   2. `Platform.OS === "web"`                               (native targets never mount)
  *   3. `typeof window !== "undefined"`
  *
  * Bundle hygiene: the import of `MusclesWorkedCardPreFix` is at module top,
  * but Expo Router's web bundler tree-shakes whole route files when the
- * default export is `null`-returning under `__DEV__ === false`. The
+ * default export is `null`-returning when neither dev mode nor the explicit
+ * audit flag is enabled. The
  * `app/__test__/rest-toolbar.tsx` route follows the same pattern. The
  * `scripts/verify-scenario-hook-not-in-bundle.sh` PR-time check enforces
  * that no dev-only seed strings leak into the prod bundle.
@@ -35,6 +36,7 @@
  * Refs: BLD-480 (original bug), BLD-924 / BLD-941 / BLD-943 (audit blocks
  * that motivated this), BLD-951 (this fixture).
  */
+/* eslint-disable design-tokens -- fixture styling is intentionally self-contained. */
 import { useEffect } from "react";
 import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -47,7 +49,7 @@ const SEEDED_SESSION_ID = "scenario-session-1";
 export default function Bld480PrefixFixture() {
   // Production / native bail-out — these branches are constant-folded away
   // on prod web builds, matching the `app/__test__/rest-toolbar.tsx` pattern.
-  if (!__DEV__) return null;
+  if (!__DEV__ && process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED !== "1") return null;
   if (Platform.OS !== "web") return null;
 
   return <Bld480PrefixFixtureInner />;

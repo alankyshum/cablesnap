@@ -10,15 +10,16 @@
  * screenshots to appear truncated (BLD-1261).
  *
  * Guards (both must hold — any false => component renders `null`):
- *   1. `__DEV__ === true`    (not a prod build)
+ *   1. `__DEV__ === true` or `EXPO_PUBLIC_E2E_SCENARIO_SEED === "1"`
  *   2. `Platform.OS === "web"`  (native targets never mount)
  *
- * Bundle hygiene: all references to harness symbols are inside `if (__DEV__)`
- * branches. Metro constant-folds `__DEV__` to `false` in production and strips
- * the branches, so nothing from this file appears in the prod web bundle.
+ * Bundle hygiene: all references to harness symbols are inside the dev-or-audit
+ * branches. Ordinary production builds leave the explicit audit flag unset, so
+ * Metro strips the branches and nothing from this file appears in that bundle.
  *
  * Refs: BLD-1261.
  */
+/* eslint-disable design-tokens -- test harness styling is intentionally self-contained. */
 import { useEffect } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -38,7 +39,7 @@ export default function AdvancedSetsHelpHarness() {
   const layout = useLayout();
 
   useEffect(() => {
-    if (__DEV__) {
+    if (__DEV__ || process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED === "1") {
       if (Platform.OS !== "web") return;
       if (typeof document !== "undefined" && document.body) {
         document.body.dataset.testReady = "true";
@@ -46,7 +47,7 @@ export default function AdvancedSetsHelpHarness() {
     }
   }, []);
 
-  if (!__DEV__) return null;
+  if (!__DEV__ && process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED !== "1") return null;
   if (Platform.OS !== "web") return null;
 
   return (

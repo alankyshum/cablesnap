@@ -11274,6 +11274,41 @@
     "srcHash": "4317b5d9a79d",
     "origin": "human"
   },
+  "ai.errors.modelLacksImageInput": {
+    "message": "此模型无法接收健身房照片。请选择支援图片输入与工具的模型。",
+    "srcHash": "c9f37e2db732",
+    "origin": "human"
+  },
+  "ai.errors.openSettings": {
+    "message": "开启设定",
+    "srcHash": "a7bde1bda7d6",
+    "origin": "human"
+  },
+  "ai.errors.photoCancelled": {
+    "message": "照片上传已取消。",
+    "srcHash": "e5fdbfaf206a",
+    "origin": "human"
+  },
+  "ai.errors.photoConsent": {
+    "message": "上传前请查看并接受照片隐私声明。",
+    "srcHash": "5b4b4751b5ff",
+    "origin": "human"
+  },
+  "ai.errors.photoPermission": {
+    "message": "需要照片图库存取权限。你可以在设定中允许。",
+    "srcHash": "4126e3764644",
+    "origin": "human"
+  },
+  "ai.errors.photoProcessing": {
+    "message": "无法安全准备这张照片。请选择另一张图片再试一次。",
+    "srcHash": "a10e742e7764",
+    "origin": "human"
+  },
+  "ai.errors.pickCompatibleModel": {
+    "message": "选择相容模型",
+    "srcHash": "a4a6dcb904ca",
+    "origin": "human"
+  },
   "components.coach.toggleSidebar": {
     "message": "Toggle sessions sidebar（AI 教练）",
     "srcHash": "fab4b855ff73",
@@ -11657,6 +11692,141 @@
   "components.coach.toolCreateTemplate": {
     "message": "正在建立训练范本",
     "srcHash": "c71e91ff884b",
+    "origin": "human"
+  },
+  "components.coach.chooseGymPhoto": {
+    "message": "从图库选择健身房照片",
+    "srcHash": "cb938f23fa57",
+    "origin": "human"
+  },
+  "components.coach.closeRevisionHistory": {
+    "message": "关闭版本历史",
+    "srcHash": "157a1d5e4970",
+    "origin": "human"
+  },
+  "components.coach.draftFallbackName": {
+    "message": "训练草稿",
+    "srcHash": "c23b4215f495",
+    "origin": "human"
+  },
+  "components.coach.draftReasonFallback": {
+    "message": "受限的本机训练规则",
+    "srcHash": "45750d88f279",
+    "origin": "human"
+  },
+  "components.coach.draftReasonsTitle": {
+    "message": "为何是这份草稿",
+    "srcHash": "ce3678db848e",
+    "origin": "human"
+  },
+  "components.coach.draftRevisionHistory": {
+    "message": "版本历史",
+    "srcHash": "2aa201e63d67",
+    "origin": "human"
+  },
+  "components.coach.draftRevisionLabel": {
+    "message": "版本 {version}",
+    "srcHash": "43083296c4c4",
+    "origin": "human"
+  },
+  "components.coach.draftSavedRevision": {
+    "message": "已储存 · 版本 {revision}",
+    "srcHash": "af04b412e9e1",
+    "origin": "human"
+  },
+  "components.coach.libraryOnlyHint": {
+    "message": "仅限图库；不使用相机拍摄",
+    "srcHash": "64da318542d6",
+    "origin": "human"
+  },
+  "components.coach.openRevisionHistoryA11y": {
+    "message": "开启训练版本历史",
+    "srcHash": "c415e8099edf",
+    "origin": "human"
+  },
+  "components.coach.removeGymPhoto": {
+    "message": "移除选取的健身房照片",
+    "srcHash": "d611dc881fe6",
+    "origin": "human"
+  },
+  "components.coach.restoreRevision": {
+    "message": "还原",
+    "srcHash": "43b5b0548fb7",
+    "origin": "human"
+  },
+  "components.coach.restoreRevisionA11y": {
+    "message": "还原版本 {version}",
+    "srcHash": "0023ebbff1cc",
+    "origin": "human"
+  },
+  "components.coach.revisionHistory": {
+    "message": "历史",
+    "srcHash": "942586cf08fc",
+    "origin": "human"
+  },
+  "components.coach.startDraft": {
+    "message": "开始训练",
+    "srcHash": "2d6903d67f08",
+    "origin": "human"
+  },
+  "components.coach.startDraftA11y": {
+    "message": "开始这次训练",
+    "srcHash": "521700e052db",
+    "origin": "human"
+  },
+  "components.coach.startDraftHint": {
+    "message": "建立一个训练课程并开启它",
+    "srcHash": "eb18c3fda664",
+    "origin": "human"
+  },
+  "components.coach.startingDraft": {
+    "message": "正在开始…",
+    "srcHash": "c6df2e10ad30",
+    "origin": "human"
+  },
+  "components.coach.promptGymPhotoTitle": {
+    "message": "从健身房照片建立训练",
+    "srcHash": "0eee27cbbc67",
+    "origin": "human"
+  },
+  "components.coach.promptGymPhotoBody": {
+    "message": "上传健身房照片，我会辨识可见器材并建立已储存的训练草稿。",
+    "srcHash": "d2ab39316530",
+    "origin": "human"
+  },
+  "components.coach.gymPhotoSuggestionA11y": {
+    "message": "从健身房照片建立训练",
+    "srcHash": "fcccd580b9f9",
+    "origin": "human"
+  },
+  "components.coach.gymPhotoPrivacyTitle": {
+    "message": "健身房照片隐私",
+    "srcHash": "f244377df26b",
+    "origin": "human"
+  },
+  "components.coach.privacyUnderstand": {
+    "message": "我了解",
+    "srcHash": "c4d3f620c13a",
+    "origin": "human"
+  },
+  "components.coach.gymPhotoReady": {
+    "message": "已选取健身房照片，可供传送",
+    "srcHash": "bfd4c87753e6",
+    "origin": "human"
+  },
+  "components.coach.startDraftError": {
+    "message": "无法开始这次训练，请再试一次。",
+    "srcHash": "a502275e052b",
+    "origin": "human"
+  },
+  "components.coach.restoreRevisionError": {
+    "message": "无法还原此版本，请再试一次。",
+    "srcHash": "4701bacc66c3",
+    "origin": "human"
+  },
+  "components.coach.startLightGuidance": {
+    "message": "先从轻重量开始，完成受控的第一组后再调整",
+    "srcHash": "4ae915e9990a",
     "origin": "human"
   },
   "components.coach.thinking": {

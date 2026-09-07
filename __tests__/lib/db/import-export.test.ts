@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 const mockStmt = {
   executeAsync: jest.fn().mockResolvedValue(undefined),
   finalizeAsync: jest.fn().mockResolvedValue(undefined),
@@ -34,6 +35,7 @@ import {
   IMPORT_TABLE_ORDER,
   type BackupV7,
 } from "../../../lib/db/import-export";
+import { importTable } from "../../../lib/db/import-table";
 
 const mockVault = jest.requireMock("../../../lib/ai/key-vault") as {
   get: jest.Mock;
@@ -49,6 +51,21 @@ describe("import completion messaging", () => {
 
   it("keeps the normal completion wording when records were added", () => {
     expect(getImportCompletionMessage(3, 2)).toBe("3 records imported, 2 already present");
+  });
+});
+
+describe("AI Coach media-key import guard", () => {
+  it("accepts injuries and volume_allocation but rejects media keys and data payloads", async () => {
+    const database = {
+      getAllAsync: jest.fn().mockResolvedValue([{ name: "id" }, { name: "coach_session_id" }, { name: "source_metadata" }]),
+      runAsync: jest.fn().mockResolvedValue({ changes: 1 }),
+    };
+    const base = { id: "draft-1", coach_session_id: "session-1" };
+    await expect(importTable(database, "coach_workout_drafts", [{ ...base, source_metadata: JSON.stringify({ injuries: [], volume_allocation: {} }) }])).resolves.toMatchObject({ inserted: 1 });
+    await expect(importTable(database, "coach_workout_drafts", [{ ...base, id: "draft-2", source_metadata: JSON.stringify({ actual_image_key: "no" }) }])).resolves.toMatchObject({ inserted: 0, skipped: 1 });
+    await expect(importTable(database, "coach_workout_drafts", [{ ...base, id: "draft-3", source_metadata: JSON.stringify({ notes: "data:image/png;base64," + "A".repeat(128) }) }])).resolves.toMatchObject({ inserted: 0, skipped: 1 });
+    await expect(importTable(database, "coach_workout_draft_revisions", [{ id: "revision-1", draft_id: "draft-1", canonical_draft: JSON.stringify({ injuries: [], volume_allocation: {} }), reason_ledger: JSON.stringify([]) }])).resolves.toMatchObject({ inserted: 1 });
+    await expect(importTable(database, "coach_workout_draft_revisions", [{ id: "revision-2", draft_id: "draft-1", canonical_draft: JSON.stringify({ notes: "data:image/png;base64," + "A".repeat(128) }), reason_ledger: "[]" }])).resolves.toMatchObject({ inserted: 0, skipped: 1 });
   });
 });
 
@@ -96,6 +113,8 @@ describe("exportAllData", () => {
   it("exports AI Coach rows and the selected default model", async () => {
     mockDb.getAllAsync.mockImplementation(async (sql: string) => {
       if (sql.includes("coach_sessions")) return [{ id: "cs-1", title: "Leg day", model_id: "openai/gpt-4o", created_at: 1, updated_at: 2 }];
+      if (sql.includes("coach_workout_drafts")) return [{ id: "d-1", coach_session_id: "cs-1", latest_revision: 1, status: "active", source_kind: "text", source_metadata: "{}", created_at: 1, updated_at: 2 }];
+      if (sql.includes("coach_workout_draft_revisions")) return [{ id: "r-1", draft_id: "d-1", version: 1, canonical_draft: JSON.stringify({ exercises: [] }), reason_ledger: "[]", change_reason: "created", created_at: 1 }];
       if (sql.includes("coach_messages")) return [{ id: "cm-1", session_id: "cs-1", role: "user", content: "Hello", tool_calls: null, created_at: 3, error: null }];
       return [];
     });
@@ -105,6 +124,9 @@ describe("exportAllData", () => {
     const ai = (backup.data as Record<string, unknown>).ai_coach as Record<string, unknown>;
     expect(ai.last_model_id).toBe("openai/gpt-4o");
     expect(ai.coach_sessions).toHaveLength(1);
+    expect(ai.coach_workout_drafts).toHaveLength(1);
+    expect(ai.coach_workout_draft_revisions).toHaveLength(1);
+    expect(JSON.stringify(ai)).not.toMatch(/photo|image|uri|base64|blob/i);
     expect(ai.coach_messages).toHaveLength(1);
   });
 
@@ -119,6 +141,12 @@ describe("exportAllData", () => {
       if (sql.includes("PRAGMA table_info(coach_messages)")) return [
         { name: "id" }, { name: "session_id" }, { name: "role" }, { name: "content" }, { name: "tool_calls" }, { name: "created_at" }, { name: "error" },
       ];
+      if (sql.includes("PRAGMA table_info(coach_workout_drafts)")) return [
+        { name: "id" }, { name: "coach_session_id" }, { name: "latest_revision" }, { name: "status" }, { name: "source_kind" }, { name: "source_metadata" }, { name: "created_at" }, { name: "updated_at" },
+      ];
+      if (sql.includes("PRAGMA table_info(coach_workout_draft_revisions)")) return [
+        { name: "id" }, { name: "draft_id" }, { name: "version" }, { name: "canonical_draft" }, { name: "reason_ledger" }, { name: "change_reason" }, { name: "created_at" },
+      ];
       return [];
     });
     await importData({
@@ -126,13 +154,17 @@ describe("exportAllData", () => {
       data: { ai_coach: {
         last_model_id: "openai/gpt-4o",
         coach_sessions: [{ id: "cs-1", title: "Leg day", model_id: "openai/gpt-4o", created_at: 1, updated_at: 2 }],
+        coach_workout_drafts: [{ id: "d-1", coach_session_id: "cs-1", latest_revision: 1, status: "active", source_kind: "text", source_metadata: "{}", created_at: 1, updated_at: 2 }],
+        coach_workout_draft_revisions: [{ id: "r-1", draft_id: "d-1", version: 1, canonical_draft: JSON.stringify({ exercises: [] }), reason_ledger: "[]", change_reason: "created", created_at: 1 }],
         coach_messages: [{ id: "cm-1", session_id: "cs-1", role: "user", content: "Hello", tool_calls: null, created_at: 3, error: null }],
         openrouter_api_key: credential,
       } },
     }, { confirmCredentials: true });
     const coachRuns = mockDb.runAsync.mock.calls.filter(([sql]) => String(sql).includes("coach_"));
     expect(coachRuns[0][0]).toContain("coach_sessions");
-    expect(coachRuns[1][0]).toContain("coach_messages");
+    expect(coachRuns[1][0]).toContain("coach_workout_drafts");
+    expect(coachRuns[2][0]).toContain("coach_workout_draft_revisions");
+    expect(coachRuns[3][0]).toContain("coach_messages");
     expect(mockVault.set).toHaveBeenCalledWith(credential);
   });
 

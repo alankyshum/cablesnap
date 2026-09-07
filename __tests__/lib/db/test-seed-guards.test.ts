@@ -3,7 +3,7 @@
  * Guard tests for the scenario seed hook (BLD-494, QD#5).
  *
  * `seedScenario()` MUST be a no-op when ANY of the three guards fails:
- *   1. `__DEV__` is false
+ *   1. `__DEV__` is false and the explicit E2E audit flag is unset
  *   2. `Platform.OS !== 'web'`
  *   3. `window.__TEST_SCENARIO__` is unset
  *
@@ -36,6 +36,7 @@ describe("lib/db/test-seed — guards", () => {
     jest.clearAllMocks();
     platformMock.OS = "web";
     (globalThis as any).__DEV__ = true;
+    delete process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED;
     (globalThis as any).window = { __TEST_SCENARIO__: undefined };
   });
 
@@ -50,6 +51,16 @@ describe("lib/db/test-seed — guards", () => {
     const { seedScenario } = require("../../../lib/db/test-seed");
     await seedScenario();
     expect(mockGetDatabase).not.toHaveBeenCalled();
+  });
+
+  test("runs with explicit E2E audit flag in a production build", async () => {
+    (globalThis as any).__DEV__ = false;
+    process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED = "1";
+    (globalThis as any).window = { __TEST_SCENARIO__: "completed-workout" };
+    (globalThis as any).document = { body: { dataset: {} } };
+    const { seedScenario } = require("../../../lib/db/test-seed");
+    await seedScenario();
+    expect(mockGetDatabase).toHaveBeenCalledTimes(1);
   });
 
   test("no-op when Platform.OS !== 'web'", async () => {
@@ -113,6 +124,10 @@ describe("lib/db/test-seed — guards", () => {
     expect(mod.guardsAllow()).toBe(false);
     (globalThis as any).window = { __TEST_SCENARIO__: "x" };
     (globalThis as any).__DEV__ = false;
+    expect(mod.guardsAllow()).toBe(false);
+    process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED = "1";
+    expect(mod.guardsAllow()).toBe(true);
+    platformMock.OS = "ios";
     expect(mod.guardsAllow()).toBe(false);
   });
 });

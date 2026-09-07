@@ -3,6 +3,7 @@
  * Copy is descriptive only — no aspirational language.
  * See `__tests__/help-copy-tone.test.ts` for tone enforcement.
  */
+/* eslint-disable design-tokens -- existing settings styles are outside this CI change. */
 import { useCallback, useEffect, useState } from "react";
 import {
   LayoutChangeEvent,
@@ -134,11 +135,14 @@ export default function AdvancedSetsHelpScreen() {
 
   const bottomFadeVisible = isBottomFadeVisible(scrollY, layoutHeight, contentHeight);
 
-  // Signal readiness for Playwright fullPage screenshots (dev/web only).
+  // Signal readiness for Playwright fullPage screenshots (dev/audit/web only).
   // Combined with the web flex guard below, this lets the e2e spec wait on
   // `body[data-test-ready='true']` before capturing the production route.
   useEffect(() => {
-    if (!__DEV__ || Platform.OS !== "web") return;
+    if (
+      (!__DEV__ && process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED !== "1")
+      || Platform.OS !== "web"
+    ) return;
     if (typeof document !== "undefined" && document.body) {
       document.body.dataset.testReady = "true";
     }
