@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useLayout } from "@/lib/layout";
+import { useLingui } from "@lingui/react/macro";
 import { useToast } from "@/components/ui/bna-toast";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ export default function BackupList() {
   const layout = useLayout();
   const router = useRouter();
   const toast = useToast();
+  const { i18n, t } = useLingui();
   const [files, setFiles] = useState<BackupFileInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [backingUp, setBackingUp] = useState(false);
@@ -26,11 +28,11 @@ export default function BackupList() {
       const result = await getBackupFiles();
       setFiles(result);
     } catch {
-      toast.error("Failed to load backups");
+       toast.error(t({ id: "settings.backups.loadFailed", message: "Failed to load backups" }));
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [t, toast]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch
@@ -45,28 +47,28 @@ export default function BackupList() {
         day: "numeric",
       });
       Alert.alert(
-        "Delete Backup",
-        `Delete backup from ${dateStr}? This cannot be undone.`,
+         t({ id: "settings.backups.deleteTitle", message: "Delete Backup" }),
+         t({ id: "settings.backups.deleteMessage", message: `Delete backup from ${dateStr}? This cannot be undone.` }),
         [
-          { text: "Cancel", style: "cancel" },
+           { text: t({ id: "common.cancel", message: "Cancel" }), style: "cancel" },
           {
-            text: "Delete",
+             text: t({ id: "common.delete", message: "Delete" }),
             style: "destructive",
             onPress: async () => {
               try {
                 const { deleteBackup } = await import("@/lib/backup");
                 await deleteBackup(item.filename);
                 setFiles((prev) => prev.filter((f) => f.filename !== item.filename));
-                toast.success("Backup deleted");
+                 toast.success(t({ id: "settings.backups.deleted", message: "Backup deleted" }));
               } catch {
-                toast.error("Failed to delete backup");
+                 toast.error(t({ id: "settings.backups.deleteFailed", message: "Failed to delete backup" }));
               }
             },
           },
         ]
       );
     },
-    [toast]
+    [t, toast]
   );
 
   const handleRestore = useCallback(
@@ -84,13 +86,13 @@ export default function BackupList() {
       try {
         await Sharing.shareAsync(item.uri, {
           mimeType: "application/json",
-          dialogTitle: "Share Backup",
+           dialogTitle: t({ id: "settings.backups.shareTitle", message: "Share Backup" }),
         });
       } catch {
-        toast.error("Failed to share backup");
+         toast.error(t({ id: "settings.backups.shareFailed", message: "Failed to share backup" }));
       }
     },
-    [toast]
+    [t, toast]
   );
 
   const handleBackupNow = useCallback(async () => {
@@ -99,17 +101,17 @@ export default function BackupList() {
       const { performAutoBackup } = await import("@/lib/backup");
       const result = await performAutoBackup();
       if (result.success) {
-        toast.success("Backup created successfully");
+         toast.success(t({ id: "settings.backups.created", message: "Backup created successfully" }));
         await loadFiles();
       } else {
-        toast.error("Backup failed");
+         toast.error(t({ id: "settings.backups.failed", message: "Backup failed" }));
       }
     } catch {
-      toast.error("Backup failed");
+       toast.error(t({ id: "settings.backups.failed", message: "Backup failed" }));
     } finally {
       setBackingUp(false);
     }
-  }, [toast, loadFiles]);
+  }, [toast, loadFiles, t]);
 
   const renderItem = useCallback(
     ({ item }: { item: BackupFileInfo }) => {
@@ -135,41 +137,41 @@ export default function BackupList() {
               variant="outline"
               size="sm"
               onPress={() => handleRestore(item)}
-              accessibilityLabel={`Restore backup from ${dateStr}`}
+              accessibilityLabel={i18n._({ id: "settings.backups.restoreA11y", message: "Restore backup from {dateStr}", values: { dateStr } })}
               accessibilityRole="button"
             >
-              Restore
+              {t({ id: "settings.backups.restore", message: "Restore" })}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onPress={() => handleShare(item)}
-              accessibilityLabel={`Share backup from ${dateStr}`}
+               accessibilityLabel={i18n._({ id: "settings.backups.shareA11y", message: "Share backup from {dateStr}", values: { dateStr } })}
               accessibilityRole="button"
             >
-              Share
+              {t({ id: "common.share", message: "Share" })}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onPress={() => handleDelete(item)}
-              accessibilityLabel={`Delete backup from ${dateStr}`}
+              accessibilityLabel={i18n._({ id: "settings.backups.deleteA11y", message: "Delete backup from {dateStr}", values: { dateStr } })}
               accessibilityRole="button"
             >
-              Delete
+              {t({ id: "common.delete", message: "Delete" })}
             </Button>
           </View>
           <Separator style={{ marginTop: 12 }} />
         </View>
       );
     },
-    [colors, handleDelete, handleRestore, handleShare]
+    [colors, handleDelete, handleRestore, handleShare, i18n, t]
   );
 
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
-        <Text variant="body" style={{ color: colors.onSurfaceVariant }}>Loading backups…</Text>
+        <Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "settings.backups.loading", message: "Loading backups…" })}</Text>
       </View>
     );
   }
@@ -186,7 +188,7 @@ export default function BackupList() {
         ]}
         ListHeaderComponent={
           <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 16 }}>
-            Backups
+             {t({ id: "settings.backups.title", message: "Backups" })}
           </Text>
         }
         ListEmptyComponent={
@@ -196,17 +198,17 @@ export default function BackupList() {
                 variant="body"
                 style={{ color: colors.onSurfaceVariant, textAlign: "center", marginBottom: 12 }}
               >
-                No backups yet — your first backup will be created after your next workout.
+                 {t({ id: "settings.backups.empty", message: "No backups yet — your first backup will be created after your next workout." })}
               </Text>
               <Button
                 variant="default"
                 onPress={handleBackupNow}
                 loading={backingUp}
                 disabled={backingUp}
-                accessibilityLabel="Create a backup now"
+                accessibilityLabel={t({ id: "settings.backups.createA11y", message: "Create a backup now" })}
                 accessibilityRole="button"
               >
-                Backup Now
+                 {t({ id: "settings.backups.create", message: "Backup Now" })}
               </Button>
             </CardContent>
           </Card>

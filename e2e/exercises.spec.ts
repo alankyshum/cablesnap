@@ -96,6 +96,13 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("Exercises tab", () => {
+  test("opens from the Workouts home header action", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Exercises" }).click();
+    await waitForExerciseList(page);
+    await expect(page).toHaveURL(/\/exercises$/);
+  });
+
   test("visual snapshot of exercise list with filter chips", async ({ page }) => {
     await page.goto("/exercises");
     await waitForExerciseList(page);

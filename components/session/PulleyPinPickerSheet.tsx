@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React, { useCallback, useState } from "react";
 import { Alert, FlatList, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -34,7 +37,7 @@ export function PulleyPinPickerSheet({ visible, currentPin, maxPins = 12, onSele
   const handleConfirmMax = useCallback(() => {
     const parsed = parseInt(maxInput, 10);
     if (isNaN(parsed) || parsed < 1 || parsed > 30) {
-      Alert.alert("Invalid value", "Max 30 pins supported");
+      Alert.alert(t({ id: "session.pulleypinpickersheet.str9", message: "Invalid value" }), t({ id: "session.pulleypinpickersheet.str10", message: "Max 30 pins supported" }));
       return;
     }
     onSetMaxPins?.(parsed);
@@ -44,7 +47,7 @@ export function PulleyPinPickerSheet({ visible, currentPin, maxPins = 12, onSele
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.root}>
-        <Pressable style={styles.backdrop} onPress={onClose} accessible={false} accessibilityLabel="Close picker" />
+        <Pressable style={styles.backdrop} onPress={onClose} accessible={false} accessibilityLabel={t({ id: "session.pulleypinpickersheet.str1", message: "Close picker" })} />
         <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
           {editingMax ? (
             <View style={styles.maxEditRow}>
@@ -53,16 +56,16 @@ export function PulleyPinPickerSheet({ visible, currentPin, maxPins = 12, onSele
                 onChangeText={setMaxInput}
                 keyboardType="number-pad"
                 style={[styles.maxInput, { color: colors.onSurface, borderColor: colors.outline }]}
-                accessibilityLabel="Max pins input"
+                accessibilityLabel={t({ id: "session.pulleypinpickersheet.str2", message: "Max pins input" })}
                 returnKeyType="done"
                 onSubmitEditing={handleConfirmMax}
                 autoFocus
               />
-              <Pressable onPress={handleConfirmMax} style={[styles.maxConfirmBtn, { backgroundColor: colors.primary }]} accessibilityRole="button" accessibilityLabel="Confirm max pins">
-                <Text style={{ color: colors.onPrimary, fontWeight: "700" }}>Set</Text>
+              <Pressable onPress={handleConfirmMax} style={[styles.maxConfirmBtn, { backgroundColor: colors.primary }]} accessibilityRole="button" accessibilityLabel={t({ id: "session.pulleypinpickersheet.str3", message: "Confirm max pins" })}>
+                <Text style={{ color: colors.onPrimary, fontWeight: "700" }}>{t({ id: "session.pulleypinpickersheet.str6", message: "Set" })}</Text>
               </Pressable>
-              <Pressable onPress={() => setEditingMax(false)} style={styles.maxCancelBtn} accessibilityRole="button" accessibilityLabel="Cancel max pins edit">
-                <Text style={{ color: colors.onSurfaceVariant }}>Cancel</Text>
+              <Pressable onPress={() => setEditingMax(false)} style={styles.maxCancelBtn} accessibilityRole="button" accessibilityLabel={t({ id: "session.pulleypinpickersheet.str4", message: "Cancel max pins edit" })}>
+                <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "session.pulleypinpickersheet.str7", message: "Cancel" })}</Text>
               </Pressable>
             </View>
           ) : (
@@ -96,7 +99,7 @@ export function PulleyPinPickerSheet({ visible, currentPin, maxPins = 12, onSele
                     },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Pulley pin ${item}`}
+                  accessibilityLabel={t({ id: "session.pulleypinpickersheet.dynamic1", message: `Pulley pin ${item}` })}
                   accessibilityState={{ selected }}
                 >
                   <Text style={[styles.pinLabel, { color: selected ? colors.onPrimary : colors.onSurfaceVariant }]}>
@@ -107,8 +110,8 @@ export function PulleyPinPickerSheet({ visible, currentPin, maxPins = 12, onSele
             }}
             contentContainerStyle={styles.grid}
           />
-          <Pressable onPress={() => { onSelect(null); onClose(); }} style={styles.clearBtn} accessibilityRole="button" accessibilityLabel="Clear pulley pin">
-            <Text style={[styles.clearLabel, { color: colors.error }]}>Clear</Text>
+          <Pressable onPress={() => { onSelect(null); onClose(); }} style={styles.clearBtn} accessibilityRole="button" accessibilityLabel={t({ id: "session.pulleypinpickersheet.str5", message: "Clear pulley pin" })}>
+            <Text style={[styles.clearLabel, { color: colors.error }]}>{t({ id: "session.pulleypinpickersheet.str8", message: "Clear" })}</Text>
           </Pressable>
         </View>
       </View>

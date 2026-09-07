@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 import { TouchableOpacity, View, StyleSheet } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
@@ -19,7 +21,7 @@ export function FoodLogCard({ item, colors, onRemove }: Props) {
           <CardContent style={styles.row}>
             <View style={{ flex: 1 }}>
               <Text variant="body" style={{ color: colors.onSurface }}>
-                {item.food?.name ?? "Unknown"}
+                 {item.food?.name ?? <Trans id="components.nutrition.foodLog.unknown">Unknown</Trans>}
               </Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
                 {item.servings !== 1 ? ` · ${item.servings}×` : ""}
@@ -31,7 +33,7 @@ export function FoodLogCard({ item, colors, onRemove }: Props) {
                 {Math.round((item.food?.fat ?? 0) * item.servings)}f
               </Text>
             </View>
-            <TouchableOpacity onPress={() => onRemove(item)} accessibilityLabel={`Remove ${item.food?.name ?? "food"}`} hitSlop={8} style={{ padding: 8 }}>
+             <TouchableOpacity onPress={() => onRemove(item)} accessibilityLabel={t({ id: "components.nutrition.foodLog.removeA11y", message: `Remove ${item.food?.name ?? "food"}` })} hitSlop={8} style={{ padding: 8 }}>
               <MaterialCommunityIcons name="delete-outline" size={20} color={colors.onSurface} />
             </TouchableOpacity>
           </CardContent>

@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import React, { useState, useCallback } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -88,12 +90,12 @@ function RecoveryHeatmapInner({ recoveryStatus, colors }: Props) {
         onPress={toggleExpanded}
         accessibilityRole="button"
         accessibilityState={{ expanded: isExpanded }}
-        accessibilityLabel={`Muscle Recovery, ${isExpanded ? "expanded" : "collapsed"}`}
+          accessibilityLabel={i18n._({ id: "home.recovery.toggleA11y", message: "Muscle Recovery, {state, select, expanded {expanded} collapsed {collapsed}}", values: { state: isExpanded ? "expanded" : "collapsed" } })}
         style={styles.header}
       >
         <View style={styles.headerLeft}>
           <MaterialCommunityIcons name="arm-flex" size={20} color={colors.primary} />
-          <Text variant="subtitle" style={{ color: colors.onBackground }}>Muscle Recovery</Text>
+           <Text variant="subtitle" style={{ color: colors.onBackground }}>{t({ id: "home.recovery.title", message: "Muscle Recovery" })}</Text>
         </View>
         <MaterialCommunityIcons
           name={isExpanded ? "chevron-up" : "chevron-down"}
@@ -106,7 +108,7 @@ function RecoveryHeatmapInner({ recoveryStatus, colors }: Props) {
         <View style={styles.content}>
           {!hasData ? (
             <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center", paddingVertical: 16 }}>
-              Complete a workout to see recovery status
+               {t({ id: "home.recovery.empty", message: "Complete a workout to see recovery status" })}
             </Text>
           ) : (
             <>
@@ -132,13 +134,13 @@ function RecoveryHeatmapInner({ recoveryStatus, colors }: Props) {
               <View style={styles.summary}>
                 {readyMuscles.length > 0 && (
                   <Text variant="caption" style={{ color: colors.onSurface }}>
-                    <Text style={{ fontWeight: "700" }}>Ready: </Text>
+                     <Text style={{ fontWeight: "700" }}>{t({ id: "home.recovery.ready", message: "Ready: " })}</Text>
                     {readyMuscles.join(", ")}
                   </Text>
                 )}
                 {recoveringMuscles.length > 0 && (
                   <Text variant="caption" style={{ color: colors.onSurface }}>
-                    <Text style={{ fontWeight: "700" }}>Recovering: </Text>
+                     <Text style={{ fontWeight: "700" }}>{t({ id: "home.recovery.recovering", message: "Recovering: " })}</Text>
                     {recoveringMuscles.join(", ")}
                   </Text>
                 )}
@@ -154,9 +156,9 @@ function RecoveryHeatmapInner({ recoveryStatus, colors }: Props) {
 function RecoveryLegend({ palette }: { palette: readonly string[] }) {
   const colors = useThemeColors();
   const items = [
-    { color: palette[0], label: "Recovered" },
-    { color: palette[1], label: "Partial" },
-    { color: palette[2], label: "Fatigued" },
+     { color: palette[0], label: t({ id: "home.recovery.recovered", message: "Recovered" }) },
+     { color: palette[1], label: t({ id: "home.recovery.partial", message: "Partial" }) },
+     { color: palette[2], label: t({ id: "home.recovery.fatigued", message: "Fatigued" }) },
   ];
 
   return (

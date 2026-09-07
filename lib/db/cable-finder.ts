@@ -10,11 +10,11 @@ import { mapRow, type ExerciseRow } from "./exercises";
  * consistent SectionList grouping.
  *
  * Note: `mount_position` was moved from the Exercise type to per-set data
- * (BLD-771), but the column still exists on the exercises table as a default.
- * CableExercise extends Exercise to surface it for this finder screen.
+ * (BLD-771). CableExercise surfaces the most recent non-null per-set value for
+ * this finder screen.
  */
 
-/** Exercise with mount_position surfaced from the DB exercises table. */
+/** Exercise with mount_position surfaced from the most recent logged set. */
 export type CableExercise = Exercise & {
   mount_position?: MountPosition | null;
 };
@@ -34,16 +34,26 @@ export async function getCableExercises(
   const { mountPosition, attachment } = filters;
 
   const rows = await query<ExerciseRow & { mount_position: string | null }>(
-    `SELECT id, name, category, primary_muscles, secondary_muscles,
-            equipment, instructions, difficulty, is_custom, deleted_at,
-            mount_position, attachment, training_modes, is_voltra,
-            start_image_uri, end_image_uri, progression_group, progression_order
-     FROM exercises
-     WHERE equipment = 'cable'
-       AND deleted_at IS NULL
-       AND (mount_position = ? OR ? IS NULL)
-       AND (attachment = ? OR ? IS NULL)
-     ORDER BY primary_muscles, name`,
+    `WITH latest_mount AS (
+       SELECT exercise_id, mount_position,
+              ROW_NUMBER() OVER (
+                PARTITION BY exercise_id
+                ORDER BY completed_at DESC, set_number DESC, id DESC
+              ) AS rn
+       FROM workout_sets
+       WHERE mount_position IS NOT NULL
+     )
+     SELECT e.id, e.name, e.category, e.primary_muscles, e.secondary_muscles,
+            e.equipment, e.instructions, e.difficulty, e.is_custom, e.deleted_at,
+            lm.mount_position, e.attachment, e.is_voltra,
+            e.start_image_uri, e.end_image_uri, e.progression_group, e.progression_order
+     FROM exercises e
+     LEFT JOIN latest_mount lm ON lm.exercise_id = e.id AND lm.rn = 1
+     WHERE e.equipment = 'cable'
+       AND e.deleted_at IS NULL
+       AND (lm.mount_position = ? OR ? IS NULL)
+       AND (e.attachment = ? OR ? IS NULL)
+     ORDER BY e.primary_muscles, e.name`,
     [
       mountPosition, mountPosition,
       attachment, attachment,

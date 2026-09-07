@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * BLD-1168 Slice 7: MiniSetEditor
  *
@@ -120,7 +123,7 @@ export function MiniSetEditor({
             (seg.weight != null ? ` at ${seg.weight} kg` : "") +
             (seg.completed_at != null ? ", completed" : "")
           }
-          accessibilityHint="Long press to delete this mini-set"
+          accessibilityHint={t({ id: "session.miniseteditor.str1", message: "Long press to delete this mini-set" })}
           testID={`mini-set-segment-${seg.id}`}
         >
           <Text variant="caption" style={[styles.segmentLabel, { color: colors.onSurfaceVariant }]}>
@@ -138,9 +141,7 @@ export function MiniSetEditor({
       {/* Next reps input (optional controlled mode) */}
       {onChangeNextReps && (
         <View style={styles.inputRow}>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginRight: 8 }}>
-            Next reps:
-          </Text>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginRight: 8 }}>{t({ id: "session.miniseteditor.str5", message: "Next reps:" })}</Text>
           <TextInput
             style={[styles.repsInput, { color: colors.onSurface, borderColor: colors.outline }]}
             value={nextReps != null ? String(nextReps) : ""}
@@ -149,9 +150,9 @@ export function MiniSetEditor({
               onChangeNextReps(Number.isFinite(n) && n > 0 ? n : null);
             }}
             keyboardType="number-pad"
-            placeholder="0"
+            placeholder={t({ id: "session.miniseteditor.str2", message: "0" })}
             placeholderTextColor={colors.onSurfaceVariant}
-            accessibilityLabel="Reps for next mini-set"
+            accessibilityLabel={t({ id: "session.miniseteditor.str3", message: "Reps for next mini-set" })}
             testID="mini-set-next-reps-input"
           />
         </View>
@@ -159,9 +160,7 @@ export function MiniSetEditor({
 
       {/* Warn at 7 */}
       {atWarn && (
-        <Text variant="caption" style={[styles.warnText, { color: colors.onSurfaceVariant }]}>
-          One more mini-set remaining before maximum (8).
-        </Text>
+        <Text variant="caption" style={[styles.warnText, { color: colors.onSurfaceVariant }]}>{t({ id: "session.miniseteditor.str6", message: "One more mini-set remaining before maximum (8)." })}</Text>
       )}
 
       {/* Action row */}
@@ -186,28 +185,22 @@ export function MiniSetEditor({
 
         {segments.length > 0 && (
           <>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginHorizontal: 8 }}>
-              Total: {totalReps}
-            </Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginHorizontal: 8 }}>{t({ id: "session.miniseteditor.str7", message: `Total: ${totalReps}` })}</Text>
             <Pressable
               onPress={handleCollapsePress}
               accessible
               accessibilityRole="button"
-              accessibilityLabel="Collapse mini-sets back to normal set"
+              accessibilityLabel={t({ id: "session.miniseteditor.str4", message: "Collapse mini-sets back to normal set" })}
               testID="mini-set-collapse-button"
             >
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant, textDecorationLine: "underline" }}>
-                Collapse
-              </Text>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant, textDecorationLine: "underline" }}>{t({ id: "session.miniseteditor.str8", message: "Collapse" })}</Text>
             </Pressable>
           </>
         )}
       </View>
 
       {atMax && (
-        <Text variant="caption" style={[styles.warnText, { color: colors.error }]}>
-          Maximum 8 mini-sets reached. Use a separate set for more.
-        </Text>
+        <Text variant="caption" style={[styles.warnText, { color: colors.error }]}>{t({ id: "session.miniseteditor.str9", message: "Maximum 8 mini-sets reached. Use a separate set for more." })}</Text>
       )}
     </View>
   );

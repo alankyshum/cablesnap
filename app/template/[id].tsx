@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -59,9 +60,9 @@ export default function EditTemplate() {
   if (!template) {
     return (
       <>
-        <Stack.Screen options={{ title: "Template" }} />
+        <Stack.Screen options={{ title: t({ id: "app.template.id.template", message: "Template" }) }} />
         <View style={[styles.center, { backgroundColor: colors.background }]}>
-          <Text style={{ color: colors.onSurfaceVariant }}>Loading...</Text>
+          <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.template.id.loading", message: "Loading..." })}</Text>
         </View>
       </>
     );
@@ -73,24 +74,24 @@ export default function EditTemplate() {
       <View style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}>
         {!starter && (
           <Input
-            label="Name"
-            placeholder="e.g. Upper Body, Push Day"
+            label={t({ id: "app.template.id.name", message: "Name" })}
+            placeholder={t({ id: "app.template.id.name-placeholder", message: "e.g. Upper Body, Push Day" })}
             value={name}
             onChangeText={handleNameChange}
             onBlur={handleNameBlur}
             error={nameError ?? undefined}
             maxLength={100}
             containerStyle={styles.nameInput}
-            accessibilityLabel="Template Name"
+            accessibilityLabel={t({ id: "app.template.id.name-a11y", message: "Template Name" })}
           />
         )}
         <View style={styles.section}>
           <View style={styles.headerRow}>
             <Text variant="title" style={{ color: colors.onBackground, flexShrink: 1 }}>
-              Exercises ({exercises.length})
+              {t({ id: "app.template.id.exercises", message: `Exercises (${exercises.length})` })}
             </Text>
             {starter && (
-              <Chip accessibilityLabel="Starter template, read-only. Duplicate to edit.">STARTER</Chip>
+              <Chip accessibilityLabel={t({ id: "app.template.id.starter-a11y", message: "Starter template, read-only. Duplicate to edit." })}>{t({ id: "app.template.id.starter", message: "STARTER" })}</Chip>
             )}
           </View>
         </View>
@@ -98,10 +99,10 @@ export default function EditTemplate() {
         {selecting && !starter && (
           <View style={[styles.selectionBar, { backgroundColor: colors.primaryContainer }]}>
             <Text variant="body" style={{ color: colors.onPrimaryContainer, flex: 1 }} accessibilityLiveRegion="polite">
-              {selected.size} selected
+              {t({ id: "app.template.id.selected", message: `${selected.size} selected` })}
             </Text>
-            <Button variant="default" onPress={confirmLink} disabled={selected.size < 2} style={{ marginRight: 8 }} accessibilityLabel="Link selected exercises" label="Link" />
-            <Button variant="ghost" onPress={cancelSelection} accessibilityLabel="Cancel selection" label="Cancel" />
+            <Button variant="default" onPress={confirmLink} disabled={selected.size < 2} style={{ marginRight: 8 }} accessibilityLabel={t({ id: "app.template.id.link-a11y", message: "Link selected exercises" })} label={t({ id: "app.template.id.link", message: "Link" })} />
+            <Button variant="ghost" onPress={cancelSelection} accessibilityLabel={t({ id: "app.template.id.cancel-a11y", message: "Cancel selection" })} label={t({ id: "app.template.id.cancel", message: "Cancel" })} />
           </View>
         )}
 
@@ -112,21 +113,21 @@ export default function EditTemplate() {
           extraData={[selecting, selected, linkIds]}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text variant="body" style={{ color: colors.onSurfaceVariant }}>No exercises. Add some below.</Text>
+              <Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "app.template.id.empty", message: "No exercises. Add some below." })}</Text>
             </View>
           }
           style={styles.list}
         />
 
         {starter ? (
-          <Button variant="default" onPress={handleDuplicate} style={styles.doneBtn} accessibilityLabel="Duplicate to edit" label="Duplicate to Edit" />
+          <Button variant="default" onPress={handleDuplicate} style={styles.doneBtn} accessibilityLabel={t({ id: "app.template.id.duplicate-a11y", message: "Duplicate to edit" })} label={t({ id: "app.template.id.duplicate", message: "Duplicate to Edit" })} />
         ) : (
           <>
             {!selecting && exercises.length >= 2 && (
-              <Button variant="outline" onPress={() => startSelection()} style={styles.addBtn} accessibilityLabel="Create superset" accessibilityRole="button" label="Create Superset" />
+              <Button variant="outline" onPress={() => startSelection()} style={styles.addBtn} accessibilityLabel={t({ id: "app.template.id.superset-a11y", message: "Create superset" })} accessibilityRole="button" label={t({ id: "app.template.id.superset", message: "Create Superset" })} />
             )}
-            <Button variant="outline" onPress={() => setPickerOpen(true)} style={styles.addBtn} accessibilityLabel="Add exercise to template" label="Add Exercise" />
-            <Button variant="default" onPress={() => router.back()} style={styles.doneBtn} accessibilityLabel="Done editing template" label="Done" />
+            <Button variant="outline" onPress={() => setPickerOpen(true)} style={styles.addBtn} accessibilityLabel={t({ id: "app.template.id.add-exercise-a11y", message: "Add exercise to template" })} label={t({ id: "app.template.id.add-exercise", message: "Add Exercise" })} />
+            <Button variant="default" onPress={() => router.back()} style={styles.doneBtn} accessibilityLabel={t({ id: "app.template.id.done-a11y", message: "Done editing template" })} label={t({ id: "app.template.id.done", message: "Done" })} />
           </>
         )}
       </View>

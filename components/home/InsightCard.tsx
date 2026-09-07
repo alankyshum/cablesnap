@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { t } from "@lingui/core/macro";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { Insight } from "@/lib/insights";
@@ -59,7 +60,7 @@ export default function InsightCard({ colors, insight, onPress, onDismiss }: Pro
         hitSlop={8}
         style={styles.dismiss}
         accessibilityRole="button"
-        accessibilityLabel="Dismiss insight"
+        accessibilityLabel={t({ id: "home.insight.dismissA11y", message: "Dismiss insight" })}
       >
         <Ionicons name="close" size={16} color={colors.onSurfaceVariant} />
       </Pressable>

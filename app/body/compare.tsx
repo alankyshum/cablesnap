@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 import React, { useEffect, useState } from "react";
 import {
   Image,
@@ -50,7 +52,7 @@ export default function CompareScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["bottom"]}>
         <View style={styles.center}>
           <Text variant="body" style={{ color: colors.error }}>
-            Could not load photos. They may have been deleted.
+             <Trans id="body.compare.loadError">Could not load photos. They may have been deleted.</Trans>
           </Text>
         </View>
       </SafeAreaView>
@@ -62,7 +64,7 @@ export default function CompareScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["bottom"]}>
         <View style={styles.center}>
           <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-            Loading photos...
+             <Trans id="body.compare.loading">Loading photos...</Trans>
           </Text>
         </View>
       </SafeAreaView>
@@ -75,7 +77,7 @@ export default function CompareScreen() {
         source={{ uri: photo.file_path }}
         style={styles.image}
         resizeMode="contain"
-        accessibilityLabel={`${photo.pose_category ?? "Progress"} photo from ${photo.display_date}`}
+         accessibilityLabel={t({ id: "body.compare.photo.a11y", message: `${photo.pose_category ?? "Progress"} photo from ${photo.display_date}` })}
       />
       <View style={styles.label}>
         {/* White text on dark overlay for WCAG AA contrast on photos */}

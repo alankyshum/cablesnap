@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 import { useCallback, useState } from "react";
 import { StyleSheet, TouchableOpacity, View, FlatList } from "react-native";
 import { router, useLocalSearchParams, useFocusEffect, Stack } from "expo-router";
@@ -39,7 +41,7 @@ function TemplateItemCard({
       <CardContent style={styles.itemRow}>
         <View style={{ flex: 1 }}>
           <Text variant="body" style={{ color: colors.onSurface }} numberOfLines={1}>
-            {item.food?.name ?? "Unknown (deleted)"}
+             {item.food?.name ?? <Trans id="nutrition.template.unknownDeleted">Unknown (deleted)</Trans>}
           </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
             {Math.round((item.food?.calories ?? 0) * item.servings)} cal · {Math.round((item.food?.protein ?? 0) * item.servings)}p
@@ -48,7 +50,7 @@ function TemplateItemCard({
         <View style={styles.servingsControl}>
           <TouchableOpacity
             onPress={() => onUpdateServings(item.id, Math.round((item.servings - 0.5) * 10) / 10)}
-            accessibilityLabel={`Decrease servings for ${item.food?.name ?? "item"}`}
+             accessibilityLabel={t({ id: "nutrition.template.decrease.a11y", message: `Decrease servings for ${item.food?.name ?? "item"}` })}
             accessibilityRole="button"
             hitSlop={8}
             style={{ padding: 6, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
@@ -60,7 +62,7 @@ function TemplateItemCard({
           </Text>
           <TouchableOpacity
             onPress={() => onUpdateServings(item.id, Math.round((item.servings + 0.5) * 10) / 10)}
-            accessibilityLabel={`Increase servings for ${item.food?.name ?? "item"}`}
+             accessibilityLabel={t({ id: "nutrition.template.increase.a11y", message: `Increase servings for ${item.food?.name ?? "item"}` })}
             accessibilityRole="button"
             hitSlop={8}
             style={{ padding: 6, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
@@ -70,7 +72,7 @@ function TemplateItemCard({
         </View>
         <TouchableOpacity
           onPress={() => onRemove(item.id)}
-          accessibilityLabel={`Remove ${item.food?.name ?? "item"}`}
+           accessibilityLabel={t({ id: "nutrition.template.remove.a11y", message: `Remove ${item.food?.name ?? "item"}` })}
           accessibilityRole="button"
           hitSlop={8}
           style={{ padding: 6, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
@@ -122,10 +124,10 @@ export default function EditMealTemplate() {
           servings: it.servings,
         })),
       });
-      success("Template updated");
+       success(t({ id: "nutrition.template.updated", message: "Template updated" }));
       router.back();
     } catch {
-      showError("Failed to update template");
+       showError(t({ id: "nutrition.template.updateError", message: "Failed to update template" }));
     } finally {
       setSaving(false);
     }
@@ -146,19 +148,19 @@ export default function EditMealTemplate() {
     if (!id) return;
     try {
       await deleteMealTemplate(id);
-      info("Template deleted");
+       info(t({ id: "nutrition.template.deleted", message: "Template deleted" }));
       router.back();
     } catch {
-      showError("Failed to delete template");
+       showError(t({ id: "nutrition.template.deleteError", message: "Failed to delete template" }));
     }
   }, [id, info, showError]);
 
   if (!template) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Stack.Screen options={{ title: "Edit Template" }} />
+         <Stack.Screen options={{ title: t({ id: "nutrition.template.editTitle", message: "Edit Template" }) }} />
         <View style={styles.empty}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant }}>Template not found</Text>
+           <Text variant="body" style={{ color: colors.onSurfaceVariant }}><Trans id="nutrition.template.notFound">Template not found</Trans></Text>
         </View>
       </View>
     );
@@ -181,11 +183,11 @@ export default function EditMealTemplate() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen
         options={{
-          title: "Edit Template",
+           title: t({ id: "nutrition.template.editTitle", message: "Edit Template" }),
           headerRight: () => (
             <TouchableOpacity
               onPress={handleDelete}
-              accessibilityLabel="Delete template"
+               accessibilityLabel={t({ id: "nutrition.template.delete.a11y", message: "Delete template" })}
               accessibilityRole="button"
               hitSlop={8}
               style={{ padding: 8, minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
@@ -204,16 +206,16 @@ export default function EditMealTemplate() {
         ListHeaderComponent={
           <View>
             <Input
-              label="Template Name"
+               label={t({ id: "nutrition.template.name.label", message: "Template Name" })}
               value={name}
               onChangeText={setName}
-              placeholder="e.g. My Breakfast"
-              accessibilityLabel="Template name"
-              error={name.trim().length === 0 ? "Name is required" : undefined}
+               placeholder={t({ id: "nutrition.template.name.placeholder", message: "e.g. My Breakfast" })}
+               accessibilityLabel={t({ id: "nutrition.template.name.a11y", message: "Template name" })}
+               error={name.trim().length === 0 ? t({ id: "nutrition.template.name.required", message: "Name is required" }) : undefined}
             />
 
             <Text variant="subtitle" style={{ color: colors.onSurfaceVariant, marginTop: 16, marginBottom: 8 }}>
-              Meal Category
+               <Trans id="nutrition.template.mealCategory">Meal Category</Trans>
             </Text>
             <View style={styles.chipRow}>
               {MEALS.map((m) => (
@@ -221,7 +223,7 @@ export default function EditMealTemplate() {
                   key={m}
                   selected={meal === m}
                   onPress={() => setMeal(m)}
-                  accessibilityLabel={`${MEAL_LABELS[m]} category`}
+                   accessibilityLabel={t({ id: "nutrition.template.category.a11y", message: `${MEAL_LABELS[m]} category` })}
                   accessibilityRole="button"
                 >
                   {MEAL_LABELS[m]}
@@ -230,12 +232,12 @@ export default function EditMealTemplate() {
             </View>
 
             <Text variant="subtitle" style={{ color: colors.onSurfaceVariant, marginTop: 16, marginBottom: 8 }}>
-              Items ({items.length})
+               <Trans id="nutrition.template.items">Items ({items.length})</Trans>
             </Text>
             {items.length === 0 && (
               <View style={[styles.emptyItems, { backgroundColor: colors.surfaceVariant }]}>
                 <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-                  No items — tap to add
+                   <Trans id="nutrition.template.noItems">No items — tap to add</Trans>
                 </Text>
               </View>
             )}
@@ -253,7 +255,7 @@ export default function EditMealTemplate() {
           <View>
             <View style={[styles.macroSummary, { backgroundColor: colors.surfaceVariant }]}>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                Total: {Math.round(macros.cal)} cal · {Math.round(macros.p)}p · {Math.round(macros.c)}c · {Math.round(macros.f)}f
+                 <Trans id="nutrition.template.totalMacros">Total: {Math.round(macros.cal)} cal · {Math.round(macros.p)}p · {Math.round(macros.c)}c · {Math.round(macros.f)}f</Trans>
               </Text>
             </View>
 
@@ -264,14 +266,14 @@ export default function EditMealTemplate() {
               ]}
               onPress={handleSave}
               disabled={!isValid || saving}
-              accessibilityLabel="Save changes"
+               accessibilityLabel={t({ id: "nutrition.template.save.a11y", message: "Save changes" })}
               accessibilityRole="button"
             >
               <Text
                 variant="body"
                 style={{ color: isValid ? colors.onPrimary : colors.onSurfaceVariant, fontWeight: "600" }}
               >
-                {saving ? "Saving…" : "Save Changes"}
+                 {saving ? <Trans id="nutrition.template.saving">Saving…</Trans> : <Trans id="nutrition.template.save">Save Changes</Trans>}
               </Text>
             </TouchableOpacity>
           </View>

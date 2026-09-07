@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { Text } from "@/components/ui/text";
@@ -26,14 +27,14 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        <Text variant="subtitle" style={{ color: colors.onBackground }}>Recent Workouts</Text>
+        <Text variant="subtitle" style={{ color: colors.onBackground }}>{t({ id: "home.recent.title", message: "Recent Workouts" })}</Text>
         {sessions.length > 0 && (
-          <Button variant="ghost" size="sm" onPress={() => router.push("/history")} accessibilityLabel="View all workout history" label="View All History" />
+          <Button variant="ghost" size="sm" onPress={() => router.push("/history")} accessibilityLabel={t({ id: "home.recent.viewAllA11y", message: "View all workout history" })} label={t({ id: "home.recent.viewAll", message: "View All History" })} />
         )}
       </View>
       {sessions.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={{ color: colors.onSurfaceVariant }}>No workouts yet. Start one above!</Text>
+          <Text style={{ color: colors.onSurfaceVariant }}>{t({ id: "home.recent.empty", message: "No workouts yet. Start one above!" })}</Text>
         </View>
       ) : (
         <Masonry gap={12}>
@@ -46,7 +47,7 @@ export default function RecentWorkoutsList({ colors, sessions, setCounts, avgRPE
                 <Pressable
                   style={[styles.flowCard, { backgroundColor: colors.surface, borderRadius: 12, padding: 18 }]}
                   onPress={() => router.push(`/session/detail/${item.id}`)}
-                  accessibilityLabel={`View workout: ${item.name}, ${formatDateShort(item.started_at)}, ${formatDuration(item.duration_seconds)}, ${setCounts[item.id] ?? 0} sets${rpeStr}`}
+                  accessibilityLabel={t({ id: "home.recent.workoutA11y", message: `View workout: ${item.name}, ${formatDateShort(item.started_at)}, ${formatDuration(item.duration_seconds)}, ${setCounts[item.id] ?? 0} sets${rpeStr}` })}
                   accessibilityRole="button"
                 >
                   <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>{item.name}</Text>

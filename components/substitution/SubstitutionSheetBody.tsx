@@ -4,6 +4,7 @@ import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 import { MUSCLE_LABELS } from "../../lib/types";
 import type { Exercise, Equipment } from "../../lib/types";
 import type { SubstitutionScore } from "../../lib/exercise-substitutions";
@@ -117,7 +118,7 @@ export function SubstitutionSheetBody(props: Props) {
           accessibilityRole="checkbox"
           accessibilityState={{ checked: setAsGoTo }}
           accessibilityLabel={`Set as my go-to for ${sourceExercise.name}`}
-          accessibilityHint="When on, your choice will be saved as the preferred substitute for next time."
+          accessibilityHint={t({ id: "components.substitution.sheet-body.go-to-hint", message: "When on, your choice will be saved as the preferred substitute for next time." })}
           style={styles.goToRow}
         >
           <MaterialCommunityIcons

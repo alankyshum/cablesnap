@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React, { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -93,7 +96,7 @@ function BodyweightGripPickerBody({
   return (
     <View>
       <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: colors.onSurface }]}>Grip type</Text>
+        <Text style={[styles.sectionLabel, { color: colors.onSurface }]}>{t({ id: "session.bodyweightgrippickersheet.str4", message: "Grip type" })}</Text>
         <SegmentedControl
           value={stagedGripType}
           onValueChange={setStagedGripType}
@@ -102,7 +105,7 @@ function BodyweightGripPickerBody({
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: colors.onSurface }]}>Grip width</Text>
+        <Text style={[styles.sectionLabel, { color: colors.onSurface }]}>{t({ id: "session.bodyweightgrippickersheet.str5", message: "Grip width" })}</Text>
         <SegmentedControl
           value={stagedGripWidth}
           onValueChange={setStagedGripWidth}
@@ -114,17 +117,17 @@ function BodyweightGripPickerBody({
         <Pressable
           onPress={handleClear}
           accessibilityRole="button"
-          accessibilityLabel="Clear grip"
-          accessibilityHint="Removes the grip type and width values from this set"
+          accessibilityLabel={t({ id: "session.bodyweightgrippickersheet.str1", message: "Clear grip" })}
+          accessibilityHint={t({ id: "session.bodyweightgrippickersheet.str2", message: "Removes the grip type and width values from this set" })}
           hitSlop={8}
           style={[styles.actionButton, { borderColor: colors.outline }]}
         >
-          <Text style={[styles.actionLabel, { color: colors.onSurface }]}>Clear</Text>
+          <Text style={[styles.actionLabel, { color: colors.onSurface }]}>{t({ id: "session.bodyweightgrippickersheet.str6", message: "Clear" })}</Text>
         </Pressable>
         <Pressable
           onPress={handleConfirm}
           accessibilityRole="button"
-          accessibilityLabel="Save grip"
+          accessibilityLabel={t({ id: "session.bodyweightgrippickersheet.str3", message: "Save grip" })}
           hitSlop={8}
           style={[
             styles.actionButton,
@@ -132,7 +135,7 @@ function BodyweightGripPickerBody({
             { backgroundColor: colors.primary },
           ]}
         >
-          <Text style={[styles.actionLabel, { color: colors.onPrimary }]}>Save</Text>
+          <Text style={[styles.actionLabel, { color: colors.onPrimary }]}>{t({ id: "session.bodyweightgrippickersheet.str7", message: "Save" })}</Text>
         </Pressable>
       </View>
     </View>

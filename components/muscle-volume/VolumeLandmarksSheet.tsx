@@ -9,6 +9,9 @@ import { MUSCLE_LABELS } from "../../lib/types";
 import type { MuscleGroup } from "../../lib/types";
 import type { VolumeLandmarks } from "../../lib/volume-landmarks";
 import { DEFAULT_LANDMARKS } from "../../lib/volume-landmarks";
+import { i18n } from "@lingui/core";
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   visible: boolean;
@@ -51,7 +54,7 @@ function NumericStepper({
         size="sm"
         onPress={onDecrement}
         disabled={value <= min}
-        accessibilityLabel={`Decrease ${label}`}
+         accessibilityLabel={t({ id: "components.muscleVolume.decreaseA11y", message: `Decrease ${label}` })}
         style={stepperStyles.btn}
       >
         <Text>−</Text>
@@ -68,7 +71,7 @@ function NumericStepper({
         size="sm"
         onPress={onIncrement}
         disabled={value >= max}
-        accessibilityLabel={`Increase ${label}`}
+         accessibilityLabel={t({ id: "components.muscleVolume.increaseA11y", message: `Increase ${label}` })}
         style={stepperStyles.btn}
       >
         <Text>+</Text>
@@ -165,17 +168,17 @@ export default function VolumeLandmarksSheet({
     <BottomSheet
       isVisible={visible}
       onClose={handleClose}
-      title="Customize Volume Targets"
+       title={t({ id: "components.muscleVolume.customizeTitle", message: "Customize Volume Targets" })}
       snapPoints={[0.6, 0.9]}
     >
       <Button
         variant="secondary"
         size="sm"
         onPress={handleResetAll}
-        accessibilityLabel="Reset all volume targets to defaults"
+         accessibilityLabel={t({ id: "components.muscleVolume.resetAllA11y", message: "Reset all volume targets to defaults" })}
         style={{ marginBottom: 12, alignSelf: "flex-start" }}
       >
-        <Text>Reset All to Defaults</Text>
+         <Text><Trans id="components.muscleVolume.resetAll">Reset All to Defaults</Trans></Text>
       </Button>
 
       {MUSCLE_KEYS.map((muscle) => {
@@ -202,8 +205,7 @@ export default function VolumeLandmarksSheet({
                 {MUSCLE_LABELS[muscle]}
               </Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                MEV {lm.mev} / MRV {lm.mrv}
-                {!isDefault ? " ✎" : ""}
+                 {i18n._({ id: "components.muscleVolume.landmarks", message: "MEV {mev} / MRV {mrv}{custom, select, true { ✎} false {}}", values: { mev: lm.mev, mrv: lm.mrv, custom: isDefault ? "false" : "true" } })}
               </Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
                 {isExpanded ? "▼" : "›"}
@@ -213,7 +215,7 @@ export default function VolumeLandmarksSheet({
             {isExpanded && (
               <View style={[styles.expandedArea, { backgroundColor: colors.surface }]}>
                 <NumericStepper
-                  label="MEV"
+                   label={t({ id: "components.muscleVolume.mev", message: "MEV" })}
                   value={lm.mev}
                   onDecrement={() => handleMevChange(muscle, -1)}
                   onIncrement={() => handleMevChange(muscle, 1)}
@@ -222,7 +224,7 @@ export default function VolumeLandmarksSheet({
                   colors={colors}
                 />
                 <NumericStepper
-                  label="MRV"
+                   label={t({ id: "components.muscleVolume.mrv", message: "MRV" })}
                   value={lm.mrv}
                   onDecrement={() => handleMrvChange(muscle, -1)}
                   onIncrement={() => handleMrvChange(muscle, 1)}
@@ -235,15 +237,15 @@ export default function VolumeLandmarksSheet({
                     variant="secondary"
                     size="sm"
                     onPress={() => handleResetMuscle(muscle)}
-                    accessibilityLabel={`Reset ${MUSCLE_LABELS[muscle]} to default`}
+                     accessibilityLabel={t({ id: "components.muscleVolume.resetA11y", message: `Reset ${MUSCLE_LABELS[muscle]} to default` })}
                     style={{ marginTop: 4 }}
                   >
-                    <Text>Reset</Text>
+                     <Text><Trans id="components.muscleVolume.reset">Reset</Trans></Text>
                   </Button>
                 )}
                 {lm.mev === lm.mrv && (
                   <Text variant="caption" style={{ color: colors.tertiary, marginTop: 4 }}>
-                    Your optimal zone is very narrow
+                     <Trans id="components.muscleVolume.narrowZone">Your optimal zone is very narrow</Trans>
                   </Text>
                 )}
               </View>
@@ -253,7 +255,7 @@ export default function VolumeLandmarksSheet({
       })}
 
       <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 12, textAlign: "center" }}>
-        Based on RP hypertrophy guidelines
+         <Trans id="components.muscleVolume.guidelines">Based on RP hypertrophy guidelines</Trans>
       </Text>
     </BottomSheet>
   );

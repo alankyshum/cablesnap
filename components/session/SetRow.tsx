@@ -1,3 +1,7 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 /* eslint-disable complexity, max-lines-per-function, max-lines */
 /**
  * SetRow — Hard Exclusions (Behavior-Design Classification: NO).
@@ -471,7 +475,7 @@ export const SetRow = memo(function SetRow({
                   unit={unit}
                   isCable={isCable}
                   stacks={stacksProp}
-                  accessibilityLabel={`Left weight for Set ${set.set_number}`}
+                  accessibilityLabel={t({ id: "session.setrow.dynamic1", message: `Left weight for Set ${set.set_number}` })}
                   testID={`set-${set.set_number}-left-weight`}
                   onWeightChange={onWeightChange}
                   onManualWeightSave={handleManualWeightSave}
@@ -484,7 +488,7 @@ export const SetRow = memo(function SetRow({
                 value={leftDisplayedReps}
                 step={1}
                 onValueChange={onRepsChange}
-                accessibilityLabel={`Left reps for Set ${set.set_number}`}
+                accessibilityLabel={t({ id: "session.setrow.dynamic2", message: `Left reps for Set ${set.set_number}` })}
                 testID={`set-${set.set_number}-left-reps`}
                 max={999}
               />
@@ -496,7 +500,7 @@ export const SetRow = memo(function SetRow({
             onPress={handleCopy}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={{ width: 36, height: 44, alignItems: "center", justifyContent: "center" }}
-            accessibilityLabel="Copy Left to Right"
+            accessibilityLabel={t({ id: "session.setrow.str1", message: "Copy Left to Right" })}
             accessibilityRole="button"
           >
             <MaterialCommunityIcons name="arrow-right-bold-circle-outline" size={20} color={colors.primary} />
@@ -525,7 +529,7 @@ export const SetRow = memo(function SetRow({
                   unit={unit}
                   isCable={isCable}
                   stacks={stacksProp}
-                  accessibilityLabel={`Right weight for Set ${set.set_number}`}
+                  accessibilityLabel={t({ id: "session.setrow.dynamic3", message: `Right weight for Set ${set.set_number}` })}
                   testID={`set-${set.set_number}-right-weight`}
                   onWeightChange={(v) => {
                     if (rightSet) {
@@ -550,7 +554,7 @@ export const SetRow = memo(function SetRow({
                     onUpdate(set.id, "reps", String(v), "right");
                   }
                 }}
-                accessibilityLabel={`Right reps for Set ${set.set_number}`}
+                accessibilityLabel={t({ id: "session.setrow.dynamic4", message: `Right reps for Set ${set.set_number}` })}
                 testID={`set-${set.set_number}-right-reps`}
                 max={999}
               />
@@ -567,7 +571,7 @@ export const SetRow = memo(function SetRow({
               set.completed && { backgroundColor: colors.primary },
               { width: 36, height: 36, borderRadius: 18, marginLeft: 6 },
             ]}
-            accessibilityLabel={`Mark set ${set.set_number} ${set.completed ? "incomplete" : "complete"}`}
+            accessibilityLabel={i18n._({ id: "session.setrow.dynamic5", message: "Mark set {number} {state, select, incomplete {incomplete} complete {complete}}", values: { number: set.set_number, state: set.completed ? "incomplete" : "complete" } })}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: set.completed }}
           >
@@ -638,8 +642,8 @@ export const SetRow = memo(function SetRow({
             hitSlop={10}
             style={[styles.colSet, { minHeight: 36 }]}
             accessibilityRole="button"
-            accessibilityLabel={`Set ${set.set_number}, ${typeLabel}`}
-            accessibilityHint="Double tap to cycle set type. Long press for direct selection."
+            accessibilityLabel={t({ id: "session.setrow.dynamic6", message: `Set ${set.set_number}, ${typeLabel}` })}
+            accessibilityHint={t({ id: "session.setrow.str2", message: "Double tap to cycle set type. Long press for direct selection." })}
             accessibilityLiveRegion="polite"
           >
             {chipLabel ? (
@@ -763,7 +767,7 @@ export const SetRow = memo(function SetRow({
               { borderColor: set.completed ? colors.primary : colors.onSurfaceVariant },
               set.completed && { backgroundColor: colors.primary },
             ]}
-            accessibilityLabel={`Mark set ${set.set_number} ${set.completed ? "incomplete" : "complete"}`}
+            accessibilityLabel={i18n._({ id: "session.setrow.dynamic7", message: "Mark set {number} {state, select, incomplete {incomplete} complete {complete}}", values: { number: set.set_number, state: set.completed ? "incomplete" : "complete" } })}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: set.completed }}
             accessibilityActions={[{ name: "complete", label: "Mark complete" }]}
@@ -836,8 +840,8 @@ export const SetRow = memo(function SetRow({
             // swipe gesture.
             accessible
             accessibilityRole="button"
-            accessibilityLabel={`Delete set ${set.set_number}`}
-            accessibilityHint={`Long-press to delete, or swipe the row ${I18nManager.isRTL ? "right" : "left"}`}
+            accessibilityLabel={t({ id: "session.setrow.dynamic8", message: `Delete set ${set.set_number}` })}
+            accessibilityHint={i18n._({ id: "session.setrow.dynamic9", message: "Long-press to delete, or swipe the row {direction}", values: { direction: I18nManager.isRTL ? "right" : "left" } })}
             accessibilityActions={[{ name: "activate", label: `Delete set ${set.set_number}` }]}
             onAccessibilityAction={onDeleteAccessibilityAction}
             onLongPress={handleDelete}
@@ -933,7 +937,7 @@ export const SetRow = memo(function SetRow({
                 }
                 return `Set ${set.set_number} cable variant: not set. Double-tap to choose.`;
               })()}
-              accessibilityHint="Long press to clear attachment and position"
+              accessibilityHint={t({ id: "session.setrow.str3", message: "Long press to clear attachment and position" })}
               style={styles.footerChipGroup}
             >
               {set.attachment == null && set.mount_position == null ? (
@@ -1041,7 +1045,7 @@ export const SetRow = memo(function SetRow({
               onLongPress={() => onClearBodyweightGrip?.(set.id)}
               accessibilityRole="button"
               accessibilityLabel={composite}
-              accessibilityHint="Long press to clear grip and width"
+              accessibilityHint={t({ id: "session.setrow.str4", message: "Long press to clear grip and width" })}
               style={[styles.variantFooter, styles.footerFlex]}
             >
               {gt == null && gw == null ? (
@@ -1081,9 +1085,7 @@ export const SetRow = memo(function SetRow({
                           styles.variantPlaceholderLabel,
                           { color: colors.onSurfaceVariant },
                         ]}
-                      >
-                        Tap to set grip
-                      </Text>
+                      >{t({ id: "session.setrow.str5", message: "Tap to set grip" })}</Text>
                     </View>
                   )}
                   {gw != null ? (
@@ -1100,9 +1102,7 @@ export const SetRow = memo(function SetRow({
                           styles.variantPlaceholderLabel,
                           { color: colors.onSurfaceVariant },
                         ]}
-                      >
-                        Tap to set width
-                      </Text>
+                      >{t({ id: "session.setrow.str6", message: "Tap to set width" })}</Text>
                     </View>
                   )}
                 </>

@@ -1,6 +1,8 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -23,18 +25,18 @@ export function PRSummaryCard({ recentPRs, stats, weightUnit, onSeeAll, style }:
     <Card style={[styles.card, style]}>
       <View style={styles.headerRow}>
         <Text variant="subtitle" style={{ color: colors.onSurface }}>
-          Personal Records
+           {t({ id: "components.progress.prSummary.title", message: "Personal Records" })}
         </Text>
         {stats.prsThisMonth > 0 && (
           <Text variant="caption" style={{ color: colors.primary, fontWeight: "600" }}>
-            {stats.prsThisMonth} this month
+             {t({ id: "components.progress.prSummary.thisMonth", message: `${stats.prsThisMonth} this month` })}
           </Text>
         )}
       </View>
 
       {recentPRs.length === 0 ? (
         <Text style={{ color: colors.onSurfaceVariant, marginTop: 8 }}>
-          No records yet — start lifting!
+           {t({ id: "components.progress.prSummary.empty", message: "No records yet — start lifting!" })}
         </Text>
       ) : (
         <>
@@ -42,11 +44,9 @@ export function PRSummaryCard({ recentPRs, stats, weightUnit, onSeeAll, style }:
             <View
               key={`${pr.exercise_id}-${pr.date}`}
               style={[styles.prRow, { borderBottomColor: colors.outlineVariant }]}
-              accessibilityLabel={
-                pr.is_weighted
-                  ? `${pr.name}: ${pr.weight != null ? toDisplay(pr.weight, weightUnit) : '-'} ${weightUnit}, ${formatDateShort(pr.date)}`
-                  : `${pr.name}: ${pr.reps} reps, ${formatDateShort(pr.date)}`
-              }
+               accessibilityLabel={pr.is_weighted
+                 ? i18n._({ id: "components.progress.prSummary.weightedRowA11y", message: "{name}: {weight} {unit}, {date}", values: { name: pr.name, weight: pr.weight != null ? toDisplay(pr.weight, weightUnit) : "-", unit: weightUnit, date: formatDateShort(pr.date) } })
+                 : t({ id: "components.progress.prSummary.bodyweightRowA11y", message: `${pr.name}: ${pr.reps} reps, ${formatDateShort(pr.date)}` })}
             >
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.onSurface }}>{pr.name}</Text>
@@ -57,17 +57,17 @@ export function PRSummaryCard({ recentPRs, stats, weightUnit, onSeeAll, style }:
               <View style={styles.valueCol}>
                 <Text style={{ color: colors.primary, fontWeight: "600" }}>
                   {pr.is_weighted && pr.weight != null
-                    ? `${toDisplay(pr.weight, weightUnit)} ${weightUnit}`
-                    : `${pr.reps} reps`}
+                     ? t({ id: "components.progress.prSummary.weightValue", message: `${toDisplay(pr.weight, weightUnit)} ${weightUnit}` })
+                     : t({ id: "components.progress.prSummary.repsValue", message: `${pr.reps} reps` })}
                 </Text>
                 {pr.is_weighted && pr.weight != null && pr.previous_best != null && pr.previous_best > 0 && (
                   <Text variant="caption" style={{ color: colors.primary }}>
-                    +{toDisplay(pr.weight - pr.previous_best, weightUnit)} {weightUnit}
+                     {t({ id: "components.progress.prSummary.weightDelta", message: `+${toDisplay(pr.weight - pr.previous_best, weightUnit)} ${weightUnit}` })}
                   </Text>
                 )}
                 {!pr.is_weighted && pr.reps != null && pr.previous_best != null && pr.previous_best > 0 && (
                   <Text variant="caption" style={{ color: colors.primary }}>
-                    +{pr.reps - pr.previous_best} reps
+                     {t({ id: "components.progress.prSummary.repsDelta", message: `+${pr.reps - pr.previous_best} reps` })}
                   </Text>
                 )}
               </View>
@@ -80,10 +80,10 @@ export function PRSummaryCard({ recentPRs, stats, weightUnit, onSeeAll, style }:
             style={styles.seeAllRow}
             onPress={onSeeAll}
             accessibilityRole="button"
-            accessibilityLabel="See all personal records"
+             accessibilityLabel={t({ id: "components.progress.prSummary.seeAllA11y", message: "See all personal records" })}
           >
             <Text style={{ color: colors.primary, fontWeight: "600" }}>
-              See All →
+               {t({ id: "components.progress.prSummary.seeAll", message: "See All →" })}
             </Text>
           </Pressable>
         </>

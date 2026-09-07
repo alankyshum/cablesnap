@@ -9,6 +9,8 @@ import type { VolumeRow } from "../../hooks/useMuscleVolume";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { VolumeLandmarks } from "../../lib/volume-landmarks";
 import { getVolumeStatus, getVolumeStatusLabel } from "../../lib/volume-landmarks";
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   data: VolumeRow[];
@@ -43,17 +45,17 @@ export default function VolumeBarChart({
   return (
     <CardContent>
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 4 }}>
-        Sets per Muscle Group
+         <Trans id="components.muscleVolume.setsPerMuscle">Sets per Muscle Group</Trans>
       </Text>
       <View
         style={styles.scaleRow}
-        accessibilityLabel={`Scale: 0 to ${maxSets} sets`}
+         accessibilityLabel={t({ id: "components.muscleVolume.scaleA11y", message: `Scale: 0 to ${maxSets} sets` })}
       >
         <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
           0
         </Text>
         <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-          {maxSets} sets
+           <Trans id="components.muscleVolume.maxSets">{maxSets} sets</Trans>
         </Text>
       </View>
       <View style={styles.bars}>
@@ -74,8 +76,8 @@ export default function VolumeBarChart({
                 active && { backgroundColor: colors.primary + "18" },
               ]}
               accessibilityRole="button"
-              accessibilityLabel={`${MUSCLE_LABELS[item.muscle]}: ${item.sets} sets, ${statusLabel}`}
-              accessibilityHint="Double tap to see weekly trend"
+               accessibilityLabel={t({ id: "components.muscleVolume.barA11y", message: `${MUSCLE_LABELS[item.muscle]}: ${item.sets} sets, ${statusLabel}` })}
+               accessibilityHint={t({ id: "components.muscleVolume.trendHint", message: "Double tap to see weekly trend" })}
               accessibilityState={{ selected: active }}
             >
               <Text

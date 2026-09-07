@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -20,7 +23,7 @@ export function ExerciseNotesPanel({ exerciseId, value, onDraftChange, onSave }:
         type="textarea"
         variant="outline"
         rows={5}
-        placeholder="Add exercise notes..."
+        placeholder={t({ id: "session.exercisenotespanel.str1", message: "Add exercise notes..." })}
         placeholderTextColor={colors.onSurfaceVariant}
         value={value}
         onChangeText={(v) => onDraftChange(exerciseId, v)}
@@ -28,7 +31,7 @@ export function ExerciseNotesPanel({ exerciseId, value, onDraftChange, onSave }:
         maxLength={200}
         textAlignVertical="top"
         inputStyle={{ ...styles.input, color: colors.onSurface }}
-        accessibilityLabel="Exercise notes"
+        accessibilityLabel={t({ id: "session.exercisenotespanel.str2", message: "Exercise notes" })}
       />
       <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "right", fontSize: fontSizes.xs }}>
         {value.length}/200

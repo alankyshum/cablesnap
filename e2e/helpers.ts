@@ -100,7 +100,7 @@ export async function enablePerWorkerDb(page: Page, parallelIndex: number) {
 
 /**
  * Inject a backup-JSON string that `pickImportBackup`
- * (app/(tabs)/_settings-handlers.ts) will return in place of the OS file
+ * (lib/settings-handlers.ts) will return in place of the OS file
  * picker (BLD-1769), so the production "Import data" → category sheet →
  * router.push("/settings/import-backup") flow runs headless and gives
  * expo-router's Stack the back-history the nav-header guard requires. The
@@ -117,6 +117,60 @@ export async function enableImportBackupFixture(page: Page, backupJson: string) 
       window as unknown as Record<string, unknown>
     ).__E2E_IMPORT_BACKUP_FIXTURE__ = raw;
   }, backupJson);
+}
+
+/**
+ * Use the production library-selection path with a deterministic, synthetic
+ * equipment-only image. The app checks navigator.webdriver before honoring
+ * this value; no real browser can activate the seam.
+ */
+export async function enableGymPhotoFixture(page: Page) {
+  await page.addInitScript(() => {
+    (window as unknown as Record<string, unknown>).__E2E_GYM_PHOTO_FIXTURE__ = {
+      uri: "e2e://synthetic-gym-photo",
+      width: 640,
+      height: 480,
+    };
+  });
+}
+
+/** Reset only the persisted photo-consent row for a consent-specific scenario. */
+export async function clearGymPhotoConsent(page: Page) {
+  await page.waitForFunction(() => Boolean((globalThis as typeof globalThis & { __cablesnap_db?: unknown }).__cablesnap_db));
+  await page.evaluate(async () => {
+    const db = (globalThis as typeof globalThis & { __cablesnap_db?: { runAsync(sql: string, params?: unknown[]): Promise<unknown> } }).__cablesnap_db;
+    await db?.runAsync("DELETE FROM app_settings WHERE key = ?", ["ai_coach_gym_photo_consent_v1"]);
+  });
+}
+
+export async function dismissUpdateDialog(page: Page) {
+  const update = page.getByText("Skip this version", { exact: true });
+  if (await update.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await update.click({ force: true });
+    await expect(update).toBeHidden({ timeout: 8_000 });
+  }
+}
+
+/** A minimal v8 fixture for import-flow coverage, including the AI Coach section. */
+export function aiCoachBackupFixture(): string {
+  return JSON.stringify({
+    version: 8,
+    app_version: "e2e",
+    exported_at: new Date(0).toISOString(),
+    data: {
+      ai_coach: {
+        last_model_id: "e2e/model",
+        coach_sessions: [{ id: "e2e-coach-session", title: "E2E Coach", model_id: "e2e/model", created_at: 1, updated_at: 1 }],
+        coach_workout_drafts: [{ id: "e2e-draft", coach_session_id: "e2e-coach-session", latest_revision: 1, status: "active", source_kind: "text", source_metadata: "{}", created_at: 1, updated_at: 1 }],
+        coach_workout_draft_revisions: [{ id: "e2e-draft-revision", draft_id: "e2e-draft", version: 1, canonical_draft: JSON.stringify({ name: "E2E workout", exercises: [] }), reason_ledger: "[]", change_reason: "created", created_at: 1 }],
+        coach_messages: [{ id: "e2e-coach-message", session_id: "e2e-coach-session", role: "user", content: "E2E message", tool_calls: null, created_at: 2, error: null }],
+      },
+      exercises: [{ id: "e2e-exercise", name: "E2E Press", category: "push", primary_muscles: "[\"chest\"]", secondary_muscles: "[]", equipment: "dumbbell", instructions: "Press.", difficulty: "beginner", is_custom: 0, deleted_at: null }],
+      workout_sessions: [{ id: "e2e-workout-session", started_at: 1, completed_at: 2, duration_seconds: 600, title: "E2E workout", notes: null, session_type: "normal" }],
+      workout_sets: [{ id: "e2e-workout-set", session_id: "e2e-workout-session", exercise_id: "e2e-exercise", set_index: 0, weight: 10, reps: 8, completed: 1, set_type: "working", notes: null }],
+    },
+    counts: {},
+  });
 }
 
 /**

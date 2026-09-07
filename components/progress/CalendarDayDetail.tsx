@@ -9,6 +9,8 @@ import {
 } from "@/lib/db/calendar";
 import { formatDuration } from "@/lib/format";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
+import { plural } from "@lingui/core/macro";
 
 type Props = {
   dateStr: string;
@@ -82,7 +84,7 @@ export default function CalendarDayDetail({ dateStr }: Props) {
         accessibilityLiveRegion="polite"
       >
         <Text style={{ color: colors.error }}>
-          Could not load workout details
+          {t({ id: "components.progress.calendarDayDetail.loadError", message: "Could not load workout details" })}
         </Text>
       </View>
     );
@@ -103,7 +105,7 @@ export default function CalendarDayDetail({ dateStr }: Props) {
           variant="caption"
           style={{ color: colors.onSurfaceVariant, marginTop: 4 }}
         >
-          No workouts
+          {t({ id: "components.progress.calendarDayDetail.noWorkouts", message: "No workouts" })}
         </Text>
       </View>
     );
@@ -127,9 +129,7 @@ export default function CalendarDayDetail({ dateStr }: Props) {
             variant="caption"
             style={{ color: colors.onSurfaceVariant, marginTop: 2 }}
           >
-            {formatDuration(session.duration_seconds)} · {session.exercise_count}{" "}
-            exercise{session.exercise_count !== 1 ? "s" : ""} · {session.set_count}{" "}
-            set{session.set_count !== 1 ? "s" : ""}
+             {t({ id: "components.progress.calendarDayDetail.sessionSummary", message: `${formatDuration(session.duration_seconds)} · ${session.exercise_count} ${plural(session.exercise_count, { one: "exercise", other: "exercises" })} · ${session.set_count} ${plural(session.set_count, { one: "set", other: "sets" })}` })}
           </Text>
         </View>
       ))}

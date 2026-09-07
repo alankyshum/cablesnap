@@ -25,8 +25,8 @@ export function useFloatingTabBarHeight(): number {
   return FLOATING_TAB_BAR_HEIGHT + insets.bottom;
 }
 
-// Desired visual order: exercises, nutrition, index (center), progress, settings
-const TAB_ORDER = ['exercises', 'nutrition', 'index', 'progress', 'settings'];
+// Desired visual order: ai-coach, nutrition, index (center), progress, settings
+export const TAB_ORDER = ['ai-coach', 'nutrition', 'index', 'progress', 'settings'] as const;
 
 export default function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   const colors = useThemeColors();

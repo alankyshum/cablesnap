@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React, { memo, useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { StyleSheet, Pressable } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -77,7 +80,7 @@ export const PlateHint = memo(function PlateHint({ weight, unit, equipment }: Pr
         onPress={handlePress}
         accessibilityRole="button"
         accessibilityLabel={hint.accessibilityLabel}
-        accessibilityHint="Opens the plate calculator"
+        accessibilityHint={t({ id: "session.platehint.str1", message: "Opens the plate calculator" })}
       >
         <Text
           style={[styles.hint, { color: colors.onSurfaceVariant }]}

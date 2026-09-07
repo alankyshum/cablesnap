@@ -18,6 +18,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { formatPacingTime, type PacingBreakdown, type ExercisePacing } from "@/lib/session-pacing";
 import { spacing } from "@/constants/design-tokens";
 import { useEffect } from "react";
+import { t } from "@lingui/core/macro";
 
 type SortKey = "working" | "rest" | "other";
 type SortDir = "desc" | "asc";
@@ -106,7 +107,7 @@ export default function PacingBreakdownSheet({ pacing, exerciseNames, onClose }:
     <BottomSheet
       isVisible={sheet.isVisible}
       onClose={handleClose}
-      title="Pacing by exercise"
+      title={t({ id: "components.session.summary.pacing-breakdown.title", message: "Pacing by exercise" })}
       snapPoints={[0.5, 0.9]}
       enableBackdropDismiss
     >
@@ -117,7 +118,7 @@ export default function PacingBreakdownSheet({ pacing, exerciseNames, onClose }:
             variant="caption"
             style={[styles.nameCell, { color: colors.onSurfaceVariant }]}
           >
-            Exercise
+            {t({ id: "components.session.summary.pacing-breakdown.exercise", message: "Exercise" })}
           </Text>
           {(["working", "rest", "other"] as SortKey[]).map((col) => (
             <TouchableOpacity
@@ -125,7 +126,7 @@ export default function PacingBreakdownSheet({ pacing, exerciseNames, onClose }:
               onPress={() => handleSort(col)}
               style={styles.valueCell}
               accessibilityRole="button"
-              accessibilityLabel={`Sort by ${col}`}
+              accessibilityLabel={t({ id: "components.session.summary.pacing-breakdown.sort", message: `Sort by ${col}` })}
               testID={`pacing-sort-${col}`}
             >
               <View style={styles.headerCellContent}>
@@ -136,7 +137,7 @@ export default function PacingBreakdownSheet({ pacing, exerciseNames, onClose }:
                     fontWeight: sortKey === col ? "700" : "400",
                   }}
                 >
-                  {col === "working" ? "Working" : col === "rest" ? "Rest" : "Other"}
+                  {col === "working" ? t({ id: "components.session.summary.pacing-breakdown.working", message: "Working" }) : col === "rest" ? t({ id: "components.session.summary.pacing-breakdown.rest", message: "Rest" }) : t({ id: "components.session.summary.pacing-breakdown.other", message: "Other" })}
                 </Text>
                 <SortIcon
                   col={col}
@@ -179,7 +180,7 @@ function ExerciseRow({
     <View
       style={[styles.dataRow, { borderBottomColor: colors.outlineVariant }]}
       accessible
-      accessibilityLabel={`${name}: Working ${formatPacingTime(row.working)}, Rest ${formatPacingTime(row.rest)}, Other ${formatPacingTime(row.other)}`}
+      accessibilityLabel={t({ id: "components.session.summary.pacing-breakdown.row-a11y", message: `${name}: Working ${formatPacingTime(row.working)}, Rest ${formatPacingTime(row.rest)}, Other ${formatPacingTime(row.other)}` })}
     >
       <Text variant="body" numberOfLines={2} style={[styles.nameCell, { color: colors.onSurface }]}>
         {name}

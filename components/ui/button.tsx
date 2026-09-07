@@ -286,7 +286,7 @@ export const Button = forwardRef<View, ButtonProps>(
             </View>
           ) : (
             <View
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             >
               {icon && (
                 <Icon name={icon} color={contentColor} size={iconSize} />

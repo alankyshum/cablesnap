@@ -1,3 +1,6 @@
+import { t } from "@lingui/core/macro";
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
 import React, { useState } from "react";
 import { Platform, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import { BottomSheetFlatList } from "@gorhom/bottom-sheet";
@@ -54,9 +57,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
       </View>
       {exercise.attachment && (
         <View style={styles.detailSection}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
-            Attachment
-          </Text>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>{t({ id: "session.exercisedetaildrawer.str1", message: "Attachment" })}</Text>
           <Text variant="body" style={{ color: colors.onSurface, marginTop: 2 }}>
             {ATTACHMENT_LABELS[exercise.attachment]}
           </Text>
@@ -64,9 +65,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
       )}
       {exercise.primary_muscles.length > 0 && (
         <View style={styles.detailSection}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
-            Primary Muscles
-          </Text>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>{t({ id: "session.exercisedetaildrawer.str2", message: "Primary Muscles" })}</Text>
           <View style={styles.detailChips}>
             {exercise.primary_muscles.map((m) => (
               <View key={m} style={[styles.detailBadge, { backgroundColor: colors.secondaryContainer }]}>
@@ -78,9 +77,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
       )}
       {exercise.secondary_muscles.length > 0 && (
         <View style={styles.detailSection}>
-          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>
-            Secondary Muscles
-          </Text>
+          <Text variant="body" style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.xs }}>{t({ id: "session.exercisedetaildrawer.str3", message: "Secondary Muscles" })}</Text>
           <View style={styles.detailChips}>
             {exercise.secondary_muscles.map((m) => (
               <View key={m} style={[styles.detailBadge, { backgroundColor: colors.tertiaryContainer }]}>
@@ -134,9 +131,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
             accessibilityRole="tab"
             accessibilityState={{ selected: activeTab === "details" }}
           >
-            <Text style={[styles.tabLabel, { color: activeTab === "details" ? colors.primary : colors.onSurfaceVariant }]}>
-              Details
-            </Text>
+            <Text style={[styles.tabLabel, { color: activeTab === "details" ? colors.primary : colors.onSurfaceVariant }]}>{t({ id: "session.exercisedetaildrawer.str4", message: "Details" })}</Text>
           </Pressable>
           <Pressable
             style={[styles.tab, activeTab === "clips" && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
@@ -144,9 +139,7 @@ export function ExerciseDetailDrawerContent({ exercise, unit }: Props) {
             accessibilityRole="tab"
             accessibilityState={{ selected: activeTab === "clips" }}
           >
-            <Text style={[styles.tabLabel, { color: activeTab === "clips" ? colors.primary : colors.onSurfaceVariant }]}>
-              Form clips
-            </Text>
+            <Text style={[styles.tabLabel, { color: activeTab === "clips" ? colors.primary : colors.onSurfaceVariant }]}>{t({ id: "session.exercisedetaildrawer.str5", message: "Form clips" })}</Text>
           </Pressable>
         </View>
       )}

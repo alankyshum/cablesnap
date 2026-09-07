@@ -31,3 +31,9 @@ export function stripInternalRefs(line: string): string {
 
   return result.trim();
 }
+
+export function stripHtmlComments(markdown: string): string {
+  return markdown
+    .replace(/^[ \t]*<!--[\s\S]*?-->[ \t]*(?:\r?\n[ \t]*\r?\n|\r?\n|$)/gm, "")
+    .replace(/<!--[\s\S]*?-->/g, "");
+}

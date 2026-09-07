@@ -1,0 +1,3 @@
+- Keep cable setup labels in sync when switching app language.
+
+_No user-facing changes yet._

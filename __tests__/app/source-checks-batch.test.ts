@@ -190,11 +190,11 @@ describe("program detail FlashList migration (BLD-422)", () => {
   it("renders dayName text without explicit numberOfLines truncation", () => {
     const dayNameUsages = src.match(/dayName\(item\)/g);
     expect(dayNameUsages).not.toBeNull();
-    const dayTextMatch = src.match(/Day \{index \+ 1\}:.*dayName/);
+    const dayTextMatch = src.match(/id:\s*"app\.program\.id\.day-name"[\s\S]*?message:\s*"Day \{day\}: \{name\}"/);
     expect(dayTextMatch).not.toBeNull();
     const textBlock = src.substring(
-      src.indexOf("Day {index + 1}") - 100,
-      src.indexOf("Day {index + 1}") + 100
+      src.indexOf("Day {day}: {name}") - 100,
+      src.indexOf("Day {day}: {name}") + 100
     );
     expect(textBlock).not.toMatch(/numberOfLines/);
   });
@@ -748,8 +748,8 @@ describe("FloatingTabBar component (BLD-212)", () => {
     expect(floatingTabBarSrc).toContain("CENTER_BUTTON_SIZE");
     expect(floatingTabBarSrc).toContain("borderRadius: CENTER_BUTTON_SIZE / 2");
     expect(floatingTabBarSrc).toContain('accessibilityRole="tab"');
-    expect(floatingTabBarSrc).toContain('accessibilityLabel="Workouts"');
-    expect(floatingTabBarSrc).toContain('accessibilityHint="Navigate to workout screen"');
+    expect(floatingTabBarSrc).toMatch(/accessibilityLabel=\{t\(\{\s*id:\s*['"]floatingTabBar\.center\.workouts['"],\s*message:\s*['"]Workouts['"]\s*\}\)\}/);
+    expect(floatingTabBarSrc).toMatch(/accessibilityHint=\{t\(\{\s*id:\s*['"]floatingTabBar\.center\.navigateHint['"],\s*message:\s*['"]Navigate to workout screen['"]\s*\}\)\}/);
     expect(floatingTabBarSrc).toContain("accessibilityState={{ selected:");
     const tabRoleCount = (floatingTabBarSrc.match(/accessibilityRole="tab"/g) || []).length;
     expect(tabRoleCount).toBeGreaterThanOrEqual(2);
@@ -766,11 +766,11 @@ describe("FloatingTabBar component (BLD-212)", () => {
     expect(floatingTabBarSrc).toContain("withTiming");
   });
 
-  it("defines correct tab order (exercises, nutrition, index, progress, settings)", () => {
+  it("defines correct tab order (ai-coach, nutrition, index, progress, settings)", () => {
     const orderMatch = floatingTabBarSrc.match(/TAB_ORDER\s*=\s*\[([^\]]+)\]/);
     expect(orderMatch).not.toBeNull();
     const order = orderMatch![1].replace(/["'\s]/g, "").split(",");
-    expect(order).toEqual(["exercises", "nutrition", "index", "progress", "settings"]);
+    expect(order).toEqual(["ai-coach", "nutrition", "index", "progress", "settings"]);
   });
 });
 
@@ -1006,7 +1006,7 @@ describe("Exercise list enhancements (exercises.tsx)", () => {
     expect(exercisesSrc).toContain("is_custom");
     expect(exercisesSrc).toContain('"Custom"');
     expect(exercisesSrc).toContain("customBadge");
-    expect(exercisesSrc).toContain(">Custom<");
+    expect(exercisesSrc).toMatch(/id:\s*"components\.exercises\.card\.custom"[\s\S]*?message:\s*"Custom"/);
   });
 
   it("renders category icons on filter chips and difficulty colors with a11y", () => {
@@ -1014,7 +1014,7 @@ describe("Exercise list enhancements (exercises.tsx)", () => {
     expect(exercisesSrc).toContain("CATEGORY_ICONS[f]");
     expect(exercisesSrc).toContain("DIFFICULTY_COLORS");
     expect(exercisesSrc).toContain("difficultyText");
-    expect(exercisesSrc).toMatch(/Difficulty: \$\{diff\}/);
+    expect(exercisesSrc).toMatch(/message:\s*"\{name\}\{custom\}, \{category\}, \{equipment\}, Difficulty: \{difficulty\}"/);
     expect(exercisesSrc).toContain('item.difficulty || "intermediate"');
   });
 

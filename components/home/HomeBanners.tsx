@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { Pressable, StyleSheet, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
@@ -22,6 +23,7 @@ type Props = {
   onStartNextWorkout: () => void;
 };
 
+/* eslint-disable complexity -- this component intentionally enumerates banner states. */
 export default function HomeBanners({
   colors, active, todaySchedule, todayDone, adherence, nextWorkout,
   onResumeSession, onStartFromSchedule, onStartNextWorkout,
@@ -34,11 +36,11 @@ export default function HomeBanners({
         <Pressable
           style={[styles.banner, { backgroundColor: colors.primaryContainer, borderRadius: 12, padding: 18 }]}
           onPress={() => onResumeSession(active.id)}
-          accessibilityLabel={`Resume active workout: ${active.name}`}
+           accessibilityLabel={t({ id: "home.banners.resumeA11y", message: `Resume active workout: ${active.name}` })}
           accessibilityRole="button"
         >
-          <Text variant="body" style={{ color: colors.onPrimaryContainer, fontWeight: "600" }}>⏱ Active Workout: {active.name}</Text>
-          <Text variant="caption" style={{ color: colors.onPrimaryContainer }}>Tap to resume</Text>
+           <Text variant="body" style={{ color: colors.onPrimaryContainer, fontWeight: "600" }}>{t({ id: "home.banners.active", message: `⏱ Active Workout: ${active.name}` })}</Text>
+           <Text variant="caption" style={{ color: colors.onPrimaryContainer }}>{t({ id: "home.banners.tapResume", message: "Tap to resume" })}</Text>
         </Pressable>
       )}
 
@@ -46,14 +48,14 @@ export default function HomeBanners({
         <Pressable
           style={[styles.banner, { backgroundColor: colors.secondaryContainer, borderRadius: 12, padding: 18 }]}
           onPress={onStartFromSchedule}
-          accessibilityLabel={`Today's workout: ${todaySchedule.template_name}. Tap to start.`}
+           accessibilityLabel={t({ id: "home.banners.todayA11y", message: `Today's workout: ${todaySchedule.template_name}. Tap to start.` })}
           accessibilityRole="button"
         >
           <View style={styles.content}>
             <MaterialCommunityIcons name="calendar-check" size={24} color={colors.onSecondaryContainer} />
             <View style={styles.text}>
-              <Text variant="body" style={{ color: colors.onSecondaryContainer, fontWeight: "600" }}>Today: {todaySchedule.template_name}</Text>
-              <Text variant="caption" style={{ color: colors.onSecondaryContainer }}>{todaySchedule.exercise_count} exercises · Tap to start</Text>
+               <Text variant="body" style={{ color: colors.onSecondaryContainer, fontWeight: "600" }}>{t({ id: "home.banners.today", message: `Today: ${todaySchedule.template_name}` })}</Text>
+               <Text variant="caption" style={{ color: colors.onSecondaryContainer }}>{t({ id: "home.banners.todayExercises", message: `${todaySchedule.exercise_count} exercises · Tap to start` })}</Text>
             </View>
           </View>
         </Pressable>
@@ -63,26 +65,26 @@ export default function HomeBanners({
         <Pressable
           style={[styles.banner, { backgroundColor: colors.primaryContainer, borderRadius: 12, padding: 18 }]}
           onPress={onStartFromSchedule}
-          accessibilityLabel={`Completed: ${todaySchedule.template_name}. Tap to train again.`}
+           accessibilityLabel={t({ id: "home.banners.completedA11y", message: `Completed: ${todaySchedule.template_name}. Tap to train again.` })}
           accessibilityRole="button"
         >
           <View style={styles.content}>
             <MaterialCommunityIcons name="check-circle" size={24} color={colors.onPrimaryContainer} />
             <View style={styles.text}>
-              <Text variant="body" style={{ color: colors.onPrimaryContainer, fontWeight: "600" }}>✅ Completed: {todaySchedule.template_name}</Text>
-              <Text variant="caption" style={{ color: colors.onPrimaryContainer }}>Train again</Text>
+               <Text variant="body" style={{ color: colors.onPrimaryContainer, fontWeight: "600" }}>{t({ id: "home.banners.completed", message: `✅ Completed: ${todaySchedule.template_name}` })}</Text>
+              <Text variant="caption" style={{ color: colors.onPrimaryContainer }}>{t({ id: "home.banners.trainAgain", message: "Train again" })}</Text>
             </View>
           </View>
         </Pressable>
       )}
 
       {!todaySchedule && hasSchedule && (
-        <View style={[styles.banner, { backgroundColor: colors.surface, borderRadius: 12, padding: 18 }]} accessibilityLabel="Rest day. No workout scheduled.">
+        <View style={[styles.banner, { backgroundColor: colors.surface, borderRadius: 12, padding: 18 }]} accessibilityLabel={t({ id: "home.banners.restDayA11y", message: "Rest day. No workout scheduled." })}>
           <View style={styles.content}>
             <MaterialCommunityIcons name="bed" size={24} color={colors.onSurfaceVariant} />
             <View style={styles.text}>
-              <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>Rest Day</Text>
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>No workout scheduled</Text>
+              <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>{t({ id: "home.banners.restDay", message: "Rest Day" })}</Text>
+              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "home.banners.noWorkout", message: "No workout scheduled" })}</Text>
             </View>
           </View>
         </View>
@@ -92,27 +94,28 @@ export default function HomeBanners({
         <Pressable
           style={[styles.banner, { backgroundColor: colors.secondaryContainer, borderRadius: 12, padding: 18 }]}
           onPress={onStartNextWorkout}
-          accessibilityLabel={`Next workout: ${nextWorkout.day.label || nextWorkout.day.template_name || "workout"} from ${nextWorkout.program.name}`}
+           accessibilityLabel={t({ id: "home.banners.nextA11y", message: `Next workout: ${nextWorkout.day.label || nextWorkout.day.template_name || "workout"} from ${nextWorkout.program.name}` })}
           accessibilityRole="button"
         >
           <View style={styles.content}>
             <MaterialCommunityIcons name="play-circle" size={24} color={colors.onSecondaryContainer} />
             <View style={styles.text}>
-              <Text variant="body" style={{ color: colors.onSecondaryContainer, fontWeight: "600" }}>Next: {nextWorkout.day.label || nextWorkout.day.template_name || "Workout"}</Text>
-              <Text variant="caption" style={{ color: colors.onSecondaryContainer }}>{nextWorkout.program.name} · Tap to start</Text>
+               <Text variant="body" style={{ color: colors.onSecondaryContainer, fontWeight: "600" }}>{t({ id: "home.banners.next", message: `Next: ${nextWorkout.day.label || nextWorkout.day.template_name || "Workout"}` })}</Text>
+               <Text variant="caption" style={{ color: colors.onSecondaryContainer }}>{t({ id: "home.banners.nextProgram", message: `${nextWorkout.program.name} · Tap to start` })}</Text>
             </View>
           </View>
         </Pressable>
       )}
 
       {nextWorkout && hasSchedule && (
-        <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8, textAlign: "center" }} accessibilityLabel={`Program ${nextWorkout.program.name}: Schedule active`}>
-          {nextWorkout.program.name} (Schedule active)
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8, textAlign: "center" }} accessibilityLabel={t({ id: "home.banners.scheduleA11y", message: `Program ${nextWorkout.program.name}: Schedule active` })}>
+          {t({ id: "home.banners.schedule", message: `${nextWorkout.program.name} (Schedule active)` })}
         </Text>
       )}
     </>
   );
 }
+/* eslint-enable complexity */
 
 const styles = StyleSheet.create({
   banner: { marginBottom: 12 },

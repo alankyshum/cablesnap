@@ -1,0 +1,5 @@
+- Update checks now run every 6 hours instead of once per day, so new releases are surfaced sooner.
+- AI Coach replies work again with models that reject tool requests.
+- Fixed mirrored message text and out-of-order conversation dates.
+- Fixed Coach layout issues, including navbar overlap, sidebar height and alignment, collapse button placement, and layer shadows.
+- Added consistent padding to warning cards, sidebar buttons, and the empty state.

@@ -3,6 +3,15 @@ import * as path from "path";
 
 const PORT = process.env.PLAYWRIGHT_PORT || "8088";
 const BASE_URL = `http://localhost:${PORT}`;
+const E2E_WEB_DIST = path.resolve(__dirname, `.expo/e2e-web-${PORT}`);
+const REPOSITORY_WEB_DIST = path.resolve(__dirname, "dist");
+const SERVE_CONFIG = path.resolve(__dirname, "e2e/serve-coop-coep.json");
+
+// CI prepares the repository dist/ bundle before Playwright starts. Local runs
+// retain the port-scoped export so separate runs cannot exercise stale output.
+const staticServerCommand = process.env.E2E_USE_STATIC === "1"
+  ? `npx serve -s '${REPOSITORY_WEB_DIST}' -l ${PORT} -c '${SERVE_CONFIG}'`
+  : `node -e "require('fs').rmSync(process.argv[1], { recursive: true, force: true })" '${E2E_WEB_DIST}' && npx expo export -p web --output-dir '${E2E_WEB_DIST}' && npx serve -s '${E2E_WEB_DIST}' -l ${PORT} -c '${SERVE_CONFIG}'`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -58,10 +67,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    // In CI (and anywhere E2E_USE_STATIC=1 is set) serve a pre-built static
-    // bundle via `npx serve -s dist` instead of the Metro dev server. The
-    // dev server's cold-start bundling time on a fresh CI runner exceeds
-    // Playwright's per-test timeout and leaves the page blank (see BLD-517).
+    // Always serve a static bundle for Playwright. CI serves the bundle
+    // explicitly prepared by its workflow; local runs build into a port-scoped
+    // isolated directory. A shared dist/ is only used when CI has prepared it.
     //
     // BLD-658: scenario specs need `crossOriginIsolated === true` so the
     // expo-sqlite Web Worker can use SharedArrayBuffer; otherwise
@@ -69,11 +77,12 @@ export default defineConfig({
     // scenario seed never runs (no `data-test-ready` flag). The serve
     // config sets COOP/COEP/CORP headers; the absolute path is required
     // because `serve --config` resolves relative to the served folder.
-    command: process.env.E2E_USE_STATIC
-      ? `npx serve -s dist -l ${PORT} -c '${path.resolve(__dirname, "e2e/serve-coop-coep.json")}'`
-      : `npx expo start --web --port ${PORT}`,
+    command: staticServerCommand,
     url: BASE_URL,
-    reuseExistingServer: !process.env.CI,
+    // Never accept an arbitrary process already bound to the test port. A stale
+    // Metro/serve instance can otherwise make Playwright exercise another
+    // checkout or an obsolete bundle while reporting this config as healthy.
+    reuseExistingServer: false,
     timeout: 180_000,
   },
 });

@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * BLD-1158b: CoachOverlay — shows the active Tempo Coach state.
  *
@@ -64,9 +67,7 @@ export function CoachOverlay({ currentPhase, tempo, onStop }: CoachOverlayProps)
           <Text
             variant="caption"
             style={{ color: colors.onPrimaryContainer, fontSize: fontSizes.xs, opacity: 0.8 }}
-          >
-            Tempo Coach · {tempo}
-          </Text>
+          >{t({ id: "session.coachoverlay.str2", message: `Tempo Coach · ${tempo}` })}</Text>
           {currentPhase ? (
             <Text
               variant="body"
@@ -82,14 +83,12 @@ export function CoachOverlay({ currentPhase, tempo, onStop }: CoachOverlayProps)
           onPress={handleStop}
           style={[styles.stopButton, { backgroundColor: colors.errorContainer }]}
           accessibilityRole="button"
-          accessibilityLabel="Stop Tempo Coach"
+          accessibilityLabel={t({ id: "session.coachoverlay.str1", message: "Stop Tempo Coach" })}
           hitSlop={12}
         >
           <Text
             style={{ color: colors.onErrorContainer, fontSize: fontSizes.xs, fontWeight: "700" }}
-          >
-            Stop
-          </Text>
+          >{t({ id: "session.coachoverlay.str3", message: "Stop" })}</Text>
         </Pressable>
       </View>
     </View>

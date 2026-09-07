@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -19,27 +22,27 @@ export function SessionListFooter({ onAddExercise, onFinish, onCancel, colors }:
         variant="outline"
         onPress={onAddExercise}
         style={styles.addExercise}
-        accessibilityLabel="Add exercise to workout"
+        accessibilityLabel={t({ id: "session.sessionlistfooter.str1", message: "Add exercise to workout" })}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
-          <Text style={{ color: colors.primary, fontWeight: "600" }}>Add Exercise</Text>
+          <Text style={{ color: colors.primary, fontWeight: "600" }}>{t({ id: "session.sessionlistfooter.str6", message: "Add Exercise" })}</Text>
         </View>
       </Button>
       <Button
         variant="default"
         onPress={onFinish}
         style={styles.finishBtn}
-        accessibilityLabel="Finish workout"
-        label="Finish Workout"
+        accessibilityLabel={t({ id: "session.sessionlistfooter.str2", message: "Finish workout" })}
+        label={t({ id: "session.sessionlistfooter.str3", message: "Finish Workout" })}
       />
       <Button
         variant="ghost"
         onPress={onCancel}
         textStyle={{ color: colors.error }}
         style={styles.cancelBtn}
-        accessibilityLabel="Cancel workout"
-        label="Cancel Workout"
+        accessibilityLabel={t({ id: "session.sessionlistfooter.str4", message: "Cancel workout" })}
+        label={t({ id: "session.sessionlistfooter.str5", message: "Cancel Workout" })}
         testID="cancel-workout-btn"
       />
     </>

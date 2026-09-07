@@ -85,7 +85,7 @@ describe("Session notes input — always-visible affordance (BLD-2743) — sourc
     });
 
     it("preserves accessibilityLabel='Session notes'", () => {
-      expect(summarySrc).toMatch(/accessibilityLabel="Session notes"/);
+      expect(summarySrc).toMatch(/accessibilityLabel=\{t\(\{\s*id:\s*"session\.summary\.id\.str2",\s*message:\s*"Session notes"\s*\}\)\}/);
     });
 
     it("does not pass notesExpanded prop to SummaryHeader", () => {
@@ -149,7 +149,7 @@ describe("Session notes input — always-visible affordance (BLD-2743) — sourc
     });
 
     it("preserves accessibilityLabel='Session notes'", () => {
-      expect(ratingNotesSrc).toMatch(/accessibilityLabel="Session notes"/);
+      expect(ratingNotesSrc).toMatch(/accessibilityLabel=\{t\(\{\s*id:\s*"components\.session\.detail\.rating-notes\.session-notes-a11y",\s*message:\s*"Session notes"\s*\}\)\}/);
     });
 
     it("does not have notesExpanded or onToggleNotes in the Props type", () => {

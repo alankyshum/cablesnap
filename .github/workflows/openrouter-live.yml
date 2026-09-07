@@ -1,0 +1,31 @@
+name: OpenRouter live AI Coach checks
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  live-ai:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - name: Require the live-test secret on scheduled runs
+        if: github.event_name == 'schedule'
+        env:
+          OPENROUTER_TEST_API_KEY: ${{ secrets.OPENROUTER_TEST_API_KEY }}
+        run: test -n "$OPENROUTER_TEST_API_KEY"
+      - name: Run live OpenRouter suite
+        run: npm run test:ai:live
+        env:
+          # Required repository secret; never echo this value.
+          OPENROUTER_TEST_API_KEY: ${{ secrets.OPENROUTER_TEST_API_KEY }}

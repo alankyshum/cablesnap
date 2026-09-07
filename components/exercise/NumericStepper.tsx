@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   value: number;
@@ -37,7 +38,7 @@ export default function NumericStepper({ value, onValueChange, min, step, unit, 
         variant="secondary"
         onPress={decrement}
         disabled={value <= min}
-        accessibilityLabel={`Decrease by ${step}`}
+        accessibilityLabel={t({ id: "components.exercise.numeric-stepper.decrease", message: `Decrease by ${step}` })}
         style={styles.btn}
       >
         <Text>−</Text>
@@ -45,7 +46,7 @@ export default function NumericStepper({ value, onValueChange, min, step, unit, 
       <Text
         variant="title"
         style={{ color: colors.onSurface, minWidth: 80, textAlign: "center", fontWeight: "700" }}
-        accessibilityLabel={`${value} ${unit}`}
+        accessibilityLabel={t({ id: "components.exercise.numeric-stepper.value", message: `${value} ${unit}` })}
       >
         {value} {unit}
       </Text>
@@ -53,7 +54,7 @@ export default function NumericStepper({ value, onValueChange, min, step, unit, 
         variant="secondary"
         onPress={increment}
         disabled={value >= max}
-        accessibilityLabel={`Increase by ${step}`}
+        accessibilityLabel={t({ id: "components.exercise.numeric-stepper.increase", message: `Increase by ${step}` })}
         style={styles.btn}
       >
         <Text>+</Text>

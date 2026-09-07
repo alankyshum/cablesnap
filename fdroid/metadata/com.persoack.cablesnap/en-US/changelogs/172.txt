@@ -1,0 +1,1 @@
+- Fixed Wear OS release builds shipping with a debug signing certificate; release APKs now use the production signing key.

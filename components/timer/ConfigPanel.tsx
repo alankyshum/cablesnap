@@ -9,6 +9,7 @@ import {
   type AmrapConfig,
 } from "../../lib/timer"
 import { radii } from "../../constants/design-tokens"
+import { t } from "@lingui/core/macro"
 
 type ConfigPanelProps = {
   mode: Mode
@@ -22,7 +23,7 @@ export function ConfigPanel({ mode, config, onAdjust }: ConfigPanelProps) {
       {mode === "tabata" && (
         <>
           <Stepper
-            label="Work"
+            label={t({ id: "components.timer.configPanel.work", message: "Work" })}
             value={(config as TabataConfig).work}
             suffix="s"
             min={5}
@@ -31,7 +32,7 @@ export function ConfigPanel({ mode, config, onAdjust }: ConfigPanelProps) {
             onDown={() => onAdjust("work", -5)}
           />
           <Stepper
-            label="Rest"
+            label={t({ id: "components.timer.configPanel.rest", message: "Rest" })}
             value={(config as TabataConfig).rest}
             suffix="s"
             min={5}
@@ -40,7 +41,7 @@ export function ConfigPanel({ mode, config, onAdjust }: ConfigPanelProps) {
             onDown={() => onAdjust("rest", -5)}
           />
           <Stepper
-            label="Rounds"
+            label={t({ id: "components.timer.configPanel.rounds", message: "Rounds" })}
             value={(config as TabataConfig).rounds}
             suffix=""
             min={1}
@@ -52,7 +53,7 @@ export function ConfigPanel({ mode, config, onAdjust }: ConfigPanelProps) {
       )}
       {mode === "emom" && (
         <Stepper
-          label="Minutes"
+          label={t({ id: "components.timer.configPanel.minutes", message: "Minutes" })}
           value={(config as EmomConfig).minutes}
           suffix="min"
           min={1}
@@ -63,7 +64,7 @@ export function ConfigPanel({ mode, config, onAdjust }: ConfigPanelProps) {
       )}
       {mode === "amrap" && (
         <Stepper
-          label="Minutes"
+          label={t({ id: "components.timer.configPanel.minutes", message: "Minutes" })}
           value={(config as AmrapConfig).minutes}
           suffix="min"
           min={1}
@@ -96,7 +97,7 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
           onPress={onDown}
           disabled={value <= min}
           style={[styles.stepBtn, { backgroundColor: colors.surfaceVariant, opacity: value <= min ? 0.4 : 1 }]}
-          accessibilityLabel={`Decrease ${label}`}
+          accessibilityLabel={t({ id: "components.timer.configPanel.decreaseA11y", message: `Decrease ${label}` })}
           accessibilityRole="button"
           accessibilityState={{ disabled: value <= min }}
           accessibilityValue={{ min, max, now: value, text: `${value}${suffix}` }}
@@ -106,7 +107,7 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
         <Text
           variant="title"
           style={[styles.stepVal, { color: colors.onSurface }]}
-          accessibilityLabel={`${label}: ${value}${suffix}`}
+           accessibilityLabel={t({ id: "components.timer.configPanel.valueA11y", message: `${label}: ${value}${suffix}` })}
         >
           {value}{suffix}
         </Text>
@@ -114,7 +115,7 @@ function Stepper({ label, value, suffix, min, max, onUp, onDown }: {
           onPress={onUp}
           disabled={value >= max}
           style={[styles.stepBtn, { backgroundColor: colors.surfaceVariant, opacity: value >= max ? 0.4 : 1 }]}
-          accessibilityLabel={`Increase ${label}`}
+          accessibilityLabel={t({ id: "components.timer.configPanel.increaseA11y", message: `Increase ${label}` })}
           accessibilityRole="button"
           accessibilityState={{ disabled: value >= max }}
           accessibilityValue={{ min, max, now: value, text: `${value}${suffix}` }}

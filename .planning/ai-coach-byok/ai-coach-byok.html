@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Coach (BYOK, OpenRouter on-device) + Navigation Reshuffle</title>
+<style>
+:root{font:15px/1.45 system-ui,sans-serif;color-scheme:light dark;--border:#89929b;--muted:#68737d;--accent:#2463eb;--card:Canvas;--bg:Canvas;--text:CanvasText}
+body{max-width:1000px;margin:0 auto;padding:1.5rem 1rem 5rem;background:var(--bg);color:var(--text)}
+h1{font-size:1.6rem;margin:0 0 .25rem}
+h2{font-size:1.2rem;margin:1rem 0 .5rem;border-bottom:1px solid var(--border);padding-bottom:.25rem}
+h3{font-size:1.05rem;margin:.75rem 0 .25rem}
+section{margin:1rem 0}
+p.meta{color:var(--muted);font-size:.9em}
+.muted{color:var(--muted);font-size:.9em}
+table{width:100%;border-collapse:collapse;margin:.5rem 0}
+td,th{border:1px solid var(--border);padding:.35rem .5rem;text-align:left;font-size:.9em}
+th{background:color-mix(in srgb,var(--border) 15%,transparent)}
+ol,ul{padding-left:1.5rem}
+li{margin:.25rem 0}
+dl{display:grid;grid-template-columns:auto 1fr;gap:.25rem .75rem;font-size:.9em}
+dt{font-weight:600;color:var(--muted)}
+dd{margin:0}
+pre.code{background:color-mix(in srgb,var(--border) 10%,transparent);border:1px solid var(--border);border-radius:5px;padding:.5rem;overflow-x:auto;font-size:.85em}
+.phase{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:1rem;margin:1rem 0}
+.phase-head{display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap}
+.phase-head h3{margin:0}
+.phase-controls{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;font-size:.9em}
+.phase-controls label{cursor:pointer}
+.phase-status{display:inline-block;padding:.1rem .4rem;border-radius:3px;font-size:.75em;background:color-mix(in srgb,var(--border) 20%,transparent)}
+.decision-card{margin:.5rem 0;padding:.5rem;border:1px dashed var(--border);border-radius:5px}
+.decision-card select{display:block;margin-top:.25rem;max-width:100%}
+.task-list{list-style:none;padding-left:0}
+.task{display:grid;grid-template-columns:auto 1fr auto;gap:.5rem;align-items:start;padding:.35rem 0;border-bottom:1px solid color-mix(in srgb,var(--border) 30%,transparent)}
+.task:last-child{border-bottom:none}
+.task textarea{grid-column:1/-1;width:100%;min-height:28px;background:transparent;color:inherit;border:1px solid var(--border);border-radius:4px;padding:.25rem;font:inherit;font-size:.9em}
+select,input[type=number],textarea{background:transparent;color:inherit;border:1px solid var(--border);border-radius:4px;padding:.2rem .35rem;font:inherit;font-size:.9em}
+input[type=checkbox]{accent-color:var(--accent)}
+input[type=radio]{accent-color:var(--accent)}
+.toolbar{position:sticky;bottom:1rem;padding:.75rem;background:color-mix(in srgb,var(--card) 92%,transparent);border:1px solid var(--border);border-radius:7px;text-align:center}
+.primary{background:var(--accent);color:#fff;border:none;padding:.5rem 1.5rem;border-radius:5px;cursor:pointer;font-size:1em}
+.badge{font-size:.75em;color:var(--muted);margin-left:.35rem}
+.order{width:48px}
+.contract{border:1px solid var(--border);border-radius:6px;padding:.75rem;margin:.5rem 0;background:color-mix(in srgb,var(--border) 5%,transparent)}
+.contract h3{margin:0 0 .35rem;color:var(--accent)}
+</style>
+</head>
+<body>
+<div id="plan-content">
+<h1>AI Coach (BYOK, OpenRouter on-device) + Navigation Reshuffle</h1>
+<p class="meta">Generated: 2026-08-17</p>
+<section id="goal"><h2>Goal</h2><p>Ship an on-device AI Coach in the floating navbar — Vercel AI SDK agent loop and tools running inside the app, talking DIRECTLY to OpenRouter with the user&#x27;s own key and their chosen model from OpenRouter&#x27;s live catalog, with no server component of any kind — and move Exercises out of the navbar behind a home-header icon with a clickable `workouts/exercise` breadcrumb.</p></section>
+<section id="assumptions"><h2>Assumptions</h2><ul><li>HEADLINE DECIDED — Option A: on-device Vercel AI SDK (ai-sdk.dev), direct to OpenRouter. Tools and agent logic are defined inside the app; the user supplies their own OpenRouter key and picks the model. Option B (eve on Vercel) is REJECTED: eve is coupled to a Vercel-deployed server that serves the agent requests — it is more like a serverless framework — which is the wrong SHAPE for an in-app agent. eve&#x27;s genuine future triggers (server-side code execution, cron nudges with the app closed, cross-device sync) are preserved in Out of Scope as the documented re-evaluation trigger.</li><li>TRANSPORT DECIDED — direct, no relay. There is NO server component at all. The former T16 (Cloudflare relay on workers/strava-proxy) is DELETED, along with the `transport` field, the proxied/direct split, the `directJustification` type, the worker upstream map, worker-side log scrubbing, and the relay sentinel test.</li><li>PROVIDER SET DECIDED — OpenRouter only. This is what kills the relay: the Anthropic / OpenAI / Google client-key prohibitions are INAPPLICABLE (not overridden) because the app never touches those providers&#x27; keys. The user holds ONE OpenRouter key and OpenRouter fans out to models. The entire prior provider-ToS section is SUPERSEDED and moot.</li><li>OpenRouter ToS position, stated honestly and NOT overclaimed — NO PROHIBITION FOUND, but not explicit permission. The terms contemplate &quot;the extent you incorporate the Service into your own products and services&quot; and place key confidentiality on the user; they do NOT explicitly bless mobile or client-side use; and they DO prohibit &quot;reselling API access to Models or otherwise developing a competing service&quot; (openrouter.ai/terms). BINDING CONSTRAINT: the app must never pool or resell access — every call uses the end user&#x27;s own key.</li><li>OAuth PKCE CONFIRMED: `https://openrouter.ai/auth?callback_url=&amp;code_challenge=&amp;code_challenge_method=S256`, exchanged at `POST https://openrouter.ai/api/v1/auth/keys`, yielding &quot;a user-controlled API key&quot; that is revocable and credit-limitable, with no client registration or client secret documented. UNCONFIRMED: whether a custom scheme (expo-linking `myapp://`) is accepted as `callback_url`. Therefore PKCE is an ENHANCEMENT and is never load-bearing — paste-a-key is the guaranteed path and must ship.</li><li>Models catalog CONFIRMED public and unauthenticated: `GET https://openrouter.ai/api/v1/models` returns `context_length`, `pricing` and `supported_parameters`, and is filterable with `?supported_parameters=tools`. HARD REQUIREMENT: the app must NOT ship a hardcoded model list. The axis of variation is no longer providers, it is MODELS, and OpenRouter&#x27;s live catalog is the binding layer.</li><li>Tool calling CONFIRMED normalized: &quot;OpenRouter standardizes the tool calling interface across models and providers&quot;; non-native providers get tools mapped or &quot;transform[ed] into a YAML template&quot;. Reliability nonetheless VARIES per model — the tools-only catalog filter is necessary but not sufficient.</li><li>`@openrouter/ai-sdk-provider` is official (OpenRouterTeam GitHub). PIN 1.5.4 for AI SDK v5 (`peerDependencies: ai ^5.0.0`). npm latest is 3.0.0 and targets AI SDK v7 — do NOT take latest. Custom-`fetch` support is UNCONFIRMED in its README, so T1 must prove `expo/fetch` can actually be injected.</li><li>RN streaming status is LIKELY, UNPROVEN. `expo/fetch` is WinterCG-compliant with a real `response.body.getReader()` and Vercel&#x27;s own Expo guide mandates it — but every documented example routes through a server, and AI SDK issue #5074 reported pure-client `streamText` failing on older versions (closed). Unproven on Expo 55 / RN 0.83.4. This is the single highest-risk unknown and it gates the AI track (T1).</li><li>Key introspection: `GET /api/v1/key` returns `limit_remaining`, `usage_daily`, `usage_monthly`. Errors: 402 insufficient credits, 429 rate limit (free models: 20 rpm; 50/day under $10 purchased, 1000/day at $10+). Full account-wide credits require a management key the client must never hold — so the app can only ever show key-scoped figures.</li><li>NAVIGATION TRACK IS LOCKED. T3, T4 and T5 are unchanged from the previous revision and have ZERO dependency on any AI decision. They are ready to dispatch immediately and must not be edited by this revision.</li><li>The OpenRouter key lives in expo-secure-store ONLY — never SQLite, never app.config extra, never a React Query cache key, never a Sentry payload. It leaves the device solely as the Authorization header on a request to OpenRouter. With no relay, no worker and no server, client telemetry is the ENTIRE scrubbing boundary.</li><li>Exercises stays a file inside `app/(tabs)/` and stays a registered Tabs.Screen; it leaves the navbar purely by dropping out of TAB_ORDER. No file move, no route-group migration, no deep-link breakage.</li><li>Schema changes are hand-written phased DDL (`lib/db/tables.ts` createExtensionTables + `lib/db/migrations.ts` phase 2), mirrored in `lib/db/schema.ts`. This repo does NOT use drizzle-kit generated migrations.</li><li>SQLite is the single source of truth for chat sessions/messages; React Query is the read/cache layer. No zustand/mmkv is introduced.</li><li>v1 ships text chat only — no voice, no image input, no server-side code execution, no cross-device sync.</li></ul></section>
+<section id="recon"><h2>Recon References</h2><ul><li>app/_layout.tsx:166-182 — root stack; app/_layout.tsx:153-165 — React Query provider</li><li>constants/screen-config.ts:11-38 — centralized SCREEN_CONFIGS title registry; route groups own headers via nested _layout</li><li>app/(tabs)/_layout.tsx:38-54 — exercises Tabs.Screen + headerRight; :72-95 — index screen, wrench headerRight -&gt; /tools (MaterialCommunityIcons &#x27;wrench&#x27;, size 24)</li><li>components/FloatingTabBar.tsx:28-29 — hardcoded TAB_ORDER [&#x27;exercises&#x27;,&#x27;nutrition&#x27;,&#x27;index&#x27;,&#x27;progress&#x27;,&#x27;settings&#x27;]</li><li>components/floating-tab-bar/TabButton.tsx:12-18 TAB_ICONS, :20-26 TAB_LABELS — two parallel maps keyed by route name</li><li>app/(tabs)/exercises.tsx — list; app/exercise/[id].tsx:447-454 — dynamic title. NO breadcrumb component exists today</li><li>lib/layout.ts:3-31 — BREAKPOINTS compact&lt;600 / medium 600-1023 / expanded&gt;=1024; useLayout() exposes compact + atLeastMedium</li><li>components/session/ExerciseDetailDrawer.tsx, components/ui/sheet.tsx — drawer/sheet precedent for the collapsed phone sidebar</li><li>lib/db/tables.ts createExtensionTables + lib/db/migrations.ts:53 migrate() four-phase ordering (phase 2 = additive DDL) — the real migration seam</li><li>lib/db/helpers.ts:144-161,282 — drizzle singleton wiring; lib/db/schema.ts:12 sqliteTable declarations must mirror DDL exactly</li><li>lib/strava.ts:19,58-64 — expo-secure-store key-constant pattern (KEY_ACCESS_TOKEN etc.)</li><li>workers/strava-proxy/ + app.config.ts:99-112 extra — the existing backend. It is EXPLICITLY NOT part of the AI track: the coach has no server component. Untouched by this plan.</li><li>__tests__/navigation-headers.test.ts:22-45 — GROUPS guard; :47-68 — title guard. Must be extended for ai-coach</li><li>@sentry/react-native shipped — scrubbing invariant applies to beforeSend and breadcrumbs. Client-only; there is no server-side logging surface in the AI path.</li><li>OpenRouter Terms — openrouter.ai/terms: contemplates &quot;the extent you incorporate the Service into your own products and services&quot;; key confidentiality sits with the user; prohibits &quot;reselling API access to Models or otherwise developing a competing service&quot;. NO PROHIBITION FOUND on client-side use, and no explicit permission either.</li><li>OpenRouter OAuth PKCE — openrouter.ai/docs/guides/overview/auth/oauth.md: `https://openrouter.ai/auth?callback_url=&amp;code_challenge=&amp;code_challenge_method=S256`, exchange at `POST https://openrouter.ai/api/v1/auth/keys`, yields &quot;a user-controlled API key&quot;, revocable and credit-limitable, no client registration or secret. UNCONFIRMED: custom-scheme (expo-linking `myapp://`) callback_url acceptance.</li><li>OpenRouter models catalog — `GET https://openrouter.ai/api/v1/models`: public + unauthenticated, returns `context_length`, `pricing`, `supported_parameters`; filterable with `?supported_parameters=tools`</li><li>OpenRouter tool calling — &quot;OpenRouter standardizes the tool calling interface across models and providers&quot;; non-native providers get tools mapped or &quot;transform[ed] into a YAML template&quot;. Reliability varies per model.</li><li>@openrouter/ai-sdk-provider — official (OpenRouterTeam GitHub). PIN 1.5.4 for AI SDK v5 (`peerDependencies: ai ^5.0.0`); npm latest 3.0.0 targets AI SDK v7. Custom-`fetch` support UNCONFIRMED in its README.</li><li>RN streaming — `expo/fetch` is WinterCG-compliant with a real `response.body.getReader()`; Vercel&#x27;s own Expo guide mandates it, but every documented example routes through a server. AI SDK issue #5074 reported pure-client streamText failing on older versions (closed). LIKELY, UNPROVEN on Expo 55 / RN 0.83.4.</li><li>OpenRouter key introspection — `GET /api/v1/key` returns `limit_remaining`, `usage_daily`, `usage_monthly`. Errors: 402 insufficient credits, 429 rate limit (free models 20 rpm; 50/day under $10 purchased, 1000/day at $10+). Account-wide credits require a management key the client must not hold.</li><li>eve (REJECTED Option B, retained only as the record) — eve is deployed as a Vercel server that serves agent requests, and its session auth snapshot durably retains credentials: eve.dev/docs/guides/auth-and-route-protection#what-reaches-ctxsessionauth</li></ul></section>
+<section id="waves"><h2>Execution Waves</h2><ol><li><strong>Wave 0 — GATE + immediately dispatchable (zero dependencies, zero pending decisions): T1, T3, T4, T6, T8</strong> — T1, T3, T4, T6, T8</li><li><strong>Wave 1 (parallel) — nav wiring, error taxonomy, chat data layer: T5, T18, T10</strong> — T5, T18, T10</li><li><strong>Wave 2 (parallel) — model catalog, key connection UI, key status: T7, T9, T17</strong> — T7, T9, T17</li><li><strong>Wave 3 (parallel) — agent loop + model picker: T11, T16</strong> — T11, T16</li><li><strong>Wave 4 (parallel) — coach tools + chat UI: T12, T13</strong> — T12, T13</li><li><strong>Wave 5 (parallel) — verification: T14, T15</strong> — T14, T15</li></ol></section>
+<section id="tasks"><h2>Task Breakdown</h2><table><thead><tr><th>#</th><th>Agent</th><th>Goal</th><th>Files</th><th>Depends</th></tr></thead><tbody><tr><td>T1</td><td>code</td><td>Spike (SHARPENED — the single gate on the AI track): prove a PURE ON-DEVICE streaming agent loop with AI SDK v5 + `@openrouter/ai-sdk-provider@1.5.4` + `expo/fetch`, straight from the device to OpenRouter with no server anywhere in the path.</td><td>lib/ai/__spike__/*, package.json</td><td></td></tr><tr><td>T2</td><td>explore</td><td>COMPLETE — research pass on the OpenRouter-only on-device design. SUPERSEDES the entire prior provider-ToS section (OpenAI / Anthropic / Gemini client-key prohibitions), which is now INAPPLICABLE because the app never touches those providers&#x27; keys.</td><td></td><td></td></tr><tr><td>T3</td><td>code</td><td>Build a reusable clickable-parent breadcrumb header title component — shared, not a one-off for exercises.</td><td>components/ui/BreadcrumbTitle.tsx, __tests__/</td><td></td></tr><tr><td>T4</td><td>code</td><td>Swap exercises out of the floating navbar for ai-coach, and add the ai-coach route file as a placeholder screen.</td><td>components/FloatingTabBar.tsx, components/floating-tab-bar/TabButton.tsx, app/(tabs)/ai-coach.tsx</td><td></td></tr><tr><td>T5</td><td>code</td><td>Wire the tabs layout: home header icon row (exercises beside wrench), ai-coach screen options, and the exercises breadcrumb title.</td><td>app/(tabs)/_layout.tsx</td><td>T3, T4</td></tr><tr><td>T6</td><td>code</td><td>Add chat sessions/messages tables via the repo&#x27;s hand-written phased DDL migration path.</td><td>lib/db/tables.ts, lib/db/schema.ts, lib/db/migrations.ts</td><td></td></tr><tr><td>T7</td><td>code</td><td>Build the OpenRouter model catalog service so that adding or removing a model costs ZERO code changes — the app fetches the live catalog and never ships a hardcoded model list.</td><td>lib/ai/catalog.ts, hooks/useModelCatalog.ts, __tests__/</td><td>T1, T18</td></tr><tr><td>T8</td><td>code</td><td>Build the OpenRouter key vault on expo-secure-store and enforce the key-scrubbing invariant across client telemetry.</td><td>lib/ai/key-vault.ts, lib/ai/redact.ts, lib/sentry*, __tests__/</td><td></td></tr><tr><td>T9</td><td>designer</td><td>Build the OpenRouter key connection UI: paste-a-key as the GUARANTEED shipping path, with OAuth PKCE as an optional enhancement that nothing depends on.</td><td>app/settings/ai-provider.tsx, app/settings/_layout.tsx, components/settings/</td><td>T8, T18</td></tr><tr><td>T10</td><td>code</td><td>Build the chat data layer over the new tables: session CRUD, message append, and React Query hooks.</td><td>lib/db/coach.ts, hooks/useCoachSessions.ts, __tests__/</td><td>T6</td></tr><tr><td>T11</td><td>code</td><td>Build the coach agent loop: on-device `streamText` straight to OpenRouter via the AI SDK, with no server in the path.</td><td>lib/ai/agent.ts, __tests__/</td><td>T1, T7, T8, T18</td></tr><tr><td>T12</td><td>code</td><td>Expose local workout and nutrition context to the coach as tools reading the local DB.</td><td>lib/ai/tools/*.ts, __tests__/</td><td>T11</td></tr><tr><td>T13</td><td>designer</td><td>Build the AI Coach chat screen: sessions sidebar + conversation pane, responsive on lib/layout.ts breakpoints.</td><td>app/(tabs)/ai-coach.tsx, components/coach/</td><td>T10, T11, T5, T9, T16, T18</td></tr><tr><td>T14</td><td>code</td><td>Update and extend the test suite for the nav reshuffle and the coach route.</td><td>__tests__/navigation-headers.test.ts, __tests__/, e2e/</td><td>T5, T9, T13</td></tr><tr><td>T15</td><td>code-reviewer</td><td>Security and invariant review of the on-device BYOK path end to end.</td><td></td><td>T11, T12, T9, T13, T17</td></tr><tr><td>T16</td><td>designer</td><td>Build the model picker: searchable, showing pricing and context length, sourced entirely from the live catalog.</td><td>components/coach/ModelPicker.tsx, __tests__/</td><td>T7, T18</td></tr><tr><td>T17</td><td>code</td><td>Surface OpenRouter key credit and usage from `GET /api/v1/key`, scoped honestly.</td><td>lib/ai/key-status.ts, hooks/useKeyStatus.ts, components/settings/, __tests__/</td><td>T8, T18</td></tr><tr><td>T18</td><td>code</td><td>Define the AI error taxonomy and the single mapping from typed error to chat UI state — one source of truth consumed by the catalog, the agent loop, and every screen.</td><td>lib/ai/errors.ts, __tests__/</td><td>T1</td></tr></tbody></table></section>
+<section id="contracts"><h2>Dispatch Contracts</h2><div class="contract"><h3>T1</h3><dl><dt>GOAL</dt><dd>Spike (SHARPENED — the single gate on the AI track): prove a PURE ON-DEVICE streaming agent loop with AI SDK v5 + `@openrouter/ai-sdk-provider@1.5.4` + `expo/fetch`, straight from the device to OpenRouter with no server anywhere in the path.</dd><dt>DONE</dt><dd>(a) INCREMENTAL TOKEN DELTAS — a throwaway screen renders &gt;=2 separate deltas from a real OpenRouter call on an Android build, not one buffered blob<br>(b) COMPLETED TOOL ROUND-TRIP — the model calls a local tool, the tool result is returned to the model, and the model continues and finishes. A tool-call event merely observed is NOT sufficient; the round-trip must complete<br>(c) MID-STREAM ABORT/CANCEL actually stops the stream and the underlying request, leaving no dangling reader and no orphaned request<br>(d) BEHAVIOUR ON 402 (insufficient credits) and 429 (rate limit) recorded verbatim, including the exact response body shape T18 will map<br>Written verdict: does `expo/fetch`&#x27;s `response.body.getReader()` reach `streamText`, and can that custom fetch be injected into `@openrouter/ai-sdk-provider@1.5.4` (its README support for custom fetch is UNCONFIRMED)</dd><dt>FILES</dt><dd>lib/ai/__spike__/*<br>package.json</dd><dt>PRIOR</dt><dd>see Recon; `expo/fetch` is WinterCG-compliant with a real `response.body.getReader()` and Vercel&#x27;s own Expo guide mandates it, BUT every documented example routes through a server and AI SDK issue #5074 reported pure-client streamText failing on older versions (closed). Status LIKELY, UNPROVEN on Expo 55 / RN 0.83.4. PIN `@openrouter/ai-sdk-provider@1.5.4` (peerDependencies `ai ^5.0.0`); npm latest 3.0.0 targets AI SDK v7.</dd><dt>DONOT</dt><dd>Do not build product UI, do not touch app/(tabs)/, do not merge the spike screen into a real route. Do NOT introduce a server, worker, relay, proxy or Vercel component of any kind — a server hop is not an acceptable fallback and not an acceptable way to make the spike pass. Do not take `@openrouter/ai-sdk-provider` latest.</dd><dt>VERIFY</dt><dd>Run on Android emulator per .claude/skills/cablesnap--android-emulator; observe streamed deltas, a completed tool round-trip, a clean abort, and the 402/429 payloads in logs</dd><dt>REPLY</dt><dd>PASS/FAIL per (a)(b)(c)(d) + exact pinned versions + the working streamText call shape including HOW expo/fetch was injected + the verbatim 402 and 429 response bodies. If FAIL, the fallback is NON-STREAMING completions against the same direct OpenRouter path — explicitly NOT a server. This verdict gates T7, T11 and T18.</dd></dl></div><div class="contract"><h3>T2</h3><dl><dt>GOAL</dt><dd>COMPLETE — research pass on the OpenRouter-only on-device design. SUPERSEDES the entire prior provider-ToS section (OpenAI / Anthropic / Gemini client-key prohibitions), which is now INAPPLICABLE because the app never touches those providers&#x27; keys.</dd><dt>DONE</dt><dd>OpenRouter ToS — NO PROHIBITION FOUND, but NOT explicit permission. The terms contemplate &quot;the extent you incorporate the Service into your own products and services&quot; and place key confidentiality on the user; they do NOT explicitly bless mobile/client-side use, and they DO prohibit &quot;reselling API access to Models or otherwise developing a competing service&quot; (openrouter.ai/terms). Binding constraint: never pool or resell access — every call uses the end user&#x27;s own key.<br>OAuth PKCE CONFIRMED: `https://openrouter.ai/auth?callback_url=&amp;code_challenge=&amp;code_challenge_method=S256`, exchanged at `POST https://openrouter.ai/api/v1/auth/keys`, yielding &quot;a user-controlled API key&quot; that is revocable and credit-limitable, with no client registration or client secret documented. UNCONFIRMED: whether a custom scheme (expo-linking `myapp://`) is accepted as `callback_url`.<br>Models catalog CONFIRMED public and unauthenticated: `GET https://openrouter.ai/api/v1/models` returns `context_length`, `pricing`, `supported_parameters`, filterable with `?supported_parameters=tools`. Tool calling CONFIRMED normalized — &quot;OpenRouter standardizes the tool calling interface across models and providers&quot;, with non-native providers mapped or &quot;transform[ed] into a YAML template&quot;; reliability varies per model.<br>`@openrouter/ai-sdk-provider` is official (OpenRouterTeam). PIN 1.5.4 for AI SDK v5 (`peerDependencies: ai ^5.0.0`); npm latest 3.0.0 targets AI SDK v7. Custom-`fetch` support UNCONFIRMED in its README — T1 must prove it. Key introspection: `GET /api/v1/key` returns `limit_remaining`, `usage_daily`, `usage_monthly`; errors are 402 insufficient credits and 429 rate limit (free models 20 rpm; 50/day under $10 purchased, 1000/day at $10+). Account-wide credits require a management key the client must never hold.</dd><dt>FILES</dt><dd></dd><dt>PRIOR</dt><dd>The earlier eve/Vercel costing is retained only as the record behind the REJECTED Option B; it is not re-litigated.</dd><dt>DONOT</dt><dd>Do NOT re-run the OpenAI/Anthropic/Gemini client-key research — it is moot under OpenRouter-only. Do not re-open eve. Do not overclaim OpenRouter&#x27;s terms as permission.</dd><dt>VERIFY</dt><dd>Every claim carries a doc URL — see Recon References</dd><dt>REPLY</dt><dd>DELIVERED. Supersedes the prior provider-ToS section entirely. Two named unknowns remain: PKCE custom-scheme acceptance (owner T9) and custom-fetch injection into `@openrouter/ai-sdk-provider@1.5.4` (owner T1).</dd></dl></div><div class="contract"><h3>T3</h3><dl><dt>GOAL</dt><dd>Build a reusable clickable-parent breadcrumb header title component — shared, not a one-off for exercises.</dd><dt>DONE</dt><dd>`components/ui/BreadcrumbTitle.tsx` takes segments [{label, href?}]; href segments are pressable and navigate, last segment is plain text<br>Renders `workouts/exercise` with `workouts` tappable; separator styled from design-tokens, colors from useThemeColors<br>48x48 min touch target on tappable segments, accessibilityRole=&#x27;link&#x27;, truncates gracefully at compact width</dd><dt>FILES</dt><dd>components/ui/BreadcrumbTitle.tsx<br>__tests__/</dd><dt>PRIOR</dt><dd>see Recon; no breadcrumb exists today; match renderHeaderTitle style at app/(tabs)/_layout.tsx:16-24</dd><dt>DONOT</dt><dd>Do not wire it into any screen — T5 owns app/(tabs)/_layout.tsx.</dd><dt>VERIFY</dt><dd>npx jest BreadcrumbTitle</dd><dt>REPLY</dt><dd>Component path + prop signature; name the file:line a third breadcrumb segment lands with zero component edits.</dd></dl></div><div class="contract"><h3>T4</h3><dl><dt>GOAL</dt><dd>Swap exercises out of the floating navbar for ai-coach, and add the ai-coach route file as a placeholder screen.</dd><dt>DONE</dt><dd>TAB_ORDER becomes [&#x27;ai-coach&#x27;,&#x27;nutrition&#x27;,&#x27;index&#x27;,&#x27;progress&#x27;,&#x27;settings&#x27;] (FloatingTabBar.tsx:29); TAB_ICONS + TAB_LABELS gain &#x27;ai-coach&#x27; and drop &#x27;exercises&#x27;<br>`app/(tabs)/ai-coach.tsx` exists and renders a titled empty state using useFloatingTabBarHeight() for bottom padding<br>Exercises remains navigable via router.push(&#x27;/exercises&#x27;) — no file move, no deep-link change</dd><dt>FILES</dt><dd>components/FloatingTabBar.tsx<br>components/floating-tab-bar/TabButton.tsx<br>app/(tabs)/ai-coach.tsx</dd><dt>PRIOR</dt><dd>see Recon; TAB_ORDER:28-29, TAB_ICONS:12-18, TAB_LABELS:20-26</dd><dt>DONOT</dt><dd>Do not edit app/(tabs)/_layout.tsx — T5 owns that file. Do not delete app/(tabs)/exercises.tsx.</dd><dt>VERIFY</dt><dd>npx jest; app boots with 5 navbar slots, ai-coach leftmost</dd><dt>REPLY</dt><dd>Confirm the three parallel maps stayed in sync; name the exact file:line trio a 3rd nav entry must touch, and whether you collapsed them into one record.</dd></dl></div><div class="contract"><h3>T5</h3><dl><dt>GOAL</dt><dd>Wire the tabs layout: home header icon row (exercises beside wrench), ai-coach screen options, and the exercises breadcrumb title.</dd><dt>DONE</dt><dd>index headerRight is a row: new exercises icon (&#x27;format-list-bulleted&#x27;) pushing /exercises, then the existing wrench pushing /tools — both 48x48, both labelled<br>exercises Tabs.Screen headerTitle renders BreadcrumbTitle with `workouts` (href &#x27;/&#x27;) + `exercise`; its existing &#x27;+&#x27; headerRight is preserved<br>ai-coach Tabs.Screen registered with title &#x27;AI Coach&#x27; and its sidebar-toggle headerLeft slot present</dd><dt>FILES</dt><dd>app/(tabs)/_layout.tsx</dd><dt>PRIOR</dt><dd>see Recon; wrench block at :84-93, exercises block at :38-54, renderHeaderTitle helper at :16-24</dd><dt>DONOT</dt><dd>Do not change FloatingTabBar or TabButton — T4 owns those.</dd><dt>VERIFY</dt><dd>npx jest __tests__/navigation-headers.test.ts; visually confirm two icons top-right on home</dd><dt>REPLY</dt><dd>Confirm header row ordering + that tapping `workouts` in the breadcrumb returns to home; name the seam a 3rd home-header icon lands.</dd></dl></div><div class="contract"><h3>T6</h3><dl><dt>GOAL</dt><dd>Add chat sessions/messages tables via the repo&#x27;s hand-written phased DDL migration path.</dd><dt>DONE</dt><dd>`coach_sessions` (id, title, model_id, created_at, updated_at) — `model_id` stores the OpenRouter model slug as FREE TEXT, never an enum and never an FK to an in-app model table — and `coach_messages` (id, session_id FK, role, content, tool_calls JSON nullable, created_at, error nullable), created in createExtensionTables (lib/db/tables.ts) and invoked from migrate() phase 2<br>Matching sqliteTable declarations in lib/db/schema.ts mirror the DDL exactly, plus an index on coach_messages(session_id, created_at)<br>Migration is additive and idempotent — re-running migrate() on an existing DB is a no-op; no API key column and no hardcoded model enum exists on any table</dd><dt>FILES</dt><dd>lib/db/tables.ts<br>lib/db/schema.ts<br>lib/db/migrations.ts</dd><dt>PRIOR</dt><dd>see Recon; migrate() four-phase ordering at lib/db/migrations.ts:53, phase 2 = additive DDL at :73-208. The model catalog is REMOTE (T7), so nothing about models is enumerated in the schema.</dd><dt>DONOT</dt><dd>Do not introduce drizzle-kit. Do not store keys in SQLite. Do not create a models table, a model enum, or a default-model column. Do not touch phase 3/4.</dd><dt>VERIFY</dt><dd>npx jest lib/db; fresh-install and upgrade-path both migrate clean</dd><dt>REPLY</dt><dd>Table DDL + the schema.ts line range; confirm phase-2 placement, confirm `model_id` is free text, and name where a per-message token-usage column would land.</dd></dl></div><div class="contract"><h3>T7</h3><dl><dt>GOAL</dt><dd>Build the OpenRouter model catalog service so that adding or removing a model costs ZERO code changes — the app fetches the live catalog and never ships a hardcoded model list.</dd><dt>DONE</dt><dd>`lib/ai/catalog.ts` fetches `GET https://openrouter.ai/api/v1/models` (public, unauthenticated), filters to entries whose `supported_parameters` contains `tools`, and exposes {id, name, contextLength, pricing, supportedParameters} plus listModels()/getModel(id). HARD REQUIREMENT: no model id, name, or default is hardcoded anywhere in app source — a repo-wide grep for a model slug returns only tests and fixtures.<br>Catalog is cached with an explicit TTL and a last-known-good copy. On fetch failure the app degrades to the LAST CACHED catalog and exposes `stale: true` plus the cache timestamp so the UI can SAY SO. It must NEVER fall back to a hardcoded guess; with no cache at all it throws CatalogUnavailableError rather than inventing a list.<br>Pre-call guards, each a separate assertion and each thrown BEFORE any model call is issued: a selected model absent from the live catalog throws ModelNotInCatalogError; a selected model present but lacking `tools` in `supported_parameters` throws ModelLacksToolsError. Neither may silently fall back to a default model — there IS no default model.<br>Error types are imported from T18&#x27;s taxonomy, not redeclared locally</dd><dt>FILES</dt><dd>lib/ai/catalog.ts<br>hooks/useModelCatalog.ts<br>__tests__/</dd><dt>PRIOR</dt><dd>see Recon; the catalog endpoint is CONFIRMED public + unauthenticated and filterable with `?supported_parameters=tools`. T1 pins the SDK versions and the fetch shape. T18 owns the error taxonomy.</dd><dt>DONOT</dt><dd>Do not hardcode a model list, a default model, or a curated &#x27;recommended&#x27; subset. Do not read SecureStore here — the catalog needs no key. Do not build the picker UI (T16 owns it) or the agent loop (T11 owns it).</dd><dt>VERIFY</dt><dd>npx jest lib/ai/catalog — cover as separate assertions: tools-filter, absent-model throw, lacks-tools throw, stale-cache degradation with the stale flag set, no-cache CatalogUnavailableError, and a source-wide assertion that no model slug is hardcoded</dd><dt>REPLY</dt><dd>Catalog API + the cache TTL chosen; state explicitly that adding or removing a model requires ZERO code changes, and name the test that proves no model slug is hardcoded.</dd></dl></div><div class="contract"><h3>T8</h3><dl><dt>GOAL</dt><dd>Build the OpenRouter key vault on expo-secure-store and enforce the key-scrubbing invariant across client telemetry.</dd><dt>DONE</dt><dd>`lib/ai/key-vault.ts` with get/set/delete/has for a SINGLE OpenRouter key under a KEY_OPENROUTER constant, following the lib/strava.ts:58-64 pattern. The key lives in expo-secure-store ONLY — never SQLite, never app.config extra, never a React Query cache key<br>A `keyFormat` predicate validates the OpenRouter key shape locally before any network call, exported for reuse by the key entry UI (T9)<br>Sentry beforeSend + breadcrumb hook redacts any value matching keyFormat and any `authorization` header, with a test asserting a planted sentinel key never survives serialization<br>Keys are never logged, never in an error message, and never in a thrown payload</dd><dt>FILES</dt><dd>lib/ai/key-vault.ts<br>lib/ai/redact.ts<br>lib/sentry*<br>__tests__/</dd><dt>PRIOR</dt><dd>see Recon; lib/strava.ts:19,58-64 SecureStore pattern. SCOPE REDUCTION vs the previous revision: there is no worker and no relay, so the worker-side log-scrubbing extension is DELETED. Client telemetry is the entire boundary.</dd><dt>DONOT</dt><dd>Do not build settings UI — T9 owns that. Do not weaken existing Sentry scrubbing. Do not add a worker, relay, or any server-side redaction — none exists and none may be introduced.</dd><dt>VERIFY</dt><dd>npx jest — the scrubbing test must fail if beforeSend is removed</dd><dt>REPLY</dt><dd>Vault API + where the scrub hook lives; state explicitly that a planted key does not survive Sentry serialization, and name the keyFormat export T9 consumes.</dd></dl></div><div class="contract"><h3>T9</h3><dl><dt>GOAL</dt><dd>Build the OpenRouter key connection UI: paste-a-key as the GUARANTEED shipping path, with OAuth PKCE as an optional enhancement that nothing depends on.</dd><dt>DONE</dt><dd>PASTE-A-KEY SHIPS and is sufficient on its own: masked input, paste support, local format pre-validation via T8&#x27;s keyFormat, Save/Remove, and a Validate action that calls `GET /api/v1/key` and reports ok / invalid-key / network distinctly. The app must be fully usable end to end with paste-only<br>OAuth PKCE is ADDITIVE and GATED: first confirm empirically whether `https://openrouter.ai/auth` accepts an expo-linking custom scheme (`myapp://`) as `callback_url`. If YES, implement the documented flow (`code_challenge_method=S256`, exchange at `POST https://openrouter.ai/api/v1/auth/keys`) and record that the result is a user-controlled, revocable, credit-limitable key. If NO, SHIP WITHOUT IT and record the finding — do not build a web-redirect workaround and do not block the release<br>No code path outside this screen may assume PKCE exists. Removing or disabling the PKCE branch entirely must leave a fully working app — asserted by a test that exercises the paste path with the PKCE module disabled<br>A one-line honest disclosure states the key is stored on THIS DEVICE only and is sent DIRECTLY to OpenRouter with no server of ours in between. MissingKeyError from anywhere in the app deep-links here</dd><dt>FILES</dt><dd>app/settings/ai-provider.tsx<br>app/settings/_layout.tsx<br>components/settings/</dd><dt>PRIOR</dt><dd>see Recon; settings group owns its header via app/settings/_layout.tsx (guarded by __tests__/navigation-headers.test.ts). PKCE endpoints are CONFIRMED with no client registration or secret; the custom-scheme callback is the single UNCONFIRMED piece and this task owns resolving it.</dd><dt>DONOT</dt><dd>Do not make PKCE load-bearing. Do not render a raw key in plaintext after save. Do not add the title only in the screen file if the group layout is the convention. Do not claim ToS blessing in the disclosure copy — state only what is true about where the key goes.</dd><dt>VERIFY</dt><dd>npx jest __tests__/navigation-headers.test.ts; manual paste/validate/remove round-trip; run the app once with PKCE disabled and confirm it is fully usable</dd><dt>REPLY</dt><dd>Route path + title registration location; PASS/FAIL on the custom-scheme callback question with the evidence; quote the disclosure copy verbatim; confirm the paste-only path is sufficient on its own.</dd></dl></div><div class="contract"><h3>T10</h3><dl><dt>GOAL</dt><dd>Build the chat data layer over the new tables: session CRUD, message append, and React Query hooks.</dd><dt>DONE</dt><dd>`lib/db/coach.ts` with createSession/listSessions/renameSession/deleteSession (cascades messages)/appendMessage/getMessages, all typed off schema.ts. A session carries the OpenRouter model slug chosen at creation<br>React Query hooks with stable keys and optimistic append for the user turn; streaming assistant text persists once on completion, not per token<br>Deleting a session removes its messages — asserted by test</dd><dt>FILES</dt><dd>lib/db/coach.ts<br>hooks/useCoachSessions.ts<br>__tests__/</dd><dt>PRIOR</dt><dd>see Recon; React Query provider at app/_layout.tsx:153-165; drizzle singleton at lib/db/helpers.ts</dd><dt>DONOT</dt><dd>Do not put an API key in a query key. Do not write the agent loop — T11 owns it. Do not hardcode a default model — the picker (T16) supplies the slug.</dd><dt>VERIFY</dt><dd>npx jest lib/db/coach</dd><dt>REPLY</dt><dd>Hook names + query keys; state the cascade-delete guarantee and where a message-edit/regenerate mutation would land.</dd></dl></div><div class="contract"><h3>T11</h3><dl><dt>GOAL</dt><dd>Build the coach agent loop: on-device `streamText` straight to OpenRouter via the AI SDK, with no server in the path.</dd><dt>DONE</dt><dd>`lib/ai/agent.ts` runs streamText on-device using `@openrouter/ai-sdk-provider@1.5.4` with `expo/fetch` injected as the custom fetch, the user&#x27;s key from T8, and the model slug the session carries — exposing start/stream/abort<br>There is NO transport branch, NO relay URL, NO proxy config and NO default model. The model id comes from the session; if it is missing, or fails T7&#x27;s catalog guards, the loop throws BEFORE issuing any request<br>Abort mid-stream leaves no partial row and no dangling reader. Every failure surfaces as a T18 typed error — invalid key (401), insufficient credits (402), rate limited (429), model-not-in-catalog, model-lacks-tools, network — never a generic failure<br>A tool-registration seam exists so T12&#x27;s tools plug in without editing the loop</dd><dt>FILES</dt><dd>lib/ai/agent.ts<br>__tests__/</dd><dt>PRIOR</dt><dd>see Recon; T1&#x27;s verdict pins the streaming call shape and the expo/fetch injection; T7 supplies the catalog guards; T8 supplies the key; T18 supplies the error taxonomy. The headline decision is DECIDED — on-device AI SDK, direct to OpenRouter.</dd><dt>DONOT</dt><dd>Do not add a server, worker, relay, proxy or Vercel component of any kind — this is DECIDED, not open. Do not hardcode a model or a default model. Do not implement tools here (T12) or UI (T13).</dd><dt>VERIFY</dt><dd>npx jest lib/ai/agent; live streamed reply on Android emulator using a real OpenRouter key</dd><dt>REPLY</dt><dd>The streaming call shape shipped, the abort/error matrix, and the exact file:line of the tool-registration seam T12 plugs into.</dd></dl></div><div class="contract"><h3>T12</h3><dl><dt>GOAL</dt><dd>Expose local workout and nutrition context to the coach as tools reading the local DB.</dd><dt>DONE</dt><dd>Tools for recent sessions, per-exercise history/e1RM trend, and recent nutrition/macros, each with a zod-typed input and a bounded result size<br>Tools read only through existing lib/db modules (session-stats.ts, nutrition-progress.ts, macro-coach.ts) — no new SQL duplication<br>No PII or raw DB dump is sent; each tool documents exactly which fields leave the device — material because tool payloads go to OpenRouter and on to whichever upstream model the user picked<br>Tools are small, unambiguous and independently useful, because tool-call reliability varies by model even though OpenRouter normalizes the interface</dd><dt>FILES</dt><dd>lib/ai/tools/*.ts<br>__tests__/</dd><dt>PRIOR</dt><dd>see Recon; lib/db/session-stats.ts, lib/db/nutrition-progress.ts, lib/db/macro-coach.ts already compute these. OpenRouter standardizes the tool-calling interface across models but reliability varies per model.</dd><dt>DONOT</dt><dd>Do not send the whole workout history in one payload. Do not add new schema. Do not assume every catalog model calls tools equally well.</dd><dt>VERIFY</dt><dd>npx jest lib/ai/tools</dd><dt>REPLY</dt><dd>Tool list + the exact field set leaving the device per tool; name the file a 4th tool lands in with zero agent-loop edits.</dd></dl></div><div class="contract"><h3>T13</h3><dl><dt>GOAL</dt><dd>Build the AI Coach chat screen: sessions sidebar + conversation pane, responsive on lib/layout.ts breakpoints.</dd><dt>DONE</dt><dd>atLeastMedium: persistent left sessions sidebar beside the conversation pane. compact: sidebar collapsed by default, opened by a header sidebar-toggle icon on this screen only<br>Conversation pane streams assistant tokens, keeps the composer above the keyboard, respects useFloatingTabBarHeight(), and auto-scrolls only when already pinned to bottom<br>The active model is visible in the conversation header and tapping it opens T16&#x27;s picker<br>Empty state, no-key state (deep-links to T9), stale-catalog notice, and EVERY T18 error state (402 / 429 / model-not-in-catalog / model-lacks-tools / invalid key / network) render distinctly, each with its own recovery affordance — no generic &#x27;something went wrong&#x27;</dd><dt>FILES</dt><dd>app/(tabs)/ai-coach.tsx<br>components/coach/</dd><dt>PRIOR</dt><dd>see Recon; lib/layout.ts:11-31 useLayout(); drawer precedent components/session/ExerciseDetailDrawer.tsx + components/ui/sheet.tsx; headerLeft slot from T5; error-to-UI-state mapping comes from T18, not from ad-hoc branching here</dd><dt>DONOT</dt><dd>Do not add a new breakpoint system. Do not re-implement a drawer from scratch if the sheet primitive fits. Do not invent error copy — consume T18&#x27;s mapping. Do not own components/coach/ModelPicker.tsx (T16 owns it).</dd><dt>VERIFY</dt><dd>npx jest; render at 375 / 768 / 1280 widths and confirm sidebar behaviour flips at 600</dd><dt>REPLY</dt><dd>Component tree + which precedent was reused for the phone drawer; confirm the toggle icon appears only on this screen and that every T18 error state has a distinct rendering.</dd></dl></div><div class="contract"><h3>T14</h3><dl><dt>GOAL</dt><dd>Update and extend the test suite for the nav reshuffle and the coach route.</dd><dt>DONE</dt><dd>__tests__/navigation-headers.test.ts covers ai-coach title registration and the exercises breadcrumb title, and still passes its existing GROUPS + settings-title guards<br>A regression test asserts TAB_ORDER, TAB_ICONS and TAB_LABELS have identical key sets — so a future nav entry cannot be half-added<br>A NO-SERVER guard test asserts the AI path contains no server URL: no relay, proxy, worker or Vercel base URL appears anywhere under lib/ai/, and app.config.ts extra gains no coach endpoint<br>Playwright e2e updated for the moved exercises entry point (home header icon, not navbar)</dd><dt>FILES</dt><dd>__tests__/navigation-headers.test.ts<br>__tests__/<br>e2e/</dd><dt>PRIOR</dt><dd>see Recon; existing guard at __tests__/navigation-headers.test.ts:22-69</dd><dt>DONOT</dt><dd>Do not delete existing assertions to make things green.</dd><dt>VERIFY</dt><dd>npx jest &amp;&amp; npx playwright test</dd><dt>REPLY</dt><dd>Full suite result + the location of the key-set-parity assertion and the no-server guard.</dd></dl></div><div class="contract"><h3>T15</h3><dl><dt>GOAL</dt><dd>Security and invariant review of the on-device BYOK path end to end.</dd><dt>DONE</dt><dd>Traced the key from entry (T9) through storage (T8) to the model call (T11) and confirmed no log, breadcrumb, Sentry payload, React Query key, SQLite row, or app.config extra ever holds it<br>Confirmed there is NO server, worker, relay, proxy or Vercel component anywhere in the AI path, and that no runtime config can introduce one<br>Confirmed no hardcoded model list and no default model exists; a model absent from the catalog or lacking `tools` hard-throws BEFORE the call and never silently falls back; catalog failure degrades only to the cached catalog, never to a guess<br>Confirmed tool payloads (T12) leak no unintended user data off-device, that key-status display (T17) never surfaces or caches the key, and that no error payload (T18) carries key material</dd><dt>FILES</dt><dd></dd><dt>PRIOR</dt><dd>see Recon; invariants stated in the T7, T8, T11, T12, T17 and T18 contracts. There is no server, so the boundary is the device plus the single outbound OpenRouter call.</dd><dt>DONOT</dt><dd>Do not fix — report findings with file:line for the code agent.</dd><dt>VERIFY</dt><dd>Re-run the Sentry scrubbing test, the no-model-slug-hardcoded test, and the no-server guard test</dd><dt>REPLY</dt><dd>PASS/FAIL per invariant with file:line evidence; list any key leak, any hardcoded model, or any server reintroduction as a ship blocker.</dd></dl></div><div class="contract"><h3>T16</h3><dl><dt>GOAL</dt><dd>Build the model picker: searchable, showing pricing and context length, sourced entirely from the live catalog.</dd><dt>DONE</dt><dd>A searchable list rendered ONLY from T7&#x27;s catalog — no curated list, no hardcoded default, no hardcoded &#x27;recommended&#x27; subset. Search matches model id and name<br>Each row shows context length and prompt/completion pricing exactly as returned by the catalog, formatted for readability, plus the model id verbatim so the user can match it against OpenRouter&#x27;s own site<br>A tools-only filter is ON by default (the coach needs tool calling) and can be relaxed only behind an explicit, labelled warning that tools will not work on the excluded models<br>Selecting a model writes the slug to the session (T10). When the catalog is stale, a visible notice states the list is cached and shows the cache timestamp</dd><dt>FILES</dt><dd>components/coach/ModelPicker.tsx<br>__tests__/</dd><dt>PRIOR</dt><dd>see Recon; catalog shape, tools filter and stale flag come from T7; sessions carry model_id per T6/T10; error states come from T18</dd><dt>DONOT</dt><dd>Do not hardcode any model, default, or hand-written ordering. Do not fetch the catalog directly — go through T7. Do not own app/(tabs)/ai-coach.tsx (T13 owns it).</dd><dt>VERIFY</dt><dd>npx jest ModelPicker; render with a fixture catalog and confirm that adding a fixture entry surfaces it in the picker with zero component edits</dd><dt>REPLY</dt><dd>Component path + the result of the ZERO-code-change test (a new catalog entry appears with no source edit); name where the tools-only filter default lives.</dd></dl></div><div class="contract"><h3>T17</h3><dl><dt>GOAL</dt><dd>Surface OpenRouter key credit and usage from `GET /api/v1/key`, scoped honestly.</dd><dt>DONE</dt><dd>`lib/ai/key-status.ts` plus a hook calls `GET https://openrouter.ai/api/v1/key` with the stored key and exposes `limit_remaining`, `usage_daily` and `usage_monthly`<br>The UI states plainly that these figures are scoped to THIS KEY, not to the user&#x27;s whole OpenRouter account — account-wide credits require a management key the app must never hold. Do not imply a total account balance<br>Refreshed on demand and after a 402, never polled on a timer, so this call cannot itself consume the 429 budget<br>The key never appears in a query key, a cache entry, a log, or an error payload</dd><dt>FILES</dt><dd>lib/ai/key-status.ts<br>hooks/useKeyStatus.ts<br>components/settings/<br>__tests__/</dd><dt>PRIOR</dt><dd>see Recon; `GET /api/v1/key` returns limit_remaining, usage_daily, usage_monthly. Free models are limited to 20 rpm, 50/day under $10 purchased and 1000/day at $10+. Errors map through T18.</dd><dt>DONOT</dt><dd>Do not request or store a management key. Do not present any figure as the account balance. Do not poll on a timer.</dd><dt>VERIFY</dt><dd>npx jest lib/ai/key-status; manual check against a real OpenRouter key</dd><dt>REPLY</dt><dd>Fields surfaced + the exact copy that scopes them to the key rather than the account; confirm the key is absent from query keys, caches and logs.</dd></dl></div><div class="contract"><h3>T18</h3><dl><dt>GOAL</dt><dd>Define the AI error taxonomy and the single mapping from typed error to chat UI state — one source of truth consumed by the catalog, the agent loop, and every screen.</dd><dt>DONE</dt><dd>`lib/ai/errors.ts` exports a discriminated union covering MissingKeyError, InvalidKeyError (401), InsufficientCreditsError (402), RateLimitedError (429), ModelNotInCatalogError, ModelLacksToolsError, CatalogUnavailableError, StaleCatalogWarning, NetworkError and AbortedByUser<br>`toChatErrorState(err)` maps each to a UI state carrying a human message and a DISTINCT recovery affordance: 402 -&gt; &#x27;add credits at openrouter.ai&#x27; alongside the key-scoped usage from T17; 429 -&gt; retry guidance naming the free-tier limits (20 rpm; 50/day under $10 purchased, 1000/day at $10+); model-not-in-catalog / model-lacks-tools -&gt; &#x27;pick another model&#x27; opening T16; missing or invalid key -&gt; deep-link to T9<br>The mapping is EXHAUSTIVE over the union and fails typecheck if a new error type is added without a UI state. There is no catch-all bucket and no silent swallow<br>Errors never carry the API key or any request header in their payload — a test asserts a planted sentinel key does not appear in any serialized error</dd><dt>FILES</dt><dd>lib/ai/errors.ts<br>__tests__/</dd><dt>PRIOR</dt><dd>see Recon; T1 records the verbatim 402 and 429 response shapes from OpenRouter, which this taxonomy must match. Free-model limits: 20 rpm; 50/day under $10 purchased, 1000/day at $10+.</dd><dt>DONOT</dt><dd>Do not render UI here — T9, T13 and T16 consume the mapping. Do not add a catch-all error type. Do not let any consumer construct an untyped error.</dd><dt>VERIFY</dt><dd>npx jest lib/ai/errors — assert that exhaustiveness fails typecheck when a union member is added without a mapping, and that no sentinel key survives error serialization</dd><dt>REPLY</dt><dd>The union members + the exhaustiveness mechanism used; name the file:line a new error type must be added and exactly what breaks if its UI state is missing.</dd></dl></div></section>
+<section id="criteria"><h2>Success Criteria</h2><ul><li>Floating navbar shows AI Coach, Nutrition, Workouts (center), Progress, Settings — Exercises is absent from it</li><li>Home header top-right shows two 48x48 icons: exercises then wrench; tapping exercises opens the exercise list</li><li>The exercise screen header reads `workouts/exercise` and tapping `workouts` navigates back to home, via a shared BreadcrumbTitle component usable by any screen</li><li>AI Coach tab opens a chat that streams a real assistant reply DIRECTLY from OpenRouter using the user&#x27;s own OpenRouter key — no relay, no worker, no Vercel, no server of ours anywhere in the path, asserted by an automated no-server guard test</li><li>NO HARDCODED MODEL LIST exists anywhere: model options come from a live `GET /api/v1/models` filtered to `supported_parameters` containing `tools`, and cached. Adding or removing a model costs ZERO code changes — proven by a fixture test</li><li>A selected model absent from the live catalog, or present but lacking `tools`, fails with a distinct typed error BEFORE the call is issued — never a silent fallback to a default model, because no default model exists</li><li>Catalog fetch failure degrades to the last cached catalog and SAYS SO in the UI with the cache timestamp; with no cache it errors rather than guessing</li><li>Paste-a-key ships and is sufficient to use the app end to end; OAuth PKCE, if shipped, is purely additive and disabling it leaves a fully working app</li><li>The OpenRouter key lives only in expo-secure-store; a planted sentinel key appears in no Sentry event, breadcrumb, log, React Query key, SQLite row, or serialized error — asserted by automated test</li><li>The model picker is searchable and shows pricing plus context length per model, with the tools-only filter on by default</li><li>Key credit and usage from `GET /api/v1/key` are displayed and explicitly scoped to THIS KEY, never presented as an account balance</li><li>402, 429, model-not-in-catalog, model-lacks-tools, invalid-key and network each render a distinct chat UI state with a distinct recovery affordance — no generic error bucket</li><li>At &gt;=600pt the sessions sidebar is persistent; below 600pt it is collapsed and opens from a header toggle on the AI Coach screen only</li><li>Deleting a chat session removes its messages; sessions survive app restart via SQLite</li><li>npx jest and npx playwright test both pass, including the updated __tests__/navigation-headers.test.ts</li></ul></section>
+<section id="decisions"><h2>Open Decisions</h2><ul><li><strong>HEADLINE — DECIDED: how does the coach reach the model?</strong><br>Options: DECIDED — Option A: on-device Vercel AI SDK (ai-sdk.dev), direct to OpenRouter, no server. Tools and agent logic are defined inside the app; the user supplies their own OpenRouter key and picks the model. The key stays in expo-secure-store and leaves the device only as an Authorization header to OpenRouter. Nothing of ours sits in the path, so there is no relay to build, no worker to secure, no no-log invariant to keep load-bearing, and no second cloud. Cost stated plainly: the whole track now rests on T1 proving pure-client streaming works on Expo 55 / RN 0.83.4, and on a new single-vendor dependency on OpenRouter. | REJECTED — Option B: eve on Vercel. Decisive reason, from the user: eve is coupled to a Vercel-deployed server that serves the agent requests — it is more like a serverless framework — which is the wrong SHAPE for an in-app agent, independent of any key-custody argument. The earlier key-custody objection (eve&#x27;s durable session auth snapshot retains credentials) still stands but is no longer the operative reason. RE-EVALUATION TRIGGER, preserved in Out of Scope: server-side sandboxed code execution, cron nudges with the app closed, or cross-device sync. If any of those three becomes required, re-open this card.<br>Current: <em>DECIDED — Option A: on-device Vercel AI SDK (ai-sdk.dev), direct to OpenRouter, no server. Tools and agent logic are defined inside the app; the user supplies their own OpenRouter key and picks the model. The key stays in expo-secure-store and leaves the device only as an Authorization header to OpenRouter. Nothing of ours sits in the path, so there is no relay to build, no worker to secure, no no-log invariant to keep load-bearing, and no second cloud. Cost stated plainly: the whole track now rests on T1 proving pure-client streaming works on Expo 55 / RN 0.83.4, and on a new single-vendor dependency on OpenRouter.</em></li><li><strong>TRANSPORT POSTURE — DECIDED: is there a relay?</strong><br>Options: DECIDED — direct, no relay, and NO server component at all. The former T16 (multi-provider streaming relay on the existing Cloudflare workers/strava-proxy) is DELETED, together with everything that depended on it: the `transport` field, the proxied/direct split, the `directJustification` type, the worker upstream map, the worker-side log scrubbing extension, and the relay sentinel test. The existing strava-proxy worker is untouched and plays no part in the AI path. | REJECTED — relay every call through the existing Cloudflare worker. This existed ONLY to work around the Anthropic / OpenAI / Google client-key prohibitions. Under OpenRouter-only those prohibitions do not apply, so the relay buys nothing while costing a key-handling server path whose no-log invariant would have been load-bearing on every turn.<br>Current: <em>DECIDED — direct, no relay, and NO server component at all. The former T16 (multi-provider streaming relay on the existing Cloudflare workers/strava-proxy) is DELETED, together with everything that depended on it: the `transport` field, the proxied/direct split, the `directJustification` type, the worker upstream map, the worker-side log scrubbing extension, and the relay sentinel test. The existing strava-proxy worker is untouched and plays no part in the AI path.</em></li><li><strong>PROVIDER SET — DECIDED: which providers does v1 talk to?</strong><br>Options: DECIDED — OpenRouter only, and this is precisely what kills the relay. The app never touches an Anthropic, OpenAI or Google key, so those providers&#x27; client-key prohibitions are INAPPLICABLE rather than overridden. The user holds ONE OpenRouter key and OpenRouter fans out to models. Honest ToS position: NO PROHIBITION FOUND, but NOT explicit permission — the terms contemplate &quot;the extent you incorporate the Service into your own products and services&quot; and place key confidentiality on the user, do not explicitly bless mobile or client-side use, and do prohibit &quot;reselling API access to Models or otherwise developing a competing service&quot; (openrouter.ai/terms). Binding constraint: the app must never pool or resell access; every call uses the end user&#x27;s own key. Consequence: the axis of variation is no longer providers, it is MODELS, and OpenRouter&#x27;s live catalog is the binding layer. | REJECTED — ship multiple first-party providers (Anthropic / OpenAI / Gemini) with per-provider keys. Every one of them forbids client-side or shared use of a user&#x27;s key, which is exactly what forced the relay in the first place. Carrying three prohibited key paths plus a server to launder them is strictly worse than one key the user already controls.<br>Current: <em>DECIDED — OpenRouter only, and this is precisely what kills the relay. The app never touches an Anthropic, OpenAI or Google key, so those providers&#x27; client-key prohibitions are INAPPLICABLE rather than overridden. The user holds ONE OpenRouter key and OpenRouter fans out to models. Honest ToS position: NO PROHIBITION FOUND, but NOT explicit permission — the terms contemplate &quot;the extent you incorporate the Service into your own products and services&quot; and place key confidentiality on the user, do not explicitly bless mobile or client-side use, and do prohibit &quot;reselling API access to Models or otherwise developing a competing service&quot; (openrouter.ai/terms). Binding constraint: the app must never pool or resell access; every call uses the end user&#x27;s own key. Consequence: the axis of variation is no longer providers, it is MODELS, and OpenRouter&#x27;s live catalog is the binding layer.</em></li></ul></section>
+<section id="scope"><h2>Out of Scope</h2><ul><li>Voice input/output and image understanding</li><li>Cross-device chat sync and server-side conversation history</li><li>Server-side sandboxed code execution, and cron/background coach nudges with the app closed — these are the GENUINE eve triggers and the documented RE-EVALUATION TRIGGER: if any of them becomes required, re-open the headline decision card</li><li>Any server, worker, relay, proxy or Vercel component in the AI path. The existing Cloudflare workers/strava-proxy is untouched and plays no part in the coach</li><li>Direct first-party provider SDKs (Anthropic / OpenAI / Google) — v1 reaches models through OpenRouter only</li><li>Pooling, reselling or app-supplied API keys — every call uses the end user&#x27;s own OpenRouter key. This is also an OpenRouter ToS constraint, not merely a product choice</li><li>Account-wide OpenRouter credit balance — it needs a management key the client must never hold</li><li>Subagents / multi-agent orchestration</li></ul></section>
+<section id="risks"><h2>Risk Flags</h2><ul><li>BIGGEST RISK — T1: pure-client streaming is UNPROVEN on this stack. `expo/fetch` is LIKELY to work (WinterCG-compliant, real `response.body.getReader()`, and Vercel&#x27;s own Expo guide mandates it), but every documented example routes through a server and AI SDK issue #5074 reported pure-client streamText failing on older versions (closed). Unproven on Expo 55 / RN 0.83.4. The whole AI track rests on this one verdict. FAIL fallback is NON-STREAMING completions on the same direct path — explicitly NOT a server.</li><li>OpenRouter ToS is PERMISSIVE-BY-SILENCE, not explicit permission. No prohibition found; no blessing either. The terms contemplate incorporating the Service into your own products, place key confidentiality on the user, and prohibit reselling API access. Hard constraint we must honour: never pool or resell — every call uses the end user&#x27;s own key. Owner: user, if legal certainty is wanted they must ask OpenRouter directly.</li><li>PKCE custom-scheme UNCONFIRMED — whether `openrouter.ai/auth` accepts an expo-linking `myapp://` callback_url is undocumented. Mitigation already built into the plan: paste-a-key is the guaranteed path and ships regardless, and PKCE is never load-bearing. Owner: T9, resolved by an empirical check.</li><li>User-picked MODEL QUALITY and TOOL-CALL RELIABILITY vary. OpenRouter normalizes the tool-calling interface (non-native providers get tools mapped or transformed into a YAML template) but reliability is not uniform. The tools-only catalog filter is necessary but NOT sufficient — a model can advertise tools and still call them badly. Mitigation: filter, keep tools small and unambiguous (T12), and surface failure honestly (T18) rather than pretending.</li><li>NEW CONCENTRATION RISK — single-vendor dependency on OpenRouter. An OpenRouter outage, pricing change, or policy change takes the entire coach down, and we now have no second path. MITIGATION, named deliberately: the AI SDK provider interface IS the seam — swapping to a direct provider later is one declaration change, not a rewrite. Name it now rather than discovering it during an incident.</li><li>VERSION PIN TRAP — `@openrouter/ai-sdk-provider` must be pinned at 1.5.4 (peerDependencies `ai ^5.0.0`). npm latest is 3.0.0 and targets AI SDK v7; taking latest silently breaks the stack. Custom-`fetch` support in 1.5.4&#x27;s README is also UNCONFIRMED, so T1 must prove `expo/fetch` can be injected at all.</li><li>Free-tier rate limits (20 rpm; 50/day under $10 purchased, 1000/day at $10+) WILL hit real users on free models and will look like an app bug unless T18 maps 429 to a distinct, honest state naming the limit.</li><li>Sentry is shipped and will capture request context — key scrubbing must land in T8 BEFORE any real OpenRouter call is made in T9, T11 or T17, not after.</li><li>Three parallel route-name maps (TAB_ORDER, TAB_ICONS, TAB_LABELS) remain a standing half-edit hazard; T14&#x27;s key-set-parity test is the mitigation.</li><li>T4 and T5 both sit in the navigation blast radius; file ownership is split deliberately (T4 = navbar components, T5 = app/(tabs)/_layout.tsx) and must not be merged into one agent.</li></ul></section>
+<section id="execution_status"><h2>Execution Status</h2><ul><li><strong>HEADLINE — DECIDED</strong>: Option A, on-device Vercel AI SDK, direct to OpenRouter. Option B (eve on Vercel) REJECTED: eve is coupled to a Vercel-deployed server serving agent requests — a serverless-framework shape that is wrong for an in-app agent. eve&#x27;s genuine triggers (server code-exec, cron nudges with the app closed, cross-device sync) are preserved in Out of Scope as the re-evaluation trigger.</li><li><strong>TRANSPORT POSTURE — DECIDED</strong>: Direct, no relay, NO server component at all. The former T16 (Cloudflare relay) is DELETED along with everything that depended on it: the `transport` field, the proxied/direct split, `directJustification`, the worker upstream map, worker-side log scrubbing, and the relay sentinel test.</li><li><strong>PROVIDER SET — DECIDED</strong>: OpenRouter only. This is what kills the relay: the Anthropic/OpenAI/Google client-key prohibitions are INAPPLICABLE because the app never touches those providers&#x27; keys. One user-held OpenRouter key, OpenRouter fans out to models.</li><li><strong>Prior provider-ToS section</strong>: SUPERSEDED and moot. The OpenAI FORBIDDEN / Anthropic FORBIDDEN / Gemini FORBIDDEN analysis no longer bears on the design and must not be re-litigated.</li><li><strong>OpenRouter ToS position</strong>: NO PROHIBITION FOUND, but NOT explicit permission — recorded as such and deliberately not overclaimed. Binding constraint: never pool or resell access; every call uses the end user&#x27;s own key.</li><li><strong>Navigation track</strong>: LOCKED. T3, T4 and T5 are byte-identical to the previous revision, have zero dependency on any AI decision, and are READY TO DISPATCH IMMEDIATELY.</li><li><strong>Axis of variation</strong>: CHANGED from providers to MODELS. OpenRouter&#x27;s live catalog is the binding layer, and a hardcoded model list is prohibited anywhere in the plan. Adding or removing a model must cost ZERO code changes — that is the seam test.</li><li><strong>T16 relay</strong>: DELETED. Task id T16 has been REUSED for the model picker UI. No relay, worker, proxy or Vercel residue remains anywhere in this plan.</li><li><strong>New work</strong>: T16 model picker UI (searchable, pricing + context length, tools-only filter), T17 key credit/usage from `GET /api/v1/key`, T18 error taxonomy and error-to-chat-UI-state mapping (402 / 429 / model-unavailable and friends).</li><li><strong>Replaced work</strong>: T7 is no longer a provider registry — it is the OpenRouter model catalog service with no-hardcoded-list as a hard requirement and typed pre-call guards. T8 keeps SecureStore plus Sentry scrubbing but its worker-side extension is dropped. T11 loses all transport dispatch.</li><li><strong>T1 — streaming spike</strong>: NOT STARTED, SHARPENED, and now the SINGLE gate: AI SDK v5 + @openrouter/ai-sdk-provider@1.5.4 + expo/fetch, direct to OpenRouter, proving (a) incremental deltas, (b) a completed tool round-trip, (c) mid-stream abort, (d) 402/429 behaviour. FAIL fallback is non-streaming completions, NOT a server.</li><li><strong>Wave re-flow</strong>: 6 waves (Wave 0-5), down from 7. Wave 0 now carries the gate plus everything with zero dependencies (T1, T3, T4, T6, T8) so the locked nav track and the foundations start immediately. Critical path is T1 -&gt; T18 -&gt; T7 -&gt; T11 -&gt; T12/T13 -&gt; T15. Invariant re-verified: no task shares or precedes its dependencies&#x27; wave.</li><li><strong>status</strong>: COMPLETE</li><li><strong>waves</strong>: All waves complete. W0 [T1,T3,T4,T6,T8] · W1 [T5,T18,T10] · W2 [T7,T9,T17] · W3 [T11,T16] · W4 [T12,T13] · W5 [T14,T15]. T2 was already COMPLETE and unwaved.</li><li><strong>task_status</strong>: {&#x27;T1&#x27;: &#x27;COMPLETE&#x27;, &#x27;T2&#x27;: &#x27;COMPLETE&#x27;, &#x27;T3&#x27;: &#x27;COMPLETE&#x27;, &#x27;T4&#x27;: &#x27;COMPLETE&#x27;, &#x27;T5&#x27;: &#x27;COMPLETE&#x27;, &#x27;T6&#x27;: &#x27;COMPLETE&#x27;, &#x27;T7&#x27;: &#x27;COMPLETE&#x27;, &#x27;T8&#x27;: &#x27;COMPLETE&#x27;, &#x27;T9&#x27;: &#x27;COMPLETE&#x27;, &#x27;T10&#x27;: &#x27;COMPLETE&#x27;, &#x27;T11&#x27;: &#x27;COMPLETE&#x27;, &#x27;T12&#x27;: &#x27;COMPLETE&#x27;, &#x27;T13&#x27;: &#x27;COMPLETE&#x27;, &#x27;T14&#x27;: &#x27;COMPLETE&#x27;, &#x27;T15&#x27;: &#x27;COMPLETE&#x27;, &#x27;T16&#x27;: &#x27;COMPLETE&#x27;, &#x27;T17&#x27;: &#x27;COMPLETE&#x27;, &#x27;T18&#x27;: &#x27;COMPLETE&#x27;}</li><li><strong>final_verification</strong>: [&#x27;npm test → 478 suites, 5755 tests passed, 0 failed, 0 skipped, 0 suite collection failures.&#x27;, &#x27;npx tsc --noEmit clean.&#x27;, &#x27;ESLint clean on all AI Coach files; remaining repo warnings are pre-existing and unrelated, confirmed via git.&#x27;]</li><li><strong>key_outcomes</strong>: [&#x27;T1 gate PASSED on device: ai@5.0.0 + @openrouter/ai-sdk-provider@1.5.4 + expo/fetch streaming works on Expo 55 / RN 0.83.4. Verified: incremental deltas, completed tool round-trip, clean mid-stream abort, verbatim 429 envelope. 402 never provoked (funded key) — remains the one unverified error path.&#x27;, &quot;Feature verified end-to-end on a real Android emulator with the user&#x27;s own OpenRouter key: key save (masked) → Validate → live model picker (no auto-selection) → real tool call against local SQLite fitness data → incremental streaming → persistence across navigation → stop-mid-stream leaving no partial row → per-session model_id restoration → multi-turn conversation history with a follow-up correctly using prior turn context.&quot;, &#x27;NO server/worker/relay/proxy exists anywhere in the AI path; __tests__/ai-no-server-guard.test.ts mechanically enforces it and was hardened to cover app/settings/ai-key.tsx plus env-var/expoConfig.extra/protocol-relative/wildcard-subdomain bypasses.&#x27;, &quot;T15 security review verdict: no key leakage (the AI SDK&#x27;s APICallError carries no request headers, so Authorization cannot ride an error into Sentry); SQL injection none (all tool-reachable queries parameterized); data minimization verified (explicit field allowlists; food names never leave the device); error taxonomy exhaustive with parseOpenRouterError the single wire seam.&quot;, &#x27;Review findings HIGH-1 (stateless agent — no history/system prompt), HIGH-2 (streaming bleed across sessions), HIGH-3 (abort blind window), HIGH-4 + MEDIUM-5 (guard gaps), MEDIUM-6 (data disclosure), MEDIUM-7 (authed calls off Sentry-instrumented global fetch), MEDIUM-9 (persisted typed error rows), MEDIUM-10 (403/500 error kinds) were all FIXED and re-verified. Agent now sends the last 20 persisted messages plus a fitness-coach system prompt.&#x27;, &quot;A runtime AI_InvalidPromptError was found on device after the history change (persisted tool-result rows lacked SDK { type: json, value } envelopes) and FIXED at lib/ai/agent.ts:56-119; persisted error rows are now excluded from outgoing history. A new test validates conversion against AI SDK&#x27;s own modelMessageSchema and fails against the old mapping.&quot;, &#x27;A green-looking run was found to be masking THREE suite-level collection failures (expo/fetch unmocked under Jest), hiding 23 tests. Fixed via __mocks__/expo-fetch.js + jest.config.js:105; package.json:21 now runs --verbose so suite failures surface, proven by a deliberate break producing a non-zero exit.&#x27;]</li><li><strong>known_gaps</strong>: [&#x27;OpenRouter 402 insufficient-credits path never provoked on a funded key.&#x27;, &#x27;Tool-in-flight indicator is correct by test but its visible duration was never measured on device; because the tool call hits local SQLite it may be humanly imperceptible — a UX polish judgment, not a correctness bug.&#x27;, &#x27;Multi-turn with MULTIPLE tool round-trips in history, and a follow-up in a session containing a persisted error row, are covered by schema-validated unit tests but were not reproduced on device.&#x27;, &#x27;Empty assistant rows persist in an older session from earlier failed runs (pre-fix residue, not a live defect).&#x27;, &#x27;PKCE OAuth deferred; paste-a-key is the shipped, fully load-bearing path.&#x27;, &#x27;Provider swap touches two files, not one: lib/ai/catalog.ts (CatalogModel) and lib/ai/agent.ts:62-67 (hardcoded createOpenRouter).&#x27;, &quot;OpenRouter ToS: no prohibition found on client-side use of a user&#x27;s own key, but no explicit permission either; binding constraint is never to pool or resell keys. Single-vendor concentration risk remains.&quot;]</li><li><strong>completion_record</strong>: {&#x27;completed_at&#x27;: &#x27;2026-08-18&#x27;, &#x27;summary&#x27;: &#x27;Implementation complete; all T1–T18 tasks are COMPLETE. T2 was already COMPLETE and remains unwaved.&#x27;, &#x27;scope&#x27;: &#x27;Only execution status and this completion record were updated; task contracts, decisions, dependencies, and waves are unchanged.&#x27;}</li></ul></section>
+</div>
+<hr>
+<h2>Interactive Decisions</h2>
+<p class="muted">Approve/reject phases, select options, update task state, add notes. Save to download decisions manifest.</p>
+<div id="app"></div>
+<details>
+<summary>Plan data (JSON payload)</summary>
+<pre class="code"><script id="plan-data" type="application/json">{
+  "title": "AI Coach (BYOK, OpenRouter on-device) + Navigation Reshuffle",
+  "generated_at": "2026-08-17",
+  "goal": "Ship an on-device AI Coach in the floating navbar — Vercel AI SDK agent loop and tools running inside the app, talking DIRECTLY to OpenRouter with the user's own key and their chosen model from OpenRouter's live catalog, with no server component of any kind — and move Exercises out of the navbar behind a home-header icon with a clickable `workouts/exercise` breadcrumb.",
+  "assumptions": [
+    "HEADLINE DECIDED — Option A: on-device Vercel AI SDK (ai-sdk.dev), direct to OpenRouter. Tools and agent logic are defined inside the app; the user supplies their own OpenRouter key and picks the model. Option B (eve on Vercel) is REJECTED: eve is coupled to a Vercel-deployed server that serves the agent requests — it is more like a serverless framework — which is the wrong SHAPE for an in-app agent. eve's genuine future triggers (server-side code execution, cron nudges with the app closed, cross-device sync) are preserved in Out of Scope as the documented re-evaluation trigger.",
+    "TRANSPORT DECIDED — direct, no relay. There is NO server component at all. The former T16 (Cloudflare relay on workers/strava-proxy) is DELETED, along with the `transport` field, the proxied/direct split, the `directJustification` type, the worker upstream map, worker-side log scrubbing, and the relay sentinel test.",
+    "PROVIDER SET DECIDED — OpenRouter only. This is what kills the relay: the Anthropic / OpenAI / Google client-key prohibitions are INAPPLICABLE (not overridden) because the app never touches those providers' keys. The user holds ONE OpenRouter key and OpenRouter fans out to models. The entire prior provider-ToS section is SUPERSEDED and moot.",
+    "OpenRouter ToS position, stated honestly and NOT overclaimed — NO PROHIBITION FOUND, but not explicit permission. The terms contemplate \"the extent you incorporate the Service into your own products and services\" and place key confidentiality on the user; they do NOT explicitly bless mobile or client-side use; and they DO prohibit \"reselling API access to Models or otherwise developing a competing service\" (openrouter.ai/terms). BINDING CONSTRAINT: the app must never pool or resell access — every call uses the end user's own key.",
+    "OAuth PKCE CONFIRMED: `https://openrouter.ai/auth?callback_url=&code_challenge=&code_challenge_method=S256`, exchanged at `POST https://openrouter.ai/api/v1/auth/keys`, yielding \"a user-controlled API key\" that is revocable and credit-limitable, with no client registration or client secret documented. UNCONFIRMED: whether a custom scheme (expo-linking `myapp://`) is accepted as `callback_url`. Therefore PKCE is an ENHANCEMENT and is never load-bearing — paste-a-key is the guaranteed path and must ship.",
+    "Models catalog CONFIRMED public and unauthenticated: `GET https://openrouter.ai/api/v1/models` returns `context_length`, `pricing` and `supported_parameters`, and is filterable with `?supported_parameters=tools`. HARD REQUIREMENT: the app must NOT ship a hardcoded model list. The axis of variation is no longer providers, it is MODELS, and OpenRouter's live catalog is the binding layer.",
+    "Tool calling CONFIRMED normalized: \"OpenRouter standardizes the tool calling interface across models and providers\"; non-native providers get tools mapped or \"transform[ed] into a YAML template\". Reliability nonetheless VARIES per model — the tools-only catalog filter is necessary but not sufficient.",
+    "`@openrouter/ai-sdk-provider` is official (OpenRouterTeam GitHub). PIN 1.5.4 for AI SDK v5 (`peerDependencies: ai ^5.0.0`). npm latest is 3.0.0 and targets AI SDK v7 — do NOT take latest. Custom-`fetch` support is UNCONFIRMED in its README, so T1 must prove `expo/fetch` can actually be injected.",
+    "RN streaming status is LIKELY, UNPROVEN. `expo/fetch` is WinterCG-compliant with a real `response.body.getReader()` and Vercel's own Expo guide mandates it — but every documented example routes through a server, and AI SDK issue #5074 reported pure-client `streamText` failing on older versions (closed). Unproven on Expo 55 / RN 0.83.4. This is the single highest-risk unknown and it gates the AI track (T1).",
+    "Key introspection: `GET /api/v1/key` returns `limit_remaining`, `usage_daily`, `usage_monthly`. Errors: 402 insufficient credits, 429 rate limit (free models: 20 rpm; 50/day under $10 purchased, 1000/day at $10+). Full account-wide credits require a management key the client must never hold — so the app can only ever show key-scoped figures.",
+    "NAVIGATION TRACK IS LOCKED. T3, T4 and T5 are unchanged from the previous revision and have ZERO dependency on any AI decision. They are ready to dispatch immediately and must not be edited by this revision.",
+    "The OpenRouter key lives in expo-secure-store ONLY — never SQLite, never app.config extra, never a React Query cache key, never a Sentry payload. It leaves the device solely as the Authorization header on a request to OpenRouter. With no relay, no worker and no server, client telemetry is the ENTIRE scrubbing boundary.",
+    "Exercises stays a file inside `app/(tabs)/` and stays a registered Tabs.Screen; it leaves the navbar purely by dropping out of TAB_ORDER. No file move, no route-group migration, no deep-link breakage.",
+    "Schema changes are hand-written phased DDL (`lib/db/tables.ts` createExtensionTables + `lib/db/migrations.ts` phase 2), mirrored in `lib/db/schema.ts`. This repo does NOT use drizzle-kit generated migrations.",
+    "SQLite is the single source of truth for chat sessions/messages; React Query is the read/cache layer. No zustand/mmkv is introduced.",
+    "v1 ships text chat only — no voice, no image input, no server-side code execution, no cross-device sync."
+  ],
+  "recon_references": [
+    "app/_layout.tsx:166-182 — root stack; app/_layout.tsx:153-165 — React Query provider",
+    "constants/screen-config.ts:11-38 — centralized SCREEN_CONFIGS title registry; route groups own headers via nested _layout",
+    "app/(tabs)/_layout.tsx:38-54 — exercises Tabs.Screen + headerRight; :72-95 — index screen, wrench headerRight -> /tools (MaterialCommunityIcons 'wrench', size 24)",
+    "components/FloatingTabBar.tsx:28-29 — hardcoded TAB_ORDER ['exercises','nutrition','index','progress','settings']",
+    "components/floating-tab-bar/TabButton.tsx:12-18 TAB_ICONS, :20-26 TAB_LABELS — two parallel maps keyed by route name",
+    "app/(tabs)/exercises.tsx — list; app/exercise/[id].tsx:447-454 — dynamic title. NO breadcrumb component exists today",
+    "lib/layout.ts:3-31 — BREAKPOINTS compact<600 / medium 600-1023 / expanded>=1024; useLayout() exposes compact + atLeastMedium",
+    "components/session/ExerciseDetailDrawer.tsx, components/ui/sheet.tsx — drawer/sheet precedent for the collapsed phone sidebar",
+    "lib/db/tables.ts createExtensionTables + lib/db/migrations.ts:53 migrate() four-phase ordering (phase 2 = additive DDL) — the real migration seam",
+    "lib/db/helpers.ts:144-161,282 — drizzle singleton wiring; lib/db/schema.ts:12 sqliteTable declarations must mirror DDL exactly",
+    "lib/strava.ts:19,58-64 — expo-secure-store key-constant pattern (KEY_ACCESS_TOKEN etc.)",
+    "workers/strava-proxy/ + app.config.ts:99-112 extra — the existing backend. It is EXPLICITLY NOT part of the AI track: the coach has no server component. Untouched by this plan.",
+    "__tests__/navigation-headers.test.ts:22-45 — GROUPS guard; :47-68 — title guard. Must be extended for ai-coach",
+    "@sentry/react-native shipped — scrubbing invariant applies to beforeSend and breadcrumbs. Client-only; there is no server-side logging surface in the AI path.",
+    "OpenRouter Terms — openrouter.ai/terms: contemplates \"the extent you incorporate the Service into your own products and services\"; key confidentiality sits with the user; prohibits \"reselling API access to Models or otherwise developing a competing service\". NO PROHIBITION FOUND on client-side use, and no explicit permission either.",
+    "OpenRouter OAuth PKCE — openrouter.ai/docs/guides/overview/auth/oauth.md: `https://openrouter.ai/auth?callback_url=&code_challenge=&code_challenge_method=S256`, exchange at `POST https://openrouter.ai/api/v1/auth/keys`, yields \"a user-controlled API key\", revocable and credit-limitable, no client registration or secret. UNCONFIRMED: custom-scheme (expo-linking `myapp://`) callback_url acceptance.",
+    "OpenRouter models catalog — `GET https://openrouter.ai/api/v1/models`: public + unauthenticated, returns `context_length`, `pricing`, `supported_parameters`; filterable with `?supported_parameters=tools`",
+    "OpenRouter tool calling — \"OpenRouter standardizes the tool calling interface across models and providers\"; non-native providers get tools mapped or \"transform[ed] into a YAML template\". Reliability varies per model.",
+    "@openrouter/ai-sdk-provider — official (OpenRouterTeam GitHub). PIN 1.5.4 for AI SDK v5 (`peerDependencies: ai ^5.0.0`); npm latest 3.0.0 targets AI SDK v7. Custom-`fetch` support UNCONFIRMED in its README.",
+    "RN streaming — `expo/fetch` is WinterCG-compliant with a real `response.body.getReader()`; Vercel's own Expo guide mandates it, but every documented example routes through a server. AI SDK issue #5074 reported pure-client streamText failing on older versions (closed). LIKELY, UNPROVEN on Expo 55 / RN 0.83.4.",
+    "OpenRouter key introspection — `GET /api/v1/key` returns `limit_remaining`, `usage_daily`, `usage_monthly`. Errors: 402 insufficient credits, 429 rate limit (free models 20 rpm; 50/day under $10 purchased, 1000/day at $10+). Account-wide credits require a management key the client must not hold.",
+    "eve (REJECTED Option B, retained only as the record) — eve is deployed as a Vercel server that serves agent requests, and its session auth snapshot durably retains credentials: eve.dev/docs/guides/auth-and-route-protection#what-reaches-ctxsessionauth"
+  ],
+  "waves": [
+    {
+      "label": "Wave 0 — GATE + immediately dispatchable (zero dependencies, zero pending decisions): T1, T3, T4, T6, T8",
+      "task_ids": [
+        "T1",
+        "T3",
+        "T4",
+        "T6",
+        "T8"
+      ]
+    },
+    {
+      "label": "Wave 1 (parallel) — nav wiring, error taxonomy, chat data layer: T5, T18, T10",
+      "task_ids": [
+        "T5",
+        "T18",
+        "T10"
+      ]
+    },
+    {
+      "label": "Wave 2 (parallel) — model catalog, key connection UI, key status: T7, T9, T17",
+      "task_ids": [
+        "T7",
+        "T9",
+        "T17"
+      ]
+    },
+    {
+      "label": "Wave 3 (parallel) — agent loop + model picker: T11, T16",
+      "task_ids": [
+        "T11",
+        "T16"
+      ]
+    },
+    {
+      "label": "Wave 4 (parallel) — coach tools + chat UI: T12, T13",
+      "task_ids": [
+        "T12",
+        "T13"
+      ]
+    },
+    {
+      "label": "Wave 5 (parallel) — verification: T14, T15",
+      "task_ids": [
+        "T14",
+        "T15"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "agent": "code",
+      "goal": "Spike (SHARPENED — the single gate on the AI track): prove a PURE ON-DEVICE streaming agent loop with AI SDK v5 + `@openrouter/ai-sdk-provider@1.5.4` + `expo/fetch`, straight from the device to OpenRouter with no server anywhere in the path.",
+      "done": [
+        "(a) INCREMENTAL TOKEN DELTAS — a throwaway screen renders >=2 separate deltas from a real OpenRouter call on an Android build, not one buffered blob",
+        "(b) COMPLETED TOOL ROUND-TRIP — the model calls a local tool, the tool result is returned to the model, and the model continues and finishes. A tool-call event merely observed is NOT sufficient; the round-trip must complete",
+        "(c) MID-STREAM ABORT/CANCEL actually stops the stream and the underlying request, leaving no dangling reader and no orphaned request",
+        "(d) BEHAVIOUR ON 402 (insufficient credits) and 429 (rate limit) recorded verbatim, including the exact response body shape T18 will map",
+        "Written verdict: does `expo/fetch`'s `response.body.getReader()` reach `streamText`, and can that custom fetch be injected into `@openrouter/ai-sdk-provider@1.5.4` (its README support for custom fetch is UNCONFIRMED)"
+      ],
+      "files": [
+        "lib/ai/__spike__/*",
+        "package.json"
+      ],
+      "prior": "see Recon; `expo/fetch` is WinterCG-compliant with a real `response.body.getReader()` and Vercel's own Expo guide mandates it, BUT every documented example routes through a server and AI SDK issue #5074 reported pure-client streamText failing on older versions (closed). Status LIKELY, UNPROVEN on Expo 55 / RN 0.83.4. PIN `@openrouter/ai-sdk-provider@1.5.4` (peerDependencies `ai ^5.0.0`); npm latest 3.0.0 targets AI SDK v7.",
+      "donot": "Do not build product UI, do not touch app/(tabs)/, do not merge the spike screen into a real route. Do NOT introduce a server, worker, relay, proxy or Vercel component of any kind — a server hop is not an acceptable fallback and not an acceptable way to make the spike pass. Do not take `@openrouter/ai-sdk-provider` latest.",
+      "verify": "Run on Android emulator per .claude/skills/cablesnap--android-emulator; observe streamed deltas, a completed tool round-trip, a clean abort, and the 402/429 payloads in logs",
+      "reply": "PASS/FAIL per (a)(b)(c)(d) + exact pinned versions + the working streamText call shape including HOW expo/fetch was injected + the verbatim 402 and 429 response bodies. If FAIL, the fallback is NON-STREAMING completions against the same direct OpenRouter path — explicitly NOT a server. This verdict gates T7, T11 and T18.",
+      "depends_on": []
+    },
+    {
+      "id": "T2",
+      "agent": "explore",
+      "goal": "COMPLETE — research pass on the OpenRouter-only on-device design. SUPERSEDES the entire prior provider-ToS section (OpenAI / Anthropic / Gemini client-key prohibitions), which is now INAPPLICABLE because the app never touches those providers' keys.",
+      "done": [
+        "OpenRouter ToS — NO PROHIBITION FOUND, but NOT explicit permission. The terms contemplate \"the extent you incorporate the Service into your own products and services\" and place key confidentiality on the user; they do NOT explicitly bless mobile/client-side use, and they DO prohibit \"reselling API access to Models or otherwise developing a competing service\" (openrouter.ai/terms). Binding constraint: never pool or resell access — every call uses the end user's own key.",
+        "OAuth PKCE CONFIRMED: `https://openrouter.ai/auth?callback_url=&code_challenge=&code_challenge_method=S256`, exchanged at `POST https://openrouter.ai/api/v1/auth/keys`, yielding \"a user-controlled API key\" that is revocable and credit-limitable, with no client registration or client secret documented. UNCONFIRMED: whether a custom scheme (expo-linking `myapp://`) is accepted as `callback_url`.",
+        "Models catalog CONFIRMED public and unauthenticated: `GET https://openrouter.ai/api/v1/models` returns `context_length`, `pricing`, `supported_parameters`, filterable with `?supported_parameters=tools`. Tool calling CONFIRMED normalized — \"OpenRouter standardizes the tool calling interface across models and providers\", with non-native providers mapped or \"transform[ed] into a YAML template\"; reliability varies per model.",
+        "`@openrouter/ai-sdk-provider` is official (OpenRouterTeam). PIN 1.5.4 for AI SDK v5 (`peerDependencies: ai ^5.0.0`); npm latest 3.0.0 targets AI SDK v7. Custom-`fetch` support UNCONFIRMED in its README — T1 must prove it. Key introspection: `GET /api/v1/key` returns `limit_remaining`, `usage_daily`, `usage_monthly`; errors are 402 insufficient credits and 429 rate limit (free models 20 rpm; 50/day under $10 purchased, 1000/day at $10+). Account-wide credits require a management key the client must never hold."
+      ],
+      "files": [],
+      "prior": "The earlier eve/Vercel costing is retained only as the record behind the REJECTED Option B; it is not re-litigated.",
+      "donot": "Do NOT re-run the OpenAI/Anthropic/Gemini client-key research — it is moot under OpenRouter-only. Do not re-open eve. Do not overclaim OpenRouter's terms as permission.",
+      "verify": "Every claim carries a doc URL — see Recon References",
+      "reply": "DELIVERED. Supersedes the prior provider-ToS section entirely. Two named unknowns remain: PKCE custom-scheme acceptance (owner T9) and custom-fetch injection into `@openrouter/ai-sdk-provider@1.5.4` (owner T1).",
+      "depends_on": []
+    },
+    {
+      "id": "T3",
+      "agent": "code",
+      "goal": "Build a reusable clickable-parent breadcrumb header title component — shared, not a one-off for exercises.",
+      "done": [
+        "`components/ui/BreadcrumbTitle.tsx` takes segments [{label, href?}]; href segments are pressable and navigate, last segment is plain text",
+        "Renders `workouts/exercise` with `workouts` tappable; separator styled from design-tokens, colors from useThemeColors",
+        "48x48 min touch target on tappable segments, accessibilityRole='link', truncates gracefully at compact width"
+      ],
+      "files": [
+        "components/ui/BreadcrumbTitle.tsx",
+        "__tests__/"
+      ],
+      "prior": "see Recon; no breadcrumb exists today; match renderHeaderTitle style at app/(tabs)/_layout.tsx:16-24",
+      "donot": "Do not wire it into any screen — T5 owns app/(tabs)/_layout.tsx.",
+      "verify": "npx jest BreadcrumbTitle",
+      "reply": "Component path + prop signature; name the file:line a third breadcrumb segment lands with zero component edits.",
+      "depends_on": []
+    },
+    {
+      "id": "T4",
+      "agent": "code",
+      "goal": "Swap exercises out of the floating navbar for ai-coach, and add the ai-coach route file as a placeholder screen.",
+      "done": [
+        "TAB_ORDER becomes ['ai-coach','nutrition','index','progress','settings'] (FloatingTabBar.tsx:29); TAB_ICONS + TAB_LABELS gain 'ai-coach' and drop 'exercises'",
+        "`app/(tabs)/ai-coach.tsx` exists and renders a titled empty state using useFloatingTabBarHeight() for bottom padding",
+        "Exercises remains navigable via router.push('/exercises') — no file move, no deep-link change"
+      ],
+      "files": [
+        "components/FloatingTabBar.tsx",
+        "components/floating-tab-bar/TabButton.tsx",
+        "app/(tabs)/ai-coach.tsx"
+      ],
+      "prior": "see Recon; TAB_ORDER:28-29, TAB_ICONS:12-18, TAB_LABELS:20-26",
+      "donot": "Do not edit app/(tabs)/_layout.tsx — T5 owns that file. Do not delete app/(tabs)/exercises.tsx.",
+      "verify": "npx jest; app boots with 5 navbar slots, ai-coach leftmost",
+      "reply": "Confirm the three parallel maps stayed in sync; name the exact file:line trio a 3rd nav entry must touch, and whether you collapsed them into one record.",
+      "depends_on": []
+    },
+    {
+      "id": "T5",
+      "agent": "code",
+      "goal": "Wire the tabs layout: home header icon row (exercises beside wrench), ai-coach screen options, and the exercises breadcrumb title.",
+      "done": [
+        "index headerRight is a row: new exercises icon ('format-list-bulleted') pushing /exercises, then the existing wrench pushing /tools — both 48x48, both labelled",
+        "exercises Tabs.Screen headerTitle renders BreadcrumbTitle with `workouts` (href '/') + `exercise`; its existing '+' headerRight is preserved",
+        "ai-coach Tabs.Screen registered with title 'AI Coach' and its sidebar-toggle headerLeft slot present"
+      ],
+      "files": [
+        "app/(tabs)/_layout.tsx"
+      ],
+      "prior": "see Recon; wrench block at :84-93, exercises block at :38-54, renderHeaderTitle helper at :16-24",
+      "donot": "Do not change FloatingTabBar or TabButton — T4 owns those.",
+      "verify": "npx jest __tests__/navigation-headers.test.ts; visually confirm two icons top-right on home",
+      "reply": "Confirm header row ordering + that tapping `workouts` in the breadcrumb returns to home; name the seam a 3rd home-header icon lands.",
+      "depends_on": [
+        "T3",
+        "T4"
+      ]
+    },
+    {
+      "id": "T6",
+      "agent": "code",
+      "goal": "Add chat sessions/messages tables via the repo's hand-written phased DDL migration path.",
+      "done": [
+        "`coach_sessions` (id, title, model_id, created_at, updated_at) — `model_id` stores the OpenRouter model slug as FREE TEXT, never an enum and never an FK to an in-app model table — and `coach_messages` (id, session_id FK, role, content, tool_calls JSON nullable, created_at, error nullable), created in createExtensionTables (lib/db/tables.ts) and invoked from migrate() phase 2",
+        "Matching sqliteTable declarations in lib/db/schema.ts mirror the DDL exactly, plus an index on coach_messages(session_id, created_at)",
+        "Migration is additive and idempotent — re-running migrate() on an existing DB is a no-op; no API key column and no hardcoded model enum exists on any table"
+      ],
+      "files": [
+        "lib/db/tables.ts",
+        "lib/db/schema.ts",
+        "lib/db/migrations.ts"
+      ],
+      "prior": "see Recon; migrate() four-phase ordering at lib/db/migrations.ts:53, phase 2 = additive DDL at :73-208. The model catalog is REMOTE (T7), so nothing about models is enumerated in the schema.",
+      "donot": "Do not introduce drizzle-kit. Do not store keys in SQLite. Do not create a models table, a model enum, or a default-model column. Do not touch phase 3/4.",
+      "verify": "npx jest lib/db; fresh-install and upgrade-path both migrate clean",
+      "reply": "Table DDL + the schema.ts line range; confirm phase-2 placement, confirm `model_id` is free text, and name where a per-message token-usage column would land.",
+      "depends_on": []
+    },
+    {
+      "id": "T7",
+      "agent": "code",
+      "goal": "Build the OpenRouter model catalog service so that adding or removing a model costs ZERO code changes — the app fetches the live catalog and never ships a hardcoded model list.",
+      "done": [
+        "`lib/ai/catalog.ts` fetches `GET https://openrouter.ai/api/v1/models` (public, unauthenticated), filters to entries whose `supported_parameters` contains `tools`, and exposes {id, name, contextLength, pricing, supportedParameters} plus listModels()/getModel(id). HARD REQUIREMENT: no model id, name, or default is hardcoded anywhere in app source — a repo-wide grep for a model slug returns only tests and fixtures.",
+        "Catalog is cached with an explicit TTL and a last-known-good copy. On fetch failure the app degrades to the LAST CACHED catalog and exposes `stale: true` plus the cache timestamp so the UI can SAY SO. It must NEVER fall back to a hardcoded guess; with no cache at all it throws CatalogUnavailableError rather than inventing a list.",
+        "Pre-call guards, each a separate assertion and each thrown BEFORE any model call is issued: a selected model absent from the live catalog throws ModelNotInCatalogError; a selected model present but lacking `tools` in `supported_parameters` throws ModelLacksToolsError. Neither may silently fall back to a default model — there IS no default model.",
+        "Error types are imported from T18's taxonomy, not redeclared locally"
+      ],
+      "files": [
+        "lib/ai/catalog.ts",
+        "hooks/useModelCatalog.ts",
+        "__tests__/"
+      ],
+      "prior": "see Recon; the catalog endpoint is CONFIRMED public + unauthenticated and filterable with `?supported_parameters=tools`. T1 pins the SDK versions and the fetch shape. T18 owns the error taxonomy.",
+      "donot": "Do not hardcode a model list, a default model, or a curated 'recommended' subset. Do not read SecureStore here — the catalog needs no key. Do not build the picker UI (T16 owns it) or the agent loop (T11 owns it).",
+      "verify": "npx jest lib/ai/catalog — cover as separate assertions: tools-filter, absent-model throw, lacks-tools throw, stale-cache degradation with the stale flag set, no-cache CatalogUnavailableError, and a source-wide assertion that no model slug is hardcoded",
+      "reply": "Catalog API + the cache TTL chosen; state explicitly that adding or removing a model requires ZERO code changes, and name the test that proves no model slug is hardcoded.",
+      "depends_on": [
+        "T1",
+        "T18"
+      ]
+    },
+    {
+      "id": "T8",
+      "agent": "code",
+      "goal": "Build the OpenRouter key vault on expo-secure-store and enforce the key-scrubbing invariant across client telemetry.",
+      "done": [
+        "`lib/ai/key-vault.ts` with get/set/delete/has for a SINGLE OpenRouter key under a KEY_OPENROUTER constant, following the lib/strava.ts:58-64 pattern. The key lives in expo-secure-store ONLY — never SQLite, never app.config extra, never a React Query cache key",
+        "A `keyFormat` predicate validates the OpenRouter key shape locally before any network call, exported for reuse by the key entry UI (T9)",
+        "Sentry beforeSend + breadcrumb hook redacts any value matching keyFormat and any `authorization` header, with a test asserting a planted sentinel key never survives serialization",
+        "Keys are never logged, never in an error message, and never in a thrown payload"
+      ],
+      "files": [
+        "lib/ai/key-vault.ts",
+        "lib/ai/redact.ts",
+        "lib/sentry*",
+        "__tests__/"
+      ],
+      "prior": "see Recon; lib/strava.ts:19,58-64 SecureStore pattern. SCOPE REDUCTION vs the previous revision: there is no worker and no relay, so the worker-side log-scrubbing extension is DELETED. Client telemetry is the entire boundary.",
+      "donot": "Do not build settings UI — T9 owns that. Do not weaken existing Sentry scrubbing. Do not add a worker, relay, or any server-side redaction — none exists and none may be introduced.",
+      "verify": "npx jest — the scrubbing test must fail if beforeSend is removed",
+      "reply": "Vault API + where the scrub hook lives; state explicitly that a planted key does not survive Sentry serialization, and name the keyFormat export T9 consumes.",
+      "depends_on": []
+    },
+    {
+      "id": "T9",
+      "agent": "designer",
+      "goal": "Build the OpenRouter key connection UI: paste-a-key as the GUARANTEED shipping path, with OAuth PKCE as an optional enhancement that nothing depends on.",
+      "done": [
+        "PASTE-A-KEY SHIPS and is sufficient on its own: masked input, paste support, local format pre-validation via T8's keyFormat, Save/Remove, and a Validate action that calls `GET /api/v1/key` and reports ok / invalid-key / network distinctly. The app must be fully usable end to end with paste-only",
+        "OAuth PKCE is ADDITIVE and GATED: first confirm empirically whether `https://openrouter.ai/auth` accepts an expo-linking custom scheme (`myapp://`) as `callback_url`. If YES, implement the documented flow (`code_challenge_method=S256`, exchange at `POST https://openrouter.ai/api/v1/auth/keys`) and record that the result is a user-controlled, revocable, credit-limitable key. If NO, SHIP WITHOUT IT and record the finding — do not build a web-redirect workaround and do not block the release",
+        "No code path outside this screen may assume PKCE exists. Removing or disabling the PKCE branch entirely must leave a fully working app — asserted by a test that exercises the paste path with the PKCE module disabled",
+        "A one-line honest disclosure states the key is stored on THIS DEVICE only and is sent DIRECTLY to OpenRouter with no server of ours in between. MissingKeyError from anywhere in the app deep-links here"
+      ],
+      "files": [
+        "app/settings/ai-provider.tsx",
+        "app/settings/_layout.tsx",
+        "components/settings/"
+      ],
+      "prior": "see Recon; settings group owns its header via app/settings/_layout.tsx (guarded by __tests__/navigation-headers.test.ts). PKCE endpoints are CONFIRMED with no client registration or secret; the custom-scheme callback is the single UNCONFIRMED piece and this task owns resolving it.",
+      "donot": "Do not make PKCE load-bearing. Do not render a raw key in plaintext after save. Do not add the title only in the screen file if the group layout is the convention. Do not claim ToS blessing in the disclosure copy — state only what is true about where the key goes.",
+      "verify": "npx jest __tests__/navigation-headers.test.ts; manual paste/validate/remove round-trip; run the app once with PKCE disabled and confirm it is fully usable",
+      "reply": "Route path + title registration location; PASS/FAIL on the custom-scheme callback question with the evidence; quote the disclosure copy verbatim; confirm the paste-only path is sufficient on its own.",
+      "depends_on": [
+        "T8",
+        "T18"
+      ]
+    },
+    {
+      "id": "T10",
+      "agent": "code",
+      "goal": "Build the chat data layer over the new tables: session CRUD, message append, and React Query hooks.",
+      "done": [
+        "`lib/db/coach.ts` with createSession/listSessions/renameSession/deleteSession (cascades messages)/appendMessage/getMessages, all typed off schema.ts. A session carries the OpenRouter model slug chosen at creation",
+        "React Query hooks with stable keys and optimistic append for the user turn; streaming assistant text persists once on completion, not per token",
+        "Deleting a session removes its messages — asserted by test"
+      ],
+      "files": [
+        "lib/db/coach.ts",
+        "hooks/useCoachSessions.ts",
+        "__tests__/"
+      ],
+      "prior": "see Recon; React Query provider at app/_layout.tsx:153-165; drizzle singleton at lib/db/helpers.ts",
+      "donot": "Do not put an API key in a query key. Do not write the agent loop — T11 owns it. Do not hardcode a default model — the picker (T16) supplies the slug.",
+      "verify": "npx jest lib/db/coach",
+      "reply": "Hook names + query keys; state the cascade-delete guarantee and where a message-edit/regenerate mutation would land.",
+      "depends_on": [
+        "T6"
+      ]
+    },
+    {
+      "id": "T11",
+      "agent": "code",
+      "goal": "Build the coach agent loop: on-device `streamText` straight to OpenRouter via the AI SDK, with no server in the path.",
+      "done": [
+        "`lib/ai/agent.ts` runs streamText on-device using `@openrouter/ai-sdk-provider@1.5.4` with `expo/fetch` injected as the custom fetch, the user's key from T8, and the model slug the session carries — exposing start/stream/abort",
+        "There is NO transport branch, NO relay URL, NO proxy config and NO default model. The model id comes from the session; if it is missing, or fails T7's catalog guards, the loop throws BEFORE issuing any request",
+        "Abort mid-stream leaves no partial row and no dangling reader. Every failure surfaces as a T18 typed error — invalid key (401), insufficient credits (402), rate limited (429), model-not-in-catalog, model-lacks-tools, network — never a generic failure",
+        "A tool-registration seam exists so T12's tools plug in without editing the loop"
+      ],
+      "files": [
+        "lib/ai/agent.ts",
+        "__tests__/"
+      ],
+      "prior": "see Recon; T1's verdict pins the streaming call shape and the expo/fetch injection; T7 supplies the catalog guards; T8 supplies the key; T18 supplies the error taxonomy. The headline decision is DECIDED — on-device AI SDK, direct to OpenRouter.",
+      "donot": "Do not add a server, worker, relay, proxy or Vercel component of any kind — this is DECIDED, not open. Do not hardcode a model or a default model. Do not implement tools here (T12) or UI (T13).",
+      "verify": "npx jest lib/ai/agent; live streamed reply on Android emulator using a real OpenRouter key",
+      "reply": "The streaming call shape shipped, the abort/error matrix, and the exact file:line of the tool-registration seam T12 plugs into.",
+      "depends_on": [
+        "T1",
+        "T7",
+        "T8",
+        "T18"
+      ]
+    },
+    {
+      "id": "T12",
+      "agent": "code",
+      "goal": "Expose local workout and nutrition context to the coach as tools reading the local DB.",
+      "done": [
+        "Tools for recent sessions, per-exercise history/e1RM trend, and recent nutrition/macros, each with a zod-typed input and a bounded result size",
+        "Tools read only through existing lib/db modules (session-stats.ts, nutrition-progress.ts, macro-coach.ts) — no new SQL duplication",
+        "No PII or raw DB dump is sent; each tool documents exactly which fields leave the device — material because tool payloads go to OpenRouter and on to whichever upstream model the user picked",
+        "Tools are small, unambiguous and independently useful, because tool-call reliability varies by model even though OpenRouter normalizes the interface"
+      ],
+      "files": [
+        "lib/ai/tools/*.ts",
+        "__tests__/"
+      ],
+      "prior": "see Recon; lib/db/session-stats.ts, lib/db/nutrition-progress.ts, lib/db/macro-coach.ts already compute these. OpenRouter standardizes the tool-calling interface across models but reliability varies per model.",
+      "donot": "Do not send the whole workout history in one payload. Do not add new schema. Do not assume every catalog model calls tools equally well.",
+      "verify": "npx jest lib/ai/tools",
+      "reply": "Tool list + the exact field set leaving the device per tool; name the file a 4th tool lands in with zero agent-loop edits.",
+      "depends_on": [
+        "T11"
+      ]
+    },
+    {
+      "id": "T13",
+      "agent": "designer",
+      "goal": "Build the AI Coach chat screen: sessions sidebar + conversation pane, responsive on lib/layout.ts breakpoints.",
+      "done": [
+        "atLeastMedium: persistent left sessions sidebar beside the conversation pane. compact: sidebar collapsed by default, opened by a header sidebar-toggle icon on this screen only",
+        "Conversation pane streams assistant tokens, keeps the composer above the keyboard, respects useFloatingTabBarHeight(), and auto-scrolls only when already pinned to bottom",
+        "The active model is visible in the conversation header and tapping it opens T16's picker",
+        "Empty state, no-key state (deep-links to T9), stale-catalog notice, and EVERY T18 error state (402 / 429 / model-not-in-catalog / model-lacks-tools / invalid key / network) render distinctly, each with its own recovery affordance — no generic 'something went wrong'"
+      ],
+      "files": [
+        "app/(tabs)/ai-coach.tsx",
+        "components/coach/"
+      ],
+      "prior": "see Recon; lib/layout.ts:11-31 useLayout(); drawer precedent components/session/ExerciseDetailDrawer.tsx + components/ui/sheet.tsx; headerLeft slot from T5; error-to-UI-state mapping comes from T18, not from ad-hoc branching here",
+      "donot": "Do not add a new breakpoint system. Do not re-implement a drawer from scratch if the sheet primitive fits. Do not invent error copy — consume T18's mapping. Do not own components/coach/ModelPicker.tsx (T16 owns it).",
+      "verify": "npx jest; render at 375 / 768 / 1280 widths and confirm sidebar behaviour flips at 600",
+      "reply": "Component tree + which precedent was reused for the phone drawer; confirm the toggle icon appears only on this screen and that every T18 error state has a distinct rendering.",
+      "depends_on": [
+        "T10",
+        "T11",
+        "T5",
+        "T9",
+        "T16",
+        "T18"
+      ]
+    },
+    {
+      "id": "T14",
+      "agent": "code",
+      "goal": "Update and extend the test suite for the nav reshuffle and the coach route.",
+      "done": [
+        "__tests__/navigation-headers.test.ts covers ai-coach title registration and the exercises breadcrumb title, and still passes its existing GROUPS + settings-title guards",
+        "A regression test asserts TAB_ORDER, TAB_ICONS and TAB_LABELS have identical key sets — so a future nav entry cannot be half-added",
+        "A NO-SERVER guard test asserts the AI path contains no server URL: no relay, proxy, worker or Vercel base URL appears anywhere under lib/ai/, and app.config.ts extra gains no coach endpoint",
+        "Playwright e2e updated for the moved exercises entry point (home header icon, not navbar)"
+      ],
+      "files": [
+        "__tests__/navigation-headers.test.ts",
+        "__tests__/",
+        "e2e/"
+      ],
+      "prior": "see Recon; existing guard at __tests__/navigation-headers.test.ts:22-69",
+      "donot": "Do not delete existing assertions to make things green.",
+      "verify": "npx jest && npx playwright test",
+      "reply": "Full suite result + the location of the key-set-parity assertion and the no-server guard.",
+      "depends_on": [
+        "T5",
+        "T9",
+        "T13"
+      ]
+    },
+    {
+      "id": "T15",
+      "agent": "code-reviewer",
+      "goal": "Security and invariant review of the on-device BYOK path end to end.",
+      "done": [
+        "Traced the key from entry (T9) through storage (T8) to the model call (T11) and confirmed no log, breadcrumb, Sentry payload, React Query key, SQLite row, or app.config extra ever holds it",
+        "Confirmed there is NO server, worker, relay, proxy or Vercel component anywhere in the AI path, and that no runtime config can introduce one",
+        "Confirmed no hardcoded model list and no default model exists; a model absent from the catalog or lacking `tools` hard-throws BEFORE the call and never silently falls back; catalog failure degrades only to the cached catalog, never to a guess",
+        "Confirmed tool payloads (T12) leak no unintended user data off-device, that key-status display (T17) never surfaces or caches the key, and that no error payload (T18) carries key material"
+      ],
+      "files": [],
+      "prior": "see Recon; invariants stated in the T7, T8, T11, T12, T17 and T18 contracts. There is no server, so the boundary is the device plus the single outbound OpenRouter call.",
+      "donot": "Do not fix — report findings with file:line for the code agent.",
+      "verify": "Re-run the Sentry scrubbing test, the no-model-slug-hardcoded test, and the no-server guard test",
+      "reply": "PASS/FAIL per invariant with file:line evidence; list any key leak, any hardcoded model, or any server reintroduction as a ship blocker.",
+      "depends_on": [
+        "T11",
+        "T12",
+        "T9",
+        "T13",
+        "T17"
+      ]
+    },
+    {
+      "id": "T16",
+      "agent": "designer",
+      "goal": "Build the model picker: searchable, showing pricing and context length, sourced entirely from the live catalog.",
+      "done": [
+        "A searchable list rendered ONLY from T7's catalog — no curated list, no hardcoded default, no hardcoded 'recommended' subset. Search matches model id and name",
+        "Each row shows context length and prompt/completion pricing exactly as returned by the catalog, formatted for readability, plus the model id verbatim so the user can match it against OpenRouter's own site",
+        "A tools-only filter is ON by default (the coach needs tool calling) and can be relaxed only behind an explicit, labelled warning that tools will not work on the excluded models",
+        "Selecting a model writes the slug to the session (T10). When the catalog is stale, a visible notice states the list is cached and shows the cache timestamp"
+      ],
+      "files": [
+        "components/coach/ModelPicker.tsx",
+        "__tests__/"
+      ],
+      "prior": "see Recon; catalog shape, tools filter and stale flag come from T7; sessions carry model_id per T6/T10; error states come from T18",
+      "donot": "Do not hardcode any model, default, or hand-written ordering. Do not fetch the catalog directly — go through T7. Do not own app/(tabs)/ai-coach.tsx (T13 owns it).",
+      "verify": "npx jest ModelPicker; render with a fixture catalog and confirm that adding a fixture entry surfaces it in the picker with zero component edits",
+      "reply": "Component path + the result of the ZERO-code-change test (a new catalog entry appears with no source edit); name where the tools-only filter default lives.",
+      "depends_on": [
+        "T7",
+        "T18"
+      ]
+    },
+    {
+      "id": "T17",
+      "agent": "code",
+      "goal": "Surface OpenRouter key credit and usage from `GET /api/v1/key`, scoped honestly.",
+      "done": [
+        "`lib/ai/key-status.ts` plus a hook calls `GET https://openrouter.ai/api/v1/key` with the stored key and exposes `limit_remaining`, `usage_daily` and `usage_monthly`",
+        "The UI states plainly that these figures are scoped to THIS KEY, not to the user's whole OpenRouter account — account-wide credits require a management key the app must never hold. Do not imply a total account balance",
+        "Refreshed on demand and after a 402, never polled on a timer, so this call cannot itself consume the 429 budget",
+        "The key never appears in a query key, a cache entry, a log, or an error payload"
+      ],
+      "files": [
+        "lib/ai/key-status.ts",
+        "hooks/useKeyStatus.ts",
+        "components/settings/",
+        "__tests__/"
+      ],
+      "prior": "see Recon; `GET /api/v1/key` returns limit_remaining, usage_daily, usage_monthly. Free models are limited to 20 rpm, 50/day under $10 purchased and 1000/day at $10+. Errors map through T18.",
+      "donot": "Do not request or store a management key. Do not present any figure as the account balance. Do not poll on a timer.",
+      "verify": "npx jest lib/ai/key-status; manual check against a real OpenRouter key",
+      "reply": "Fields surfaced + the exact copy that scopes them to the key rather than the account; confirm the key is absent from query keys, caches and logs.",
+      "depends_on": [
+        "T8",
+        "T18"
+      ]
+    },
+    {
+      "id": "T18",
+      "agent": "code",
+      "goal": "Define the AI error taxonomy and the single mapping from typed error to chat UI state — one source of truth consumed by the catalog, the agent loop, and every screen.",
+      "done": [
+        "`lib/ai/errors.ts` exports a discriminated union covering MissingKeyError, InvalidKeyError (401), InsufficientCreditsError (402), RateLimitedError (429), ModelNotInCatalogError, ModelLacksToolsError, CatalogUnavailableError, StaleCatalogWarning, NetworkError and AbortedByUser",
+        "`toChatErrorState(err)` maps each to a UI state carrying a human message and a DISTINCT recovery affordance: 402 -> 'add credits at openrouter.ai' alongside the key-scoped usage from T17; 429 -> retry guidance naming the free-tier limits (20 rpm; 50/day under $10 purchased, 1000/day at $10+); model-not-in-catalog / model-lacks-tools -> 'pick another model' opening T16; missing or invalid key -> deep-link to T9",
+        "The mapping is EXHAUSTIVE over the union and fails typecheck if a new error type is added without a UI state. There is no catch-all bucket and no silent swallow",
+        "Errors never carry the API key or any request header in their payload — a test asserts a planted sentinel key does not appear in any serialized error"
+      ],
+      "files": [
+        "lib/ai/errors.ts",
+        "__tests__/"
+      ],
+      "prior": "see Recon; T1 records the verbatim 402 and 429 response shapes from OpenRouter, which this taxonomy must match. Free-model limits: 20 rpm; 50/day under $10 purchased, 1000/day at $10+.",
+      "donot": "Do not render UI here — T9, T13 and T16 consume the mapping. Do not add a catch-all error type. Do not let any consumer construct an untyped error.",
+      "verify": "npx jest lib/ai/errors — assert that exhaustiveness fails typecheck when a union member is added without a mapping, and that no sentinel key survives error serialization",
+      "reply": "The union members + the exhaustiveness mechanism used; name the file:line a new error type must be added and exactly what breaks if its UI state is missing.",
+      "depends_on": [
+        "T1"
+      ]
+    }
+  ],
+  "success_criteria": [
+    "Floating navbar shows AI Coach, Nutrition, Workouts (center), Progress, Settings — Exercises is absent from it",
+    "Home header top-right shows two 48x48 icons: exercises then wrench; tapping exercises opens the exercise list",
+    "The exercise screen header reads `workouts/exercise` and tapping `workouts` navigates back to home, via a shared BreadcrumbTitle component usable by any screen",
+    "AI Coach tab opens a chat that streams a real assistant reply DIRECTLY from OpenRouter using the user's own OpenRouter key — no relay, no worker, no Vercel, no server of ours anywhere in the path, asserted by an automated no-server guard test",
+    "NO HARDCODED MODEL LIST exists anywhere: model options come from a live `GET /api/v1/models` filtered to `supported_parameters` containing `tools`, and cached. Adding or removing a model costs ZERO code changes — proven by a fixture test",
+    "A selected model absent from the live catalog, or present but lacking `tools`, fails with a distinct typed error BEFORE the call is issued — never a silent fallback to a default model, because no default model exists",
+    "Catalog fetch failure degrades to the last cached catalog and SAYS SO in the UI with the cache timestamp; with no cache it errors rather than guessing",
+    "Paste-a-key ships and is sufficient to use the app end to end; OAuth PKCE, if shipped, is purely additive and disabling it leaves a fully working app",
+    "The OpenRouter key lives only in expo-secure-store; a planted sentinel key appears in no Sentry event, breadcrumb, log, React Query key, SQLite row, or serialized error — asserted by automated test",
+    "The model picker is searchable and shows pricing plus context length per model, with the tools-only filter on by default",
+    "Key credit and usage from `GET /api/v1/key` are displayed and explicitly scoped to THIS KEY, never presented as an account balance",
+    "402, 429, model-not-in-catalog, model-lacks-tools, invalid-key and network each render a distinct chat UI state with a distinct recovery affordance — no generic error bucket",
+    "At >=600pt the sessions sidebar is persistent; below 600pt it is collapsed and opens from a header toggle on the AI Coach screen only",
+    "Deleting a chat session removes its messages; sessions survive app restart via SQLite",
+    "npx jest and npx playwright test both pass, including the updated __tests__/navigation-headers.test.ts"
+  ],
+  "out_of_scope": [
+    "Voice input/output and image understanding",
+    "Cross-device chat sync and server-side conversation history",
+    "Server-side sandboxed code execution, and cron/background coach nudges with the app closed — these are the GENUINE eve triggers and the documented RE-EVALUATION TRIGGER: if any of them becomes required, re-open the headline decision card",
+    "Any server, worker, relay, proxy or Vercel component in the AI path. The existing Cloudflare workers/strava-proxy is untouched and plays no part in the coach",
+    "Direct first-party provider SDKs (Anthropic / OpenAI / Google) — v1 reaches models through OpenRouter only",
+    "Pooling, reselling or app-supplied API keys — every call uses the end user's own OpenRouter key. This is also an OpenRouter ToS constraint, not merely a product choice",
+    "Account-wide OpenRouter credit balance — it needs a management key the client must never hold",
+    "Subagents / multi-agent orchestration"
+  ],
+  "risk_flags": [
+    "BIGGEST RISK — T1: pure-client streaming is UNPROVEN on this stack. `expo/fetch` is LIKELY to work (WinterCG-compliant, real `response.body.getReader()`, and Vercel's own Expo guide mandates it), but every documented example routes through a server and AI SDK issue #5074 reported pure-client streamText failing on older versions (closed). Unproven on Expo 55 / RN 0.83.4. The whole AI track rests on this one verdict. FAIL fallback is NON-STREAMING completions on the same direct path — explicitly NOT a server.",
+    "OpenRouter ToS is PERMISSIVE-BY-SILENCE, not explicit permission. No prohibition found; no blessing either. The terms contemplate incorporating the Service into your own products, place key confidentiality on the user, and prohibit reselling API access. Hard constraint we must honour: never pool or resell — every call uses the end user's own key. Owner: user, if legal certainty is wanted they must ask OpenRouter directly.",
+    "PKCE custom-scheme UNCONFIRMED — whether `openrouter.ai/auth` accepts an expo-linking `myapp://` callback_url is undocumented. Mitigation already built into the plan: paste-a-key is the guaranteed path and ships regardless, and PKCE is never load-bearing. Owner: T9, resolved by an empirical check.",
+    "User-picked MODEL QUALITY and TOOL-CALL RELIABILITY vary. OpenRouter normalizes the tool-calling interface (non-native providers get tools mapped or transformed into a YAML template) but reliability is not uniform. The tools-only catalog filter is necessary but NOT sufficient — a model can advertise tools and still call them badly. Mitigation: filter, keep tools small and unambiguous (T12), and surface failure honestly (T18) rather than pretending.",
+    "NEW CONCENTRATION RISK — single-vendor dependency on OpenRouter. An OpenRouter outage, pricing change, or policy change takes the entire coach down, and we now have no second path. MITIGATION, named deliberately: the AI SDK provider interface IS the seam — swapping to a direct provider later is one declaration change, not a rewrite. Name it now rather than discovering it during an incident.",
+    "VERSION PIN TRAP — `@openrouter/ai-sdk-provider` must be pinned at 1.5.4 (peerDependencies `ai ^5.0.0`). npm latest is 3.0.0 and targets AI SDK v7; taking latest silently breaks the stack. Custom-`fetch` support in 1.5.4's README is also UNCONFIRMED, so T1 must prove `expo/fetch` can be injected at all.",
+    "Free-tier rate limits (20 rpm; 50/day under $10 purchased, 1000/day at $10+) WILL hit real users on free models and will look like an app bug unless T18 maps 429 to a distinct, honest state naming the limit.",
+    "Sentry is shipped and will capture request context — key scrubbing must land in T8 BEFORE any real OpenRouter call is made in T9, T11 or T17, not after.",
+    "Three parallel route-name maps (TAB_ORDER, TAB_ICONS, TAB_LABELS) remain a standing half-edit hazard; T14's key-set-parity test is the mitigation.",
+    "T4 and T5 both sit in the navigation blast radius; file ownership is split deliberately (T4 = navbar components, T5 = app/(tabs)/_layout.tsx) and must not be merged into one agent."
+  ],
+  "execution_status": {
+    "HEADLINE — DECIDED": "Option A, on-device Vercel AI SDK, direct to OpenRouter. Option B (eve on Vercel) REJECTED: eve is coupled to a Vercel-deployed server serving agent requests — a serverless-framework shape that is wrong for an in-app agent. eve's genuine triggers (server code-exec, cron nudges with the app closed, cross-device sync) are preserved in Out of Scope as the re-evaluation trigger.",
+    "TRANSPORT POSTURE — DECIDED": "Direct, no relay, NO server component at all. The former T16 (Cloudflare relay) is DELETED along with everything that depended on it: the `transport` field, the proxied/direct split, `directJustification`, the worker upstream map, worker-side log scrubbing, and the relay sentinel test.",
+    "PROVIDER SET — DECIDED": "OpenRouter only. This is what kills the relay: the Anthropic/OpenAI/Google client-key prohibitions are INAPPLICABLE because the app never touches those providers' keys. One user-held OpenRouter key, OpenRouter fans out to models.",
+    "Prior provider-ToS section": "SUPERSEDED and moot. The OpenAI FORBIDDEN / Anthropic FORBIDDEN / Gemini FORBIDDEN analysis no longer bears on the design and must not be re-litigated.",
+    "OpenRouter ToS position": "NO PROHIBITION FOUND, but NOT explicit permission — recorded as such and deliberately not overclaimed. Binding constraint: never pool or resell access; every call uses the end user's own key.",
+    "Navigation track": "LOCKED. T3, T4 and T5 are byte-identical to the previous revision, have zero dependency on any AI decision, and are READY TO DISPATCH IMMEDIATELY.",
+    "Axis of variation": "CHANGED from providers to MODELS. OpenRouter's live catalog is the binding layer, and a hardcoded model list is prohibited anywhere in the plan. Adding or removing a model must cost ZERO code changes — that is the seam test.",
+    "T16 relay": "DELETED. Task id T16 has been REUSED for the model picker UI. No relay, worker, proxy or Vercel residue remains anywhere in this plan.",
+    "New work": "T16 model picker UI (searchable, pricing + context length, tools-only filter), T17 key credit/usage from `GET /api/v1/key`, T18 error taxonomy and error-to-chat-UI-state mapping (402 / 429 / model-unavailable and friends).",
+    "Replaced work": "T7 is no longer a provider registry — it is the OpenRouter model catalog service with no-hardcoded-list as a hard requirement and typed pre-call guards. T8 keeps SecureStore plus Sentry scrubbing but its worker-side extension is dropped. T11 loses all transport dispatch.",
+    "T1 — streaming spike": "NOT STARTED, SHARPENED, and now the SINGLE gate: AI SDK v5 + @openrouter/ai-sdk-provider@1.5.4 + expo/fetch, direct to OpenRouter, proving (a) incremental deltas, (b) a completed tool round-trip, (c) mid-stream abort, (d) 402/429 behaviour. FAIL fallback is non-streaming completions, NOT a server.",
+    "Wave re-flow": "6 waves (Wave 0-5), down from 7. Wave 0 now carries the gate plus everything with zero dependencies (T1, T3, T4, T6, T8) so the locked nav track and the foundations start immediately. Critical path is T1 -> T18 -> T7 -> T11 -> T12/T13 -> T15. Invariant re-verified: no task shares or precedes its dependencies' wave.",
+    "status": "COMPLETE",
+    "waves": "All waves complete. W0 [T1,T3,T4,T6,T8] · W1 [T5,T18,T10] · W2 [T7,T9,T17] · W3 [T11,T16] · W4 [T12,T13] · W5 [T14,T15]. T2 was already COMPLETE and unwaved.",
+    "task_status": {
+      "T1": "COMPLETE",
+      "T2": "COMPLETE",
+      "T3": "COMPLETE",
+      "T4": "COMPLETE",
+      "T5": "COMPLETE",
+      "T6": "COMPLETE",
+      "T7": "COMPLETE",
+      "T8": "COMPLETE",
+      "T9": "COMPLETE",
+      "T10": "COMPLETE",
+      "T11": "COMPLETE",
+      "T12": "COMPLETE",
+      "T13": "COMPLETE",
+      "T14": "COMPLETE",
+      "T15": "COMPLETE",
+      "T16": "COMPLETE",
+      "T17": "COMPLETE",
+      "T18": "COMPLETE"
+    },
+    "final_verification": [
+      "npm test → 478 suites, 5755 tests passed, 0 failed, 0 skipped, 0 suite collection failures.",
+      "npx tsc --noEmit clean.",
+      "ESLint clean on all AI Coach files; remaining repo warnings are pre-existing and unrelated, confirmed via git."
+    ],
+    "key_outcomes": [
+      "T1 gate PASSED on device: ai@5.0.0 + @openrouter/ai-sdk-provider@1.5.4 + expo/fetch streaming works on Expo 55 / RN 0.83.4. Verified: incremental deltas, completed tool round-trip, clean mid-stream abort, verbatim 429 envelope. 402 never provoked (funded key) — remains the one unverified error path.",
+      "Feature verified end-to-end on a real Android emulator with the user's own OpenRouter key: key save (masked) → Validate → live model picker (no auto-selection) → real tool call against local SQLite fitness data → incremental streaming → persistence across navigation → stop-mid-stream leaving no partial row → per-session model_id restoration → multi-turn conversation history with a follow-up correctly using prior turn context.",
+      "NO server/worker/relay/proxy exists anywhere in the AI path; __tests__/ai-no-server-guard.test.ts mechanically enforces it and was hardened to cover app/settings/ai-key.tsx plus env-var/expoConfig.extra/protocol-relative/wildcard-subdomain bypasses.",
+      "T15 security review verdict: no key leakage (the AI SDK's APICallError carries no request headers, so Authorization cannot ride an error into Sentry); SQL injection none (all tool-reachable queries parameterized); data minimization verified (explicit field allowlists; food names never leave the device); error taxonomy exhaustive with parseOpenRouterError the single wire seam.",
+      "Review findings HIGH-1 (stateless agent — no history/system prompt), HIGH-2 (streaming bleed across sessions), HIGH-3 (abort blind window), HIGH-4 + MEDIUM-5 (guard gaps), MEDIUM-6 (data disclosure), MEDIUM-7 (authed calls off Sentry-instrumented global fetch), MEDIUM-9 (persisted typed error rows), MEDIUM-10 (403/500 error kinds) were all FIXED and re-verified. Agent now sends the last 20 persisted messages plus a fitness-coach system prompt.",
+      "A runtime AI_InvalidPromptError was found on device after the history change (persisted tool-result rows lacked SDK { type: json, value } envelopes) and FIXED at lib/ai/agent.ts:56-119; persisted error rows are now excluded from outgoing history. A new test validates conversion against AI SDK's own modelMessageSchema and fails against the old mapping.",
+      "A green-looking run was found to be masking THREE suite-level collection failures (expo/fetch unmocked under Jest), hiding 23 tests. Fixed via __mocks__/expo-fetch.js + jest.config.js:105; package.json:21 now runs --verbose so suite failures surface, proven by a deliberate break producing a non-zero exit."
+    ],
+    "known_gaps": [
+      "OpenRouter 402 insufficient-credits path never provoked on a funded key.",
+      "Tool-in-flight indicator is correct by test but its visible duration was never measured on device; because the tool call hits local SQLite it may be humanly imperceptible — a UX polish judgment, not a correctness bug.",
+      "Multi-turn with MULTIPLE tool round-trips in history, and a follow-up in a session containing a persisted error row, are covered by schema-validated unit tests but were not reproduced on device.",
+      "Empty assistant rows persist in an older session from earlier failed runs (pre-fix residue, not a live defect).",
+      "PKCE OAuth deferred; paste-a-key is the shipped, fully load-bearing path.",
+      "Provider swap touches two files, not one: lib/ai/catalog.ts (CatalogModel) and lib/ai/agent.ts:62-67 (hardcoded createOpenRouter).",
+      "OpenRouter ToS: no prohibition found on client-side use of a user's own key, but no explicit permission either; binding constraint is never to pool or resell keys. Single-vendor concentration risk remains."
+    ],
+    "completion_record": {
+      "completed_at": "2026-08-18",
+      "summary": "Implementation complete; all T1–T18 tasks are COMPLETE. T2 was already COMPLETE and remains unwaved.",
+      "scope": "Only execution status and this completion record were updated; task contracts, decisions, dependencies, and waves are unchanged."
+    }
+  },
+  "phases": [
+    {
+      "title": "Wave 0 — Gate and immediately dispatchable work",
+      "decision": "approved",
+      "order": 1,
+      "notes": "All three open decisions are now DECIDED (see the cards below) — nothing in this plan is blocked on the user. T2 is COMPLETE and sits in no wave; its findings supersede the entire prior provider-ToS section. Every task here has ZERO dependencies and can start right now. T3 and T4 are the LOCKED navigation track: byte-identical to the previous revision and entirely independent of the AI design. T1 is the single gate on the AI track.",
+      "decisions": [
+        {
+          "question": "HEADLINE — DECIDED: how does the coach reach the model?",
+          "options": [
+            "DECIDED — Option A: on-device Vercel AI SDK (ai-sdk.dev), direct to OpenRouter, no server. Tools and agent logic are defined inside the app; the user supplies their own OpenRouter key and picks the model. The key stays in expo-secure-store and leaves the device only as an Authorization header to OpenRouter. Nothing of ours sits in the path, so there is no relay to build, no worker to secure, no no-log invariant to keep load-bearing, and no second cloud. Cost stated plainly: the whole track now rests on T1 proving pure-client streaming works on Expo 55 / RN 0.83.4, and on a new single-vendor dependency on OpenRouter.",
+            "REJECTED — Option B: eve on Vercel. Decisive reason, from the user: eve is coupled to a Vercel-deployed server that serves the agent requests — it is more like a serverless framework — which is the wrong SHAPE for an in-app agent, independent of any key-custody argument. The earlier key-custody objection (eve's durable session auth snapshot retains credentials) still stands but is no longer the operative reason. RE-EVALUATION TRIGGER, preserved in Out of Scope: server-side sandboxed code execution, cron nudges with the app closed, or cross-device sync. If any of those three becomes required, re-open this card."
+          ],
+          "selected": "DECIDED — Option A: on-device Vercel AI SDK (ai-sdk.dev), direct to OpenRouter, no server. Tools and agent logic are defined inside the app; the user supplies their own OpenRouter key and picks the model. The key stays in expo-secure-store and leaves the device only as an Authorization header to OpenRouter. Nothing of ours sits in the path, so there is no relay to build, no worker to secure, no no-log invariant to keep load-bearing, and no second cloud. Cost stated plainly: the whole track now rests on T1 proving pure-client streaming works on Expo 55 / RN 0.83.4, and on a new single-vendor dependency on OpenRouter."
+        },
+        {
+          "question": "TRANSPORT POSTURE — DECIDED: is there a relay?",
+          "options": [
+            "DECIDED — direct, no relay, and NO server component at all. The former T16 (multi-provider streaming relay on the existing Cloudflare workers/strava-proxy) is DELETED, together with everything that depended on it: the `transport` field, the proxied/direct split, the `directJustification` type, the worker upstream map, the worker-side log scrubbing extension, and the relay sentinel test. The existing strava-proxy worker is untouched and plays no part in the AI path.",
+            "REJECTED — relay every call through the existing Cloudflare worker. This existed ONLY to work around the Anthropic / OpenAI / Google client-key prohibitions. Under OpenRouter-only those prohibitions do not apply, so the relay buys nothing while costing a key-handling server path whose no-log invariant would have been load-bearing on every turn."
+          ],
+          "selected": "DECIDED — direct, no relay, and NO server component at all. The former T16 (multi-provider streaming relay on the existing Cloudflare workers/strava-proxy) is DELETED, together with everything that depended on it: the `transport` field, the proxied/direct split, the `directJustification` type, the worker upstream map, the worker-side log scrubbing extension, and the relay sentinel test. The existing strava-proxy worker is untouched and plays no part in the AI path."
+        },
+        {
+          "question": "PROVIDER SET — DECIDED: which providers does v1 talk to?",
+          "options": [
+            "DECIDED — OpenRouter only, and this is precisely what kills the relay. The app never touches an Anthropic, OpenAI or Google key, so those providers' client-key prohibitions are INAPPLICABLE rather than overridden. The user holds ONE OpenRouter key and OpenRouter fans out to models. Honest ToS position: NO PROHIBITION FOUND, but NOT explicit permission — the terms contemplate \"the extent you incorporate the Service into your own products and services\" and place key confidentiality on the user, do not explicitly bless mobile or client-side use, and do prohibit \"reselling API access to Models or otherwise developing a competing service\" (openrouter.ai/terms). Binding constraint: the app must never pool or resell access; every call uses the end user's own key. Consequence: the axis of variation is no longer providers, it is MODELS, and OpenRouter's live catalog is the binding layer.",
+            "REJECTED — ship multiple first-party providers (Anthropic / OpenAI / Gemini) with per-provider keys. Every one of them forbids client-side or shared use of a user's key, which is exactly what forced the relay in the first place. Carrying three prohibited key paths plus a server to launder them is strictly worse than one key the user already controls."
+          ],
+          "selected": "DECIDED — OpenRouter only, and this is precisely what kills the relay. The app never touches an Anthropic, OpenAI or Google key, so those providers' client-key prohibitions are INAPPLICABLE rather than overridden. The user holds ONE OpenRouter key and OpenRouter fans out to models. Honest ToS position: NO PROHIBITION FOUND, but NOT explicit permission — the terms contemplate \"the extent you incorporate the Service into your own products and services\" and place key confidentiality on the user, do not explicitly bless mobile or client-side use, and do prohibit \"reselling API access to Models or otherwise developing a competing service\" (openrouter.ai/terms). Binding constraint: the app must never pool or resell access; every call uses the end user's own key. Consequence: the axis of variation is no longer providers, it is MODELS, and OpenRouter's live catalog is the binding layer."
+        }
+      ],
+      "items": [
+        {
+          "text": "T1: Spike AI SDK v5 + @openrouter/ai-sdk-provider@1.5.4 + expo/fetch, DIRECT to OpenRouter — deltas, completed tool round-trip, abort, 402/429",
+          "checked": false,
+          "order": 1,
+          "priority": "critical",
+          "notes": "The single gate on the AI track and the biggest risk in the plan. FAIL fallback is non-streaming completions on the same direct path — NOT a server."
+        },
+        {
+          "text": "T3: Shared BreadcrumbTitle component (clickable parent segments) — not an exercises one-off",
+          "checked": false,
+          "order": 2,
+          "priority": "normal",
+          "notes": "LOCKED — unchanged from the previous revision. Zero dependency on any AI decision. Dispatch immediately."
+        },
+        {
+          "text": "T4: Navbar reshuffle — exercises out of TAB_ORDER, ai-coach in; add app/(tabs)/ai-coach.tsx placeholder",
+          "checked": false,
+          "order": 3,
+          "priority": "high",
+          "notes": "LOCKED — unchanged from the previous revision. Zero dependency on any AI decision. Dispatch immediately. Three parallel maps must stay in sync."
+        },
+        {
+          "text": "T6: coach_sessions + coach_messages tables via tables.ts createExtensionTables and migrate() phase 2",
+          "checked": false,
+          "order": 4,
+          "priority": "high",
+          "notes": "model_id is free text holding the OpenRouter slug — no model enum, no models table, no default-model column."
+        },
+        {
+          "text": "T8: SecureStore OpenRouter key vault + client Sentry key scrubbing",
+          "checked": false,
+          "order": 5,
+          "priority": "critical",
+          "notes": "Must land before any real OpenRouter call in T9, T11 or T17. Worker-side scrubbing is DELETED — there is no server, so client telemetry is the entire boundary."
+        }
+      ]
+    },
+    {
+      "title": "Wave 1 — Nav wiring, error taxonomy, chat data layer",
+      "decision": "pending",
+      "order": 2,
+      "notes": "T5 completes the LOCKED navigation track as soon as T3 and T4 land. T18 is deliberately early: the error taxonomy is a foundation that the catalog, the agent loop and every screen consume, so it must exist before them rather than being retrofitted.",
+      "decisions": [],
+      "items": [
+        {
+          "text": "T5: app/(tabs)/_layout.tsx — home header icon row (exercises + wrench), ai-coach options, exercises breadcrumb title",
+          "checked": false,
+          "order": 1,
+          "priority": "high",
+          "notes": "LOCKED — unchanged from the previous revision. Sole owner of this file. Depends only on T3 + T4, never on an AI decision."
+        },
+        {
+          "text": "T18: AI error taxonomy + single error-to-chat-UI-state mapping (402 / 429 / model-unavailable / lacks-tools / key / network)",
+          "checked": false,
+          "order": 2,
+          "priority": "critical",
+          "notes": "Exhaustive union, no catch-all bucket, no silent swallow. T1 supplies the verbatim 402/429 response shapes to match."
+        },
+        {
+          "text": "T10: Chat data layer — session CRUD, message append, React Query hooks",
+          "checked": false,
+          "order": 3,
+          "priority": "normal",
+          "notes": "Persist streamed assistant text once on completion, not per token. Sessions carry the OpenRouter model slug."
+        }
+      ]
+    },
+    {
+      "title": "Wave 2 — Model catalog, key connection UI, key status",
+      "decision": "pending",
+      "order": 3,
+      "notes": "T7 is the replacement for the old provider registry: the axis of variation is now models, and the live OpenRouter catalog is the binding layer. T9 and T17 both consume the key vault; neither may be started before T8 lands.",
+      "decisions": [],
+      "items": [
+        {
+          "text": "T7: OpenRouter model catalog service — live /api/v1/models, tools-only filter, cache + stale flag, typed pre-call guards, NO hardcoded model list",
+          "checked": false,
+          "order": 1,
+          "priority": "critical",
+          "notes": "Seam test: adding or removing a model costs ZERO code changes. A selected model missing from the catalog or lacking tools hard-throws before the call; there is no default model to fall back to."
+        },
+        {
+          "text": "T9: OpenRouter key connection UI — paste-a-key GUARANTEED, OAuth PKCE additive and gated",
+          "checked": false,
+          "order": 2,
+          "priority": "high",
+          "notes": "PKCE must never be load-bearing: whether openrouter.ai/auth accepts an expo-linking custom scheme is UNCONFIRMED and this task owns resolving it. If the answer is no, ship paste-only and record it."
+        },
+        {
+          "text": "T17: Key credit/usage display from GET /api/v1/key",
+          "checked": false,
+          "order": 3,
+          "priority": "normal",
+          "notes": "Scoped to THIS KEY, never presented as an account balance — account-wide credits need a management key the app must not hold."
+        }
+      ]
+    },
+    {
+      "title": "Wave 3 — Agent loop and model picker",
+      "decision": "pending",
+      "order": 4,
+      "notes": "T11 is no longer blocked on any decision — the shape is settled: on-device streamText, direct to OpenRouter, no transport branch. T16 renders the catalog and must not fetch it itself.",
+      "decisions": [],
+      "items": [
+        {
+          "text": "T11: Coach agent loop — on-device streamText direct to OpenRouter via @openrouter/ai-sdk-provider@1.5.4 with expo/fetch",
+          "checked": false,
+          "order": 1,
+          "priority": "critical",
+          "notes": "No transport branch, no relay URL, no proxy config, no default model. Every failure surfaces as a T18 typed error."
+        },
+        {
+          "text": "T16: Model picker UI — searchable, pricing + context length, tools-only filter on by default",
+          "checked": false,
+          "order": 2,
+          "priority": "high",
+          "notes": "Rendered purely from T7's catalog. Zero-code-change test: a new catalog entry must appear with no source edit."
+        }
+      ]
+    },
+    {
+      "title": "Wave 4 — Coach behaviour and chat UI",
+      "decision": "pending",
+      "order": 5,
+      "notes": "Both consume T11's output; the tool-registration seam from T11 is what T12 plugs into. T13 also consumes T16's picker and T18's error mapping rather than branching on errors itself.",
+      "decisions": [],
+      "items": [
+        {
+          "text": "T12: Coach context tools — workouts, e1RM trends, nutrition/macros from the local DB",
+          "checked": false,
+          "order": 1,
+          "priority": "normal",
+          "notes": "Reuse existing lib/db modules; bound every payload. Keep tools small and unambiguous because tool-call reliability varies by model."
+        },
+        {
+          "text": "T13: AI Coach chat screen — sessions sidebar + conversation pane, responsive on lib/layout.ts",
+          "checked": false,
+          "order": 2,
+          "priority": "high",
+          "notes": "Persistent sidebar at atLeastMedium; collapsed + header toggle at compact. Every T18 error state renders distinctly; active model opens T16's picker."
+        }
+      ]
+    },
+    {
+      "title": "Wave 5 — Verification",
+      "decision": "pending",
+      "order": 6,
+      "notes": "T15 is a read-only review; findings route back to a code agent as follow-up. Two invariants are now ship blockers alongside key leakage: no server may exist anywhere in the AI path, and no model slug may be hardcoded.",
+      "decisions": [],
+      "items": [
+        {
+          "text": "T14: Update navigation-headers tests, add TAB map key-set-parity guard, add the NO-SERVER guard, update Playwright e2e",
+          "checked": false,
+          "order": 1,
+          "priority": "high",
+          "notes": "Do not delete existing assertions to go green. The no-server guard is what keeps the transport decision from silently eroding."
+        },
+        {
+          "text": "T15: Security and invariant review — key path, no-server, no-hardcoded-model, tool payloads, key-status display",
+          "checked": false,
+          "order": 2,
+          "priority": "critical",
+          "notes": "Any key leak, any reintroduced server, or any hardcoded model is a ship blocker."
+        }
+      ]
+    }
+  ],
+  "save_filename": "ai-coach-byok.decisions.json"
+}</script></pre>
+</details>
+<p class="toolbar">
+  <button class="primary" id="save">Save decisions</button>
+  <span class="badge" id="save-label"></span>
+</p>
+<script>
+(function(){'use strict';
+const data=JSON.parse(document.getElementById('plan-data').textContent);
+const app=document.getElementById('app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const priorities=['low','normal','high','critical'];
+function render(){document.getElementById('save-label').textContent='Downloads '+((data.save_filename)||'plan.decisions.json');
+app.innerHTML=data.phases.map((p,pi)=>'<section class="phase" data-phase="'+pi+'"><div class="phase-head"><h3>'+esc(p.title)+' <span class="phase-status">'+(p.decision||'pending')+'</span></h3><div class="phase-controls">'+['pending','approved','rejected'].map(d=>'<label><input type="radio" name="d-'+pi+'" value="'+d+'" '+(p.decision===d?'checked':'')+' data-decision data-p="'+pi+'"> '+d+'</label>').join('')+' <span class="badge">order <input class="order" type="number" min="1" value="'+(p.order??pi+1)+'" data-phase-order data-p="'+pi+'"></span></div></div>'+(p.decisions||[]).map((d,di)=>'<div class="decision-card"><strong>'+esc(d.question)+'</strong><select data-choice data-p="'+pi+'" data-di="'+di+'"><option value="">&mdash; Choose &mdash;</option>'+(d.options||[]).map(o=>'<option value="'+esc(o)+'"'+(d.selected===o?' selected':'')+'>'+esc(o)+'</option>').join('')+'</select></div>').join('')+'<ol class="task-list">'+(p.items||[]).map((i,ii)=>'<li class="task" data-p="'+pi+'" data-i="'+ii+'"><input type="checkbox"'+(i.checked?' checked':'')+' data-check data-p="'+pi+'" data-i="'+ii+'"><span class="task-text">'+esc(i.text)+'</span><span><select data-priority data-p="'+pi+'" data-i="'+ii+'">'+priorities.map(pr=>'<option value="'+pr+'"'+((i.priority||'normal')===pr?' selected':'')+'>'+pr+'</option>').join('')+'</select> <input class="order" type="number" min="1" value="'+(i.order??ii+1)+'" data-task-order data-p="'+pi+'" data-i="'+ii+'"></span><textarea rows="1" placeholder="Task notes" data-notes data-p="'+pi+'" data-i="'+ii+'">'+esc(i.notes||'')+'</textarea></li>').join('')+'</ol><textarea rows="2" placeholder="Phase notes" data-phase-notes data-p="'+pi+'">'+esc(p.notes||'')+'</textarea></section>').join('');bind()}
+function bind(){document.querySelectorAll('[data-decision]').forEach(el=>{el.addEventListener('change',()=>{data.phases[+el.dataset.p].decision=el.value;render()})});document.querySelectorAll('[data-phase-order]').forEach(el=>{el.addEventListener('change',()=>{data.phases[+el.dataset.p].order=+el.value})});document.querySelectorAll('[data-choice]').forEach(el=>{el.addEventListener('change',()=>{data.phases[+el.dataset.p].decisions[+el.dataset.di].selected=el.value||null})});document.querySelectorAll('[data-check]').forEach(el=>{el.addEventListener('change',()=>{data.phases[+el.dataset.p].items[+el.dataset.i].checked=el.checked})});document.querySelectorAll('[data-priority]').forEach(el=>{el.addEventListener('change',()=>{data.phases[+el.dataset.p].items[+el.dataset.i].priority=el.value})});document.querySelectorAll('[data-task-order]').forEach(el=>{el.addEventListener('change',()=>{data.phases[+el.dataset.p].items[+el.dataset.i].order=+el.value})});document.querySelectorAll('[data-notes]').forEach(el=>{el.addEventListener('input',()=>{data.phases[+el.dataset.p].items[+el.dataset.i].notes=el.value})});document.querySelectorAll('[data-phase-notes]').forEach(el=>{el.addEventListener('input',()=>{data.phases[+el.dataset.p].notes=el.value})})}
+document.getElementById('save').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({title:data.title,phases:data.phases.map(p=>({title:p.title,decision:p.decision||'pending',order:p.order,notes:p.notes||'',decisions:(p.decisions||[]).map(d=>({question:d.question,options:d.options,selected:d.selected})),items:(p.items||[]).map(i=>({text:i.text,checked:!!i.checked,order:i.order,priority:i.priority||'normal',notes:i.notes||''}))})),decided_at:new Date().toISOString(),decided_by:'human'},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=data.save_filename||'plan.decisions.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)});render()})();
+</script>
+</body>
+</html>

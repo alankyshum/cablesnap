@@ -14,6 +14,7 @@ import { radii } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useFoodLogger } from "@/hooks/useFoodLogger";
 import { useFoodSearch, type SearchResult } from "@/hooks/useFoodSearch";
+import { t } from "@/lib/i18n";
 
 type Props = { dateKey: string; onFoodLogged: () => void; onSnack: (message: string, undoFn?: () => Promise<void>) => void; scanOnMount?: boolean };
 
@@ -42,18 +43,18 @@ export default function InlineFoodSearch({ dateKey, onFoodLogged, onSnack, scanO
   const sepIdx = localResults.length;
   const renderItem = useCallback(({ item, index }: { item: SearchResult; index: number }) => {
     const el = <FoodResultItem item={item} index={index} expandedKey={expandedKey} multiplier={multiplier} mult={mult} validMult={validMult} saveFav={saveFav} saving={saving} onExpand={expandResult} onSetMultiplier={setMultiplier} onToggleFav={() => setSaveFav((p) => !p)} onLogLocal={(f) => logLocalFood(f, mult, saveFav)} onLogOnline={(f) => logOnlineFood(f, mult, saveFav)} />;
-    if (showSep && index === sepIdx) return <View><Text variant="caption" style={[styles.separator, { color: colors.onSurfaceVariant }]}>Online Results</Text>{el}</View>;
+    if (showSep && index === sepIdx) return <View><Text variant="caption" style={[styles.separator, { color: colors.onSurfaceVariant }]}>{t({ id: "components.foodSearch.onlineResults", message: "Online Results" })}</Text>{el}</View>;
     return el;
   }, [expandedKey, multiplier, mult, validMult, saveFav, saving, expandResult, logLocalFood, logOnlineFood, showSep, sepIdx, colors]);
   const hasResults = combinedResults.length > 0;
   const showEmptyMessage = query.trim().length >= 2 && !hasResults && !onlineLoading && !onlineError;
-  const barcodeBtn = Platform.OS !== "web" ? <Pressable onPress={() => { Keyboard.dismiss(); openScanner(); }} accessibilityLabel="Scan barcode" style={{ padding: 4 }}><ScanBarcode size={20} color={colors.onSurfaceVariant} /></Pressable> : undefined;
+  const barcodeBtn = Platform.OS !== "web" ? <Pressable onPress={() => { Keyboard.dismiss(); openScanner(); }} accessibilityLabel={t({ id: "components.foodSearch.scanBarcodeA11y", message: "Scan barcode" })} style={{ padding: 4 }}><ScanBarcode size={20} color={colors.onSurfaceVariant} /></Pressable> : undefined;
 
   return (
     <Card style={StyleSheet.flatten([styles.card, { backgroundColor: colors.surface }])}>
       <CardContent style={styles.content}>
         <MealFavoritesBar meal={meal} onMealChange={setMeal} favorites={favorites} saving={saving} onLogFavorite={logFavorite} />
-        <Input variant="outline" placeholder="Search foods..." value={query} onChangeText={setQuery} containerStyle={styles.searchInput} accessibilityLabel="Search foods" rightComponent={barcodeBtn} />
+        <Input variant="outline" placeholder={t({ id: "components.foodSearch.placeholder", message: "Search foods..." })} value={query} onChangeText={setQuery} containerStyle={styles.searchInput} accessibilityLabel={t({ id: "components.foodSearch.searchA11y", message: "Search foods" })} rightComponent={barcodeBtn} />
         {hasBarcodeStatus && <BarcodeStatus loading={barcodeLoading} error={barcodeError} productName={scannedProductName} onRetry={openScanner} />}
         <View style={styles.actionRow}><ManualFoodEntry saving={saving} onSave={logManualFood} onFavoritesChanged={setFavorites} /></View>
         <SearchResultsArea onlineLoading={onlineLoading} onlineError={onlineError} showEmptyMessage={showEmptyMessage} hasResults={hasResults} combinedResults={combinedResults} renderItemWithSeparator={renderItem} retrySearch={retrySearch} />

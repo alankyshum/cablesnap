@@ -12,6 +12,7 @@ const VALID_TABLES = new Set([
   "meal_templates", "meal_template_items", "app_settings",
   "program_schedule", "strength_goals", "water_logs",
   "gym_profiles", "cable_stacks", "stack_calibrations",
+  "coach_sessions", "coach_workout_drafts", "coach_workout_draft_revisions", "coach_messages",
 ]);
 
 function assertValidTable(table: string): void {
@@ -276,6 +277,53 @@ export async function createCoreTables(database: SQLite.SQLiteDatabase): Promise
 
 export async function createExtensionTables(database: SQLite.SQLiteDatabase): Promise<void> {
   await database.execAsync(`
+    CREATE TABLE IF NOT EXISTS coach_sessions (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      model_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS coach_messages (
+      id TEXT PRIMARY KEY,
+       session_id TEXT NOT NULL REFERENCES coach_sessions(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      model_id TEXT,
+      tool_calls TEXT,
+      created_at INTEGER NOT NULL,
+      error TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_messages_session_created_at
+      ON coach_messages(session_id, created_at);
+
+    CREATE TABLE IF NOT EXISTS coach_workout_drafts (
+      id TEXT PRIMARY KEY,
+       coach_session_id TEXT NOT NULL REFERENCES coach_sessions(id) ON DELETE CASCADE,
+      latest_revision INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'active',
+      source_kind TEXT NOT NULL,
+      source_metadata TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_workout_drafts_session
+      ON coach_workout_drafts(coach_session_id, updated_at);
+
+    CREATE TABLE IF NOT EXISTS coach_workout_draft_revisions (
+      id TEXT PRIMARY KEY,
+       draft_id TEXT NOT NULL REFERENCES coach_workout_drafts(id) ON DELETE CASCADE,
+      version INTEGER NOT NULL,
+      canonical_draft TEXT NOT NULL,
+      reason_ledger TEXT NOT NULL DEFAULT '[]',
+      change_reason TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE(draft_id, version)
+    );
+    CREATE INDEX IF NOT EXISTS idx_coach_workout_draft_revisions_draft_version
+      ON coach_workout_draft_revisions(draft_id, version);
+
     CREATE TABLE IF NOT EXISTS interaction_log (
       id TEXT PRIMARY KEY,
       action TEXT NOT NULL,

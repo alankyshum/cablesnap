@@ -15,6 +15,7 @@ import { Chip } from "@/components/ui/chip";
 import { Text } from "@/components/ui/text";
 import { fontSizes } from "@/constants/design-tokens";
 import { getAppSetting, setAppSetting } from "../../lib/db";
+import { t } from "@lingui/core/macro";
 
 export type CuratedAttribution = { label: string; url: string; license: string };
 
@@ -25,9 +26,9 @@ export function CuratedChip() {
     <Chip
       compact
       style={styles.chip}
-      accessibilityLabel="Curated program from the community. Editable in place."
+       accessibilityLabel={t({ id: "components.program.curated-extras.chip-a11y", message: "Curated program from the community. Editable in place." })}
     >
-      CURATED
+       {t({ id: "components.program.curated-extras.curated", message: "CURATED" })}
     </Chip>
   );
 }
@@ -73,12 +74,12 @@ export function CuratedCaption({
   return (
     <View style={[styles.captionCard, { backgroundColor: surface, borderColor: outline }]}>
       <Text style={[styles.captionText, { color: onSurfaceVariant }]} maxFontSizeMultiplier={1.5}>
-        Curated programs are added by CableSnap. Edit freely or hide them via the filter on the Programs screen.
+         {t({ id: "components.program.curated-extras.caption", message: "Curated programs are added by CableSnap. Edit freely or hide them via the filter on the Programs screen." })}
       </Text>
       <TouchableOpacity
         onPress={onDismiss}
         hitSlop={8}
-        accessibilityLabel="Dismiss curated programs info"
+         accessibilityLabel={t({ id: "components.program.curated-extras.dismiss-a11y", message: "Dismiss curated programs info" })}
         accessibilityRole="button"
         style={styles.captionDismiss}
       >
@@ -99,7 +100,7 @@ export function AttributionFooter({
   return (
     <TouchableOpacity
       onPress={() => void Linking.openURL(attribution.url)}
-      accessibilityLabel={`Source: ${attribution.label} (${attribution.license}). Opens in browser.`}
+      accessibilityLabel={t({ id: "components.program.curated-extras.source-a11y", message: `Source: ${attribution.label} (${attribution.license}). Opens in browser.` })}
       accessibilityRole="link"
       style={styles.attributionRow}
     >

@@ -19,6 +19,7 @@ import { getAppSetting, setAppSetting } from "@/lib/db";
 import { bumpQueryVersion } from "@/lib/query";
 import { useToast } from "@/components/ui/bna-toast";
 import { log as logInteraction } from "@/lib/interactions";
+import { t } from "@lingui/core/macro";
 
 export const RPE_NUDGE_BODY =
   "You've logged RPE before. One tap after each set, and your rest adapts.";
@@ -65,7 +66,7 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
       await markRpeCaptureNudgeSeen();
     } catch {
       setWriteInFlight(false);
-      toast.error("Couldn't save — try again");
+      toast.error(t({ id: "components.exercises.rpe-capture-nudge.save-error", message: "Couldn't save — try again" }));
       return;
     }
     await logInteraction("rpe_nudge_turn_on", "exercise_detail", exerciseId);
@@ -74,7 +75,7 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
       bumpQueryVersion("preferences");
     } catch {
       // nudgeShown already written — banner will never show again
-      toast.error("Saved — couldn't enable capture. Try Settings");
+      toast.error(t({ id: "components.exercises.rpe-capture-nudge.enable-error", message: "Saved — couldn't enable capture. Try Settings" }));
     }
     setEligible(false);
     onDismiss?.();
@@ -88,7 +89,7 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
       await markRpeCaptureNudgeSeen();
     } catch {
       setWriteInFlight(false);
-      toast.error("Couldn't save — try again");
+      toast.error(t({ id: "components.exercises.rpe-capture-nudge.dismiss-error", message: "Couldn't save — try again" }));
       return;
     }
     await logInteraction("rpe_nudge_not_now", "exercise_detail", exerciseId);
@@ -120,12 +121,12 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
           onPress={handleTurnOn}
           disabled={writeInFlight}
           accessibilityRole="button"
-          accessibilityLabel="Turn on live RPE capture"
+          accessibilityLabel={t({ id: "components.exercises.rpe-capture-nudge.turn-on-a11y", message: "Turn on live RPE capture" })}
           accessibilityState={{ disabled: writeInFlight }}
           style={({ pressed }) => [styles.btn, styles.btnPrimary, pressed && { opacity: 0.7 }]}
         >
           <Text style={{ color: colors.primary, fontSize: fontSizes.sm, fontWeight: "600" }}>
-            Turn on
+            {t({ id: "components.exercises.rpe-capture-nudge.turn-on", message: "Turn on" })}
           </Text>
         </Pressable>
         <Pressable
@@ -133,12 +134,12 @@ export function RpeCaptureNudge({ exerciseId, onDismiss }: Props) {
           onPress={handleNotNow}
           disabled={writeInFlight}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss RPE capture suggestion"
+          accessibilityLabel={t({ id: "components.exercises.rpe-capture-nudge.dismiss-a11y", message: "Dismiss RPE capture suggestion" })}
           accessibilityState={{ disabled: writeInFlight }}
           style={({ pressed }) => [styles.btn, pressed && { opacity: 0.7 }]}
         >
           <Text style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
-            Not now
+            {t({ id: "components.exercises.rpe-capture-nudge.not-now", message: "Not now" })}
           </Text>
         </Pressable>
       </View>

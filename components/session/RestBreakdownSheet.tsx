@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Switch, View } from "react-native";
 import {
@@ -163,9 +166,7 @@ export function RestBreakdownSheet({
         {exerciseId && onPinChange && restSource &&
           (restSource.kind === "history" || restSource.kind === "template" || restSource.kind === "default" || restSource.kind === "pinned") ? (
           <View style={styles.pinRow} accessibilityRole="none">
-            <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>
-              Pin as default for this exercise
-            </Text>
+            <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>{t({ id: "session.restbreakdownsheet.str10", message: "Pin as default for this exercise" })}</Text>
             <Switch
               value={isPinned}
               onValueChange={(val) => {
@@ -198,7 +199,7 @@ export function RestBreakdownSheet({
         {/* Additive bars: Base + each non-default factor = Total */}
         <View style={styles.breakdownBlock}>
           <BreakdownRow
-            label="Base"
+            label={t({ id: "session.restbreakdownsheet.str1", message: "Base" })}
             seconds={breakdown.baseSeconds}
             isDelta={false}
             maxBar={maxBar}
@@ -216,9 +217,7 @@ export function RestBreakdownSheet({
             />
           ))}
           <View style={[styles.totalRow, { borderTopColor: colors.outline }]}>
-            <Text variant="body" style={{ color: colors.onSurface, fontWeight: "700", flex: 1 }}>
-              Total
-            </Text>
+            <Text variant="body" style={{ color: colors.onSurface, fontWeight: "700", flex: 1 }}>{t({ id: "session.restbreakdownsheet.str11", message: "Total" })}</Text>
             <Text variant="body" style={{ color: colors.primary, fontWeight: "700" }}>
               {formatMMSS(breakdown.totalSeconds)} · {breakdown.totalSeconds}s
             </Text>
@@ -230,20 +229,20 @@ export function RestBreakdownSheet({
           <Button
             variant="outline"
             onPress={() => onAddTime(-30)}
-            label="−30s"
-            accessibilityLabel="Subtract 30 seconds from rest"
+            label={t({ id: "session.restbreakdownsheet.str2", message: "−30s" })}
+            accessibilityLabel={t({ id: "session.restbreakdownsheet.str3", message: "Subtract 30 seconds from rest" })}
           />
           <Button
             variant="outline"
             onPress={() => onAddTime(30)}
-            label="+30s"
-            accessibilityLabel="Add 30 seconds to rest"
+            label={t({ id: "session.restbreakdownsheet.str4", message: "+30s" })}
+            accessibilityLabel={t({ id: "session.restbreakdownsheet.str5", message: "Add 30 seconds to rest" })}
           />
           <Button
             variant="ghost"
             onPress={onCutShort}
-            label="Cut short"
-            accessibilityLabel="End rest now"
+            label={t({ id: "session.restbreakdownsheet.str6", message: "Cut short" })}
+            accessibilityLabel={t({ id: "session.restbreakdownsheet.str7", message: "End rest now" })}
           />
         </View>
 
@@ -251,8 +250,8 @@ export function RestBreakdownSheet({
           <Button
             variant="ghost"
             onPress={onEditRules}
-            label="Edit adaptive rules…"
-            accessibilityLabel="Edit adaptive rest timer rules"
+            label={t({ id: "session.restbreakdownsheet.str8", message: "Edit adaptive rules…" })}
+            accessibilityLabel={t({ id: "session.restbreakdownsheet.str9", message: "Edit adaptive rest timer rules" })}
           />
         ) : null}
       </BottomSheetScrollView>

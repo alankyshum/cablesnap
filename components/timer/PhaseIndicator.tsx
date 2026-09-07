@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/icon"
 import { Play, Pause } from "lucide-react-native"
 import { phaseLabel } from "@/lib/timer"
 import { type useTimerEngine } from "@/hooks/useTimerEngine"
+import { t } from "@lingui/core/macro"
 
 const phaseIconMap = { work: Play, rest: Pause } as const
 type TimerState = ReturnType<typeof useTimerEngine>["state"]
@@ -18,7 +19,13 @@ export function PhaseIndicator({ phase, bgColor, state }: { phase: string; bgCol
         </Pressable>
       )}
       <Text variant="subtitle" style={[styles.phaseText, { color: bgColor }]} accessibilityRole="text">
-        {phaseLabel(state)}
+         {state.phase === "work"
+           ? t({ id: "components.timer.phaseIndicator.work", message: "WORK" })
+           : state.phase === "rest"
+             ? t({ id: "components.timer.phaseIndicator.rest", message: "REST" })
+             : state.phase === "completed"
+               ? t({ id: "components.timer.phaseIndicator.done", message: "DONE" })
+               : phaseLabel(state)}
       </Text>
     </View>
   )

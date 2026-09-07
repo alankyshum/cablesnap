@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { FlatList, StyleSheet } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -30,7 +32,7 @@ export function MealFavoritesBar({ meal, onMealChange, favorites, saving, onLogF
             selected={meal === m}
             onPress={() => onMealChange(m)}
             style={styles.mealChip}
-            accessibilityLabel={`Meal: ${MEAL_LABELS[m]}`}
+             accessibilityLabel={t({ id: "components.nutrition.favorites.mealA11y", message: `Meal: ${MEAL_LABELS[m]}` })}
             role="button"
             accessibilityState={{ selected: meal === m }}
           >
@@ -51,7 +53,7 @@ export function MealFavoritesBar({ meal, onMealChange, favorites, saving, onLogF
               onPress={() => onLogFavorite(f)}
               style={styles.favChip}
               disabled={saving}
-              accessibilityLabel={`Quick log ${f.name}`}
+               accessibilityLabel={t({ id: "components.nutrition.favorites.quickLogA11y", message: `Quick log ${f.name}` })}
               role="button"
             >
               {f.name}
@@ -60,7 +62,7 @@ export function MealFavoritesBar({ meal, onMealChange, favorites, saving, onLogF
         />
       ) : (
         <Text variant="caption" style={[styles.favHint, { color: colors.onSurfaceVariant }]}>
-          ★ Star foods to add them here
+           <Trans id="components.nutrition.favorites.hint">★ Star foods to add them here</Trans>
         </Text>
       )}
     </>

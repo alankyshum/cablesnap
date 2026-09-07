@@ -9,6 +9,7 @@
  */
 import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import { skipOnboarding, navigateTo } from "./helpers";
+import { ALL_SCREENS, ONBOARDING_SCREENS, type Screen } from "./route-registry";
 
 const ALLOWED_PROJECTS = new Set(["mobile", "tablet"]);
 
@@ -23,69 +24,6 @@ test.beforeAll(({}, testInfo) => {
 test.beforeEach(async ({ page }) => {
   await skipOnboarding(page);
 });
-
-// ── Route Registry ───────────────────────────────────────────────────
-// Every route registered in app/_layout.tsx, grouped by category.
-// Dynamic [id] routes use known seed IDs so the screen renders content.
-
-type Screen = {
-  name: string;
-  path: string;
-  waitFor?: string;
-};
-
-// Tabs (app/(tabs)/)
-const TAB_SCREENS: Screen[] = [
-  { name: "Workouts", path: "/" },
-  { name: "Exercises", path: "/exercises" },
-  { name: "Nutrition", path: "/nutrition" },
-  { name: "Progress", path: "/progress" },
-  { name: "Settings", path: "/settings" },
-];
-
-// Tools (app/tools/)
-const TOOL_SCREENS: Screen[] = [
-  { name: "Tools Hub", path: "/tools" },
-  { name: "1RM Calculator", path: "/tools/rm" },
-  { name: "Plate Calculator", path: "/tools/plates" },
-  { name: "Interval Timer", path: "/tools/timer" },
-];
-
-// Standalone screens with no dynamic ID
-const STANDALONE_SCREENS: Screen[] = [
-  { name: "Workout History", path: "/history" },
-  { name: "Feedback", path: "/feedback" },
-  { name: "Error Log", path: "/errors" },
-  { name: "Body Measurements", path: "/body/measurements" },
-  { name: "Body Goals", path: "/body/goals" },
-  { name: "New Exercise", path: "/exercise/create" },
-  { name: "New Template", path: "/template/create" },
-  { name: "New Program", path: "/program/create" },
-  { name: "Pick Template", path: "/program/pick-template" },
-];
-
-// Dynamic [id] routes — use seed IDs that exist after DB init
-const DYNAMIC_SCREENS: Screen[] = [
-  { name: "Exercise Detail", path: "/exercise/voltra-001" },
-  { name: "Edit Exercise", path: "/exercise/edit/voltra-001" },
-  { name: "Template Detail", path: "/template/starter-tpl-1" },
-  { name: "Program Detail", path: "/program/starter-prog-1" },
-];
-
-const ALL_SCREENS: Screen[] = [
-  ...TAB_SCREENS,
-  ...TOOL_SCREENS,
-  ...STANDALONE_SCREENS,
-  ...DYNAMIC_SCREENS,
-];
-
-// Onboarding screens are tested separately (they need the onboarding
-// gate to be active, i.e. __SKIP_ONBOARDING__ must NOT be set).
-const ONBOARDING_SCREENS: Screen[] = [
-  { name: "Onboarding: Welcome", path: "/onboarding/welcome" },
-  { name: "Onboarding: Setup", path: "/onboarding/setup" },
-  { name: "Onboarding: Recommend", path: "/onboarding/recommend" },
-];
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -104,6 +42,7 @@ async function waitForScreen(page: Page, screen: Screen) {
   await page.waitForTimeout(500);
 }
 
+/* eslint-disable complexity -- browser metric collection intentionally checks independent design invariants. */
 async function collectDesignMetrics(page: Page) {
   // This browser-side audit intentionally inspects many independent layout rules.
   // eslint-disable-next-line complexity
@@ -407,6 +346,7 @@ async function collectEdgePaddingIssues(page: Page, minPadding = 8) {
     { minPad: minPadding },
   );
 }
+/* eslint-enable complexity */
 
 /**
  * Measure the widest content block on the page. On tablet/desktop viewports,

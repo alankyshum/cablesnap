@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React, { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -98,9 +101,7 @@ export function SetOptionsSheet({
     >
       <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
         {/* ── Set Type section ── */}
-        <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12 }}>
-          Set Type
-        </Text>
+        <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12 }}>{t({ id: "session.setoptionssheet.str1", message: "Set Type" })}</Text>
         {(() => {
           const isUnilateral = (() => {
             for (const g of groups) {
@@ -126,7 +127,7 @@ export function SetOptionsSheet({
                 ]}
                 onPress={() => { onSelectType(type); onDismiss(); }}
                 accessibilityRole="button"
-                accessibilityLabel={`${label.label} set`}
+                accessibilityLabel={t({ id: "session.setoptionssheet.dynamic1", message: `${label.label} set` })}
                 accessibilityState={{ selected: isSelected }}
               >
                 {label.short ? (
@@ -195,9 +196,7 @@ export function SetOptionsSheet({
                 </Text>
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text variant="body" style={{ color: colors.onSurface }}>
-                  Tempo
-                </Text>
+                <Text variant="body" style={{ color: colors.onSurface }}>{t({ id: "session.setoptionssheet.str2", message: "Tempo" })}</Text>
                 {currentTempo ? (
                   <Text
                     variant="caption"
@@ -209,9 +208,7 @@ export function SetOptionsSheet({
                   <Text
                     variant="caption"
                     style={{ color: colors.onSurfaceVariant, marginTop: 2 }}
-                  >
-                    None
-                  </Text>
+                  >{t({ id: "session.setoptionssheet.str3", message: "None" })}</Text>
                 )}
               </View>
               <Text style={{ color: colors.onSurfaceVariant, fontSize: fontSizes.sm }}>›</Text>
@@ -226,7 +223,7 @@ export function SetOptionsSheet({
                   onDismiss();
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={`Start Tempo Coach for ${currentTempo}. Double tap to begin.`}
+                accessibilityLabel={t({ id: "session.setoptionssheet.dynamic2", message: `Start Tempo Coach for ${currentTempo}. Double tap to begin.` })}
               >
                 <View style={[styles.chipPreview, { backgroundColor: colors.primary }]}>
                   <Text style={{ fontSize: fontSizes.sm, fontWeight: "700", color: colors.onPrimary }}>
@@ -234,12 +231,8 @@ export function SetOptionsSheet({
                   </Text>
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text variant="body" style={{ color: colors.onPrimaryContainer }}>
-                    Coach this set
-                  </Text>
-                  <Text variant="caption" style={{ color: colors.onPrimaryContainer, marginTop: 2, opacity: 0.8 }}>
-                    Haptic rep guide · {currentTempo}
-                  </Text>
+                  <Text variant="body" style={{ color: colors.onPrimaryContainer }}>{t({ id: "session.setoptionssheet.str4", message: "Coach this set" })}</Text>
+                  <Text variant="caption" style={{ color: colors.onPrimaryContainer, marginTop: 2, opacity: 0.8 }}>{t({ id: "session.setoptionssheet.str5", message: `Haptic rep guide · ${currentTempo}` })}</Text>
                 </View>
               </Pressable>
             ) : null}

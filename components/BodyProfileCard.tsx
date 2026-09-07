@@ -9,6 +9,7 @@ import { fontSizes } from "@/constants/design-tokens";
 import { BodyProfileForm } from "./BodyProfileForm";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useBodyProfile } from "@/hooks/useBodyProfile";
+import { t } from "@/lib/i18n";
 
 type BodyProfileCardProps = {
   weightUnit?: "kg" | "lb";
@@ -29,7 +30,7 @@ export default function BodyProfileCard({ weightUnit, heightUnit, bareContent = 
     const loadingContent = (
       <View style={styles.loadingContainer}>
         <Spinner size="sm" />
-        <Text variant="body" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>Loading profile…</Text>
+        <Text variant="body" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>{t({ id: "components.bodyProfile.loading", message: "Loading profile…" })}</Text>
       </View>
     );
     if (bareContent) return loadingContent;
@@ -43,8 +44,8 @@ export default function BodyProfileCard({ weightUnit, heightUnit, bareContent = 
   if (profile.cardState === "error") {
     const errorContent = (
       <>
-        <Text variant="body" style={{ color: colors.error, marginBottom: 8 }}>Could not load profile</Text>
-        <Button variant="outline" onPress={profile.loadProfile} accessibilityLabel="Retry loading profile">Retry</Button>
+        <Text variant="body" style={{ color: colors.error, marginBottom: 8 }}>{t({ id: "components.bodyProfile.loadFailed", message: "Could not load profile" })}</Text>
+        <Button variant="outline" onPress={profile.loadProfile} accessibilityLabel={t({ id: "components.bodyProfile.retryA11y", message: "Retry loading profile" })}>{t({ id: "common.retry", message: "Retry" })}</Button>
       </>
     );
     if (bareContent) return <View>{errorContent}</View>;
@@ -57,7 +58,7 @@ export default function BodyProfileCard({ weightUnit, heightUnit, bareContent = 
 
   const mainContent = (
     <>
-      <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Body Profile</Text>
+       <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>{t({ id: "components.bodyProfile.title", message: "Body Profile" })}</Text>
       <BodyProfileForm colors={colors} {...profile} />
     </>
   );

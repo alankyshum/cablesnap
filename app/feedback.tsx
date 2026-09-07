@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Linking, StyleSheet, Switch, View, FlatList } from "react-native";
 import { useLayout } from "../lib/layout";
@@ -23,11 +24,13 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 
 const MAX_TITLE = 150;
 
-const TYPE_OPTIONS = [
-  { value: "bug", label: "Bug Report" },
-  { value: "feature", label: "Feature" },
-  { value: "crash", label: "Crash" },
-] as const;
+function getTypeOptions() {
+  return [
+  { value: "bug", label: t({ id: "feedback.type.bug", message: "Bug Report" }) },
+  { value: "feature", label: t({ id: "feedback.type.feature", message: "Feature" }) },
+  { value: "crash", label: t({ id: "feedback.type.crash", message: "Crash" }) },
+  ] as const;
+}
 
 function buildDiagText(
   type: ReportType,
@@ -35,7 +38,7 @@ function buildDiagText(
   errors: ErrorEntry[],
   consoleLogs: ConsoleLogEntry[],
 ): string {
-  if (interactions.length === 0 && errors.length === 0 && consoleLogs.length === 0) return "No diagnostic data recorded";
+  if (interactions.length === 0 && errors.length === 0 && consoleLogs.length === 0) return t({ id: "feedback.diagnostics.none", message: "No diagnostic data recorded" });
   const parts: string[] = [];
   if (interactions.length > 0) {
     parts.push(
@@ -48,7 +51,7 @@ function buildDiagText(
           .join("\n")
     );
   } else {
-    parts.push("No recent interactions");
+      parts.push(t({ id: "feedback.diagnostics.noInteractions", message: "No recent interactions" }));
   }
   if (type !== "feature") {
     if (errors.length > 0) {
@@ -62,7 +65,7 @@ function buildDiagText(
             .join("\n")
       );
     } else {
-      parts.push("\nNo errors recorded");
+      parts.push(`\n${t({ id: "feedback.diagnostics.noErrors", message: "No errors recorded" })}`);
     }
     if (consoleLogs.length > 0) {
       parts.push(
@@ -75,7 +78,7 @@ function buildDiagText(
             .join("\n")
       );
     } else {
-      parts.push("\nNo recent console logs");
+      parts.push(`\n${t({ id: "feedback.diagnostics.noConsoleLogs", message: "No recent console logs" })}`);
     }
   }
   return parts.join("\n");
@@ -83,6 +86,7 @@ function buildDiagText(
 
 export default function FeedbackScreen() {
   const colors = useThemeColors();
+  const typeOptions = getTypeOptions();
   const layout = useLayout();
   const params = useLocalSearchParams<{ type?: string }>();
 
@@ -152,11 +156,11 @@ export default function FeedbackScreen() {
       await report.write(text);
       const artifact = new File(Paths.cache, "cablesnap-report.json");
       await artifact.write(json);
-      await Sharing.shareAsync(report.uri, { mimeType: "text/plain", dialogTitle: "Share Report" });
+       await Sharing.shareAsync(report.uri, { mimeType: "text/plain", dialogTitle: t({ id: "feedback.share.dialogTitle", message: "Share Report" }) });
       startCooldown();
-      toast.success("Report shared");
+       toast.success(t({ id: "feedback.share.success", message: "Report shared" }));
     } catch {
-      toast.error("Unable to share");
+       toast.error(t({ id: "feedback.share.failure", message: "Unable to share" }));
     }
   }, [valid, reportPayload, diag, errors, interactions, consoleLogs, startCooldown, toast]);
 
@@ -164,26 +168,26 @@ export default function FeedbackScreen() {
     if (!valid) return;
     const state = await NetInfo.fetch();
     if (!state.isConnected) {
-      Alert.alert("No Internet", "You appear to be offline. Would you like to share the report instead?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Share Report", onPress: () => handleShare() },
+       Alert.alert(t({ id: "feedback.offline.title", message: "No Internet" }), t({ id: "feedback.offline.message", message: "You appear to be offline. Would you like to share the report instead?" }), [
+         { text: t({ id: "feedback.offline.cancel", message: "Cancel" }), style: "cancel" },
+         { text: t({ id: "feedback.offline.share", message: "Share Report" }), onPress: () => handleShare() },
       ]);
       return;
     }
     await Linking.openURL(generateGitHubURL(reportPayload));
     startCooldown();
-    toast.info("Report opened in browser");
+     toast.info(t({ id: "feedback.github.opened", message: "Report opened in browser" }));
   }, [valid, reportPayload, handleShare, startCooldown, toast]);
 
   const diagText = buildDiagText(type, interactions, errors, consoleLogs);
 
   const buttons = useMemo(
     () =>
-      TYPE_OPTIONS.map((o) => ({
+      typeOptions.map((o) => ({
         value: o.value,
         label: o.label,
       })),
-    []
+    [typeOptions]
   );
 
   const ITEMS = ["form"] as const;
@@ -214,12 +218,12 @@ export default function FeedbackScreen() {
       </Text>
       <Input
         variant="outline"
-        placeholder="Brief summary of the issue"
+         placeholder={t({ id: "feedback.title.placeholder", message: "Brief summary of the issue" })}
         value={title}
         onChangeText={(t) => setTitle(t.slice(0, MAX_TITLE))}
         maxLength={MAX_TITLE}
         inputStyle={styles.input}
-        accessibilityLabel="Report title"
+         accessibilityLabel={t({ id: "feedback.title.a11y", message: "Report title" })}
       />
 
       <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: 16, marginBottom: 8 }}>
@@ -227,13 +231,13 @@ export default function FeedbackScreen() {
       </Text>
       <Input
         variant="outline"
-        placeholder={type === "bug" ? "Steps to reproduce the issue..." : type === "feature" ? "Describe the feature you'd like..." : "Additional context..."}
+         placeholder={type === "bug" ? t({ id: "feedback.description.bugPlaceholder", message: "Steps to reproduce the issue..." }) : type === "feature" ? t({ id: "feedback.description.featurePlaceholder", message: "Describe the feature you'd like..." }) : t({ id: "feedback.description.crashPlaceholder", message: "Additional context..." })}
         value={desc}
         onChangeText={setDesc}
         type="textarea"
         rows={4}
         inputStyle={{ ...styles.input, minHeight: 100 }}
-        accessibilityLabel="Report description"
+         accessibilityLabel={t({ id: "feedback.description.a11y", message: "Report description" })}
       />
 
       <View style={styles.diagHeader}>
@@ -248,7 +252,7 @@ export default function FeedbackScreen() {
         <Switch
           value={diag}
           onValueChange={setDiag}
-          accessibilityLabel="Include diagnostic data"
+           accessibilityLabel={t({ id: "feedback.diagnostics.includeA11y", message: "Include diagnostic data" })}
         />
       </View>
 
@@ -257,8 +261,8 @@ export default function FeedbackScreen() {
         icon={expanded ? ChevronUp : ChevronDown}
         onPress={() => setExpanded(!expanded)}
         style={{ alignSelf: "flex-start" }}
-        accessibilityLabel={expanded ? "Hide diagnostic preview" : "Show diagnostic preview"}
-        label={expanded ? "Hide Preview" : "Show Preview"}
+         accessibilityLabel={expanded ? t({ id: "feedback.preview.hideA11y", message: "Hide diagnostic preview" }) : t({ id: "feedback.preview.showA11y", message: "Show diagnostic preview" })}
+         label={expanded ? t({ id: "feedback.preview.hide", message: "Hide Preview" }) : t({ id: "feedback.preview.show", message: "Show Preview" })}
       />
 
       {expanded && (
@@ -275,8 +279,8 @@ export default function FeedbackScreen() {
         onPress={handleGitHub}
         disabled={!valid || cooldown > 0}
         style={styles.btn}
-        accessibilityLabel="Open report on GitHub"
-        label={cooldown > 0 ? `Open on GitHub (${cooldown}s)` : "Open on GitHub"}
+         accessibilityLabel={t({ id: "feedback.github.a11y", message: "Open report on GitHub" })}
+         label={cooldown > 0 ? t({ id: "feedback.github.cooldown", message: `Open on GitHub (${cooldown}s)` }) : t({ id: "feedback.github.open", message: "Open on GitHub" })}
       />
 
       <Button
@@ -285,8 +289,8 @@ export default function FeedbackScreen() {
         onPress={handleShare}
         disabled={!valid || cooldown > 0}
         style={styles.btn}
-        accessibilityLabel="Share report"
-        label={cooldown > 0 ? `Share Report (${cooldown}s)` : "Share Report"}
+         accessibilityLabel={t({ id: "feedback.share.a11y", message: "Share report" })}
+         label={cooldown > 0 ? t({ id: "feedback.share.cooldown", message: `Share Report (${cooldown}s)` }) : t({ id: "feedback.share.label", message: "Share Report" })}
       />
           </View>
         )}

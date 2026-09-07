@@ -10,6 +10,7 @@ import { getExerciseById } from "@/lib/db";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { radii, fontSizes, spacing } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
 
 type GoalSummary = {
   goal: StrengthGoalRow;
@@ -63,14 +64,14 @@ export default function ActiveGoalsCard() {
       <View style={styles.header}>
         <MaterialCommunityIcons name="bullseye-arrow" size={18} color={colors.primary} />
         <Text variant="subtitle" style={{ color: colors.onSurface, marginLeft: spacing.sm }}>
-          Active Goals
+          {t({ id: "components.progress.activeGoals.title", message: "Active Goals" })}
         </Text>
       </View>
       {summaries.map((s) => (
         <Pressable
           key={s.goal.id}
           onPress={() => router.push(`/exercise/${s.goal.exercise_id}`)}
-          accessibilityLabel={`${s.exerciseName} goal: ${s.progressPct} percent complete`}
+          accessibilityLabel={t({ id: "components.progress.activeGoals.goalSummaryA11y", message: `${s.exerciseName} goal: ${s.progressPct} percent complete` })}
           accessibilityRole="button"
           style={styles.goalRow}
         >
@@ -97,7 +98,7 @@ export default function ActiveGoalsCard() {
       ))}
       {goals.length > 3 && (
         <Text style={{ color: colors.primary, fontSize: fontSizes.xs, marginTop: spacing.xs, textAlign: "center" }}>
-          +{goals.length - 3} more
+           +{goals.length - 3} {t({ id: "components.progress.activeGoals.more", message: "more" })}
         </Text>
       )}
     </View>

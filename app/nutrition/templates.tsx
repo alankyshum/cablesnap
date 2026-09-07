@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 import { useCallback, useRef, useState } from "react";
 import { SectionList, StyleSheet, TouchableOpacity, View } from "react-native";
 import { router, useFocusEffect, Stack } from "expo-router";
@@ -57,9 +59,9 @@ export default function MealTemplates() {
       try {
         const date = formatDateKey(Date.now());
         const result = await logFromTemplate(template.id, date);
-        info(`${template.name} logged`, {
+         info(t({ id: "nutrition.templates.logged", message: `${template.name} logged` }), {
           action: {
-            label: "Undo",
+             label: t({ id: "nutrition.templates.undo", message: "Undo" }),
             onPress: async () => {
               await undoLogFromTemplate(result.logIds);
               load();
@@ -68,7 +70,7 @@ export default function MealTemplates() {
         });
         load();
       } catch {
-        info("Failed to log template");
+         info(t({ id: "nutrition.templates.logError", message: "Failed to log template" }));
       }
     },
     [info, load]
@@ -90,9 +92,9 @@ export default function MealTemplates() {
           deleted.current = null;
         }, 4000),
       };
-      info(`${template.name} deleted`, {
+       info(t({ id: "nutrition.templates.deleted", message: `${template.name} deleted` }), {
         action: {
-          label: "Undo",
+           label: t({ id: "nutrition.templates.undo", message: "Undo" }),
           onPress: async () => {
             if (!deleted.current) return;
             clearTimeout(deleted.current.timer);
@@ -114,15 +116,15 @@ export default function MealTemplates() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen options={{ title: "Meal Templates" }} />
+       <Stack.Screen options={{ title: t({ id: "nutrition.templates.title", message: "Meal Templates" }) }} />
 
       {templates.length >= 5 && (
         <View style={styles.searchContainer}>
           <SearchBar
-            placeholder="Search templates…"
+             placeholder={t({ id: "nutrition.templates.search.placeholder", message: "Search templates…" })}
             value={search}
             onChangeText={setSearch}
-            accessibilityLabel="Search meal templates"
+             accessibilityLabel={t({ id: "nutrition.templates.search.a11y", message: "Search meal templates" })}
           />
         </View>
       )}
@@ -175,9 +177,9 @@ export default function MealTemplates() {
           <View style={styles.empty}>
             <MaterialCommunityIcons name="food-variant" size={48} color={colors.onSurfaceVariant} />
             <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center", marginTop: 16 }}>
-              {search.trim()
-                ? "No templates match your search"
-                : "Save your first meal template from the nutrition log"}
+               {search.trim()
+                 ? <Trans id="nutrition.templates.empty.search">No templates match your search</Trans>
+                 : <Trans id="nutrition.templates.empty.default">Save your first meal template from the nutrition log</Trans>}
             </Text>
           </View>
         }

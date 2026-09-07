@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
@@ -145,22 +147,22 @@ export default function Exercises() {
       loading ? null : (
         <View style={styles.empty}>
           <Text variant="title" style={{ color: colors.onSurfaceVariant }}>
-            No exercises found
+            {t({ id: "exercises.empty.title", message: "No exercises found" })}
           </Text>
           <Text variant="body" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
             {totalActiveCount > 0
-              ? `Try adjusting your filters. (${totalActiveCount} filter${totalActiveCount !== 1 ? "s" : ""} active)`
-              : "Try adjusting your search or filters"}
+              ? i18n._({ id: "exercises.empty.adjustFilters", message: `Try adjusting your filters. ({count, plural, one {# filter} other {# filters}} active)`, values: { count: totalActiveCount } })
+              : t({ id: "exercises.empty.adjustSearch", message: "Try adjusting your search or filters" })}
           </Text>
           {totalActiveCount > 0 && (
             <Pressable
               onPress={clearAllFilters}
               style={styles.clearFiltersButton}
-              accessibilityLabel="Clear all filters"
+              accessibilityLabel={t({ id: "exercises.filters.clearAllA11y", message: "Clear all filters" })}
               accessibilityRole="button"
             >
               <Text variant="body" style={{ color: colors.primary, fontWeight: "600" }}>
-                Clear filters
+                {t({ id: "exercises.filters.clear", message: "Clear filters" })}
               </Text>
             </Pressable>
           )}
@@ -169,17 +171,17 @@ export default function Exercises() {
     [loading, colors, totalActiveCount, clearAllFilters]
   );
 
-  const filterLabel = (f: FilterType) => (f === "custom" ? "Custom" : CATEGORY_LABELS[f]);
+  const filterLabel = (f: FilterType) => (f === "custom" ? t({ id: "exercises.filters.custom", message: "Custom" }) : CATEGORY_LABELS[f]);
 
   const list = (
     <View style={layout.atLeastMedium ? { flex: 2 } : { flex: 1 }}>
       <View style={styles.searchRow}>
         <SearchBar
-          placeholder="Search exercises..."
+          placeholder={t({ id: "exercises.search.placeholder", message: "Search exercises..." })}
           value={query}
           onChangeText={setQuery}
           style={[styles.search, { backgroundColor: colors.surface, flex: 1 }]}
-          accessibilityLabel="Search exercises"
+          accessibilityLabel={t({ id: "exercises.search.a11y", message: "Search exercises" })}
         />
         <FilterButton
           activeCount={activeFilterCount}
@@ -218,7 +220,7 @@ export default function Exercises() {
                   color={active ? colors.onPrimaryContainer : colors.onSurface}
                 />
               ) : undefined}
-              accessibilityLabel={`Filter by ${filterLabel(f)}`}
+              accessibilityLabel={t({ id: "exercises.filters.by", message: `Filter by ${filterLabel(f)}` })}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
             >

@@ -11,6 +11,8 @@ import {
 } from "../../lib/db/e1rm-trends";
 import type { SessionRPERow, SessionRatingRow } from "../../lib/db/e1rm-trends";
 import { rpeToRir } from "@/lib/intensity";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { useIntensityMode } from "@/hooks/useIntensityMode";
 
 type TrendLineCardProps = {
@@ -53,7 +55,7 @@ export function TrendLineCard({
   }
 
   const latest = data[data.length - 1];
-  const accessibilityLabel = `${title}: latest value ${latest.y.toFixed(1)}, ${data.length} session${data.length === 1 ? "" : "s"}`;
+   const accessibilityLabel = i18n._({ id: "components.progress.trends.chartA11y", message: "{title}: latest value {latest}, {count} {count, plural, one {session} other {sessions}}", values: { title, latest: latest.y.toFixed(1), count: data.length } });
 
   return (
     <Card style={[styles.card, style]}>
@@ -119,20 +121,20 @@ export function RPETrendCard({ chartWidth, gymId, style }: RPETrendCardProps) {
   return (
     <View style={style}>
       <TrendLineCard
-        title="Avg RPE per Session (1–10)"
+         title={t({ id: "components.progress.trends.avgRpe", message: "Avg RPE per Session (1–10)" })}
         data={data}
         yDomain={[1, 10]}
         lineColor={colors.tertiary}
-        emptyMessage="Log RPE on your sets to see trends here."
+         emptyMessage={t({ id: "components.progress.trends.rpeEmpty", message: "Log RPE on your sets to see trends here." })}
         chartWidth={chartWidth}
       />
       {intensityMode === "rir" && latestRpe != null && (
         <Text
           variant="caption"
           style={{ color: colors.onSurfaceVariant, marginTop: -8, marginBottom: 8, textAlign: "right" }}
-          accessibilityLabel={`Latest session avg RIR: ${Math.round(rpeToRir(latestRpe) * 10) / 10}`}
+           accessibilityLabel={t({ id: "components.progress.trends.latestRirA11y", message: `Latest session avg RIR: ${Math.round(rpeToRir(latestRpe) * 10) / 10}` })}
         >
-          Latest avg: {Math.round(rpeToRir(latestRpe) * 10) / 10} RIR
+            {t({ id: "components.progress.trends.latestAvg", message: "Latest avg" })}: {Math.round(rpeToRir(latestRpe) * 10) / 10} RIR
         </Text>
       )}
     </View>
@@ -162,11 +164,11 @@ export function RatingTrendCard({ chartWidth, gymId, style }: RatingTrendCardPro
 
   return (
     <TrendLineCard
-      title="Session Ratings (1–5)"
+       title={t({ id: "components.progress.trends.ratings", message: "Session Ratings (1–5)" })}
       data={data}
       yDomain={[1, 5]}
       lineColor={colors.secondary}
-      emptyMessage="Rate your sessions to see trends here."
+       emptyMessage={t({ id: "components.progress.trends.ratingsEmpty", message: "Rate your sessions to see trends here." })}
       chartWidth={chartWidth}
       style={style}
     />

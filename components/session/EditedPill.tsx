@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import { StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
@@ -25,7 +28,7 @@ export function EditedPill({ editedAt, colors, size = "default" }: Props) {
   const compact = size === "compact";
   return (
     <View
-      accessibilityLabel={`This workout was edited on ${a11yDate}`}
+      accessibilityLabel={t({ id: "session.editedpill.dynamic1", message: `This workout was edited on ${a11yDate}` })}
       style={[
         styles.pill,
         {
@@ -43,9 +46,7 @@ export function EditedPill({ editedAt, colors, size = "default" }: Props) {
           fontSize: compact ? fontSizes.xs : fontSizes.sm,
           fontWeight: "600",
         }}
-      >
-        Edited
-      </Text>
+      >{t({ id: "session.editedpill.str1", message: "Edited" })}</Text>
     </View>
   );
 }

@@ -157,11 +157,11 @@ describe("Strava Integration — Settings UI", () => {
     expect(settingsSrc).toMatch(/Platform\.OS\s*===\s*"web"/);
     expect(settingsSrc).toContain("ErrorBoundary");
     expect(settingsSrc).toContain("Connect Strava");
-    expect(settingsSrc).toContain('accessibilityLabel="Connect your Strava account"');
+    expect(settingsSrc).toMatch(/accessibilityLabel=\{t\(\{\s*id:\s*"settings\.integrations\.connectA11y",\s*message:\s*"Connect your Strava account"\s*\}\)\}/);
     expect(settingsSrc).toContain('accessibilityRole="button"');
     expect(settingsSrc).toContain("Disconnect");
     expect(settingsSrc).toMatch(/accessibilityLabel=.*Disconnect Strava account/);
-    expect(settingsSrc).toContain("Connected as {stravaAthlete}");
+    expect(settingsSrc).toMatch(/id:\s*"settings\.integrations\.connectedAs",\s*message:\s*`Connected as \$\{stravaAthlete\}`/);
   });
 });
 

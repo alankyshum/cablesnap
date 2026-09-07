@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /* eslint-disable max-lines-per-function */
 import React, { useCallback, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -51,31 +54,31 @@ export function SessionToolboxSheet({ sheetRef, onOpenRestSettings, onDismiss }:
         keyboardShouldPersistTaps="handled"
       >
         {/* Rest Settings — a11y fallback for long-press */}
-        <ToolSection icon="timer-outline" title="Rest Timer" colors={colors}>
+        <ToolSection icon="timer-outline" title={t({ id: "session.sessiontoolboxsheet.str1", message: "Rest Timer" })} colors={colors}>
           <Button
             variant="ghost"
             onPress={handleOpenRestSettings}
-            accessibilityLabel="Open rest timer settings"
-            label="Rest Settings"
+            accessibilityLabel={t({ id: "session.sessiontoolboxsheet.str2", message: "Open rest timer settings" })}
+            label={t({ id: "session.sessiontoolboxsheet.str3", message: "Rest Settings" })}
           />
         </ToolSection>
 
         {/* Plate Calculator */}
-        <ToolSection icon="weight" title="Plate Calculator" colors={colors}>
+        <ToolSection icon="weight" title={t({ id: "session.sessiontoolboxsheet.str4", message: "Plate Calculator" })} colors={colors}>
           <ToolErrorBoundary name="Plate Calculator">
             <PlateCalculatorContent initialWeight={plateCalcWeight} />
           </ToolErrorBoundary>
         </ToolSection>
 
         {/* 1RM Calculator */}
-        <ToolSection icon="arm-flex" title="1RM Calculator" colors={colors}>
+        <ToolSection icon="arm-flex" title={t({ id: "session.sessiontoolboxsheet.str5", message: "1RM Calculator" })} colors={colors}>
           <ToolErrorBoundary name="1RM Calculator">
             <RMCalculatorContent onPlateCalc={handlePlateCalcFromRM} />
           </ToolErrorBoundary>
         </ToolSection>
 
         {/* Interval Timer */}
-        <ToolSection icon="timer-outline" title="Interval Timer" colors={colors}>
+        <ToolSection icon="timer-outline" title={t({ id: "session.sessiontoolboxsheet.str6", message: "Interval Timer" })} colors={colors}>
           <ToolErrorBoundary name="Interval Timer">
             <TimerContent />
           </ToolErrorBoundary>
@@ -129,7 +132,7 @@ class ToolErrorBoundary extends React.Component<BoundaryProps, BoundaryState> {
           <Text style={{ textAlign: "center", opacity: 0.6 }}>
             {this.props.name} failed to load.
           </Text>
-          <Button variant="ghost" size="sm" onPress={this.handleRetry} label="Tap to retry" />
+          <Button variant="ghost" size="sm" onPress={this.handleRetry} label={t({ id: "session.sessiontoolboxsheet.str7", message: "Tap to retry" })} />
         </View>
       );
     }

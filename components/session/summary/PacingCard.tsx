@@ -49,6 +49,7 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 import { formatPacingTime, formatPacingTimeSpoken, type PacingBreakdown } from "@/lib/session-pacing";
 import PacingBreakdownSheet from "./PacingBreakdownSheet";
 import { spacing } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
 
 // ─── ⓘ Disclosure copy (verbatim AC§147) ─────────────────────────────────────
 export const PACING_DISCLOSURE_COPY =
@@ -609,7 +610,7 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
   const otherLabel = formatPacingTime(pacing.other);
 
   const a11yLabel = pacing.isEmpty
-    ? "Estimated pacing: No completed sets to analyze"
+    ? t({ id: "components.session.summary.pacing.a11y-empty", message: "Estimated pacing: No completed sets to analyze" })
     : `Estimated pacing: Working ${formatPacingTimeSpoken(pacing.working)}, Rest ${formatPacingTimeSpoken(pacing.rest)}, Other ${formatPacingTimeSpoken(pacing.other)}`;
 
   return (
@@ -622,13 +623,13 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
           {/* Header row */}
           <View style={styles.headerRow}>
             <Text variant="title" style={{ color: colors.onSurface, fontWeight: "700" }}>
-              {"Estimated pacing"}
+              {t({ id: "components.session.summary.pacing.title", message: "Estimated pacing" })}
             </Text>
             <Pressable
               onPress={() => setDisclosureOpen((v) => !v)}
               accessibilityRole="button"
-              accessibilityLabel="Show how pacing is calculated"
-              accessibilityHint="Opens a brief explanation of how working time and rest are estimated"
+              accessibilityLabel={t({ id: "components.session.summary.pacing.show-calculation-a11y", message: "Show how pacing is calculated" })}
+              accessibilityHint={t({ id: "components.session.summary.pacing.show-calculation-hint", message: "Opens a brief explanation of how working time and rest are estimated" })}
               hitSlop={8}
               style={styles.infoButton}
             >
@@ -651,14 +652,14 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
               variant="body"
               style={{ color: colors.onSurfaceVariant, marginTop: spacing.xs }}
             >
-              {"No completed sets to analyze"}
+              {t({ id: "components.session.summary.pacing.empty", message: "No completed sets to analyze" })}
             </Text>
           ) : (
             <Pressable
               onPress={() => setSheetOpen(true)}
               accessibilityRole="button"
               accessibilityLabel={a11yLabel}
-              accessibilityHint="Double tap to open per-exercise breakdown"
+              accessibilityHint={t({ id: "components.session.summary.pacing.breakdown-hint", message: "Double tap to open per-exercise breakdown" })}
             >
               {/* Stacked bar — extracted to PacingBar to keep PacingCard's
                   cyclomatic complexity under the ESLint ceiling.
@@ -677,9 +678,9 @@ export default function PacingCard({ pacing, exerciseNames = {} }: Props) {
 
               {/* Labels */}
               <View style={styles.labelsRow}>
-                <LabelChip label="Working" value={workingLabel} color={segColors.working} textColor={colors.onSurface} showHatch={false} showDash />
-                <LabelChip label="Rest" value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} showDash={false} showVerticalDash />
-                <LabelChip label="Other" value={otherLabel} color={segColors.other} textColor={colors.onSurface} showHatch showDash={false} />
+                <LabelChip label={t({ id: "components.session.summary.pacing.working", message: "Working" })} value={workingLabel} color={segColors.working} textColor={colors.onSurface} showHatch={false} showDash />
+                <LabelChip label={t({ id: "components.session.summary.pacing.rest", message: "Rest" })} value={restLabel} color={segColors.rest} textColor={colors.onSurface} showHatch={false} showDash={false} showVerticalDash />
+                <LabelChip label={t({ id: "components.session.summary.pacing.other", message: "Other" })} value={otherLabel} color={segColors.other} textColor={colors.onSurface} showHatch showDash={false} />
               </View>
 
               <Text

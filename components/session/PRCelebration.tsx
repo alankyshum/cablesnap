@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
@@ -151,7 +154,7 @@ export function PRCelebration({ celebration }: PRCelebrationProps) {
       style={styles.overlay}
       pointerEvents="none"
       accessibilityLiveRegion="assertive"
-      accessibilityLabel={`New personal record for ${celebration.exerciseName}`}
+      accessibilityLabel={t({ id: "session.prcelebration.dynamic1", message: `New personal record for ${celebration.exerciseName}` })}
     >
       {celebration.showConfetti && (
         <View style={styles.confettiContainer}>
@@ -160,12 +163,12 @@ export function PRCelebration({ celebration }: PRCelebrationProps) {
       )}
       <Animated.View style={[styles.badge, { backgroundColor: colors.primary, shadowColor: colors.shadow }, badgeStyle]}>
         <Text style={styles.badgeEmoji}>🏆</Text>
-        <Text style={[styles.badgeText, { color: colors.onPrimary }]}>NEW PR!</Text>
+        <Text style={[styles.badgeText, { color: colors.onPrimary }]}>{t({ id: "session.prcelebration.str1", message: "NEW PR!" })}</Text>
       </Animated.View>
       {celebration.goalAchieved && (
         <Animated.View style={[styles.goalBadge, { backgroundColor: colors.tertiary, shadowColor: colors.shadow }, badgeStyle]}>
           <MaterialCommunityIcons name="bullseye-arrow" size={20} color={colors.onPrimary} />
-          <Text style={[styles.badgeText, { color: colors.onPrimary }]}>GOAL ACHIEVED!</Text>
+          <Text style={[styles.badgeText, { color: colors.onPrimary }]}>{t({ id: "session.prcelebration.str2", message: "GOAL ACHIEVED!" })}</Text>
         </Animated.View>
       )}
     </View>

@@ -21,6 +21,8 @@ import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { TrendingDown } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import type { PlateauResult, BreakThroughSuggestion } from "@/lib/plateau";
 import { applyBreakThroughFill, REP_TARGET_DELTA } from "@/lib/plateau";
 import { fontSizes } from "@/constants/design-tokens";
@@ -53,23 +55,23 @@ function formatWeight(w: number, unit: "kg" | "lb"): string {
 function primaryCtaLabel(suggestion: BreakThroughSuggestion, unit: "kg" | "lb"): string {
   switch (suggestion.kind) {
     case "deload":
-      return `Try ${formatWeight(suggestion.weight, unit)} ${unit} × ${suggestion.reps} next session`;
+      return t({ id: "components.exercise.plateau.primary-deload", message: `Try ${formatWeight(suggestion.weight, unit)} ${unit} × ${suggestion.reps} next session` });
     case "rep_target":
-      return `Try ${formatWeight(suggestion.weight, unit)} ${unit} × ${suggestion.reps} next session`;
+      return t({ id: "components.exercise.plateau.primary-target", message: `Try ${formatWeight(suggestion.weight, unit)} ${unit} × ${suggestion.reps} next session` });
     case "rep_plus_one":
-      return `Try ${suggestion.reps} reps next session`;
+      return t({ id: "components.exercise.plateau.primary-reps", message: `Try ${suggestion.reps} reps next session` });
     case "form_check":
-      return "Record a quick form clip";
+      return t({ id: "components.exercise.plateau.primary-form", message: "Record a quick form clip" });
   }
 }
 
 function secondaryCtaLabel(suggestion: BreakThroughSuggestion, unit: "kg" | "lb"): string {
   switch (suggestion.kind) {
     case "deload":
-      return `or deload to ${formatWeight(suggestion.weight, unit)} ${unit} × ${suggestion.reps}`;
+      return t({ id: "components.exercise.plateau.secondary-deload", message: `or deload to ${formatWeight(suggestion.weight, unit)} ${unit} × ${suggestion.reps}` });
     case "rep_target":
       // REP_TARGET_DELTA is the delta added to reps in the suggestion construction
-      return `or push for +${REP_TARGET_DELTA} reps at ${formatWeight(suggestion.weight, unit)} ${unit}`;
+      return t({ id: "components.exercise.plateau.secondary-target", message: `or push for +${REP_TARGET_DELTA} reps at ${formatWeight(suggestion.weight, unit)} ${unit}` });
     default:
       return "";
   }
@@ -77,33 +79,29 @@ function secondaryCtaLabel(suggestion: BreakThroughSuggestion, unit: "kg" | "lb"
 
 function getHeadline(result: PlateauResult): string {
   if (result.classification === "regressing") {
-    return "Recent sessions felt heavier than usual";
+    return t({ id: "components.exercise.plateau.headline-heavier-sessions", message: "Recent sessions felt heavier than usual" });
   }
   const sessions = result.sessionsObserved;
   const count = Math.min(sessions, 4);
   if (result.topSetWeight != null && result.topSetWeight > 0 && result.topSetReps != null) {
-    return `${count} sessions at ${result.topSetWeight} × ${result.topSetReps} — looks like a stall`;
+    return t({ id: "components.exercise.plateau.headline-weight", message: `${count} sessions at ${result.topSetWeight} × ${result.topSetReps} — looks like a stall` });
   }
   if (result.topSetReps != null) {
-    return `${count} sessions at ${result.topSetReps} reps — ready to push past it?`;
+    return i18n._({ id: "components.exercise.plateau.headline-reps", message: "{count} sessions at {reps} reps — ready to push past it?", values: { count, reps: result.topSetReps } });
   }
-  return "Looks like a stall";
+  return t({ id: "components.exercise.plateau.headline-default", message: "Looks like a stall" });
 }
 
 function getBodyCopy(result: PlateauResult): string {
   if (result.classification === "regressing") {
-    return "A quick form clip can help you spot what's drifting.";
+    return t({ id: "components.exercise.plateau.body-form-drift", message: "A quick form clip can help you spot what's drifting." });
   }
   const isBodyweight =
     result.topSetWeight == null || result.topSetWeight === 0;
   if (isBodyweight) {
-    return "Plateaus are normal. Adding one rep is the smallest move that keeps progress real.";
+    return t({ id: "components.exercise.plateau.body-bodyweight", message: "Plateaus are normal. Adding one rep is the smallest move that keeps progress real." });
   }
-  return (
-    "Plateaus are normal. Stalls happen to every lifter past the beginner phase — " +
-    // \u002a renders as * (asterisk) — used instead of literal * to avoid markdown rendering
-    "pushing through them is what intermediate training \u002ais\u002a."
-  );
+  return t({ id: "components.exercise.plateau.body-weighted", message: "Plateaus are normal. Stalls happen to every lifter past the beginner phase — pushing through them is what intermediate training *is*." });
 }
 
 export function PlateauStatusCard({
@@ -138,16 +136,16 @@ export function PlateauStatusCard({
             : `${formatWeight(suggestion.weight!, unit)} ${unit} × ${suggestion.reps}`;
 
         Alert.alert(
-          "Apply break-through suggestion?",
+          t({ id: "components.exercise.plateau.apply-title", message: "Apply break-through suggestion?" }),
           updates.length === 0
-            ? "No empty sets to fill."
-            : `Will fill ${updates.length} empty set${updates.length === 1 ? "" : "s"} with ${weightDesc}.`,
+            ? t({ id: "components.exercise.plateau.no-empty-sets", message: "No empty sets to fill." })
+            : i18n._({ id: "components.exercise.plateau.fill-sets", message: "Will fill {count} empty {count, plural, one {set} other {sets}} with {weight}.", values: { count: updates.length, weight: weightDesc } }),
           updates.length === 0
-            ? [{ text: "OK", style: "cancel" }]
+            ? [{ text: t({ id: "components.exercise.plateau.ok", message: "OK" }), style: "cancel" }]
             : [
-                { text: "Cancel", style: "cancel" },
+                { text: t({ id: "components.exercise.plateau.cancel", message: "Cancel" }), style: "cancel" },
                 {
-                  text: "Apply",
+                  text: t({ id: "components.exercise.plateau.apply", message: "Apply" }),
                   onPress: () => onApplyBreakThrough(updates),
                 },
               ],
@@ -156,9 +154,9 @@ export function PlateauStatusCard({
         // No active session: queue for next session init
         await onQueuePending(suggestion);
         Alert.alert(
-          "Queued for next session",
-          "Values will be prefilled when you start your next session for this exercise.",
-          [{ text: "OK" }],
+          t({ id: "components.exercise.plateau.queued-title", message: "Queued for next session" }),
+          t({ id: "components.exercise.plateau.queued-message", message: "Values will be prefilled when you start your next session for this exercise." }),
+          [{ text: t({ id: "components.exercise.plateau.queued-ok", message: "OK" }) }],
         );
       }
     },
@@ -179,16 +177,16 @@ export function PlateauStatusCard({
 
   const primaryA11yLabel =
     primary.kind === "form_check"
-      ? "Record a quick form clip"
+      ? t({ id: "components.exercise.plateau.primary-a11y-form", message: "Record a quick form clip" })
       : primary.kind === "rep_plus_one"
-        ? `Try ${primary.reps} reps next session`
-        : `Try ${formatWeight(primary.weight!, unit)} ${unit} by ${primary.reps} reps next session`;
+        ? t({ id: "components.exercise.plateau.primary-a11y-reps", message: `Try ${primary.reps} reps next session` })
+        : t({ id: "components.exercise.plateau.primary-a11y-weight", message: `Try ${formatWeight(primary.weight!, unit)} ${unit} by ${primary.reps} reps next session` });
 
   return (
     <View
       style={[styles.card, { backgroundColor: colors.surfaceVariant, borderColor: colors.outlineVariant }]}
       accessibilityRole="none"
-      accessibilityLabel={`Plateau detected on ${exerciseName}. ${headline}. ${bodyCopy}`}
+      accessibilityLabel={t({ id: "components.exercise.plateau.card-a11y", message: `Plateau detected on ${exerciseName}. ${headline}. ${bodyCopy}` })}
     >
       <View style={styles.iconRow}>
         <TrendingDown
@@ -218,7 +216,7 @@ export function PlateauStatusCard({
         onPress={() => handleApply(primary)}
         accessibilityRole="button"
         accessibilityLabel={primaryA11yLabel}
-        accessibilityHint="Applies the suggestion to your next session for this exercise"
+        accessibilityHint={t({ id: "components.exercise.plateau.primary-hint", message: "Applies the suggestion to your next session for this exercise" })}
         testID="plateau-primary-cta"
       >
         <Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>
@@ -234,12 +232,12 @@ export function PlateauStatusCard({
           accessibilityRole="button"
           accessibilityLabel={
             secondary.kind === "deload"
-              ? `Or deload to ${formatWeight((secondary as { weight: number }).weight, unit)} ${unit} by ${secondary.reps} reps`
+              ? t({ id: "components.exercise.plateau.secondary-a11y-deload", message: `Or deload to ${formatWeight((secondary as { weight: number }).weight, unit)} ${unit} by ${secondary.reps} reps` })
               : secondary.kind === "rep_target"
-              ? `Or push for target reps at ${formatWeight((secondary as { weight: number }).weight, unit)} ${unit}`
-              : "Try alternative approach"
+              ? t({ id: "components.exercise.plateau.secondary-a11y-target", message: `Or push for target reps at ${formatWeight((secondary as { weight: number }).weight, unit)} ${unit}` })
+              : t({ id: "components.exercise.plateau.secondary-a11y-default", message: "Try alternative approach" })
           }
-          accessibilityHint="Applies the alternative suggestion instead"
+           accessibilityHint={t({ id: "components.exercise.plateau.secondary-hint", message: "Applies the alternative suggestion instead" })}
           testID="plateau-secondary-cta"
         >
           <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>
@@ -253,8 +251,8 @@ export function PlateauStatusCard({
         style={({ pressed }) => [styles.dismissBtn, { opacity: pressed ? 0.7 : 1 }]}
         onPress={onDismiss}
         accessibilityRole="button"
-        accessibilityLabel="Not now"
-        accessibilityHint="Hides this card for 14 days"
+         accessibilityLabel={t({ id: "components.exercise.plateau.dismiss-a11y", message: "Not now" })}
+         accessibilityHint={t({ id: "components.exercise.plateau.dismiss-hint", message: "Hides this card for 14 days" })}
         testID="plateau-dismiss"
       >
         <Text style={[styles.dismissText, { color: colors.onSurfaceVariant }]}>

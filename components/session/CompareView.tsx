@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * CompareView.tsx
  *
@@ -239,7 +242,7 @@ function CompareBody({
         style={styles.closeBtn}
         onPress={onClose}
         accessibilityRole="button"
-        accessibilityLabel="Close comparison"
+        accessibilityLabel={t({ id: "session.compareview.str1", message: "Close comparison" })}
       >
         {/* eslint-disable-next-line no-restricted-syntax */}
         <MaterialCommunityIcons name="close" size={28} color="#fff" />
@@ -250,8 +253,8 @@ function CompareBody({
         style={styles.swapBtn}
         onPress={handleSwap}
         accessibilityRole="button"
-        accessibilityLabel="Swap clip A and B"
-        accessibilityHint="Swaps the two clips. Both clips reset to the beginning and pause."
+        accessibilityLabel={t({ id: "session.compareview.str2", message: "Swap clip A and B" })}
+        accessibilityHint={t({ id: "session.compareview.str3", message: "Swaps the two clips. Both clips reset to the beginning and pause." })}
       >
         {/* eslint-disable-next-line no-restricted-syntax */}
         <MaterialCommunityIcons name="swap-vertical" size={22} color="#fff" />
@@ -263,7 +266,7 @@ function CompareBody({
         <ClipPane
           key={state.clipA.id}
           clip={state.clipA}
-          label="A"
+          label={t({ id: "session.compareview.str4", message: "A" })}
           accessibilityOrder={1}
           onPlayerReady={(p) => { playerARef.current = p; }}
           onLoaded={onALoaded}
@@ -280,7 +283,7 @@ function CompareBody({
           <ClipPane
             key={state.clipB.id}
             clip={state.clipB}
-            label="B"
+            label={t({ id: "session.compareview.str5", message: "B" })}
             accessibilityOrder={2}
             onPlayerReady={(p) => { playerBRef.current = p; }}
             onLoaded={onBLoaded}
@@ -290,7 +293,7 @@ function CompareBody({
           />
         ) : (
           <EmptyPane
-            label="B"
+            label={t({ id: "session.compareview.str6", message: "B" })}
             style={paneStyle}
             pickerEnabled={pickerEnabled}
             onOpenPicker={handleOpenPicker("B")}
@@ -405,20 +408,20 @@ function ClipPane({
       <View
         style={[style, styles.missingPane]}
         importantForAccessibility="yes"
-        accessibilityLabel={`Clip ${label} unavailable`}
+        accessibilityLabel={t({ id: "session.compareview.dynamic1", message: `Clip ${label} unavailable` })}
       >
         {/* eslint-disable-next-line no-restricted-syntax */}
         <MaterialCommunityIcons name="video-off-outline" size={36} color="#888" />
-        <Text style={styles.missingText}>Clip unavailable</Text>
+        <Text style={styles.missingText}>{t({ id: "session.compareview.str11", message: "Clip unavailable" })}</Text>
         {pickerEnabled && (
           <Pressable
             style={styles.changeBtn}
             onPress={onChangeTap}
             accessibilityRole="button"
-            accessibilityLabel={`Change clip ${label}`}
+            accessibilityLabel={t({ id: "session.compareview.dynamic2", message: `Change clip ${label}` })}
           >
             {/* eslint-disable-next-line no-restricted-syntax */}
-            <Text style={styles.changeBtnText}>Change</Text>
+            <Text style={styles.changeBtnText}>{t({ id: "session.compareview.str12", message: "Change" })}</Text>
           </Pressable>
         )}
       </View>
@@ -433,7 +436,7 @@ function ClipPane({
           style={styles.video}
           nativeControls={false}
           contentFit="contain"
-          accessibilityLabel={`Clip ${label}, recorded ${dateStr}. Clip ${accessibilityOrder} of 2.`}
+          accessibilityLabel={t({ id: "session.compareview.dynamic3", message: `Clip ${label}, recorded ${dateStr}. Clip ${accessibilityOrder} of 2.` })}
         />
       </Sentry_Mask>
       {/* Per-pane play/pause overlay */}
@@ -460,9 +463,9 @@ function ClipPane({
           style={styles.changeChip}
           onPress={onChangeTap}
           accessibilityRole="button"
-          accessibilityLabel={`Change clip ${label}`}
+          accessibilityLabel={t({ id: "session.compareview.dynamic4", message: `Change clip ${label}` })}
         >
-          <Text style={styles.changeChipText}>Change</Text>
+          <Text style={styles.changeChipText}>{t({ id: "session.compareview.str13", message: "Change" })}</Text>
         </Pressable>
       )}
     </View>
@@ -485,7 +488,7 @@ function EmptyPane({ label, style, pickerEnabled, onOpenPicker, colors }: EmptyP
   return (
     <View
       style={[style, styles.emptyPane, { backgroundColor: colors.surfaceVariant }]}
-      accessibilityLabel={`Slot ${label} empty — tap to pick a clip`}
+      accessibilityLabel={t({ id: "session.compareview.dynamic5", message: `Slot ${label} empty — tap to pick a clip` })}
     >
       {/* eslint-disable-next-line no-restricted-syntax */}
       <MaterialCommunityIcons name="video-plus-outline" size={36} color={colors.onSurfaceVariant} />
@@ -497,9 +500,9 @@ function EmptyPane({ label, style, pickerEnabled, onOpenPicker, colors }: EmptyP
           style={[styles.changeBtn, { borderColor: colors.primary }]}
           onPress={onOpenPicker}
           accessibilityRole="button"
-          accessibilityLabel={`Pick clip for slot ${label}`}
+          accessibilityLabel={t({ id: "session.compareview.dynamic6", message: `Pick clip for slot ${label}` })}
         >
-          <Text style={[styles.changeBtnText, { color: colors.primary }]}>Pick clip</Text>
+          <Text style={[styles.changeBtnText, { color: colors.primary }]}>{t({ id: "session.compareview.str14", message: "Pick clip" })}</Text>
         </Pressable>
       )}
     </View>
@@ -522,22 +525,18 @@ function PickerStrip({ clips, slot, onSelect, onClose, colors }: PickerStripProp
   return (
     <View style={[styles.pickerContainer, { backgroundColor: colors.surface }]}>
       <View style={styles.pickerHeader}>
-        <Text style={[styles.pickerTitle, { color: colors.onSurface }]}>
-          Pick clip for slot {slot}
-        </Text>
+        <Text style={[styles.pickerTitle, { color: colors.onSurface }]}>{t({ id: "session.compareview.str15", message: `Pick clip for slot ${slot}` })}</Text>
         <Pressable
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Close clip picker"
+          accessibilityLabel={t({ id: "session.compareview.str7", message: "Close clip picker" })}
         >
           {/* eslint-disable-next-line no-restricted-syntax */}
           <MaterialCommunityIcons name="close" size={20} color={colors.onSurface} />
         </Pressable>
       </View>
       {clips.length === 0 ? (
-        <Text style={[styles.pickerEmpty, { color: colors.onSurfaceVariant }]}>
-          No other clips available
-        </Text>
+        <Text style={[styles.pickerEmpty, { color: colors.onSurfaceVariant }]}>{t({ id: "session.compareview.str16", message: "No other clips available" })}</Text>
       ) : (
         <FlatList
           horizontal
@@ -579,7 +578,7 @@ function PickerThumb({ clip, onSelect }: { clip: SetMediaRow; onSelect: (c: SetM
       style={styles.thumbItem}
       onPress={() => onSelect(clip)}
       accessibilityRole="button"
-      accessibilityLabel={`Select clip from ${dateStr}`}
+      accessibilityLabel={t({ id: "session.compareview.dynamic7", message: `Select clip from ${dateStr}` })}
     >
       <Sentry_Mask>
         {thumbUri ? (
@@ -615,7 +614,7 @@ function TransportRow({ bothLoaded, onPlayBoth, onPauseBoth, onResetBoth, colors
     <View style={[styles.transport, { backgroundColor: colors.surface }]}>
       <TransportBtn
         icon="play"
-        label="Play Both"
+        label={t({ id: "session.compareview.str8", message: "Play Both" })}
         onPress={onPlayBoth}
         disabled={!bothLoaded}
         disabledHint={disabledHint}
@@ -623,7 +622,7 @@ function TransportRow({ bothLoaded, onPlayBoth, onPauseBoth, onResetBoth, colors
       />
       <TransportBtn
         icon="pause"
-        label="Pause Both"
+        label={t({ id: "session.compareview.str9", message: "Pause Both" })}
         onPress={onPauseBoth}
         disabled={!bothLoaded}
         disabledHint={disabledHint}
@@ -631,7 +630,7 @@ function TransportRow({ bothLoaded, onPlayBoth, onPauseBoth, onResetBoth, colors
       />
       <TransportBtn
         icon="restart"
-        label="Reset Both"
+        label={t({ id: "session.compareview.str10", message: "Reset Both" })}
         onPress={onResetBoth}
         disabled={!bothLoaded}
         disabledHint={disabledHint}

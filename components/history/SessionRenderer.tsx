@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { useCallback } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
@@ -25,20 +27,20 @@ export function useSessionRenderer({ colors }: Props) {
       <Animated.View entering={FadeIn.duration(200)}>
         <Pressable
           onPress={() => router.push(`/session/detail/${item.id}`)}
-          accessibilityLabel={`${item.name || "Untitled workout"}, ${date}, ${formatDuration(item.duration_seconds)}, ${item.set_count} sets${item.rating ? `, rated ${item.rating} out of 5` : ""}`}
+          accessibilityLabel={i18n._({ id: "history.session.a11y", message: "{name}, {date}, {duration}, {count} sets{hasRating, select, true {, rated {rating} out of 5} false {}}", values: { name: item.name || "Untitled workout", date, duration: formatDuration(item.duration_seconds), count: item.set_count, hasRating: !!item.rating, rating: item.rating ?? 0 } })}
           accessibilityRole="button"
         >
           <Card style={{ ...styles.card, backgroundColor: colors.surface }}>
             <CardContent>
               <View style={styles.cardHeader}>
                 <Text variant="subtitle" style={{ color: colors.onSurface, flex: 1, minWidth: 0 }} numberOfLines={1}>
-                  {item.name || "Untitled workout"}
+                  {item.name || t({ id: "history.session.untitled", message: "Untitled workout" })}
                 </Text>
                 {item.edited_at != null && <EditedPill editedAt={item.edited_at} colors={colors} size="compact" />}
                 {item.rating != null && item.rating > 0 && <RatingWidget value={item.rating} readOnly size="small" />}
               </View>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                {date} · {formatDuration(item.duration_seconds)} · {item.set_count} sets
+                {t({ id: "history.session.summary", message: `${date} · ${formatDuration(item.duration_seconds)} · ${item.set_count} sets` })}
               </Text>
             </CardContent>
           </Card>

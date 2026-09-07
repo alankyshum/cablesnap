@@ -628,7 +628,7 @@ describe('Route registration — import-workouts navigation header (BLD-2463)', 
       join(__dirname, '..', '..', 'app', 'settings', '_layout.tsx'),
       'utf8',
     );
-    expect(layout).toMatch(/name="import-workouts"[\s\S]*?title:\s*"Import Workout History"/);
+    expect(layout).toMatch(/name="import-workouts"[\s\S]*?title:\s*t\(\{\s*id:\s*"settings\.importWorkoutHistory\.title",\s*message:\s*"Import Workout History"\s*\}\)/);
     expect(layout).toMatch(/headerShown:\s*true/);
   });
 });
@@ -649,7 +649,7 @@ describe('pickImportWorkoutsCsv handler (BLD-2463)', () => {
 
   it('returns null when picker is canceled', async () => {
     mockDocumentPickerGetDocumentAsync.mockResolvedValueOnce({ canceled: true });
-    const { pickImportWorkoutsCsv } = require('@/app/(tabs)/_settings-handlers');
+    const { pickImportWorkoutsCsv } = require('@/lib/settings-handlers');
     const result = await pickImportWorkoutsCsv({ toast: mockToast });
     expect(result).toBeNull();
   });
@@ -659,7 +659,7 @@ describe('pickImportWorkoutsCsv handler (BLD-2463)', () => {
       canceled: false,
       assets: [{ uri: 'file:///test/workout.csv', name: 'workout.csv', size: 1024 }],
     });
-    const { pickImportWorkoutsCsv } = require('@/app/(tabs)/_settings-handlers');
+    const { pickImportWorkoutsCsv } = require('@/lib/settings-handlers');
     const result = await pickImportWorkoutsCsv({ toast: mockToast });
     expect(result).toBe('file:///test/workout.csv');
   });
@@ -669,7 +669,7 @@ describe('pickImportWorkoutsCsv handler (BLD-2463)', () => {
       canceled: false,
       assets: [{ uri: 'file:///test/data.json', name: 'data.json', size: 512 }],
     });
-    const { pickImportWorkoutsCsv } = require('@/app/(tabs)/_settings-handlers');
+    const { pickImportWorkoutsCsv } = require('@/lib/settings-handlers');
     const result = await pickImportWorkoutsCsv({ toast: mockToast });
     expect(result).toBeNull();
   });
@@ -679,7 +679,7 @@ describe('pickImportWorkoutsCsv handler (BLD-2463)', () => {
       canceled: false,
       assets: [{ uri: 'file:///test/big.csv', name: 'big.csv', size: 60 * 1024 * 1024 }],
     });
-    const { pickImportWorkoutsCsv } = require('@/app/(tabs)/_settings-handlers');
+    const { pickImportWorkoutsCsv } = require('@/lib/settings-handlers');
     const result = await pickImportWorkoutsCsv({ toast: mockToast });
     expect(result).toBeNull();
   });

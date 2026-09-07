@@ -8,6 +8,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { MacroInputRow } from "./nutrition/MacroInputRow";
 import { useManualFoodForm } from "@/hooks/useManualFoodForm";
 import type { FoodEntry } from "../lib/types";
+import { t } from "@/lib/i18n";
 
 type Props = {
   saving: boolean;
@@ -21,14 +22,14 @@ export default function ManualFoodEntry({ saving, onSave, onFavoritesChanged }: 
 
   return (
     <View style={styles.container}>
-      <Button variant="outline" onPress={toggle} style={styles.actionBtn} accessibilityLabel={expanded ? "Close manual entry" : "Manual entry"}>
-        {expanded ? "Cancel" : "Manual Entry"}
+      <Button variant="outline" onPress={toggle} style={styles.actionBtn} accessibilityLabel={expanded ? t({ id: "components.manualFood.closeA11y", message: "Close manual entry" }) : t({ id: "components.manualFood.openA11y", message: "Manual entry" })}>
+        {expanded ? t({ id: "common.cancel", message: "Cancel" }) : t({ id: "components.manualFood.open", message: "Manual Entry" })}
       </Button>
       {expanded && (
         <View style={styles.formContent}>
-          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>Manual Food Entry</Text>
+          <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>{t({ id: "components.manualFood.title", message: "Manual Food Entry" })}</Text>
           <Input
-            label="Food name"
+            label={t({ id: "components.manualFood.foodName", message: "Food name" })}
             value={name}
             onChangeText={setName}
             variant="outline"
@@ -36,7 +37,7 @@ export default function ManualFoodEntry({ saving, onSave, onFavoritesChanged }: 
             testID="food-name-input"
           />
           <Input
-            label="Calories"
+            label={t({ id: "components.manualFood.calories", message: "Calories" })}
             value={calories}
             onChangeText={setCalories}
             keyboardType="numeric"
@@ -53,7 +54,7 @@ export default function ManualFoodEntry({ saving, onSave, onFavoritesChanged }: 
             onFatChange={setFat}
           />
           <Input
-            label="Serving size"
+            label={t({ id: "components.manualFood.servingSize", message: "Serving size" })}
             value={serving}
             onChangeText={setServing}
             variant="outline"
@@ -64,11 +65,11 @@ export default function ManualFoodEntry({ saving, onSave, onFavoritesChanged }: 
             selected={favorite}
             onPress={() => setFavorite(!favorite)}
             style={styles.favChip}
-            accessibilityLabel={favorite ? "Remove manual entry from favorites" : "Save manual entry as favorite"}
+             accessibilityLabel={favorite ? t({ id: "components.manualFood.removeFavoriteA11y", message: "Remove manual entry from favorites" }) : t({ id: "components.manualFood.saveFavoriteA11y", message: "Save manual entry as favorite" })}
             role="button"
             accessibilityState={{ selected: favorite }}
           >
-            Save as favorite
+            {t({ id: "components.manualFood.saveFavorite", message: "Save as favorite" })}
           </Chip>
           {/* Log Food button is rendered last in the form. The BottomSheet ScrollView
               is now correctly bounded to the visible sheet height (BLD-1819 fix in
@@ -81,10 +82,10 @@ export default function ManualFoodEntry({ saving, onSave, onFavoritesChanged }: 
             onPress={handleSave}
             loading={saving}
             disabled={saving || !name.trim()}
-            accessibilityLabel="Log manual entry"
+             accessibilityLabel={t({ id: "components.manualFood.logA11y", message: "Log manual entry" })}
             testID="log-food-button"
           >
-            Log Food
+            {t({ id: "components.manualFood.log", message: "Log Food" })}
           </Button>
         </View>
       )}

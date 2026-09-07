@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { styles } from "./recommend-styles";
+import { t } from "@lingui/core/macro";
 
 export function RecommendActions({
   primaryLabel,
@@ -20,17 +21,17 @@ export function RecommendActions({
         style={styles.btn}
         loading={saving}
         disabled={saving}
-        accessibilityLabel={primaryLabel}
+         accessibilityLabel={primaryLabel}
+         label={primaryLabel}
       >
-        {primaryLabel}
       </Button>
       <Button
         variant="ghost"
         onPress={onSkip}
         style={styles.skip}
         disabled={saving}
-        accessibilityLabel="Skip recommendation and explore on your own"
-        label="I'll explore on my own"
+         accessibilityLabel={t({ id: "components.onboarding.recommendActions.skipA11y", message: "Skip recommendation and explore on your own" })}
+         label={t({ id: "components.onboarding.recommendActions.skip", message: "I'll explore on my own" })}
       />
     </>
   );

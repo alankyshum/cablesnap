@@ -13,6 +13,7 @@ import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import type { Exercise } from "@/lib/types";
 import { resolveExerciseImages, type ResolvedExerciseImages } from "../../assets/exercise-illustrations/resolve";
+import { t } from "@lingui/core/macro";
 import { ExerciseImageZoomModal } from "./ExerciseImageZoomModal";
 
 interface Props {
@@ -38,7 +39,7 @@ export function ExerciseIllustrationCards({ exercise }: Props) {
           <Text
             variant="body"
             style={{ color: colors.onSurfaceVariant, fontSize: 12 }}
-            accessibilityLabel="Add your own illustration — coming soon"
+            accessibilityLabel={t({ id: "components.exercises.illustration.add", message: "Add your own illustration — coming soon" })}
           >
             Add your own illustration — coming soon
           </Text>
@@ -60,7 +61,7 @@ export function ExerciseIllustrationCards({ exercise }: Props) {
           onPress={() => setZoom("start")}
           accessibilityRole="button"
           accessibilityLabel={resolved.startAlt}
-          accessibilityHint="Tap to view full-screen"
+          accessibilityHint={t({ id: "components.exercises.illustration.fullscreen", message: "Tap to view full-screen" })}
           style={cardStyle}
           testID="exercise-illustration-start"
         >
@@ -71,13 +72,13 @@ export function ExerciseIllustrationCards({ exercise }: Props) {
             transition={0}
             accessible={false}
           />
-          <Text style={[styles.caption, { color: colors.onSurfaceVariant }]}>Start position</Text>
+          <Text style={[styles.caption, { color: colors.onSurfaceVariant }]}>{t({ id: "components.exercises.illustration.start", message: "Start position" })}</Text>
         </Pressable>
         <Pressable
           onPress={() => setZoom("end")}
           accessibilityRole="button"
           accessibilityLabel={resolved.endAlt}
-          accessibilityHint="Tap to view full-screen"
+          accessibilityHint={t({ id: "components.exercises.illustration.fullscreen-end", message: "Tap to view full-screen" })}
           style={cardStyle}
           testID="exercise-illustration-end"
         >
@@ -88,7 +89,7 @@ export function ExerciseIllustrationCards({ exercise }: Props) {
             transition={0}
             accessible={false}
           />
-          <Text style={[styles.caption, { color: colors.onSurfaceVariant }]}>End position</Text>
+          <Text style={[styles.caption, { color: colors.onSurfaceVariant }]}>{t({ id: "components.exercises.illustration.end", message: "End position" })}</Text>
         </Pressable>
       </View>
       {resolved.safetyNote ? (

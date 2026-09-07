@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React, { useCallback, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -115,7 +118,7 @@ function VariantPickerBody({
   return (
     <View>
       <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: colors.onSurface }]}>Attachment</Text>
+        <Text style={[styles.sectionLabel, { color: colors.onSurface }]}>{t({ id: "session.variantpickersheet.str4", message: "Attachment" })}</Text>
         <SegmentedControl
           value={String(visibleAttachmentValue)}
           onValueChange={setStagedAttachment}
@@ -124,7 +127,7 @@ function VariantPickerBody({
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: colors.onSurface }]}>Mount position</Text>
+        <Text style={[styles.sectionLabel, { color: colors.onSurface }]}>{t({ id: "session.variantpickersheet.str5", message: "Mount position" })}</Text>
         <SegmentedControl
           value={String(visibleMountValue)}
           onValueChange={setStagedMount}
@@ -136,17 +139,17 @@ function VariantPickerBody({
         <Pressable
           onPress={handleClear}
           accessibilityRole="button"
-          accessibilityLabel="Clear variant"
-          accessibilityHint="Removes the attachment and mount values from this set"
+          accessibilityLabel={t({ id: "session.variantpickersheet.str1", message: "Clear variant" })}
+          accessibilityHint={t({ id: "session.variantpickersheet.str2", message: "Removes the attachment and mount values from this set" })}
           hitSlop={8}
           style={[styles.actionButton, { borderColor: colors.outline }]}
         >
-          <Text style={[styles.actionLabel, { color: colors.onSurface }]}>Clear</Text>
+          <Text style={[styles.actionLabel, { color: colors.onSurface }]}>{t({ id: "session.variantpickersheet.str6", message: "Clear" })}</Text>
         </Pressable>
         <Pressable
           onPress={handleConfirm}
           accessibilityRole="button"
-          accessibilityLabel="Save variant"
+          accessibilityLabel={t({ id: "session.variantpickersheet.str3", message: "Save variant" })}
           hitSlop={8}
           style={[
             styles.actionButton,
@@ -154,7 +157,7 @@ function VariantPickerBody({
             { backgroundColor: colors.primary },
           ]}
         >
-          <Text style={[styles.actionLabel, { color: colors.onPrimary }]}>Save</Text>
+          <Text style={[styles.actionLabel, { color: colors.onPrimary }]}>{t({ id: "session.variantpickersheet.str7", message: "Save" })}</Text>
         </Pressable>
       </View>
     </View>

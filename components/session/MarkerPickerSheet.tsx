@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * MarkerPickerSheet — lets the user pick a cable stack marker number from the
  * active gym's calibration table. On confirm, the caller receives the selected
@@ -57,7 +60,7 @@ function MarkerPickerBody({
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { color: colors.onSurface }]}>Select Marker</Text>
+      <Text style={[styles.title, { color: colors.onSurface }]}>{t({ id: "session.markerpickersheet.str2", message: "Select Marker" })}</Text>
 
       {stacks.length > 1 ? (
         <View style={styles.stackPicker}>
@@ -75,7 +78,7 @@ function MarkerPickerBody({
                   },
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={`Stack: ${stack.name}`}
+                accessibilityLabel={t({ id: "session.markerpickersheet.dynamic1", message: `Stack: ${stack.name}` })}
                 accessibilityState={{ selected }}
               >
                 <Text
@@ -94,9 +97,7 @@ function MarkerPickerBody({
 
       {activeStack && activeStack.calibrations.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-            No markers added yet. Add markers in Settings → Gym Profiles.
-          </Text>
+          <Text style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>{t({ id: "session.markerpickersheet.str3", message: "No markers added yet. Add markers in Settings → Gym Profiles." })}</Text>
         </View>
       ) : null}
 
@@ -109,8 +110,8 @@ function MarkerPickerBody({
               onPress={() => handleSelect(item.marker, item.true_weight)}
               style={[styles.markerRow, { borderBottomColor: colors.outlineVariant }]}
               accessibilityRole="button"
-              accessibilityLabel={`Marker ${item.marker}, ${item.true_weight} ${activeStack.unit}`}
-              accessibilityHint="Select this marker weight"
+              accessibilityLabel={t({ id: "session.markerpickersheet.dynamic2", message: `Marker ${item.marker}, ${item.true_weight} ${activeStack.unit}` })}
+              accessibilityHint={t({ id: "session.markerpickersheet.str1", message: "Select this marker weight" })}
             >
               <Text style={[styles.markerNumber, { color: colors.onSurface }]}>#{item.marker}</Text>
               <Text style={[styles.markerWeight, { color: colors.onSurfaceVariant }]}> 
@@ -124,9 +125,7 @@ function MarkerPickerBody({
 
       {!activeStack && stacks.length > 0 ? (
         <View style={styles.emptyState}>
-          <Text style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-            Select a stack above to see markers.
-          </Text>
+          <Text style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>{t({ id: "session.markerpickersheet.str4", message: "Select a stack above to see markers." })}</Text>
         </View>
       ) : null}
     </View>

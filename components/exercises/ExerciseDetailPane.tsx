@@ -14,6 +14,7 @@ import ProgressionPathCard from "@/components/exercise/ProgressionPathCard";
 import { useProgressionChain } from "@/hooks/useProgressionChain";
 import { fontSizes } from "@/constants/design-tokens";
 import { RpeCaptureNudge } from "./RpeCaptureNudge";
+import { t } from "@lingui/core/macro";
 
 export interface ExerciseDetailPaneProps {
   detail: Exercise | null;
@@ -71,7 +72,7 @@ export function ExerciseDetailPane({ detail, colors, profileGender, bottomInset 
                   <Text
                     variant="body"
                     style={{ color: colors.onSurface, marginTop: 4 }}
-                    accessibilityLabel={`Attachment: ${detail.attachment}`}
+                    accessibilityLabel={t({ id: "components.exercises.detail-pane.attachment-a11y", message: `Attachment: ${detail.attachment}` })}
                   >
                     {detail.attachment}
                   </Text>

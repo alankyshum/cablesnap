@@ -7,6 +7,7 @@ import {
 import { Stack, useLocalSearchParams } from "expo-router"
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { PlateCalculatorContent as _PlateCalculatorContent } from "../../components/plates/PlateCalculatorContent";
+import { t } from "@lingui/core/macro";
 
 // FTA decomposition contract: plates.tsx must declare its sub-module dependencies.
 // These re-exports surface the atomic building blocks used by PlateCalculatorContent.
@@ -28,7 +29,7 @@ export default function PlateCalculator() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Plate Calculator" }} />
+       <Stack.Screen options={{ title: t({ id: "app.tools.plates.title", message: "Plate Calculator" }) }} />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

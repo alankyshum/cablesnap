@@ -25,6 +25,7 @@ import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
 import {
   ATTACHMENT_VALUES,
   MOUNT_POSITION_VALUES,
@@ -107,7 +108,7 @@ export default function ExerciseVariantFilter({
   return (
     <View
       style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}
-      accessibilityLabel="Cable variant filter"
+       accessibilityLabel={t({ id: "components.exercise.variant-filter.a11y", message: "Cable variant filter" })}
     >
       <View style={styles.headerRow}>
         <Text
@@ -122,18 +123,18 @@ export default function ExerciseVariantFilter({
           <Pressable
             onPress={clear}
             accessibilityRole="button"
-            accessibilityLabel="Clear variant filter"
+             accessibilityLabel={t({ id: "components.exercise.variant-filter.clear-a11y", message: "Clear variant filter" })}
             style={({ pressed }) => [
               styles.clearBtn,
               { backgroundColor: colors.surfaceVariant, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Text style={[styles.clearLabel, { color: colors.onSurfaceVariant }]}>Clear</Text>
+             <Text style={[styles.clearLabel, { color: colors.onSurfaceVariant }]}>{t({ id: "components.exercise.variant-filter.clear", message: "Clear" })}</Text>
           </Pressable>
         )}
       </View>
 
-      <Text style={[styles.dimensionLabel, { color: colors.onSurfaceVariant }]}>Attachment</Text>
+      <Text style={[styles.dimensionLabel, { color: colors.onSurfaceVariant }]}>{t({ id: "components.exercise.variant-filter.attachment", message: "Attachment" })}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -169,7 +170,7 @@ export default function ExerciseVariantFilter({
         })}
       </ScrollView>
 
-      <Text style={[styles.dimensionLabel, { color: colors.onSurfaceVariant }]}>Mount</Text>
+      <Text style={[styles.dimensionLabel, { color: colors.onSurfaceVariant }]}>{t({ id: "components.exercise.variant-filter.mount", message: "Mount" })}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

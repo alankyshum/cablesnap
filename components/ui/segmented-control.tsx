@@ -2,7 +2,7 @@
 import { Text } from "@/components/ui/text";
 import { useColor } from "@/hooks/useColor";
 import { CORNERS, FONT_SIZE, HEIGHT } from "@/theme/globals";
-import React from "react";
+import React, { useEffect } from "react";
 import { LayoutChangeEvent, Pressable, TextStyle, View, ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from "react-native-reanimated";
 import { interiorSpring, radii, spacing } from "@/constants/design-tokens";
@@ -40,7 +40,9 @@ export function SegmentedControl({
   const activeIndex = Math.max(0, buttons.findIndex((button) => button.value === value));
   const indicatorPosition = useSharedValue(activeIndex);
   const containerWidth = useSharedValue(0);
-  indicatorPosition.value = reducedMotion ? activeIndex : withSpring(activeIndex, interiorSpring.tabIndicator);
+  useEffect(() => {
+    indicatorPosition.value = reducedMotion ? activeIndex : withSpring(activeIndex, interiorSpring.tabIndicator);
+  }, [activeIndex, indicatorPosition, reducedMotion]);
   const indicatorStyle = useAnimatedStyle(() => ({
     left: (indicatorPosition.value * containerWidth.value) / buttons.length,
     width: containerWidth.value / buttons.length,

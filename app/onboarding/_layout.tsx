@@ -6,6 +6,7 @@ import React from "react";
 import { setAppSetting } from "../../lib/db";
 import { useCompleteOnboarding } from "../../lib/onboarding-context";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 function Fallback() {
   const colors = useThemeColors();
@@ -19,7 +20,7 @@ function Fallback() {
       completeOnboarding();
       router.replace("/(tabs)");
     } catch {
-      setErr("Could not save preferences. Tap again to continue anyway.");
+      setErr(t({ id: "app.onboarding.layout.saveError", message: "Could not save preferences. Tap again to continue anyway." }));
     }
   }
 
@@ -31,10 +32,10 @@ function Fallback() {
   return (
     <View style={[styles.fallback, { backgroundColor: colors.background }]}>
       <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
-        Something went wrong
+        {t({ id: "app.onboarding.layout.errorTitle", message: "Something went wrong" })}
       </Text>
       <Text variant="body" style={[styles.sub, { color: colors.onSurfaceVariant }]}>
-        {"We couldn't load onboarding. You can skip straight to the app."}
+        {t({ id: "app.onboarding.layout.loadError", message: "We couldn't load onboarding. You can skip straight to the app." })}
       </Text>
       {err && (
         <Text variant="caption" style={[styles.sub, { color: colors.error }]}>
@@ -45,8 +46,8 @@ function Fallback() {
         variant="default"
         onPress={err ? force : skip}
         style={styles.btn}
-        accessibilityLabel="Skip to app"
-        label={err ? "Continue Without Saving" : "Skip to App"}
+        accessibilityLabel={t({ id: "app.onboarding.layout.skipA11y", message: "Skip to app" })}
+        label={err ? t({ id: "app.onboarding.layout.continueWithoutSaving", message: "Continue Without Saving" }) : t({ id: "app.onboarding.layout.skipToApp", message: "Skip to App" })}
       />
     </View>
   );

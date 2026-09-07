@@ -5,6 +5,20 @@
 
 import type { MuscleGroup } from "./types";
 import { MUSCLE_LABELS } from "./types";
+import { t as linguiT } from "@lingui/core/macro";
+
+type TranslationDescriptor = { id: string; message: string };
+type TranslationValues = Record<string, string | number>;
+
+function t(descriptor: TranslationDescriptor, values?: TranslationValues): string {
+  try {
+    return (linguiT as unknown as (descriptor: TranslationDescriptor, values?: TranslationValues) => string)(descriptor, values);
+  } catch {
+    return values
+      ? descriptor.message.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? `{${key}}`))
+      : descriptor.message;
+  }
+}
 
 export type InsightType = "strength" | "volume" | "consistency" | "returning" | "goal_progress" | "balance";
 
@@ -88,13 +102,19 @@ function generateGoalInsight(goals?: GoalInsightRow[]): Insight | null {
 
   if (!best || best.progressPct <= 0) return null;
 
-  const title = `You're ${best.progressPct}% of the way to your ${best.exercise_name} goal!`;
+  const title = t(
+    { id: "insights.goal.title", message: "You're {progressPct}% of the way to your {exerciseName} goal!" },
+    { progressPct: best.progressPct, exerciseName: best.exercise_name },
+  );
   return {
     type: "goal_progress",
     title,
     icon: "bullseye-arrow",
     exerciseId: best.exercise_id,
-    accessibilityLabel: `Training insight: ${title}. Tap to view details.`,
+    accessibilityLabel: t(
+      { id: "insights.goal.accessibilityLabel", message: "Training insight: {title}. Tap to view details." },
+      { title },
+    ),
   };
 }
 
@@ -115,13 +135,19 @@ function generateStrengthInsight(trends: E1RMTrendRow[]): Insight | null {
   if (!best) return null;
 
   const deltaRounded = Math.round(bestDelta * 10) / 10;
-  const title = `Your ${best.name} is up ${deltaRounded}kg this month`;
+  const title = t(
+    { id: "insights.strength.title", message: "Your {exerciseName} is up {delta}kg this month" },
+    { exerciseName: best.name, delta: deltaRounded },
+  );
   return {
     type: "strength",
     title,
     icon: "trending-up",
     exerciseId: best.exercise_id,
-    accessibilityLabel: `Training insight: ${title}. Tap to view details.`,
+    accessibilityLabel: t(
+      { id: "insights.strength.accessibilityLabel", message: "Training insight: {title}. Tap to view details." },
+      { title },
+    ),
   };
 }
 
@@ -142,12 +168,15 @@ function generateVolumeInsight(weeklyVolume: WeeklyVolumeRow[]): Insight | null 
   const pct = Math.round(((recentAvg - previousAvg) / previousAvg) * 100);
   if (pct < 1) return null;
 
-  const title = `Training volume up ${pct}% vs last month`;
+  const title = t({ id: "insights.volume.title", message: "Training volume up {pct}% vs last month" }, { pct });
   return {
     type: "volume",
     title,
     icon: "bar-chart",
-    accessibilityLabel: `Training insight: ${title}. Tap to view details.`,
+    accessibilityLabel: t(
+      { id: "insights.volume.accessibilityLabel", message: "Training insight: {title}. Tap to view details." },
+      { title },
+    ),
   };
 }
 
@@ -210,12 +239,15 @@ function generateConsistencyInsight(timestamps: number[]): Insight | null {
 
   if (bestInWeeks < 1) return null;
 
-  const title = `${currentCount} workouts this week — your best in ${bestInWeeks} weeks!`;
+  const title = t(
+    { id: "insights.consistency.title", message: "{count} workouts this week — your best in {weeks} weeks!" },
+    { count: currentCount, weeks: bestInWeeks },
+  );
   return {
     type: "consistency",
     title,
     icon: "star",
-    accessibilityLabel: `Training insight: ${title}`,
+    accessibilityLabel: t({ id: "insights.consistency.accessibilityLabel", message: "Training insight: {title}" }, { title }),
   };
 }
 
@@ -232,11 +264,15 @@ function generateReturningInsight(timestamps: number[]): Insight | null {
 
   // Latest session was within the last 24 hours and previous was 14+ days before it
   if (latest >= oneDayAgo && (latest - secondLatest) >= fourteenDays) {
+    const title = t({ id: "insights.returning.title", message: "Welcome back! You crushed it today." });
     return {
       type: "returning",
-      title: "Welcome back! You crushed it today.",
+      title,
       icon: "heart",
-      accessibilityLabel: "Training insight: Welcome back! You crushed it today.",
+      accessibilityLabel: t(
+        { id: "insights.returning.accessibilityLabel", message: "Training insight: {title}" },
+        { title },
+      ),
     };
   }
 
@@ -244,7 +280,7 @@ function generateReturningInsight(timestamps: number[]): Insight | null {
 }
 
 export function formatMuscleName(muscle: MuscleGroup): string {
-  if (muscle === "full_body") return "full body";
+  if (muscle === "full_body") return t({ id: "insights.muscle.fullBody", message: "full body" });
   return MUSCLE_LABELS[muscle]?.toLowerCase() ?? muscle;
 }
 
@@ -266,14 +302,17 @@ export function generateBalanceInsight(balanceRows?: MuscleBalanceRow[]): Insigh
   let title = "";
   if (underCount > 0 && overCount === 0) {
     title = underCount === 1
-      ? "1 muscle is below this week's target"
-      : `${underCount} muscles are below this week's target`;
+      ? t({ id: "insights.balance.underOne", message: "1 muscle is below this week's target" })
+      : t({ id: "insights.balance.underMany", message: "{count} muscles are below this week's target" }, { count: underCount });
   } else if (overCount > 0 && underCount === 0) {
     title = overCount === 1
-      ? "1 muscle is above this week's cap"
-      : `${overCount} muscles are above this week's cap`;
+      ? t({ id: "insights.balance.overOne", message: "1 muscle is above this week's cap" })
+      : t({ id: "insights.balance.overMany", message: "{count} muscles are above this week's cap" }, { count: overCount });
   } else {
-    title = `${underCount} below target, ${overCount} above cap this week.`;
+    title = t(
+      { id: "insights.balance.mixed", message: "{underCount} below target, {overCount} above cap this week." },
+      { underCount, overCount },
+    );
   }
 
   return {
@@ -281,6 +320,9 @@ export function generateBalanceInsight(balanceRows?: MuscleBalanceRow[]): Insigh
     title,
     icon: "bar-chart",
     muscle: firstFlaggedMuscle,
-    accessibilityLabel: `${title}. Tap to view muscle volume details.`,
+    accessibilityLabel: t(
+      { id: "insights.balance.accessibilityLabel", message: "{title}. Tap to view muscle volume details." },
+      { title },
+    ),
   };
 }

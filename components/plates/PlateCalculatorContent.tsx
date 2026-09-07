@@ -7,6 +7,7 @@ import { color } from "../../lib/plates";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { usePlateCalculator } from "../../hooks/usePlateCalculator";
 import { Barbell } from "./BarbellDiagram";
+import { t } from "@lingui/core/macro";
 
 type PlateState = {
   side: number;
@@ -27,7 +28,7 @@ function StatusMessage({ valid, target, state, parsed, active, unit }: {
   if (!valid && target !== "") {
     return (
       <Text variant="caption" style={{ color: colors.error, textAlign: "center" }}>
-        Enter a valid weight
+        {t({ id: "components.plates.calculator.invalidWeight", message: "Enter a valid weight" })}
       </Text>
     );
   }
@@ -35,7 +36,7 @@ function StatusMessage({ valid, target, state, parsed, active, unit }: {
   if (valid && state && "error" in state && state.error === "low") {
     return (
       <Text variant="caption" style={{ color: colors.error, textAlign: "center" }}>
-        Weight must exceed bar weight
+        {t({ id: "components.plates.calculator.weightExceedsBar", message: "Weight must exceed bar weight" })}
       </Text>
     );
   }
@@ -43,7 +44,7 @@ function StatusMessage({ valid, target, state, parsed, active, unit }: {
   if (valid && state && "error" in state && state.error === "empty") {
     return (
       <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-        Target equals bar weight — no plates needed
+        {t({ id: "components.plates.calculator.noPlates", message: "Target equals bar weight — no plates needed" })}
       </Text>
     );
   }
@@ -52,11 +53,11 @@ function StatusMessage({ valid, target, state, parsed, active, unit }: {
     return (
       <>
         <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-          ({parsed} − {active}) ÷ 2 = {state.side} {unit} per side
+           {t({ id: "components.plates.calculator.perSide", message: `(${parsed} − ${active}) ÷ 2 = ${state.side} ${unit} per side` })}
         </Text>
         {state.rounded && (
           <Text variant="caption" style={{ color: colors.tertiary, textAlign: "center", marginTop: 2 }}>
-            Rounded to {state.achieved}{unit} (nearest achievable)
+            {t({ id: "components.plates.calculator.rounded", message: `Rounded to ${state.achieved}${unit} (nearest achievable)` })}
           </Text>
         )}
       </>
@@ -107,10 +108,10 @@ export function PlateResults({ valid, target, state, parsed, active, unit, items
 
       {state && !("error" in state) && (
         <Text variant="subtitle" style={{ color: colors.onBackground, textAlign: "center", marginTop: 16 }}>
-          Total: {state.achieved}{unit}
+           {t({ id: "components.plates.calculator.totalResult", message: `Total: ${state.achieved}${unit}` })}
           {active != null && (
             <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-              {" "}(bar {active}{unit} + 2×{state.side}{unit})
+              {t({ id: "components.plates.calculator.barBreakdown", message: ` (bar ${active}${unit} + 2×${state.side}${unit})` })}
             </Text>
           )}
         </Text>
@@ -153,24 +154,24 @@ export function PlateCalculatorContent({
             keyboardType="numeric"
             value={target}
             onChangeText={setTarget}
-            placeholder="Total"
+             placeholder={t({ id: "components.plates.calculator.total", message: "Total" })}
             rightComponent={() => <Text variant="caption" style={{ marginRight: 8 }}>{unit}</Text>}
-            accessibilityLabel={"Target weight in " + label}
+             accessibilityLabel={t({ id: "components.plates.calculator.targetValueA11y", message: `Target weight in ${label}` })}
           />
         </View>
         <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-          with bar
+           {t({ id: "components.plates.calculator.withBar", message: "with bar" })}
         </Text>
-        <View style={styles.barWrap} accessibilityRole="radiogroup" accessibilityLabel="Bar weight selection">
+        <View style={styles.barWrap} accessibilityRole="radiogroup" accessibilityLabel={t({ id: "components.plates.calculator.barSelection", message: "Bar weight selection" })}>
           <View style={styles.barInputWrap}>
             <Input
               variant="outline"
               keyboardType="numeric"
               value={custom !== "" ? custom : bar != null ? String(bar) : ""}
               onChangeText={handleBarInput}
-              placeholder="Bar"
+               placeholder={t({ id: "components.plates.calculator.bar", message: "Bar" })}
               rightComponent={() => <Text variant="caption" style={{ marginRight: 8 }}>{unit}</Text>}
-              accessibilityLabel={"Bar weight in " + label}
+              accessibilityLabel={t({ id: "components.plates.calculator.barValueA11y", message: `Bar weight in ${label}` })}
             />
           </View>
           {presets.map(p => (
@@ -188,7 +189,7 @@ export function PlateCalculatorContent({
       </View>
 
       {/* Barbell always visible */}
-      <Barbell plates={diagram} unit={unit} barbell={barbell || "Empty barbell"} />
+      <Barbell plates={diagram} unit={unit} barbell={barbell || t({ id: "components.plates.calculator.emptyBarbell", message: "Empty barbell" })} />
 
       {/* Results, plate list, and footer */}
       <PlateResults

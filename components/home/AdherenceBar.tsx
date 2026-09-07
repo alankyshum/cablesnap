@@ -2,6 +2,8 @@ import { FlatList, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { radii } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import type { WeeklyGoalProgress } from "./loadHomeData";
 
 type Props = {
@@ -20,13 +22,13 @@ export default function AdherenceBar({ colors, progress }: Props) {
 
   let statusText: string;
   if (mode === "frequency" && overGoal) {
-    statusText = `Goal reached! ${completedCount} workouts this week 🔥`;
+    statusText = t({ id: "home.adherence.goalReached", message: `Goal reached! ${completedCount} workouts this week 🔥` });
   } else {
-    statusText = `${completedCount} of ${targetCount} this week ${allDone ? "🔥" : "🎯"}`;
+    statusText = i18n._({ id: "home.adherence.progress", message: "{completed} of {target} this week {symbol}", values: { completed: completedCount, target: targetCount, symbol: allDone ? "🔥" : "🎯" } });
   }
 
   return (
-    <View style={styles.adherence} accessibilityLabel={`Adherence: ${completedCount} of ${targetCount} workouts this week`}>
+    <View style={styles.adherence} accessibilityLabel={t({ id: "home.adherence.a11y", message: `Adherence: ${completedCount} of ${targetCount} workouts this week` })}>
       <View style={styles.dots}>
         <FlatList
           data={slots}
@@ -45,8 +47,8 @@ export default function AdherenceBar({ colors, progress }: Props) {
               ]}
               accessibilityLabel={
                 mode === "schedule"
-                  ? `${dayLabels[i]}: ${a.completed ? "completed" : a.scheduled ? "scheduled" : "rest day"}`
-                  : `Workout ${i + 1}: ${a.completed ? "completed" : "not yet"}`
+                  ? i18n._({ id: "home.adherence.dayA11y", message: "{day}: {status, select, completed {completed} scheduled {scheduled} rest {rest day}}", values: { day: dayLabels[i], status: a.completed ? "completed" : a.scheduled ? "scheduled" : "rest" } })
+                  : i18n._({ id: "home.adherence.workoutA11y", message: "Workout {number}: {status, select, completed {completed} notYet {not yet}}", values: { number: i + 1, status: a.completed ? "completed" : "notYet" } })
               }
             />
           )}

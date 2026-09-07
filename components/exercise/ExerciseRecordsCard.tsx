@@ -7,6 +7,8 @@ import { toDisplay } from "@/lib/units";
 import { percentageTable } from "@/lib/rm";
 import type { ExerciseRecords } from "@/lib/db";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 type Props = {
   colors: ThemeColors;
@@ -29,18 +31,18 @@ type Props = {
 function RecordsEmptyState({ colors, variantFilterActive }: { colors: ThemeColors; variantFilterActive?: boolean }) {
   if (variantFilterActive) {
     return (
-      <View accessibilityLabel="No sets logged with this variant yet. Log this variant in your next session.">
+      <View accessibilityLabel={t({ id: "components.exercise.records.variant-empty-a11y", message: "No sets logged with this variant yet. Log this variant in your next session." })}>
         <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
-          No sets logged with this variant yet
+          {t({ id: "components.exercise.records.variant-empty", message: "No sets logged with this variant yet" })}
         </Text>
         <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-          Log this variant in your next session.
+          {t({ id: "components.exercise.records.variant-empty-hint", message: "Log this variant in your next session." })}
         </Text>
       </View>
     );
   }
   return (
-    <Text variant="body" style={{ color: colors.onSurfaceVariant }}>No workout data yet — start a session to build your history</Text>
+    <Text variant="body" style={{ color: colors.onSurfaceVariant }}>{t({ id: "components.exercise.records.empty", message: "No workout data yet — start a session to build your history" })}</Text>
   );
 }
 
@@ -55,13 +57,13 @@ export default function ExerciseRecordsCard({
   return (
     <Card style={[styles.card, style, { backgroundColor: colors.surface }]}>
       <CardContent>
-        <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12 }}>Personal Records</Text>
+        <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12 }}>{t({ id: "components.exercise.records.title", message: "Personal Records" })}</Text>
         {recordsLoading ? (
           <ActivityIndicator style={styles.loader} />
         ) : recordsError ? (
           <View style={styles.errorBox}>
-            <Text style={{ color: colors.error }}>Failed to load records</Text>
-            <Button variant="ghost" onPress={() => exerciseId && loadRecords(exerciseId)} label="Retry" />
+            <Text style={{ color: colors.error }}>{t({ id: "components.exercise.records.error", message: "Failed to load records" })}</Text>
+            <Button variant="ghost" onPress={() => exerciseId && loadRecords(exerciseId)} label={t({ id: "components.exercise.records.retry", message: "Retry" })} />
           </View>
         ) : records && records.total_sessions === 0 ? (
           <RecordsEmptyState colors={colors} variantFilterActive={variantFilterActive} />
@@ -70,16 +72,16 @@ export default function ExerciseRecordsCard({
             <View style={styles.statsRow}>
               {bw ? (
                 <>
-                  <Stat colors={colors} value={records.max_reps ?? "—"} label="Max Reps" a11y={`Maximum reps: ${records.max_reps ?? 0}`} />
-                  <Stat colors={colors} value={records.total_sessions} label="Sessions" a11y={`Total sessions: ${records.total_sessions}`} />
-                  <Stat colors={colors} value={records.max_volume != null ? Math.round(records.max_volume) : "—"} label="Best Vol" a11y={`Best volume: ${records.max_volume ?? 0}`} />
+                  <Stat colors={colors} value={records.max_reps ?? "—"} label={t({ id: "components.exercise.records.max-reps", message: "Max Reps" })} a11y={i18n._({ id: "components.exercise.records.max-reps-a11y", message: "Maximum reps: {reps}", values: { reps: records.max_reps ?? 0 } })} />
+                  <Stat colors={colors} value={records.total_sessions} label={t({ id: "components.exercise.records.sessions", message: "Sessions" })} a11y={t({ id: "components.exercise.records.sessions-a11y", message: `Total sessions: ${records.total_sessions}` })} />
+                  <Stat colors={colors} value={records.max_volume != null ? Math.round(records.max_volume) : "—"} label={t({ id: "components.exercise.records.best-volume", message: "Best Vol" })} a11y={i18n._({ id: "components.exercise.records.best-volume-a11y", message: "Best volume: {volume}", values: { volume: records.max_volume ?? 0 } })} />
                 </>
               ) : (
                 <>
-                  <Stat colors={colors} value={records.max_weight != null ? toDisplay(records.max_weight, unit) : "—"} label={`Max ${unit}`} a11y={`Maximum weight: ${records.max_weight != null ? toDisplay(records.max_weight, unit) : 0} ${unit}`} />
-                  <Stat colors={colors} value={records.max_reps ?? "—"} label="Max Reps" a11y={`Maximum reps: ${records.max_reps ?? 0}`} />
-                  <Stat colors={colors} value={records.est_1rm != null ? toDisplay(records.est_1rm, unit) : "—"} label={best && best.reps === 1 ? "Tested 1RM" : "Est 1RM"} a11y={`Estimated one rep max: ${records.est_1rm != null ? toDisplay(records.est_1rm, unit) : 0} ${unit}`} />
-                  <Stat colors={colors} value={records.total_sessions} label="Sessions" a11y={`Total sessions: ${records.total_sessions}`} />
+                  <Stat colors={colors} value={records.max_weight != null ? toDisplay(records.max_weight, unit) : "—"} label={i18n._({ id: "components.exercise.records.max-weight", message: "Max {unit}", values: { unit } })} a11y={i18n._({ id: "components.exercise.records.max-weight-a11y", message: "Maximum weight: {weight} {unit}", values: { weight: records.max_weight != null ? toDisplay(records.max_weight, unit) : 0, unit } })} />
+                  <Stat colors={colors} value={records.max_reps ?? "—"} label={t({ id: "components.exercise.records.max-reps-weight", message: "Max Reps" })} a11y={i18n._({ id: "components.exercise.records.max-reps-weight-a11y", message: "Maximum reps: {reps}", values: { reps: records.max_reps ?? 0 } })} />
+                  <Stat colors={colors} value={records.est_1rm != null ? toDisplay(records.est_1rm, unit) : "—"} label={best && best.reps === 1 ? t({ id: "components.exercise.records.tested-1rm", message: "Tested 1RM" }) : t({ id: "components.exercise.records.est-1rm", message: "Est 1RM" })} a11y={i18n._({ id: "components.exercise.records.est-1rm-a11y", message: "Estimated one rep max: {value} {unit}", values: { value: records.est_1rm != null ? toDisplay(records.est_1rm, unit) : 0, unit } })} />
+                  <Stat colors={colors} value={records.total_sessions} label={t({ id: "components.exercise.records.sessions-weight", message: "Sessions" })} a11y={t({ id: "components.exercise.records.sessions-weight-a11y", message: `Total sessions: ${records.total_sessions}` })} />
                 </>
               )}
             </View>
@@ -88,30 +90,30 @@ export default function ExerciseRecordsCard({
               const tested = best != null && best.reps === 1;
               const orm = toDisplay(records.est_1rm!, unit);
               const table = percentageTable(orm);
-              const source = best ? `Based on: ${toDisplay(best.weight, unit)}${unit} × ${best.reps} reps` : "";
+               const source = best ? i18n._({ id: "components.exercise.records.based-on", message: "Based on: {weight}{unit} × {reps} reps", values: { weight: toDisplay(best.weight, unit), unit, reps: best.reps } }) : "";
               return (
                 <View style={[styles.pctSection, { borderTopColor: colors.outlineVariant }]}>
                   <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
-                    {tested ? "Tested 1RM" : "Estimated 1RM"}: {orm} {unit}
+                    {tested ? t({ id: "components.exercise.records.tested-1rm-heading", message: "Tested 1RM" }) : t({ id: "components.exercise.records.estimated-1rm", message: "Estimated 1RM" })}: {orm} {unit}
                   </Text>
                   {source ? <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>{source} · Epley</Text> : null}
                   <View style={styles.pctTable}>
                     <View style={styles.pctRow}>
-                      <Text variant="caption" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>% 1RM</Text>
-                      <Text variant="caption" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>Weight</Text>
-                      <Text variant="caption" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>Reps</Text>
+                       <Text variant="caption" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>{t({ id: "components.exercise.records.percent-1rm", message: "% 1RM" })}</Text>
+                       <Text variant="caption" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>{t({ id: "components.exercise.records.weight", message: "Weight" })}</Text>
+                       <Text variant="caption" style={[styles.pctCol, { color: colors.onSurfaceVariant }]}>{t({ id: "components.exercise.records.reps", message: "Reps" })}</Text>
                     </View>
                     {table.map((row) => (
-                      <Pressable key={row.pct} onPress={() => router.push(`/tools/plates?weight=${row.weight}`)} accessibilityLabel={`${row.pct} percent of one rep max, ${row.weight} ${unit === "kg" ? "kilograms" : "pounds"}, ${row.reps} reps`} accessibilityRole="button"
+                      <Pressable key={row.pct} onPress={() => router.push(`/tools/plates?weight=${row.weight}`)} accessibilityLabel={i18n._({ id: "components.exercise.records.plate-row-a11y", message: "{percent} percent of one rep max, {weight} {unitWord}, {reps} reps", values: { percent: row.pct, weight: row.weight, unitWord: unit === "kg" ? "kilograms" : "pounds", reps: row.reps } })} accessibilityRole="button"
                         style={[styles.pctRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.outlineVariant }]}
-                        accessibilityHint="Opens plate calculator with this weight">
+                        accessibilityHint={t({ id: "components.exercise.records.plate-hint", message: "Opens plate calculator with this weight" })}>
                         <Text variant="caption" style={[styles.pctCol, { color: colors.onSurface }]}>{row.pct}%</Text>
                         <Text variant="caption" style={[styles.pctCol, { color: colors.onSurface }]}>{row.weight} {unit}</Text>
                         <Text variant="caption" style={[styles.pctCol, { color: colors.onSurface }]}>{row.reps}</Text>
                       </Pressable>
                     ))}
                   </View>
-                  <Button variant="ghost" size="sm" onPress={() => router.push("/tools/rm")} style={{ alignSelf: "flex-start", marginTop: 4 }} accessibilityLabel="Open 1RM calculator" label="1RM Calculator" />
+                   <Button variant="ghost" size="sm" onPress={() => router.push("/tools/rm")} style={{ alignSelf: "flex-start", marginTop: 4 }} accessibilityLabel={t({ id: "components.exercise.records.rm-a11y", message: "Open 1RM calculator" })} label={t({ id: "components.exercise.records.rm", message: "1RM Calculator" })} />
                 </View>
               );
             })()}

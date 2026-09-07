@@ -31,6 +31,7 @@ import {
 import type { SetMediaRow } from "@/lib/db/form-clips";
 import { fontSizes, radii } from "@/constants/design-tokens";
 import { FormClipsPlayer } from "@/components/session/FormClipsPlayer";
+import { t } from "@/lib/i18n";
 import { ClipThumbImage } from "@/components/session/ClipThumbImage";
 
 type Props = {
@@ -215,7 +216,7 @@ function FormClipsManageSheetBody({ onClose, onClipsChanged }: BodyProps) {
               color={colors.onErrorContainer}
             />
             <Text style={[styles.deleteAllText, { color: colors.onErrorContainer }]}>
-              {deletingAll ? "Deleting…" : `Delete all clips`}
+              {deletingAll ? t({ id: "common.deleting", message: "Deleting…" }) : t({ id: "settings.formClips.deleteAll", message: "Delete all clips" })}
             </Text>
           </Pressable>
         </View>
@@ -296,7 +297,7 @@ function ClipRow({ clip, onDelete, onPlay }: ClipRowProps) {
         onPress={() => onDelete(clip)}
         accessibilityRole="button"
         accessibilityLabel={`Delete clip from ${dateStr}`}
-        accessibilityHint="Removes this clip from your device"
+         accessibilityHint={t({ id: "settings.formClips.deleteHint", message: "Removes this clip from your device" })}
         hitSlop={8}
       >
         <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.error} />

@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/bna-toast";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
+import { t } from "@lingui/core/macro";
 import { useLayout } from "../../lib/layout";
 import {
   addExerciseToTemplate,
@@ -74,7 +75,7 @@ export default function CreateTemplate() {
   const save = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      Alert.alert("Validation", "Template name is required.");
+      Alert.alert(t({ id: "app.template.create.validation", message: "Validation" }), t({ id: "app.template.create.name-required", message: "Template name is required." }));
       return;
     }
     setSaving(true);
@@ -83,10 +84,10 @@ export default function CreateTemplate() {
         const tpl = await createTemplate(trimmed);
         setTemplate(tpl);
         bumpQueryVersion("home");
-        Alert.alert("Template Created", "Now add exercises to your template.");
+        Alert.alert(t({ id: "app.template.create.created", message: "Template Created" }), t({ id: "app.template.create.add-exercises", message: "Now add exercises to your template." }));
       } else {
         if (exercises.length === 0) {
-          Alert.alert("Validation", "Add at least 1 exercise to your template.");
+          Alert.alert(t({ id: "app.template.create.validation-exercises", message: "Validation" }), t({ id: "app.template.create.minimum-exercise", message: "Add at least 1 exercise to your template." }));
           setSaving(false);
           return;
         }
@@ -131,7 +132,7 @@ export default function CreateTemplate() {
       setEditing(null);
       await load();
     } catch {
-      showError("Failed to update exercise settings");
+      showError(t({ id: "app.template.create.update-exercise-error", message: "Failed to update exercise settings" }));
     }
   }, [editing, template, load, showError]);
 
@@ -143,28 +144,28 @@ export default function CreateTemplate() {
         onPress={() => setEditing(item)}
         style={[styles.exerciseRow, { backgroundColor: colors.surface, borderBottomColor: colors.outlineVariant }]}
         accessibilityRole="button"
-        accessibilityLabel={`Edit ${exName} settings`}
+         accessibilityLabel={t({ id: "app.template.create.edit-settings-a11y", message: `Edit ${exName} settings` })}
       >
         <View style={styles.exerciseTopRow}>
           <View style={styles.exerciseInfo}>
             <Text variant="subtitle" style={{ color: colors.onSurface }}>
-              {item.exercise?.name ?? "Unknown Exercise"}
+              {item.exercise?.name ?? t({ id: "app.template.create.unknown-exercise", message: "Unknown Exercise" })}
             </Text>
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-              {item.target_sets} × {item.target_reps} · {item.rest_seconds}s rest
+               {t({ id: "app.template.create.exercise-summary", message: `${item.target_sets} × ${item.target_reps} · ${item.rest_seconds}s rest` })}
             </Text>
           </View>
           <View style={styles.actions}>
-            <TouchableOpacity onPress={() => setEditing(item)} accessibilityLabel={`Edit ${exName} settings`} hitSlop={8} style={styles.iconBtn}>
+            <TouchableOpacity onPress={() => setEditing(item)} accessibilityLabel={t({ id: "app.template.create.edit-settings-a11y-2", message: `Edit ${exName} settings` })} hitSlop={8} style={styles.iconBtn}>
               <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.onSurface} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={`Move ${exName} up`} hitSlop={8} style={styles.iconBtn}>
+            <TouchableOpacity onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={t({ id: "app.template.create.move-up", message: `Move ${exName} up` })} hitSlop={8} style={styles.iconBtn}>
               <MaterialCommunityIcons name="arrow-up" size={18} color={colors.onSurface} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => move(index, 1)} disabled={index === exercises.length - 1} accessibilityLabel={`Move ${exName} down`} hitSlop={8} style={styles.iconBtn}>
+            <TouchableOpacity onPress={() => move(index, 1)} disabled={index === exercises.length - 1} accessibilityLabel={t({ id: "app.template.create.move-down", message: `Move ${exName} down` })} hitSlop={8} style={styles.iconBtn}>
               <MaterialCommunityIcons name="arrow-down" size={18} color={colors.onSurface} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={`Remove ${exName}`} hitSlop={8} style={styles.iconBtn}>
+            <TouchableOpacity onPress={() => remove(item.id)} accessibilityLabel={t({ id: "app.template.create.remove-a11y", message: `Remove ${exName}` })} hitSlop={8} style={styles.iconBtn}>
               <MaterialCommunityIcons name="close" size={18} color={colors.onSurface} />
             </TouchableOpacity>
           </View>
@@ -177,23 +178,23 @@ export default function CreateTemplate() {
 
   return (
     <>
-      <Stack.Screen options={{ title: template ? "Edit Template" : "New Template" }} />
+      <Stack.Screen options={{ title: template ? t({ id: "app.template.create.edit-title", message: "Edit Template" }) : t({ id: "app.template.create.new-title", message: "New Template" }) }} />
       <View
         style={[styles.container, { backgroundColor: colors.background, paddingHorizontal: layout.horizontalPadding }]}
       >
         <Input
-          label="Name"
-          placeholder="e.g. Upper Body, Push Day"
+          label={t({ id: "app.template.create.name", message: "Name" })}
+          placeholder={t({ id: "app.template.create.name-placeholder", message: "e.g. Upper Body, Push Day" })}
           value={name}
           onChangeText={setName}
           containerStyle={styles.input}
-          accessibilityLabel="Template Name"
+          accessibilityLabel={t({ id: "app.template.create.name-a11y", message: "Template Name" })}
         />
         {template && (
           <>
             <View style={styles.section}>
               <Text variant="title" style={{ color: colors.onBackground }}>
-                Exercises ({exercises.length})
+                {t({ id: "app.template.create.exercises", message: `Exercises (${exercises.length})` })}
               </Text>
             </View>
             <FlatList
@@ -203,7 +204,7 @@ export default function CreateTemplate() {
               ListEmptyComponent={
                 <View style={styles.empty}>
                   <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-                    No exercises yet. Add some below.
+                    {t({ id: "app.template.create.empty", message: "No exercises yet. Add some below." })}
                   </Text>
                 </View>
               }
@@ -213,8 +214,8 @@ export default function CreateTemplate() {
               variant="outline"
               onPress={() => setPickerOpen(true)}
               style={styles.addBtn}
-              accessibilityLabel="Add exercise to template"
-              label="Add Exercise"
+              accessibilityLabel={t({ id: "app.template.create.add-a11y", message: "Add exercise to template" })}
+              label={t({ id: "app.template.create.add", message: "Add Exercise" })}
             />
           </>
         )}
@@ -224,8 +225,8 @@ export default function CreateTemplate() {
           loading={saving}
           disabled={saving}
           style={styles.saveBtn}
-          accessibilityLabel={template ? "Done editing template" : "Create template"}
-          label={template ? "Done" : "Create Template"}
+          accessibilityLabel={template ? t({ id: "app.template.create.done-a11y", message: "Done editing template" }) : t({ id: "app.template.create.create-a11y", message: "Create template" })}
+          label={template ? t({ id: "app.template.create.done", message: "Done" }) : t({ id: "app.template.create.create", message: "Create Template" })}
         />
       </View>
       <ExercisePickerSheet visible={pickerOpen} onDismiss={() => setPickerOpen(false)} onPick={handlePickExercise} />

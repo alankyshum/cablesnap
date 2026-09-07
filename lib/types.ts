@@ -299,6 +299,29 @@ export type WorkoutSession = {
 
 export type SetType = "normal" | "warmup" | "dropset" | "failure" | "rest_pause" | "cluster" | "myo_reps";
 
+/** P1 durable AI Coach workout-draft contract. Photo bytes and identifiers are intentionally absent. */
+export type CoachWorkoutDraftExercise = {
+  exercise_id: string;
+  sets: number;
+  reps?: number | string | null;
+  rest_seconds?: number | null;
+  weight?: number | null;
+  tempo?: string | null;
+};
+export type CoachWorkoutDraft = {
+  name?: string;
+  exercises: CoachWorkoutDraftExercise[];
+  [key: string]: unknown;
+};
+export type CoachWorkoutDraftReason = {
+  source?: string;
+  rule?: string;
+  bound?: string;
+  fallback?: string;
+  uncertainty?: string;
+  [key: string]: unknown;
+};
+
 // BLD-1168: advanced set schemes appended so the cycle selector includes them.
 export const SET_TYPE_CYCLE: SetType[] = ["normal", "warmup", "dropset", "failure", "rest_pause", "cluster", "myo_reps"];
 

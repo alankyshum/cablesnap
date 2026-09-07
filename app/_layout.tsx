@@ -1,5 +1,5 @@
+import "../lib/i18n";
 import "react-native-reanimated";
-
 // Reanimated 4 performance flags for New Architecture on Android
 (global as Record<string, unknown>)._reanimatedFeatureFlags = {
   ...((global as Record<string, unknown>)._reanimatedFeatureFlags as Record<string, boolean> ?? {}),
@@ -20,6 +20,8 @@ import { ToastProvider } from "../components/ui/bna-toast";
 import { Colors } from "../theme/colors";
 import { ThemePreferenceProvider } from "../lib/theme-preference";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { I18nProvider } from "../lib/i18n/provider";
+import { LanguageProvider } from "../lib/language-preference";
 
 import { setupConsoleLogBuffer } from "../lib/console-log-buffer";
 import { log as logInteraction } from "../lib/interactions";
@@ -40,6 +42,7 @@ import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
 import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
 import { filterLocalhostEvents } from '@/lib/sentry-localhost-filter';
+import { redactSentryBreadcrumb } from '@/lib/ai/redact';
 import { isSentryEnabled, resolveSentryDsn } from '@/lib/sentry-enabled';
 
 const sentryEnabled = isSentryEnabled(Constants.expoConfig?.extra);
@@ -56,6 +59,7 @@ Sentry.init({
   enableLogs: true,
   // BLD-2446: Drop CI/dev events (localhost/127.0.0.1/0.0.0.0). Fail-open on missing/unparseable url tag.
   beforeSend: filterLocalhostEvents,
+  beforeBreadcrumb: redactSentryBreadcrumb,
   // AC12 (BLD-1092): no session-sampled replay; error replays remain. See PLAN-BLD-1092.md §Privacy.
   replaysSessionSampleRate: 0,
   replaysOnErrorSampleRate: 1,
@@ -148,7 +152,7 @@ export default Sentry.wrap(function RootLayout() {
       <QueryProvider>
       <OnboardingContext.Provider value={onboardingCtx}>
       <FormClipsContext.Provider value={formClipsCtx}>
-      <ThemePreferenceProvider>
+        <ThemePreferenceProvider><LanguageProvider><I18nProvider>
       <BNAThemeProvider>
         <ToastProvider>
           <BottomSheetModalProvider>
@@ -179,7 +183,7 @@ export default Sentry.wrap(function RootLayout() {
           </BottomSheetModalProvider>
         </ToastProvider>
       </BNAThemeProvider>
-      </ThemePreferenceProvider>
+        </I18nProvider></LanguageProvider></ThemePreferenceProvider>
       </FormClipsContext.Provider>
       </OnboardingContext.Provider>
       </QueryProvider>

@@ -1,0 +1,2 @@
+- The AI Coach model picker now scrolls properly on tablets and phones.
+- AI Coach now shows an animated indicator while it is thinking or running a tool.

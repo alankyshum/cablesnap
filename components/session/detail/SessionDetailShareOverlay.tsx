@@ -15,6 +15,7 @@ import { scrim, fontSizes } from "@/constants/design-tokens";
 import { saveShareSettings } from "@/lib/db";
 import { syncSessionToStrava, getStravaUserMessage } from "@/lib/strava";
 import { stravaLog } from "../../../lib/strava-telemetry";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   shareSheetRef: React.RefObject<BottomSheetModal | null>;
@@ -77,20 +78,20 @@ export function SessionDetailShareOverlay({
     try {
       const result = await syncSessionToStrava(sessionId, "manual_detail");
       if (result.status === "synced") {
-        success("Synced to Strava ✓");
+        success(t({ id: "components.session.detail.share-overlay.synced", message: "Synced to Strava ✓" }));
         onRefreshSyncLog?.();
       } else if (result.status === "queued") {
-        info("Sync queued", "Will sync when back online");
+        info(t({ id: "components.session.detail.share-overlay.sync-queued", message: "Sync queued" }), t({ id: "components.session.detail.share-overlay.sync-queued-hint", message: "Will sync when back online" }));
         onRefreshSyncLog?.();
       } else if (result.status === "failed") {
         error(getStravaUserMessage(result.error));
         onRefreshSyncLog?.();
       } else if (result.status === "skipped") {
-        info("Already on Strava");
+        info(t({ id: "components.session.detail.share-overlay.already-synced", message: "Already on Strava" }));
         onRefreshSyncLog?.();
       }
     } catch {
-      error("Strava sync failed");
+      error(t({ id: "components.session.detail.share-overlay.sync-failed", message: "Strava sync failed" }));
     } finally {
       setSyncingToStrava(false);
     }
@@ -126,7 +127,7 @@ export function SessionDetailShareOverlay({
       uri = await captureRef(shareCardRef, { format: "png", quality: 1.0 });
       await Sharing.shareAsync(uri, { mimeType: "image/png" });
     } catch {
-      toast({ description: "Unable to generate image" });
+      toast({ description: t({ id: "components.session.detail.share-overlay.image-error", message: "Unable to generate image" }) });
     } finally {
       setImageLoading(false);
       setPreviewVisible(false);
@@ -176,7 +177,7 @@ export function SessionDetailShareOverlay({
       await Sharing.shareAsync(uri, { mimeType: "image/png" });
       stravaLog("info", "strava_share_image_shared", { sessionId });
     } catch {
-      toast({ description: "Unable to generate image" });
+      toast({ description: t({ id: "components.session.detail.share-overlay.image-error-2", message: "Unable to generate image" }) });
     } finally {
       setIsCapturing(false);
       setStravaImageLoading(false);
@@ -206,7 +207,7 @@ export function SessionDetailShareOverlay({
         promo_caption: editedCaption,
         promo_caption_enabled: editedPromoEnabled ? 1 : 0,
       });
-      toast({ description: "Saved as default caption" });
+      toast({ description: t({ id: "components.session.detail.share-overlay.saved-caption", message: "Saved as default caption" }) });
       stravaLog("info", "promo_caption_saved_default", { captionLength: editedCaption.length });
       if (sessionId && stravaSynced && stravaActivityId) {
         syncSessionToStrava(sessionId).catch((err) => {
@@ -214,7 +215,7 @@ export function SessionDetailShareOverlay({
         });
       }
     } catch {
-      toast({ description: "Failed to save caption" });
+      toast({ description: t({ id: "components.session.detail.share-overlay.caption-error", message: "Failed to save caption" }) });
     }
   }, [editedCaption, editedPromoEnabled, toast, commitCaptionEditLog, sessionId, stravaSynced, stravaActivityId]);
 
@@ -263,8 +264,8 @@ export function SessionDetailShareOverlay({
                 <ActivityIndicator size="large" color={colors.primary} />
               ) : (
                 <>
-                  <Button variant="default" onPress={handleCaptureAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Capture and share the workout card image" label="Share" />
-                  <Button variant="outline" onPress={() => { setPreviewVisible(false); setImageLoading(false); }} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Cancel and close the preview" label="Cancel" />
+                  <Button variant="default" onPress={handleCaptureAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.detail.share-overlay.image-hint", message: "Capture and share the workout card image" })} label={t({ id: "components.session.detail.share-overlay.share", message: "Share" })} />
+                  <Button variant="outline" onPress={() => { setPreviewVisible(false); setImageLoading(false); }} style={styles.previewBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.detail.share-overlay.cancel-hint", message: "Cancel and close the preview" })} label={t({ id: "components.session.detail.share-overlay.cancel", message: "Cancel" })} />
                 </>
               )}
             </View>
@@ -303,7 +304,7 @@ export function SessionDetailShareOverlay({
             {editedPromoEnabled && (
               <View style={styles.captionEditRow}>
                 <View style={{ flex: 1 }} />
-                <Button variant="ghost" onPress={handleSaveDefaultCaption} label="Save as default" />
+                  <Button variant="ghost" onPress={handleSaveDefaultCaption} label={t({ id: "components.session.detail.share-overlay.save-default", message: "Save as default" })} />
               </View>
             )}
             <View style={styles.previewActions}>
@@ -311,8 +312,8 @@ export function SessionDetailShareOverlay({
                 <ActivityIndicator size="large" color={colors.primary} />
               ) : (
                 <>
-                  <Button variant="default" onPress={handleCaptureStravaAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Capture and share the Strava workout card image" label="Share" />
-                  <Button variant="outline" onPress={handleCloseStravaPreview} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Cancel and close the preview" label="Cancel" />
+                  <Button variant="default" onPress={handleCaptureStravaAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.detail.share-overlay.strava-hint", message: "Capture and share the Strava workout card image" })} label={t({ id: "components.session.detail.share-overlay.share-2", message: "Share" })} />
+                  <Button variant="outline" onPress={handleCloseStravaPreview} style={styles.previewBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.detail.share-overlay.cancel-hint-2", message: "Cancel and close the preview" })} label={t({ id: "components.session.detail.share-overlay.cancel-2", message: "Cancel" })} />
                 </>
               )}
             </View>

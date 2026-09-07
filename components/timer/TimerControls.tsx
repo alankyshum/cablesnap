@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native"
 import { Text } from "@/components/ui/text"
 import type { Status } from "../../lib/timer"
 import { radii } from "../../constants/design-tokens"
+import { t } from "@lingui/core/macro"
 
 type TimerControlsProps = {
   status: Status
@@ -35,12 +36,12 @@ export function TimerControls({ status, startLabel, startA11y, onStart, onReset,
         <Pressable
           onPress={onReset}
           style={[styles.btn, { backgroundColor: colors.surfaceVariant }]}
-          accessibilityLabel="Reset timer"
+           accessibilityLabel={t({ id: "components.timer.timerControls.resetA11y", message: "Reset timer" })}
           accessibilityRole="button"
           accessibilityState={{ disabled: false }}
         >
           <Text variant="subtitle" style={{ color: colors.onSurfaceVariant }}>
-            Reset
+             {t({ id: "components.timer.timerControls.reset", message: "Reset" })}
           </Text>
         </Pressable>
       )}

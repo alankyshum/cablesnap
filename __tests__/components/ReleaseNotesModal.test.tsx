@@ -35,7 +35,7 @@ import { Linking } from 'react-native';
 import ReleaseNotesModal from '../../components/ReleaseNotesModal';
 import type { ReleaseEntry } from '../../lib/changelog.generated';
 import { CHANGELOG } from '../../lib/changelog.generated';
-import { stripInternalRefs } from '../../lib/release-notes-markdown';
+import { stripHtmlComments, stripInternalRefs } from '../../lib/release-notes-markdown';
 
 jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
 
@@ -180,6 +180,13 @@ describe('stripInternalRefs', () => {
 
     expect(stripped).not.toMatch(/BLD-?\d/i);
     expect(stripped).not.toMatch(/\/BLD(?:\/|\b)/i);
+  });
+});
+
+describe('stripHtmlComments', () => {
+  it('removes single-line and multiline HTML comments, including their empty lines', () => {
+    expect(stripHtmlComments('before\n<!-- versionCode: 172 -->\n\n<!-- multi\nline -->\nafter'))
+      .toBe('before\nafter');
   });
 });
 

@@ -1,0 +1,2 @@
+- Improved AI Coach reliability when an upstream provider is unavailable or a selected model cannot support Coach tools.
+- Improved translation robustness by validating ICU messages before release builds.

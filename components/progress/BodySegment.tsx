@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { FAB } from "@/components/ui/fab";
 import { Text } from "@/components/ui/text";
+import { t } from "@lingui/core/macro";
 import Masonry from "@/components/ui/Masonry";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useFocusEffect } from "expo-router";
@@ -53,7 +54,7 @@ function BodyEntryRow({
       </View>
       <Pressable
         onPress={() => onDelete(item)}
-        accessibilityLabel={`Delete weight entry for ${item.date}`}
+         accessibilityLabel={t({ id: "components.progress.bodySegment.deleteWeightA11y", message: `Delete weight entry for ${item.date}` })}
         hitSlop={8}
         style={{ padding: 8 }}
       >
@@ -222,14 +223,14 @@ export default function BodySegment() {
             padding: 16,
           }}
         >
-          Log your first weigh-in
+           {t({ id: "components.progress.bodySegment.firstWeighIn", message: "Log your first weigh-in" })}
         </Text>
         <FAB
           icon="plus"
           onPress={() => setModal(true)}
           style={[styles.emptyFab, { backgroundColor: colors.primary }]}
           color={colors.onPrimary}
-          accessibilityLabel="Log body weight"
+           accessibilityLabel={t({ id: "components.progress.bodySegment.logWeightA11y", message: "Log body weight" })}
         />
         <BodyModal
           modal={modal} setModal={setModal} unit={unit}
@@ -288,13 +289,13 @@ export default function BodySegment() {
                 marginTop: 8,
               }}
             >
-              Recent Entries
+               {t({ id: "components.progress.bodySegment.recentEntries", message: "Recent Entries" })}
             </Text>
           </>
         }
         ListEmptyComponent={
           <Text style={{ color: colors.onSurfaceVariant }}>
-            No entries yet
+             {t({ id: "components.progress.bodySegment.noEntries", message: "No entries yet" })}
           </Text>
         }
       />
@@ -303,7 +304,7 @@ export default function BodySegment() {
         onPress={() => setModal(true)}
         style={[styles.fab, { backgroundColor: colors.primary, bottom: tabBarHeight + 16 }]}
         color={colors.onPrimary}
-        accessibilityLabel="Log body weight"
+         accessibilityLabel={t({ id: "components.progress.bodySegment.logWeightA11y", message: "Log body weight" })}
       />
       <BodyModal
         modal={modal} setModal={setModal} unit={unit}

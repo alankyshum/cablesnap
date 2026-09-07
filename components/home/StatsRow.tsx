@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import { StyleSheet, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text } from "@/components/ui/text";
@@ -16,9 +17,9 @@ export default function StatsRow({ colors, streak, progress, prCount }: Props) {
   const weekDisplay = targetCount > 0 ? `${completedCount}/${targetCount}` : String(completedCount);
   const weekLabel = targetCount > 0 ? `${completedCount} of ${targetCount} workouts this week` : `${completedCount} workouts this week`;
   const items = [
-    { icon: "fire" as const, value: streak, label: "Streak", a11y: `${streak} week streak` },
-    { icon: "calendar-check" as const, value: weekDisplay, label: "This Week", a11y: weekLabel },
-    { icon: "trophy" as const, value: prCount, label: "Recent PRs", a11y: `${prCount} recent personal records` },
+    { icon: "fire" as const, value: streak, label: t({ id: "home.stats.streak", message: "Streak" }), a11y: t({ id: "home.stats.streakA11y", message: `${streak} week streak` }) },
+    { icon: "calendar-check" as const, value: weekDisplay, label: t({ id: "home.stats.thisWeek", message: "This Week" }), a11y: weekLabel },
+    { icon: "trophy" as const, value: prCount, label: t({ id: "home.stats.recentPrs", message: "Recent PRs" }), a11y: t({ id: "home.stats.recentPrsA11y", message: `${prCount} recent personal records` }) },
   ];
   return (
     <View style={styles.row}>

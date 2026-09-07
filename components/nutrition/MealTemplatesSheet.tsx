@@ -20,6 +20,8 @@ import type { MealTemplate } from '@/lib/types';
 import { MEALS, MEAL_LABELS } from '@/lib/types';
 import { formatDateKey } from '@/lib/format';
 import SwipeToDelete from '@/components/SwipeToDelete';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 type Props = {
   visible: boolean;
@@ -66,7 +68,7 @@ export function MealTemplatesSheet({ visible, onClose, onLogged }: Props) {
         const result = await logFromTemplate(template.id, date);
         info(`${template.name} logged`, {
           action: {
-            label: 'Undo',
+            label: t({ id: 'components.nutrition.templates.undo', message: 'Undo' }),
             onPress: async () => {
               await undoLogFromTemplate(result.logIds);
               load();
@@ -77,7 +79,7 @@ export function MealTemplatesSheet({ visible, onClose, onLogged }: Props) {
         load();
         onLogged();
       } catch {
-        info('Failed to log template');
+        info(t({ id: 'components.nutrition.templates.logError', message: 'Failed to log template' }));
       }
     },
     [info, load, onLogged],
@@ -100,7 +102,7 @@ export function MealTemplatesSheet({ visible, onClose, onLogged }: Props) {
       };
       info(`${template.name} deleted`, {
         action: {
-          label: 'Undo',
+          label: t({ id: 'components.nutrition.templates.undo', message: 'Undo' }),
           onPress: async () => {
             if (!deleted.current) return;
             clearTimeout(deleted.current.timer);
@@ -124,16 +126,16 @@ export function MealTemplatesSheet({ visible, onClose, onLogged }: Props) {
     <BottomSheet
       isVisible={visible}
       onClose={onClose}
-      title="Meal Templates"
+      title={t({ id: 'components.nutrition.templates.title', message: 'Meal Templates' })}
       snapPoints={[0.7, 0.9]}
     >
       {templates.length >= 5 && (
         <View style={styles.searchContainer}>
           <SearchBar
-            placeholder="Search templates…"
+            placeholder={t({ id: 'components.nutrition.templates.searchPlaceholder', message: 'Search templates…' })}
             value={search}
             onChangeText={setSearch}
-            accessibilityLabel="Search meal templates"
+            accessibilityLabel={t({ id: 'components.nutrition.templates.searchA11y', message: 'Search meal templates' })}
           />
         </View>
       )}
@@ -180,7 +182,7 @@ export function MealTemplatesSheet({ visible, onClose, onLogged }: Props) {
                       onClose();
                       router.push(`/nutrition/template/${item.id}`);
                     }}
-                    accessibilityLabel={`Edit ${item.name}`}
+                     accessibilityLabel={t({ id: 'components.nutrition.templates.editA11y', message: `Edit ${item.name}` })}
                     accessibilityRole="button"
                     hitSlop={8}
                     style={styles.editBtn}
@@ -204,8 +206,8 @@ export function MealTemplatesSheet({ visible, onClose, onLogged }: Props) {
               style={{ color: colors.onSurfaceVariant, textAlign: 'center', marginTop: 16 }}
             >
               {search.trim()
-                ? 'No templates match your search'
-                : 'Save your first meal template from the nutrition log'}
+                ? <Trans id="components.nutrition.templates.noSearch">No templates match your search</Trans>
+                : <Trans id="components.nutrition.templates.empty">Save your first meal template from the nutrition log</Trans>}
             </Text>
           </View>
         }

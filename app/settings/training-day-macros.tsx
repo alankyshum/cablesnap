@@ -27,6 +27,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useToast } from "@/components/ui/bna-toast";
 import { spacing, radii } from "@/constants/design-tokens";
+import { useLingui } from "@lingui/react/macro";
 import {
   getEnabled,
   getSplitPercent,
@@ -69,6 +70,7 @@ function formatKcal(n: number): string {
 export default function TrainingDayMacrosScreen() {
   const colors = useThemeColors();
   const toast = useToast();
+  const { t } = useLingui();
 
   const [enabled, setEnabledState] = useState(false);
   const [splitPercent, setSplitPercentState] = useState(10);
@@ -130,7 +132,7 @@ export default function TrainingDayMacrosScreen() {
     setTrainingDaysState(next);
     await setTrainingDaysPerWeek(next);
     if (baseTargets) computePreview(baseTargets, splitPercent, next);
-    toast.info(`Training days: ${next}/week`);
+    toast.info(t({ id: "settings.trainingDayMacros.trainingDaysToast", message: `Training days: ${next}/week` }));
   };
 
   return (
@@ -138,7 +140,7 @@ export default function TrainingDayMacrosScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}
     >
-      <Stack.Screen options={{ title: "Training-Day Macros" }} />
+      <Stack.Screen options={{ title: t({ id: "settings.trainingDayMacros.title", message: "Training-Day Macros" }) }} />
 
       {/* ── Enable toggle ─────────────────────────────────────────────── */}
       <Card style={{ backgroundColor: colors.surface, marginBottom: 16 }}>
@@ -146,16 +148,16 @@ export default function TrainingDayMacrosScreen() {
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
               <Text variant="subtitle" style={{ color: colors.onSurface }}>
-                Training-Day Macro Adjustment
+                {t({ id: "settings.trainingDayMacros.adjustment", message: "Training-Day Macro Adjustment" })}
               </Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                Different calorie targets on training vs rest days. Off by default.
+                {t({ id: "settings.trainingDayMacros.adjustmentHint", message: "Different calorie targets on training vs rest days. Off by default." })}
               </Text>
             </View>
             <Switch
               value={enabled}
               onValueChange={handleToggleEnabled}
-              accessibilityLabel="Enable Training-Day Macro Adjustment"
+              accessibilityLabel={t({ id: "settings.trainingDayMacros.enableA11y", message: "Enable Training-Day Macro Adjustment" })}
               accessibilityRole="switch"
             />
           </View>
@@ -166,7 +168,7 @@ export default function TrainingDayMacrosScreen() {
       <Card style={{ backgroundColor: colors.surface, marginBottom: 16 }}>
         <CardContent>
           <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
-            How it works
+                {t({ id: "settings.trainingDayMacros.howItWorks", message: "How it works" })}
           </Text>
           {/* C2 verbatim body — DO NOT alter wording */}
           <Text variant="body" style={{ color: colors.onSurfaceVariant, lineHeight: 22 }}>
@@ -193,28 +195,28 @@ export default function TrainingDayMacrosScreen() {
           <Card style={{ backgroundColor: colors.surface, marginBottom: 16 }}>
             <CardContent>
               <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 4 }}>
-                Training boost
+                 {t({ id: "settings.trainingDayMacros.trainingBoost", message: "Training boost" })}
               </Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
-                How much extra to add on training days (offset by rest days to keep weekly total steady).
+                 {t({ id: "settings.trainingDayMacros.trainingBoostHint", message: "How much extra to add on training days (offset by rest days to keep weekly total steady)." })}
               </Text>
               <View style={styles.stepper}>
                 <StepperButton
-                  label="−"
+                  label={t({ id: "common.decrease", message: "−" })}
                   onPress={() => handleSplitPercentChange(-5)}
                   disabled={splitPercent <= SPLIT_PERCENT_MIN}
                   colors={colors}
-                  accessibilityLabel="Decrease training boost"
+                   accessibilityLabel={t({ id: "settings.trainingDayMacros.decreaseBoostA11y", message: "Decrease training boost" })}
                 />
                 <Text variant="subtitle" style={{ color: colors.onSurface, minWidth: 60, textAlign: "center" }}>
                   {splitPercent}%
                 </Text>
                 <StepperButton
-                  label="+"
+                  label={t({ id: "common.increase", message: "+" })}
                   onPress={() => handleSplitPercentChange(5)}
                   disabled={splitPercent >= SPLIT_PERCENT_MAX}
                   colors={colors}
-                  accessibilityLabel="Increase training boost"
+                   accessibilityLabel={t({ id: "settings.trainingDayMacros.increaseBoostA11y", message: "Increase training boost" })}
                 />
               </View>
             </CardContent>
@@ -224,28 +226,28 @@ export default function TrainingDayMacrosScreen() {
           <Card style={{ backgroundColor: colors.surface, marginBottom: 16 }}>
             <CardContent>
               <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 4 }}>
-                Training days per week
+                 {t({ id: "settings.trainingDayMacros.daysPerWeek", message: "Training days per week" })}
               </Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
-                Used to keep your weekly calorie average exactly equal to your base target.
+                 {t({ id: "settings.trainingDayMacros.daysPerWeekHint", message: "Used to keep your weekly calorie average exactly equal to your base target." })}
               </Text>
               <View style={styles.stepper}>
                 <StepperButton
-                  label="−"
+                  label={t({ id: "common.decrease", message: "−" })}
                   onPress={() => handleTrainingDaysChange(-1)}
                   disabled={trainingDays <= TRAINING_DAYS_MIN}
                   colors={colors}
-                  accessibilityLabel="Decrease training days per week"
+                   accessibilityLabel={t({ id: "settings.trainingDayMacros.decreaseDaysA11y", message: "Decrease training days per week" })}
                 />
                 <Text variant="subtitle" style={{ color: colors.onSurface, minWidth: 60, textAlign: "center" }}>
                   {trainingDays}/week
                 </Text>
                 <StepperButton
-                  label="+"
+                  label={t({ id: "common.increase", message: "+" })}
                   onPress={() => handleTrainingDaysChange(1)}
                   disabled={trainingDays >= TRAINING_DAYS_MAX}
                   colors={colors}
-                  accessibilityLabel="Increase training days per week"
+                   accessibilityLabel={t({ id: "settings.trainingDayMacros.increaseDaysA11y", message: "Increase training days per week" })}
                 />
               </View>
             </CardContent>
@@ -256,10 +258,10 @@ export default function TrainingDayMacrosScreen() {
             <Card style={{ backgroundColor: colors.surface, marginBottom: 16 }}>
               <CardContent>
                 <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
-                  Preview
+                  {t({ id: "settings.trainingDayMacros.preview", message: "Preview" })}
                 </Text>
                 <View style={styles.previewRow}>
-                  <Text variant="body" style={{ color: colors.onSurface }}>Training day</Text>
+                  <Text variant="body" style={{ color: colors.onSurface }}>{t({ id: "settings.trainingDayMacros.trainingDay", message: "Training day" })}</Text>
                   <Text
                     variant="body"
                     style={{ color: colors.onSurface, fontWeight: "600" }}
@@ -269,7 +271,7 @@ export default function TrainingDayMacrosScreen() {
                   </Text>
                 </View>
                 <View style={styles.previewRow}>
-                  <Text variant="body" style={{ color: colors.onSurface }}>Rest day</Text>
+                  <Text variant="body" style={{ color: colors.onSurface }}>{t({ id: "settings.trainingDayMacros.restDay", message: "Rest day" })}</Text>
                   <Text
                     variant="body"
                     style={{ color: colors.onSurface, fontWeight: "600" }}
@@ -279,7 +281,7 @@ export default function TrainingDayMacrosScreen() {
                   </Text>
                 </View>
                 <View style={[styles.previewRow, styles.previewDivider, { borderTopColor: colors.onSurfaceVariant + "40" }]}>
-                  <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>Weekly average</Text>
+                  <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "settings.trainingDayMacros.weeklyAverage", message: "Weekly average" })}</Text>
                   <Text
                     variant="caption"
                     style={{ color: colors.onSurfaceVariant }}

@@ -1,3 +1,6 @@
+import { t } from "@lingui/core/macro";
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
 // Do not wrap PlateCalculatorContent in a NavigationContainer or independent navigator — useFocusEffect depends on the parent screen's NavigationContext.
 
 import React, { useCallback, useMemo, useRef } from "react";
@@ -67,9 +70,7 @@ export function InlinePlateSheet({
           variant="subtitle"
           style={[styles.header, { color: colors.onSurface }]}
           accessibilityRole="header"
-        >
-          Plate Calculator
-        </Text>
+        >{t({ id: "session.inlineplatesheet.str1", message: "Plate Calculator" })}</Text>
         <PlateCalculatorContent
           initialWeight={initialWeight}
           onActiveBarChanged={handleActiveBarChanged}

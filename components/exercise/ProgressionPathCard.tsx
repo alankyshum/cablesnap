@@ -10,6 +10,8 @@ import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { spacing, radii, fontSizes } from "@/constants/design-tokens";
 import type { ProgressionChainExercise, ProgressionSuggestion } from "@/lib/db";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 
 type Props = {
   exerciseId: string;
@@ -85,7 +87,7 @@ export default function ProgressionPathCard({ exerciseId, chain, suggestion }: P
                   if (!isCurrent) router.push(`/exercise/${exercise.id}`);
                 }}
                 disabled={isCurrent}
-                accessibilityLabel={`${exercise.name}, step ${index + 1} of ${chain.length}${isCurrent ? ", current" : exercise.has_been_logged ? ", completed" : ""}`}
+                  accessibilityLabel={i18n._({ id: "components.exercise.progression.step-a11y", message: "{name}, step {step} of {total}{status, select, none {} current {, current} completed {, completed}}", values: { name: exercise.name, step: index + 1, total: chain.length, status: isCurrent ? "current" : exercise.has_been_logged ? "completed" : "none" } })}
                 accessibilityRole="button"
                 hitSlop={8}
               >
@@ -145,10 +147,10 @@ export default function ProgressionPathCard({ exerciseId, chain, suggestion }: P
 function getSuggestionText(suggestion: ProgressionSuggestion | null): string | null {
   if (!suggestion) return null;
   if (suggestion.isTerminal) {
-    return "You\u2019ve reached the most advanced variation in this chain. Keep building strength here, or explore other progression paths.";
+    return t({ id: "components.exercise.progression.terminal", message: "You’ve reached the most advanced variation in this chain. Keep building strength here, or explore other progression paths." });
   }
   if (suggestion.shouldSuggest && suggestion.nextExercise) {
-    return `You\u2019ve been consistent and your sets look strong. When you feel ready, ${suggestion.nextExercise.name} is the next step.`;
+    return t({ id: "components.exercise.progression.next", message: `You’ve been consistent and your sets look strong. When you feel ready, ${suggestion.nextExercise.name} is the next step.` });
   }
   return null;
 }

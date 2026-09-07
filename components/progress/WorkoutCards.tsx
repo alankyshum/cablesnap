@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text";
 import { BarChart } from "@/components/charts";
 import { formatDuration, formatDateShort } from "../../lib/format";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type PR = { exercise_id: string; name: string; max_weight: number };
 type SessionRow = {
@@ -57,11 +58,11 @@ export function PRCard({ prs, style }: PRCardProps) {
   return (
     <Card style={[styles.card, style]}>
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
-        Personal Records
+        {t({ id: "components.progress.workoutCards.personalRecords", message: "Personal Records" })}
       </Text>
       {prs.length === 0 ? (
         <Text style={{ color: colors.onSurfaceVariant }}>
-          No records yet — start lifting!
+          {t({ id: "components.progress.workoutCards.noRecords", message: "No records yet — start lifting!" })}
         </Text>
       ) : (
         prs.map((pr) => (
@@ -97,7 +98,7 @@ export function SessionsCard({ sessions, style }: SessionsCardProps) {
   return (
     <Card style={[styles.card, style]}>
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
-        Recent Sessions
+        {t({ id: "components.progress.workoutCards.recentSessions", message: "Recent Sessions" })}
       </Text>
       {sessions.map((s, i) => (
         <View key={s.id}>
@@ -105,7 +106,7 @@ export function SessionsCard({ sessions, style }: SessionsCardProps) {
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.onSurface }}>{s.name}</Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                {formatDateShort(s.started_at)} · {formatDuration(s.duration_seconds)} · {s.set_count} sets
+                {t({ id: "components.progress.workoutCards.sessionSummary", message: `${formatDateShort(s.started_at)} · ${formatDuration(s.duration_seconds)} · ${s.set_count} sets` })}
               </Text>
             </View>
           </View>
@@ -124,7 +125,7 @@ export function SessionsByGymCard({ rows, style }: { rows: SessionsByGymRow[]; s
   return (
     <Card style={[styles.card, style]}>
       <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 12 }}>
-        Sessions by gym
+        {t({ id: "components.progress.workoutCards.sessionsByGym", message: "Sessions by gym" })}
       </Text>
       {rows.map((row, index) => (
         <View key={row.gymId}>

@@ -14,6 +14,7 @@ import { saveShareSettings } from "@/lib/db";
 import { syncSessionToStrava } from "@/lib/strava";
 import { useToast } from "@/components/ui/bna-toast";
 import { stravaLog } from "../../../lib/strava-telemetry";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   colors: ThemeColors;
@@ -131,7 +132,7 @@ export default function SummaryFooter({
         promo_caption: editedCaption,
         promo_caption_enabled: editedPromoEnabled ? 1 : 0,
       });
-      toast({ description: "Saved as default caption" });
+      toast({ description: t({ id: "components.session.summary.footer.saved-caption", message: "Saved as default caption" }) });
       stravaLog("info", "promo_caption_saved_default", { captionLength: editedCaption.length });
       if (session.id && stravaSynced) {
         syncSessionToStrava(session.id, "post_workout").catch((err) => {
@@ -139,7 +140,7 @@ export default function SummaryFooter({
         });
       }
     } catch {
-      toast({ description: "Failed to save caption" });
+      toast({ description: t({ id: "components.session.summary.footer.caption-error", message: "Failed to save caption" }) });
     }
   };
 
@@ -182,9 +183,9 @@ export default function SummaryFooter({
             }}
             style={styles.actionBtn}
             accessibilityRole="button"
-            accessibilityLabel="View on Strava"
-            accessibilityHint="Open this activity on Strava"
-            label="View on Strava"
+            accessibilityLabel={t({ id: "components.session.summary.footer.strava-a11y", message: "View on Strava" })}
+            accessibilityHint={t({ id: "components.session.summary.footer.strava-hint", message: "Open this activity on Strava" })}
+            label={t({ id: "components.session.summary.footer.strava", message: "View on Strava" })}
           />
         )}
         {session.completed_at && (
@@ -197,14 +198,14 @@ export default function SummaryFooter({
             style={styles.actionBtn}
             disabled={completedSetCount === 0}
             accessibilityRole="button"
-            accessibilityHint={completedSetCount === 0 ? "No exercises to save" : "Save this workout as a reusable template"}
+            accessibilityHint={completedSetCount === 0 ? t({ id: "components.session.summary.footer.template-disabled", message: "No exercises to save" }) : t({ id: "components.session.summary.footer.template-hint", message: "Save this workout as a reusable template" })}
             accessibilityState={{ disabled: completedSetCount === 0 }}
-            label="Save as Template"
+            label={t({ id: "components.session.summary.footer.save-template", message: "Save as Template" })}
           />
         )}
-        <Button variant="default" onPress={onDone} style={styles.actionBtn} accessibilityRole="button" accessibilityHint="Return to workouts tab" label="Done" />
-        <Button variant="outline" onPress={onSharePress} style={styles.actionBtn} accessibilityRole="button" accessibilityHint="Share workout summary" label="Share" />
-        <Button variant="ghost" onPress={onViewDetails} accessibilityRole="button" accessibilityHint="View detailed workout breakdown" label="View Details" />
+        <Button variant="default" onPress={onDone} style={styles.actionBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.summary.footer.done-hint", message: "Return to workouts tab" })} label={t({ id: "components.session.summary.footer.done", message: "Done" })} />
+        <Button variant="outline" onPress={onSharePress} style={styles.actionBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.summary.footer.share-hint", message: "Share workout summary" })} label={t({ id: "components.session.summary.footer.share", message: "Share" })} />
+        <Button variant="ghost" onPress={onViewDetails} accessibilityRole="button" accessibilityHint={t({ id: "components.session.summary.footer.details-hint", message: "View detailed workout breakdown" })} label={t({ id: "components.session.summary.footer.details", message: "View Details" })} />
       </View>
 
       <SaveTemplateModal
@@ -311,20 +312,20 @@ function SaveTemplateModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-          <Text variant="title" style={{ color: colors.onSurface, marginBottom: 16 }}>Save as Template</Text>
+          <Text variant="title" style={{ color: colors.onSurface, marginBottom: 16 }}>{t({ id: "components.session.summary.footer.modal-title", message: "Save as Template" })}</Text>
           <TextInput
             value={templateName}
             onChangeText={onNameChange}
-            placeholder="Template name"
+            placeholder={t({ id: "components.session.summary.footer.modal-placeholder", message: "Template name" })}
             placeholderTextColor={colors.onSurfaceDisabled}
             maxLength={100}
             style={[styles.modalInput, { color: colors.onSurface, backgroundColor: colors.surfaceVariant, borderColor: colors.outline }]}
             autoFocus
-            accessibilityLabel="Template name"
+            accessibilityLabel={t({ id: "components.session.summary.footer.modal-name-a11y", message: "Template name" })}
           />
           <View style={styles.modalActions}>
-            <Button variant="ghost" onPress={onClose} label="Cancel" />
-            <Button variant="default" onPress={handleSaveAsTemplate} loading={saving} disabled={saving || !templateName.trim()} label="Save" />
+            <Button variant="ghost" onPress={onClose} label={t({ id: "components.session.summary.footer.modal-cancel", message: "Cancel" })} />
+            <Button variant="default" onPress={handleSaveAsTemplate} loading={saving} disabled={saving || !templateName.trim()} label={t({ id: "components.session.summary.footer.modal-save", message: "Save" })} />
           </View>
         </View>
       </View>
@@ -395,8 +396,8 @@ function SharePreviewModal({
               <ActivityIndicator size="large" color={colors.primary} />
             ) : (
               <>
-                <Button variant="default" onPress={handleCaptureAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Capture and share the workout card image" label="Share" />
-                <Button variant="outline" onPress={onClose} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Cancel and close the preview" label="Cancel" />
+                <Button variant="default" onPress={handleCaptureAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.summary.footer.image-hint", message: "Capture and share the workout card image" })} label={t({ id: "components.session.summary.footer.share-preview", message: "Share" })} />
+                <Button variant="outline" onPress={onClose} style={styles.previewBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.summary.footer.cancel-preview-hint", message: "Cancel and close the preview" })} label={t({ id: "components.session.summary.footer.cancel-preview", message: "Cancel" })} />
               </>
             )}
           </View>
@@ -484,7 +485,7 @@ function StravaPreviewModal({
           {editedPromoEnabled && (
             <View style={styles.captionEditRow}>
               <View style={{ flex: 1 }} />
-              <Button variant="ghost" onPress={handleSaveDefaultCaption} label="Save as default" />
+              <Button variant="ghost" onPress={handleSaveDefaultCaption} label={t({ id: "components.session.summary.footer.save-default", message: "Save as default" })} />
             </View>
           )}
           <View style={styles.previewActions} testID="summary-strava-preview-actions">
@@ -492,8 +493,8 @@ function StravaPreviewModal({
               <ActivityIndicator size="large" color={colors.primary} />
             ) : (
               <>
-                <Button variant="default" onPress={localCaptureStravaAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Capture and share the Strava workout card image" label="Share" />
-                <Button variant="outline" onPress={onClose} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Cancel and close the preview" label="Cancel" />
+                <Button variant="default" onPress={localCaptureStravaAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.summary.footer.strava-preview-hint", message: "Capture and share the Strava workout card image" })} label={t({ id: "components.session.summary.footer.strava-share", message: "Share" })} />
+                <Button variant="outline" onPress={onClose} style={styles.previewBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.summary.footer.strava-cancel-hint", message: "Cancel and close the preview" })} label={t({ id: "components.session.summary.footer.strava-cancel", message: "Cancel" })} />
               </>
             )}
           </View>
@@ -566,7 +567,7 @@ function AchievementPreviewModal({
           {editedPromoEnabled && (
             <View style={styles.captionEditRow}>
               <View style={{ flex: 1 }} />
-              <Button variant="ghost" onPress={handleSaveDefaultCaption} label="Save as default" />
+              <Button variant="ghost" onPress={handleSaveDefaultCaption} label={t({ id: "components.session.summary.footer.achievement-save-default", message: "Save as default" })} />
             </View>
           )}
           <View style={styles.previewActions} testID="summary-achievement-preview-actions">
@@ -574,8 +575,8 @@ function AchievementPreviewModal({
               <ActivityIndicator size="large" color={colors.primary} />
             ) : (
               <>
-                <Button variant="default" onPress={localCaptureAchievementAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Capture and share the achievement recap card image" label="Share" />
-                <Button variant="outline" onPress={onClose} style={styles.previewBtn} accessibilityRole="button" accessibilityHint="Cancel and close the preview" label="Cancel" />
+                <Button variant="default" onPress={localCaptureAchievementAndShare} style={styles.previewBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.summary.footer.achievement-share-hint", message: "Capture and share the achievement recap card image" })} label={t({ id: "components.session.summary.footer.achievement-share", message: "Share" })} />
+                <Button variant="outline" onPress={onClose} style={styles.previewBtn} accessibilityRole="button" accessibilityHint={t({ id: "components.session.summary.footer.achievement-cancel-hint", message: "Cancel and close the preview" })} label={t({ id: "components.session.summary.footer.achievement-cancel", message: "Cancel" })} />
               </>
             )}
           </View>

@@ -68,6 +68,23 @@ if [ -f "scripts/check-changelog-gate.ts" ]; then
   fi
 fi
 
+# ─── i18n Catalog Gate (T6) ──────────────────────────────────────
+# Blocks push when catalogs are stale, incomplete, orphaned, or inconsistent.
+# This check is deterministic and offline; translation and code generation are
+# explicit local steps and are never run automatically by the hook or CI.
+if [ -f "scripts/check-i18n-gate.ts" ]; then
+  echo "🌐 Verifying i18n catalogs..."
+  if ! npx tsx scripts/check-i18n-gate.ts --check; then
+    echo ""
+    echo "i18n catalog gate BLOCKED push. Update catalogs locally and re-run:"
+    echo "  npm run i18n:translate -- --locale <locale>"
+    echo "  npm run i18n:zhcn"
+    echo "  npm run i18n:codegen"
+    echo "To skip this check (governance escape hatch only): git push --no-verify"
+    exit 1
+  fi
+fi
+
 # ─── Exercise Illustration Bundle Gate (BLD-561) ────────────────
 # Blocks push if assets/exercise-illustrations/**/*.webp exceeds the hard-fail
 # bundle budget (R2 plan: target ≤8MB, hard fail >12MB).

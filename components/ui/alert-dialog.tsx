@@ -185,6 +185,7 @@ const styles = StyleSheet.create({
   // Rounded corners and clipping consolidated here (non-animated)
   roundedWrapper: {
     width: '100%',
+    maxHeight: '90%',
     borderRadius: 16,
     overflow: 'hidden',
   },

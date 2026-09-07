@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import Masonry from "@/components/ui/Masonry";
 import { Text } from "@/components/ui/text";
+import { t } from "@lingui/core/macro";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   getWeeklySessionCounts,
@@ -138,7 +139,7 @@ export default function WorkoutSegment() {
       style={[styles.toggleButton, { borderColor: colors.outlineVariant }]}
       accessibilityRole="button"
       accessibilityLabel={
-        viewMode === "list" ? "Switch to calendar view" : "Switch to list view"
+         viewMode === "list" ? t({ id: "components.progress.workout.switchCalendar", message: "Switch to calendar view" }) : t({ id: "components.progress.workout.switchList", message: "Switch to list view" })
       }
     >
       {viewMode === "list" ? (
@@ -152,10 +153,10 @@ export default function WorkoutSegment() {
   const gymFilter = showGymUI ? (
     <View style={styles.filterRow} testID="workout-gym-filter-row">
       <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-        Filter:
+         {t({ id: "components.progress.workout.filter", message: "Filter:" })}
       </Text>
       <View style={styles.filterPills} testID="workout-gym-filter-pills">
-        {[{ id: "all", name: "All gyms" }, ...gymOptions].map((option) => {
+         {[{ id: "all", name: t({ id: "components.progress.workout.allGyms", message: "All gyms" }) }, ...gymOptions].map((option) => {
           const selected = selectedGymId === option.id;
           return (
             <Pressable
@@ -169,7 +170,7 @@ export default function WorkoutSegment() {
                 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel={`Filter workouts by ${option.name}`}
+                accessibilityLabel={t({ id: "components.progress.workout.filterByOption", message: `Filter workouts by ${option.name}` })}
               accessibilityState={{ selected }}
             >
               <Text style={{ color: selected ? colors.onPrimary : colors.onSurfaceVariant, fontSize: fontSizes.sm }}>
@@ -211,21 +212,21 @@ export default function WorkoutSegment() {
         { backgroundColor: colors.surface, borderRadius: 12, padding: 18 },
       ]}
       onPress={() => router.push("/progress/achievements")}
-      accessibilityLabel="Achievements"
+       accessibilityLabel={t({ id: "components.progress.workout.achievementsA11y", message: "Achievements" })}
       accessibilityRole="button"
-      accessibilityHint="View your achievements and milestones"
+       accessibilityHint={t({ id: "components.progress.workout.achievementsHint", message: "View your achievements and milestones" })}
     >
       <View style={styles.cardHeader}>
         <Text style={{ fontSize: fontSizes.xl, marginRight: 8 }}>🏆</Text>
         <Text variant="subtitle" style={{ color: colors.onSurface }}>
-          Achievements
+           {t({ id: "components.progress.workout.achievements", message: "Achievements" })}
         </Text>
       </View>
       <Text
         variant="caption"
         style={{ color: colors.onSurfaceVariant, marginTop: 4 }}
       >
-        Track your milestones and badges
+         {t({ id: "components.progress.workout.milestones", message: "Track your milestones and badges" })}
       </Text>
     </Pressable>
   );
@@ -233,7 +234,7 @@ export default function WorkoutSegment() {
   const freqCard =
     freq.length > 0 ? (
       <WorkoutChartCard
-        title="Sessions Per Week"
+         title={t({ id: "components.progress.workout.sessionsPerWeek", message: "Sessions Per Week" })}
         data={freq.map((f) => ({ x: f.week, y: f.count }))}
         xKey="x"
         yKey="y"
@@ -244,7 +245,7 @@ export default function WorkoutSegment() {
   const volCard =
     vol.length > 0 ? (
       <WorkoutChartCard
-        title="Weekly Volume (kg)"
+         title={t({ id: "components.progress.workout.weeklyVolume", message: "Weekly Volume (kg)" })}
         data={vol.map((v) => ({ x: v.week, y: v.volume }))}
         xKey="x"
         yKey="y"

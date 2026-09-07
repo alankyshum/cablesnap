@@ -1,3 +1,6 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 /**
  * BLD-600 — Water amount input sheet (custom volume + edit existing entry).
  */
@@ -52,13 +55,13 @@ export function WaterAmountSheet({
   const handleSubmit = async () => {
     const n = parseFloat(text.replace(",", "."));
     if (!Number.isFinite(n) || n <= 0) {
-      setErrorMsg("Enter an amount above 0.");
+       setErrorMsg(t({ id: "components.nutrition.water.amountError", message: "Enter an amount above 0." }));
       return;
     }
     const cap = unit === "ml" ? MAX_SINGLE_ENTRY_ML : MAX_OZ;
     if (n > cap) {
       const suffix = unit === "ml" ? "ml" : "fl oz";
-      setErrorMsg(`Maximum is ${unit === "ml" ? MAX_SINGLE_ENTRY_ML : Math.floor(MAX_OZ)} ${suffix} per entry.`);
+       setErrorMsg(i18n._({ id: "components.nutrition.water.maximumError", message: "Maximum is {maximum} {suffix} per entry.", values: { maximum: unit === "ml" ? MAX_SINGLE_ENTRY_ML : Math.floor(MAX_OZ), suffix } }));
       return;
     }
     const ml = unit === "ml" ? n : ozToMl(n);
@@ -68,33 +71,33 @@ export function WaterAmountSheet({
   };
 
   return (
-    <BottomSheet isVisible={visible} onClose={onClose} snapPoints={[0.4, 0.6]} title={initialMl != null ? "Edit water entry" : "Add water"}>
+    <BottomSheet isVisible={visible} onClose={onClose} snapPoints={[0.4, 0.6]} title={initialMl != null ? t({ id: "components.nutrition.water.editTitle", message: "Edit water entry" }) : t({ id: "components.nutrition.water.addTitle", message: "Add water" })}>
       <View style={styles.body}>
         <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
-          Amount ({unit === "ml" ? "ml" : "fl oz"})
+           {i18n._({ id: "components.nutrition.water.amount", message: "Amount ({unit, select, ml {ml} oz {fl oz}})", values: { unit: unit === "ml" ? "ml" : "oz" } })}
         </Text>
         <TextInput
-          accessibilityLabel="Water amount"
-          accessibilityHint={unit === "ml" ? "Enter a positive number of milliliters." : "Enter a positive number of fluid ounces."}
+          accessibilityLabel={t({ id: "components.nutrition.water.amountA11y", message: "Water amount" })}
+          accessibilityHint={unit === "ml" ? t({ id: "components.nutrition.water.mlHint", message: "Enter a positive number of milliliters." }) : t({ id: "components.nutrition.water.ozHint", message: "Enter a positive number of fluid ounces." })}
           value={text}
           onChangeText={setText}
           keyboardType="numeric"
-          placeholder={unit === "ml" ? "e.g. 250" : "e.g. 8"}
+           placeholder={unit === "ml" ? t({ id: "components.nutrition.water.mlPlaceholder", message: "e.g. 250" }) : t({ id: "components.nutrition.water.ozPlaceholder", message: "e.g. 8" })}
           placeholderTextColor={colors.onSurfaceVariant}
           style={[
             styles.input,
-            { color: colors.onSurface, borderColor: errorMsg ? "#d32f2f" : colors.onSurfaceVariant },
+            { color: colors.onSurface, borderColor: errorMsg ? colors.error : colors.onSurfaceVariant },
           ]}
         />
         {errorMsg && (
-          <Text variant="caption" style={{ color: "#d32f2f", marginTop: 6 }}>{errorMsg}</Text>
+          <Text variant="caption" style={{ color: colors.error, marginTop: 6 }}>{errorMsg}</Text>
         )}
 
         <View style={styles.actionsRow}>
           {onDelete ? (
             <Pressable
               onPress={async () => { await onDelete(); onClose(); }}
-              accessibilityLabel="Delete water entry"
+              accessibilityLabel={t({ id: "components.nutrition.water.deleteA11y", message: "Delete water entry" })}
               accessibilityRole="button"
               style={({ pressed }) => [
                 styles.btn,
@@ -102,12 +105,12 @@ export function WaterAmountSheet({
                 pressed && { opacity: 0.6 },
               ]}
             >
-              <Text variant="body" style={{ color: "#d32f2f" }}>Delete</Text>
+              <Text variant="body" style={{ color: colors.error }}><Trans id="components.nutrition.water.delete">Delete</Trans></Text>
             </Pressable>
           ) : null}
           <Pressable
             onPress={handleSubmit}
-            accessibilityLabel={initialMl != null ? "Save water entry" : "Add water entry"}
+            accessibilityLabel={initialMl != null ? t({ id: "components.nutrition.water.saveA11y", message: "Save water entry" }) : t({ id: "components.nutrition.water.addA11y", message: "Add water entry" })}
             accessibilityRole="button"
             style={({ pressed }) => [
               styles.btn,
@@ -115,7 +118,7 @@ export function WaterAmountSheet({
               pressed && { opacity: 0.8 },
             ]}
           >
-            <Text variant="body" style={{ color: "#fff" }}>{initialMl != null ? "Save" : "Add"}</Text>
+            <Text variant="body" style={{ color: colors.onPrimary }}>{initialMl != null ? <Trans id="components.nutrition.water.save">Save</Trans> : <Trans id="components.nutrition.water.add">Add</Trans>}</Text>
           </Pressable>
         </View>
       </View>

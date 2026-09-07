@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { Modal, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
@@ -30,14 +32,14 @@ export default function PrivacyModal({ visible, onDismiss }: PrivacyModalProps) 
             style={{ alignSelf: "center", marginBottom: 16 }}
           />
           <Text variant="title" style={{ color: colors.onSurface, textAlign: "center", marginBottom: 12 }}>
-            Your Photos Are Private
+             <Trans id="components.photos.privacy.title">Your Photos Are Private</Trans>
           </Text>
           <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center", marginBottom: 24 }}>
-            Your progress photos are stored only on this device and never uploaded to any server.
-            Photos are not visible in your device&apos;s photo gallery.
-            If you reinstall the app, photos will be lost.
+             <Trans id="components.photos.privacy.body">Your progress photos are stored only on this device and never uploaded to any server.
+             Photos are not visible in your device&apos;s photo gallery.
+             If you reinstall the app, photos will be lost.</Trans>
           </Text>
-          <Button variant="default" onPress={onDismiss} label="I Understand" />
+           <Button variant="default" onPress={onDismiss} label={t({ id: "components.photos.privacy.dismiss", message: "I Understand" })} />
         </View>
       </View>
     </Modal>

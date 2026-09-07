@@ -19,6 +19,7 @@
  */
 
 import type { ErrorEvent } from '@sentry/core';
+import { redactSentryEvent } from './ai/redact';
 
 /** Hosts that always indicate a local dev / CI environment. */
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0']);
@@ -81,6 +82,12 @@ function isHeadlessEvent(event: ErrorEvent): boolean {
  * @returns The event unchanged, or `null` to drop it.
  */
 export function filterLocalhostEvents(event: ErrorEvent): ErrorEvent | null {
+  // Scrub in place so the existing callback identity and localhost filtering
+  // contract remain unchanged while secrets are removed before serialization.
+  const scrubbed = redactSentryEvent(event);
+  for (const key of Object.keys(event)) delete (event as unknown as Record<string, unknown>)[key];
+  Object.assign(event, scrubbed);
+
   // 1. Headless environment check → drop immediately
   if (isHeadlessEvent(event)) {
     return null;

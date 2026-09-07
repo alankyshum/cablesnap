@@ -7,6 +7,7 @@ import { LineChart } from "@/components/charts";
 import { toDisplay } from "@/lib/units";
 import { useLayout } from "@/lib/layout";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 function formatDate(ts: number): string {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(ts));
@@ -55,24 +56,24 @@ export default function ExerciseChartCard({
     <Card style={[styles.card, style, { backgroundColor: colors.surface }]}>
       <CardContent>
         <Text variant="title" style={{ color: colors.onSurface, marginBottom: 12 }}>
-          {bw ? "Reps Progression" : "Weight Progression"}
+          {bw ? t({ id: "components.exercise.chart.reps-progression", message: "Reps Progression" }) : t({ id: "components.exercise.chart.weight-progression", message: "Weight Progression" })}
         </Text>
         {!bw && chart.length >= 2 && (
-          <View style={styles.chartToggle} accessibilityRole="radiogroup" accessibilityLabel="Chart data mode">
-            <Chip selected={chartMode === "max"} onPress={() => setChartMode("max")} compact style={styles.chip}>Max Weight</Chip>
-            <Chip selected={chartMode === "1rm"} onPress={() => setChartMode("1rm")} compact style={styles.chip}>Est. 1RM</Chip>
+          <View style={styles.chartToggle} accessibilityRole="radiogroup" accessibilityLabel={t({ id: "components.exercise.chart.mode", message: "Chart data mode" })}>
+            <Chip selected={chartMode === "max"} onPress={() => setChartMode("max")} compact style={styles.chip}>{t({ id: "components.exercise.chart.max-weight", message: "Max Weight" })}</Chip>
+            <Chip selected={chartMode === "1rm"} onPress={() => setChartMode("1rm")} compact style={styles.chip}>{t({ id: "components.exercise.chart.est-1rm", message: "Est. 1RM" })}</Chip>
           </View>
         )}
         {chartLoading ? (
           <ActivityIndicator style={styles.loader} />
         ) : chartError ? (
           <View style={styles.errorBox}>
-            <Text style={{ color: colors.error }}>Failed to load chart</Text>
-            <Button variant="ghost" onPress={() => exerciseId && loadChart(exerciseId)} label="Retry" />
+            <Text style={{ color: colors.error }}>{t({ id: "components.exercise.chart.error", message: "Failed to load chart" })}</Text>
+            <Button variant="ghost" onPress={() => exerciseId && loadChart(exerciseId)} label={t({ id: "components.exercise.chart.retry", message: "Retry" })} />
           </View>
         ) : activeChart.length < 2 ? (
           <Text variant="body" style={{ color: colors.onSurfaceVariant }}>
-            {activeChart.length === 0 ? "No data to chart yet" : "Log more sessions to see a trend chart"}
+            {activeChart.length === 0 ? t({ id: "components.exercise.chart.empty", message: "No data to chart yet" }) : t({ id: "components.exercise.chart.more-data", message: "Log more sessions to see a trend chart" })}
           </Text>
         ) : (
           <View accessibilityLabel={chartSummary ?? undefined}>

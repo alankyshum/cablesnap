@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   visible: boolean;
@@ -20,12 +21,12 @@ export function TemplateModal({ visible, templateName, onNameChange, onSave, onC
       <View style={styles.modalOverlay}>
         <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
           <Text variant="title" style={{ color: colors.onSurface, marginBottom: 16 }}>
-            Save as Template
+            {t({ id: "components.session.detail.template-modal.title", message: "Save as Template" })}
           </Text>
           <TextInput
             value={templateName}
             onChangeText={(t) => onNameChange(t.slice(0, 100))}
-            placeholder="Template name"
+            placeholder={t({ id: "components.session.detail.template-modal.placeholder", message: "Template name" })}
             placeholderTextColor={colors.onSurfaceDisabled}
             maxLength={100}
             style={[
@@ -37,16 +38,16 @@ export function TemplateModal({ visible, templateName, onNameChange, onSave, onC
               },
             ]}
             autoFocus
-            accessibilityLabel="Template name"
+            accessibilityLabel={t({ id: "components.session.detail.template-modal.name-a11y", message: "Template name" })}
           />
           <View style={styles.modalActions}>
-            <Button variant="ghost" onPress={onClose} label="Cancel" />
+            <Button variant="ghost" onPress={onClose} label={t({ id: "components.session.detail.template-modal.cancel", message: "Cancel" })} />
             <Button
               variant="default"
               onPress={onSave}
               loading={saving}
               disabled={saving || !templateName.trim()}
-              label="Save"
+              label={t({ id: "components.session.detail.template-modal.save", message: "Save" })}
             />
           </View>
         </View>

@@ -22,7 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "CableSnap",
   slug: "cablesnap",
-  version: "0.26.100",
+  version: "0.26.115",
   orientation: "default",
   icon: "./assets/icon.png",
   userInterfaceStyle: "automatic",
@@ -41,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#FF6038", // eslint-disable-line no-restricted-syntax
     },
     package: "com.persoack.cablesnap",
-    versionCode: 168,
+    versionCode: 183,
   },
   web: {
     favicon: "./assets/favicon.png",
@@ -80,6 +80,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // that preserves SecureStore sharedpref exclusion PLUS excludes form-clips/.
     ["expo-secure-store", { configureAndroidBackup: false }],
     "expo-image",
+    [
+      "expo-image-picker",
+      {
+        photosPermission:
+          "CableSnap uses your photo library only when you choose a gym photo to send to your selected AI Coach model.",
+      },
+    ],
     [
       "expo-build-properties",
       {

@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 import { useState, useCallback } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Button } from "@/components/ui/button";
@@ -58,25 +60,25 @@ export default function Goals() {
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
     >
       <Text variant="title" style={{ color: colors.onBackground, marginBottom: 16 }}>
-        Body Goals
+        <Trans id="body.goals.title">Body Goals</Trans>
       </Text>
 
       <Input
-        label={`Weight Goal (${unit})`}
+        label={t({ id: "body.goals.weightGoal.label", message: `Weight Goal (${unit})` })}
         value={weight}
         onChangeText={setWeight}
         keyboardType="numeric"
         containerStyle={styles.input}
-        accessibilityLabel={`Weight goal in ${unit}`}
+        accessibilityLabel={t({ id: "body.goals.weightGoal.a11y", message: `Weight goal in ${unit}` })}
       />
 
       <Input
-        label="Body Fat Goal (%)"
+        label={t({ id: "body.goals.bodyFatGoal.label", message: "Body Fat Goal (%)" })}
         value={fat}
         onChangeText={setFat}
         keyboardType="numeric"
         containerStyle={styles.input}
-        accessibilityLabel="Body fat percentage goal"
+        accessibilityLabel={t({ id: "body.goals.bodyFatGoal.a11y", message: "Body fat percentage goal" })}
       />
 
       <View style={styles.buttons}>
@@ -84,8 +86,8 @@ export default function Goals() {
           variant="outline"
           onPress={() => router.back()}
           style={{ flex: 1, marginRight: 8 }}
-          accessibilityLabel="Cancel goal editing"
-          label="Cancel"
+          accessibilityLabel={t({ id: "body.goals.cancel.a11y", message: "Cancel goal editing" })}
+          label={t({ id: "body.goals.cancel.label", message: "Cancel" })}
         />
         <Button
           variant="default"
@@ -93,8 +95,8 @@ export default function Goals() {
           loading={saving}
           disabled={saving}
           style={{ flex: 1 }}
-          accessibilityLabel="Save body goals"
-          label="Save"
+          accessibilityLabel={t({ id: "body.goals.save.a11y", message: "Save body goals" })}
+          label={t({ id: "body.goals.save.label", message: "Save" })}
         />
       </View>
     </ScrollView>

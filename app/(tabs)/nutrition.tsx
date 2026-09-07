@@ -16,6 +16,7 @@ import { MacroCoachCard } from '../../components/nutrition/MacroCoachCard';
 import { useThemeColors } from '@/hooks/useThemeColors';
 import { useNutritionData } from '@/hooks/useNutritionData';
 import { useMacroCoach } from '@/hooks/useMacroCoach';
+import { t } from '@lingui/core/macro';
 
 /** Returns a human-readable week label like "May 4–10" based on the most recent Sunday. */
 function getWeekLabel(now: Date): string {
@@ -131,7 +132,7 @@ export default function Nutrition() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: 'center' }}>
-              No food logged yet.{'\n'}Tap + to add your first meal.
+              {t({ id: 'nutrition.empty', message: 'No food logged yet.\nTap + to add your first meal.' })}
             </Text>
           </View>
         }
@@ -141,7 +142,7 @@ export default function Nutrition() {
         isVisible={addSheetVisible}
         onClose={() => setAddSheetVisible(false)}
         snapPoints={[0.7, 0.9]}
-        title="Add Food"
+        title={t({ id: 'nutrition.addFood.title', message: 'Add Food' })}
         // disablePanGesture: the Add Food sheet hosts a long, keyboard-heavy
         // manual-entry form (ManualFoodEntry). The default drag-to-dismiss
         // Gesture.Pan() wraps the body and intercepts every vertical drag,

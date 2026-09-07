@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Input } from "@/components/ui/input";
@@ -15,21 +16,21 @@ export function MacroInputRow({ protein, carbs, fat, onProteinChange, onCarbsCha
   return (
     <View style={styles.row}>
       <Input
-        label="Protein (g)" value={protein} onChangeText={onProteinChange}
+        label={t({ id: "components.nutrition.macro.protein", message: "Protein (g)" })} value={protein} onChangeText={onProteinChange}
         keyboardType="numeric" variant="outline"
         containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
         testID="macro-protein-input"
       />
       <View style={{ width: 8 }} />
       <Input
-        label="Carbs (g)" value={carbs} onChangeText={onCarbsChange}
+        label={t({ id: "components.nutrition.macro.carbs", message: "Carbs (g)" })} value={carbs} onChangeText={onCarbsChange}
         keyboardType="numeric" variant="outline"
         containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
         testID="macro-carbs-input"
       />
       <View style={{ width: 8 }} />
       <Input
-        label="Fat (g)" value={fat} onChangeText={onFatChange}
+        label={t({ id: "components.nutrition.macro.fat", message: "Fat (g)" })} value={fat} onChangeText={onFatChange}
         keyboardType="numeric" variant="outline"
         containerStyle={StyleSheet.flatten([styles.input, styles.flex])}
         testID="macro-fat-input"

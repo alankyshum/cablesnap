@@ -28,6 +28,8 @@ import {
   removeQuickAddSet,
   listRecentQuickAddExercises,
 } from "@/lib/db/day-session";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import { getActiveSession } from "@/lib/db/sessions";
 import { getBodySettings, getAppSetting } from "@/lib/db";
 import { resolveStep } from "@/lib/weightStep";
@@ -101,7 +103,7 @@ export default function QuickAddSheet({
         setStep(resolveStep(rawStep, resolvedUnit));
       })
       .catch(() => {
-        showError("Failed to load exercises. Please try again.");
+        showError(t({ id: "home.quickAdd.loadFailure", message: "Failed to load exercises. Please try again." }));
       })
       .finally(() => setLoading(false));
   }, [visible, showError]);
@@ -128,9 +130,9 @@ export default function QuickAddSheet({
         onSetLogged();
 
         // Show confirmation toast with Undo (AC8)
-        showSuccess(`Logged: ${exerciseName} ${reps} reps · today's total ${result.todayTotal}`, {
+        showSuccess(t({ id: "home.quickAdd.logged", message: `Logged: ${exerciseName} ${reps} reps · today's total ${result.todayTotal}` }), {
           action: {
-            label: "Undo",
+            label: t({ id: "home.quickAdd.undo", message: "Undo" }),
             onPress: async () => {
               await removeQuickAddSet(result.setId);
               onSetLogged();
@@ -139,7 +141,7 @@ export default function QuickAddSheet({
           duration: 4000,
         });
       } catch {
-        showError("Failed to log set. Please try again.");
+        showError(t({ id: "home.quickAdd.logFailure", message: "Failed to log set. Please try again." }));
       } finally {
         setCommitting(false);
       }
@@ -227,9 +229,9 @@ export default function QuickAddSheet({
                   onOpenActiveSession(activeSessionId!);
                 }}
                 style={styles.bannerBtn}
-                accessibilityLabel="Open active session"
+                accessibilityLabel={t({ id: "home.quickAdd.openActiveA11y", message: "Open active session" })}
               >
-                <Text style={{ color: colors.onPrimary }}>Open active session</Text>
+                <Text style={{ color: colors.onPrimary }}>{t({ id: "home.quickAdd.openActive", message: "Open active session" })}</Text>
               </Button>
             </View>
           )}
@@ -242,7 +244,7 @@ export default function QuickAddSheet({
               </Text>
               <View style={styles.steppers}>
                 <View style={styles.stepperGroup}>
-                  <Text style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>Reps</Text>
+                  <Text style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>{t({ id: "home.quickAdd.reps", message: "Reps" })}</Text>
                   <NumericStepper
                     value={editState.reps}
                     onValueChange={(v) => setEditState((s) => s ? { ...s, reps: v } : null)}
@@ -252,7 +254,7 @@ export default function QuickAddSheet({
                   />
                 </View>
                 <View style={styles.stepperGroup}>
-                  <Text style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>Weight</Text>
+                  <Text style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>{t({ id: "home.quickAdd.weight", message: "Weight" })}</Text>
                   <NumericStepper
                     value={editState.weight}
                     onValueChange={(v) => setEditState((s) => s ? { ...s, weight: v } : null)}
@@ -266,20 +268,20 @@ export default function QuickAddSheet({
                 variant="default"
                 onPress={handleLogSet}
                 style={styles.logBtn}
-                accessibilityLabel={`Log set: ${editState.reps} reps of ${editState.chip.exercise_name}`}
-                accessibilityHint="Announces result after logging"
+                accessibilityLabel={t({ id: "home.quickAdd.logA11y", message: `Log set: ${editState.reps} reps of ${editState.chip.exercise_name}` })}
+                accessibilityHint={t({ id: "home.quickAdd.logHint", message: "Announces result after logging" })}
               >
                 <Text style={{ color: colors.onPrimary }}>
-                  {committing ? "Logging…" : "Log set"}
+                  {committing ? t({ id: "home.quickAdd.logging", message: "Logging…" }) : t({ id: "home.quickAdd.logSet", message: "Log set" })}
                 </Text>
               </Button>
               <Button
                 variant="secondary"
                 onPress={() => setEditState(null)}
                 style={styles.cancelBtn}
-                accessibilityLabel="Cancel edit, go back to exercise list"
+                accessibilityLabel={t({ id: "home.quickAdd.cancelA11y", message: "Cancel edit, go back to exercise list" })}
               >
-                <Text>Cancel</Text>
+                  <Text>{t({ id: "home.quickAdd.cancel", message: "Cancel" })}</Text>
               </Button>
             </View>
           )}
@@ -326,7 +328,7 @@ export default function QuickAddSheet({
                           accessible
                           accessibilityRole="button"
                           accessibilityLabel={
-                            `${chip.exercise_name}, log a set, last logged ${chip.last_reps ?? 1} reps${chip.last_weight ? ` at ${chip.last_weight} kg` : ""}. Long press to edit.`
+                            i18n._({ id: "home.quickAdd.chipA11y", message: "{name}, log a set, last logged {reps} reps{hasWeight, select, true { at {weight} kg} false {}}. Long press to edit.", values: { name: chip.exercise_name, reps: chip.last_reps ?? 1, hasWeight: !!chip.last_weight, weight: chip.last_weight ?? 0 } })
                           }
                           hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                         >
@@ -340,7 +342,7 @@ export default function QuickAddSheet({
                             style={[styles.chipSub, { color: colors.onSurfaceVariant }]}
                             numberOfLines={1}
                           >
-                            {chip.last_reps ?? 1} reps{chip.last_weight ? ` · ${chip.last_weight} kg` : ""}
+                            {i18n._({ id: "home.quickAdd.chipSummary", message: "{reps} reps{hasWeight, select, true { · {weight} kg} false {}}", values: { reps: chip.last_reps ?? 1, hasWeight: !!chip.last_weight, weight: chip.last_weight ?? 0 } })}
                           </Text>
                         </Pressable>
                       ))}
@@ -354,7 +356,7 @@ export default function QuickAddSheet({
                 onPress={() => !hasActiveSession && setExercisePickerVisible(true)}
                 disabled={hasActiveSession}
                 style={styles.pickBtn}
-                accessibilityLabel="Pick exercise to log a set"
+                 accessibilityLabel={t({ id: "home.quickAdd.pickExerciseA11y", message: "Pick exercise to log a set" })}
               >
                 <Text style={{ color: hasActiveSession ? colors.onSurface : colors.onPrimary }}>
                   + Pick exercise…

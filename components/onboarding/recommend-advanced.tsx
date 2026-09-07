@@ -5,6 +5,7 @@ import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { STARTER_TEMPLATES } from "../../lib/starter-templates";
 import { styles } from "./recommend-styles";
+import { t } from "@lingui/core/macro";
 
 const BROWSE_TEMPLATES = STARTER_TEMPLATES.slice(0, 3);
 
@@ -28,10 +29,10 @@ export function AdvancedRecommend({
         <>
           {errorBanner}
           <Text variant="heading" style={[styles.title, { color: colors.onBackground }]}>
-            Browse Our Templates
+             {t({ id: "components.onboarding.recommendAdvanced.title", message: "Browse Our Templates" })}
           </Text>
           <Text variant="body" style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-            Pick a starter template or create your own workouts from scratch.
+             {t({ id: "components.onboarding.recommendAdvanced.subtitle", message: "Pick a starter template or create your own workouts from scratch." })}
           </Text>
         </>
       }
@@ -43,16 +44,16 @@ export function AdvancedRecommend({
             style={styles.btn}
             loading={saving}
             disabled={saving}
-            accessibilityLabel="Browse all workout templates"
-            label="Browse All Templates"
+             accessibilityLabel={t({ id: "components.onboarding.recommendAdvanced.browseA11y", message: "Browse all workout templates" })}
+             label={t({ id: "components.onboarding.recommendAdvanced.browse", message: "Browse All Templates" })}
           />
           <Button
             variant="ghost"
             onPress={() => finish()}
             style={styles.skip}
             disabled={saving}
-            accessibilityLabel="Skip and explore on your own"
-            label="I'll explore on my own"
+             accessibilityLabel={t({ id: "components.onboarding.recommendAdvanced.skipA11y", message: "Skip and explore on your own" })}
+             label={t({ id: "components.onboarding.recommendAdvanced.skip", message: "I'll explore on my own" })}
           />
         </>
       }
@@ -72,7 +73,7 @@ export function AdvancedRecommend({
               </View>
             </View>
             <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-              {tpl.exercises.length} exercises · {tpl.difficulty}
+               {tpl.exercises.length} {t({ id: "components.onboarding.recommendAdvanced.exercises", message: "exercises" })} · {tpl.difficulty}
             </Text>
           </CardContent>
         </Card>

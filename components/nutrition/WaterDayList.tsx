@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 /**
  * BLD-600 — Day list of water entries (used by app/nutrition/water.tsx).
  */
@@ -32,7 +34,7 @@ export function WaterDayList({ entries, unit, colors, onDelete, onEdit }: Props)
     return (
       <View style={styles.empty}>
         <Text variant="body" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>
-          No water logged yet today.
+          <Trans id="components.nutrition.water.empty">No water logged yet today.</Trans>
         </Text>
       </View>
     );
@@ -45,8 +47,8 @@ export function WaterDayList({ entries, unit, colors, onDelete, onEdit }: Props)
           <SwipeToDelete onDelete={() => onDelete(entry)}>
             <TouchableOpacity
               onPress={() => onEdit(entry)}
-              accessibilityLabel={`Edit water entry ${formatVolume(entry.amount_ml, unit)} at ${timeOfDay(entry.logged_at)}`}
-              accessibilityHint="Opens edit sheet with delete option. Swipe left to delete directly."
+              accessibilityLabel={t({ id: "components.nutrition.water.editA11y", message: `Edit water entry ${formatVolume(entry.amount_ml, unit)} at ${timeOfDay(entry.logged_at)}` })}
+              accessibilityHint={t({ id: "components.nutrition.water.editHint", message: "Opens edit sheet with delete option. Swipe left to delete directly." })}
               accessibilityRole="button"
               style={{ minHeight: 48 }}
             >

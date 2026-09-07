@@ -22,6 +22,7 @@ import {
   MOUNT_POSITION_LABELS,
   GRIP_TYPE_LABELS,
 } from "@/lib/types";
+import { t } from "@lingui/core/macro";
 
 export type VariantTuple = {
   attachment: string | null;
@@ -65,19 +66,19 @@ function buildChipText(v: VariantTuple): string {
 function buildAccessibilityLabel(v: VariantTuple): string {
   const parts: string[] = [];
   if (v.attachment !== null) {
-    parts.push(`${labelFor(v.attachment, ATTACHMENT_LABELS as Record<string, string>)} attachment`);
+     parts.push(t({ id: "components.progress.records.variant.attachment", message: `${labelFor(v.attachment, ATTACHMENT_LABELS as Record<string, string>)} attachment` }));
   }
   if (v.mountPosition !== null) {
-    parts.push(`${labelFor(v.mountPosition, MOUNT_POSITION_LABELS as Record<string, string>)} mount`);
+     parts.push(t({ id: "components.progress.records.variant.mount", message: `${labelFor(v.mountPosition, MOUNT_POSITION_LABELS as Record<string, string>)} mount` }));
   }
   if (v.gripType !== null) {
-    parts.push(`${labelFor(v.gripType, GRIP_TYPE_LABELS as Record<string, string>)} grip`);
+     parts.push(t({ id: "components.progress.records.variant.grip", message: `${labelFor(v.gripType, GRIP_TYPE_LABELS as Record<string, string>)} grip` }));
   }
   if (v.stackUnitAtLog !== null) {
     parts.push(stackUnitLabel(v.stackUnitAtLog));
   }
-  if (parts.length === 0) return "Variant: unspecified.";
-  return `Variant: ${parts.join(", ")}.`;
+   if (parts.length === 0) return t({ id: "components.progress.records.variant.unspecified", message: "Variant: unspecified." });
+   return t({ id: "components.progress.records.variant.label", message: `Variant: ${parts.join(", ")}.` });
 }
 
 type Props = {

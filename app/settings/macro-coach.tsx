@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Stack, useFocusEffect } from "expo-router";
+import { useLingui } from "@lingui/react/macro";
 import { Text } from "@/components/ui/text";
 import { Card, CardContent } from "@/components/ui/card";
 import { useThemeColors } from "@/hooks/useThemeColors";
@@ -52,6 +53,7 @@ type ScreenState =
 export default function MacroCoachSettingsScreen() {
   const colors = useThemeColors();
   const toast = useToast();
+  const { t } = useLingui();
 
   const [screen, setScreen] = useState<ScreenState>("main");
   const [enabled, setEnabledState] = useState(false);
@@ -110,7 +112,7 @@ export default function MacroCoachSettingsScreen() {
     await setEnabled(newValue);
     clearMacroCoachMemo();
     setEnabledState(newValue);
-    toast.info(newValue ? "Macro Coach enabled." : "Macro Coach disabled.");
+    toast.info(newValue ? t({ id: "settings.macroCoach.enabled", message: "Macro Coach enabled." }) : t({ id: "settings.macroCoach.disabled", message: "Macro Coach disabled." }));
   }
 
   async function handleModeChange(newMode: CoachMode) {
@@ -122,30 +124,30 @@ export default function MacroCoachSettingsScreen() {
   async function handleFloorSave() {
     const parsed = parseInt(floorInput, 10);
     if (isNaN(parsed)) {
-      toast.error("Enter a valid number.");
+      toast.error(t({ id: "settings.macroCoach.invalidNumber", message: "Enter a valid number." }));
       return;
     }
     if (!userFloorProfile) {
-      toast.error("Profile not loaded.");
+      toast.error(t({ id: "settings.macroCoach.profileNotLoaded", message: "Profile not loaded." }));
       return;
     }
     const computed = computeSafetyFloor(userFloorProfile);
     if (parsed < computed) {
-      toast.error(`Floor cannot go below ${computed.toLocaleString()} kcal (your safety minimum).`);
+      toast.error(t({ id: "settings.macroCoach.floorTooLow", message: `Floor cannot go below ${computed.toLocaleString()} kcal (your safety minimum).` }));
       setFloorInput(String(floorKcal ?? computed));
       return;
     }
     await setFloorKcalOverride(parsed, userFloorProfile);
     clearMacroCoachMemo();
     setFloorKcalState(parsed);
-    toast.info("Safety floor updated.");
+    toast.info(t({ id: "settings.macroCoach.floorUpdated", message: "Safety floor updated." }));
   }
 
   async function handleResumePause() {
     await setPausedUntil(null);
     clearMacroCoachMemo();
     setPausedUntilState(null);
-    toast.info("Macro Coach resumed.");
+    toast.info(t({ id: "settings.macroCoach.resumed", message: "Macro Coach resumed." }));
   }
 
   // ─── Opt-in flow ──────────────────────────────────────────────────────────
@@ -170,7 +172,7 @@ export default function MacroCoachSettingsScreen() {
     clearMacroCoachMemo();
     setScreen("main");
     await load();
-    toast.info("Adaptive Macro Coach enabled.");
+    toast.info(t({ id: "settings.macroCoach.enabledAdaptive", message: "Adaptive Macro Coach enabled." }));
   }
 
   function handleSkipIdentity() {
@@ -183,28 +185,24 @@ export default function MacroCoachSettingsScreen() {
     return (
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.content}>
-        <Stack.Screen options={{ title: "About Macro Coach" }} />
+        <Stack.Screen options={{ title: t({ id: "settings.macroCoach.aboutTitle", message: "About Macro Coach" }) }} />
         <Text variant="heading" style={{ color: colors.onSurface, marginBottom: 16 }}>
-          About Adaptive Macro Coach
+          {t({ id: "settings.macroCoach.aboutHeading", message: "About Adaptive Macro Coach" })}
         </Text>
         <Text variant="body" style={{ color: colors.onSurface, marginBottom: 12 }}>
-          Every Sunday, this coach reviews your logged weight and food data to estimate your
-          real-world calorie needs. It then suggests a weekly target adjustment — advisory only.
+          {t({ id: "settings.macroCoach.aboutBody", message: "Every Sunday, this coach reviews your logged weight and food data to estimate your real-world calorie needs. It then suggests a weekly target adjustment — advisory only." })}
         </Text>
         <Text variant="body" style={{ color: colors.onSurface, marginBottom: 12 }}>
-          It <Text variant="body" style={{ fontWeight: "700", color: colors.onSurface }}>never</Text> silently changes
-          your targets. Every suggestion requires your tap to apply.
+          {t({ id: "settings.macroCoach.neverChanges", message: "It never silently changes your targets. Every suggestion requires your tap to apply." })}
         </Text>
         <Text variant="body" style={{ color: colors.onSurface, marginBottom: 12 }}>
-          Suggestions are bounded: ±300 kcal per week maximum, and never below your personal
-          safety floor (based on your resting metabolic rate).
+          {t({ id: "settings.macroCoach.bounds", message: "Suggestions are bounded: ±300 kcal per week maximum, and never below your personal safety floor (based on your resting metabolic rate)." })}
         </Text>
         <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 24, fontStyle: "italic" }}>
-          If you have a history of disordered eating, we recommend keeping this off or
-          using info-only mode. Talk to a clinician before adjusting calories.
+          {t({ id: "settings.macroCoach.disorderedEating", message: "If you have a history of disordered eating, we recommend keeping this off or using info-only mode. Talk to a clinician before adjusting calories." })}
         </Text>
-        <OptionButton label="Next →" onPress={handleDisclosureContinue} primary colors={colors} />
-        <OptionButton label="Go back" onPress={handleDisclosureBack} colors={colors} />
+        <OptionButton label={t({ id: "common.next", message: "Next →" })} onPress={handleDisclosureContinue} primary colors={colors} />
+        <OptionButton label={t({ id: "common.goBack", message: "Go back" })} onPress={handleDisclosureBack} colors={colors} />
       </ScrollView>
     );
   }
@@ -213,31 +211,30 @@ export default function MacroCoachSettingsScreen() {
     return (
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.content}>
-        <Stack.Screen options={{ title: "A quick question" }} />
+        <Stack.Screen options={{ title: t({ id: "settings.macroCoach.quickQuestionTitle", message: "A quick question" }) }} />
         <Text variant="heading" style={{ color: colors.onSurface, marginBottom: 16 }}>
-          One quick question
+          {t({ id: "settings.macroCoach.quickQuestionHeading", message: "One quick question" })}
         </Text>
         <Text variant="body" style={{ color: colors.onSurface, marginBottom: 24 }}>
-          Have you ever felt out of control around food, or worried about food or weight
-          in a way that interfered with daily life?
+          {t({ id: "settings.macroCoach.screeningQuestion", message: "Have you ever felt out of control around food, or worried about food or weight in a way that interfered with daily life?" })}
         </Text>
         <OptionButton
-          label="Yes"
+          label={t({ id: "common.yes", message: "Yes" })}
           onPress={() => handleScoffAnswer("yes")}
           colors={colors}
-          accessibilityLabel="Yes — food or weight has been a concern"
+          accessibilityLabel={t({ id: "settings.macroCoach.yesA11y", message: "Yes — food or weight has been a concern" })}
         />
         <OptionButton
-          label="No"
+          label={t({ id: "common.no", message: "No" })}
           onPress={() => handleScoffAnswer("no")}
           colors={colors}
-          accessibilityLabel="No — not been a concern"
+          accessibilityLabel={t({ id: "settings.macroCoach.noA11y", message: "No — not been a concern" })}
         />
         <OptionButton
-          label="Prefer not to say"
+          label={t({ id: "common.preferNotToSay", message: "Prefer not to say" })}
           onPress={() => handleScoffAnswer("prefer_not_to_say")}
           colors={colors}
-          accessibilityLabel="Prefer not to say"
+          accessibilityLabel={t({ id: "common.preferNotToSay", message: "Prefer not to say" })}
         />
         <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontStyle: "italic" }}>
           Your answer is stored only on your device. It guides which mode to suggest —
@@ -252,29 +249,28 @@ export default function MacroCoachSettingsScreen() {
     return (
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.content}>
-        <Stack.Screen options={{ title: "Choose your mode" }} />
+        <Stack.Screen options={{ title: t({ id: "settings.macroCoach.chooseModeTitle", message: "Choose your mode" }) }} />
         <Text variant="heading" style={{ color: colors.onSurface, marginBottom: 16 }}>
-          Choose how you&apos;d like to use this
+          {t({ id: "settings.macroCoach.chooseModeHeading", message: "Choose how you'd like to use this" })}
         </Text>
         <Text variant="body" style={{ color: colors.onSurface, marginBottom: 24 }}>
-          Both options give you weekly insight into your calorie needs. Neither is a dead end —
-          you can change your preference any time in Settings.
+          {t({ id: "settings.macroCoach.chooseModeBody", message: "Both options give you weekly insight into your calorie needs. Neither is a dead end — you can change your preference any time in Settings." })}
         </Text>
         <OptionButton
-          label="Use info-only mode"
-          sublabel="See your weekly TDEE estimate — no target suggestions"
+          label={t({ id: "settings.macroCoach.infoOnly", message: "Use info-only mode" })}
+          sublabel={t({ id: "settings.macroCoach.infoOnlyHint", message: "See your weekly TDEE estimate — no target suggestions" })}
           onPress={() => handleRouting("info_only")}
           primary={suggestInfoOnly}
           colors={colors}
-          accessibilityLabel="Use info-only mode — see TDEE estimate only"
+          accessibilityLabel={t({ id: "settings.macroCoach.infoOnlyA11y", message: "Use info-only mode — see TDEE estimate only" })}
         />
         <OptionButton
-          label="Full mode"
-          sublabel="Weekly target suggestions + TDEE estimate"
+          label={t({ id: "settings.macroCoach.fullMode", message: "Full mode" })}
+          sublabel={t({ id: "settings.macroCoach.fullModeHint", message: "Weekly target suggestions + TDEE estimate" })}
           onPress={() => handleRouting("full")}
           primary={!suggestInfoOnly}
           colors={colors}
-          accessibilityLabel="Full mode — weekly target suggestions"
+           accessibilityLabel={t({ id: "settings.macroCoach.fullModeSuggestionsA11y", message: "Full mode — weekly target suggestions" })}
         />
         {scoffAnswer !== "no" && (
           <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 16, fontStyle: "italic" }}>
@@ -288,14 +284,14 @@ export default function MacroCoachSettingsScreen() {
 
   if (screen === "opt-in-identity") {
     const ifThenOptions: Array<{ key: IfThenChoice; label: string }> = [
-      { key: "before_lunch", label: "Check it before lunch" },
-      { key: "after_workout", label: "Check it after my Sunday workout" },
-      { key: "whenever", label: "Check it whenever" },
+      { key: "before_lunch", label: t({ id: "settings.macroCoach.beforeLunch", message: "Check it before lunch" }) },
+      { key: "after_workout", label: t({ id: "settings.macroCoach.afterWorkout", message: "Check it after my Sunday workout" }) },
+      { key: "whenever", label: t({ id: "settings.macroCoach.whenever", message: "Check it whenever" }) },
     ];
     return (
       <ScrollView style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.content}>
-        <Stack.Screen options={{ title: "One moment" }} />
+        <Stack.Screen options={{ title: t({ id: "settings.macroCoach.oneMomentTitle", message: "One moment" }) }} />
         <Text variant="heading" style={{ color: colors.onSurface, marginBottom: 8 }}>
           Optional: make it yours
         </Text>
@@ -309,9 +305,9 @@ export default function MacroCoachSettingsScreen() {
           style={[styles.textInput, { color: colors.onSurface, borderColor: colors.onSurfaceVariant }]}
           value={identityDraft}
           onChangeText={setIdentityDraft}
-          placeholder="e.g. A parent who wants to keep up with my kids"
+          placeholder={t({ id: "settings.macroCoach.identityPlaceholder", message: "e.g. A parent who wants to keep up with my kids" })}
           placeholderTextColor={colors.onSurfaceVariant}
-          accessibilityLabel="Who are you fueling? Optional."
+          accessibilityLabel={t({ id: "settings.macroCoach.identityA11y", message: "Who are you fueling? Optional." })}
           multiline
           allowFontScaling
           maxLength={200}
@@ -338,8 +334,8 @@ export default function MacroCoachSettingsScreen() {
           </TouchableOpacity>
         ))}
         <View style={{ marginTop: 24, gap: 12 }}>
-          <OptionButton label="Done" onPress={handleIdentityComplete} primary colors={colors} />
-          <OptionButton label="Skip" onPress={handleSkipIdentity} colors={colors} />
+          <OptionButton label={t({ id: "common.done", message: "Done" })} onPress={handleIdentityComplete} primary colors={colors} />
+          <OptionButton label={t({ id: "common.skip", message: "Skip" })} onPress={handleSkipIdentity} colors={colors} />
         </View>
       </ScrollView>
     );
@@ -355,7 +351,7 @@ export default function MacroCoachSettingsScreen() {
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: "Adaptive Macro Coach" }} />
+      <Stack.Screen options={{ title: t({ id: "settings.macroCoach.title", message: "Adaptive Macro Coach" }) }} />
 
       {/* Enable toggle */}
       <Card style={{ backgroundColor: colors.surface, marginBottom: 16 }}>
@@ -377,7 +373,7 @@ export default function MacroCoachSettingsScreen() {
             <Switch
               value={enabled}
               onValueChange={handleToggleEnabled}
-              accessibilityLabel="Enable Adaptive Macro Coach"
+               accessibilityLabel={t({ id: "settings.macroCoach.enableA11y", message: "Enable Adaptive Macro Coach" })}
               accessibilityRole="switch"
             />
           </View>
@@ -400,20 +396,20 @@ export default function MacroCoachSettingsScreen() {
                 Mode
               </Text>
               <OptionButton
-                label="Full mode"
-                sublabel="Weekly target suggestions + TDEE estimate"
+                 label={t({ id: "settings.macroCoach.fullMode", message: "Full mode" })}
+                 sublabel={t({ id: "settings.macroCoach.fullModeHint", message: "Weekly target suggestions + TDEE estimate" })}
                 onPress={() => handleModeChange("full")}
                 primary={mode === "full"}
                 colors={colors}
-                accessibilityLabel="Full mode"
+                  accessibilityLabel={t({ id: "settings.macroCoach.fullModeA11y", message: "Full mode" })}
               />
               <OptionButton
-                label="Info-only mode"
-                sublabel="Show weekly TDEE check-ins only — no target changes"
+                  label={t({ id: "settings.macroCoach.infoOnlyLabel", message: "Info-only mode" })}
+                  sublabel={t({ id: "settings.macroCoach.infoOnlyCheckinsHint", message: "Show weekly TDEE check-ins only — no target changes" })}
                 onPress={() => handleModeChange("info_only")}
                 primary={mode === "info_only"}
                 colors={colors}
-                accessibilityLabel="Info-only mode"
+                  accessibilityLabel={t({ id: "settings.macroCoach.infoOnlyModeA11y", message: "Info-only mode" })}
               />
             </CardContent>
           </Card>
@@ -439,12 +435,12 @@ export default function MacroCoachSettingsScreen() {
                     value={floorInput}
                     onChangeText={setFloorInput}
                     keyboardType="number-pad"
-                    accessibilityLabel="Safety floor in calories"
+                     accessibilityLabel={t({ id: "settings.macroCoach.safetyFloorA11y", message: "Safety floor in calories" })}
                     maxLength={5}
                     allowFontScaling
                   />
                   <TouchableOpacity onPress={handleFloorSave} style={[styles.saveBtn, { borderColor: colors.onSurface }]}>
-                    <Text variant="body" style={{ color: colors.onSurface }}>Save</Text>
+                     <Text variant="body" style={{ color: colors.onSurface }}>{t({ id: "common.save", message: "Save" })}</Text>
                   </TouchableOpacity>
                 </View>
               </CardContent>

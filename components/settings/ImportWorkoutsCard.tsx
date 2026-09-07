@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { FileInput } from "lucide-react-native";
 import { fontSizes, spacing } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   colors: ThemeColors;
@@ -53,7 +54,7 @@ export default function ImportWorkoutsCard({
           loading={loading}
           disabled={loading}
           testID="import-workouts-pick-btn"
-          accessibilityLabel="Choose CSV file to import workout history"
+          accessibilityLabel={t({ id: "settings.importWorkouts.chooseFileA11y", message: "Choose CSV file to import workout history" })}
           accessibilityRole="button"
         >
           Choose CSV File…

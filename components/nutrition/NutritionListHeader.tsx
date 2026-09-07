@@ -8,6 +8,8 @@ import type { HydrationUnit } from '@/lib/hydration-units';
 import { MacroRow } from './MacroRow';
 import { WaterSection } from './WaterSection';
 import type { DayType } from '@/lib/training-day-macros';
+import { Trans } from '@lingui/react/macro';
+import { t } from '@lingui/core/macro';
 
 /**
  * PROHIBITION (AC16/C1): No "earn/earned/bonus/reward/treat/deserve/penalty/punish/
@@ -20,12 +22,12 @@ import type { DayType } from '@/lib/training-day-macros';
 // Exported so the module-level lexeme-ban grep test (AC16) can import directly.
 
 export const BADGE_COPY = {
-  trainingDayLabel: 'Training day · fueled',
-  trainingDayLabelMinimal: 'Training day',
-  restDayLabel: 'Rest day · recovery',
-  restDayLabelMinimal: 'Rest day',
-  trainingDayTap: 'Higher target today because you trained — extra fuel for recovery. Your weekly average is unchanged.',
-  restDayTap: 'Recovery day — a bit lower to balance your training days. Your weekly average is unchanged.',
+  get trainingDayLabel() { return t({ id: 'components.nutrition.badge.trainingFueled', message: 'Training day · fueled' }); },
+  get trainingDayLabelMinimal() { return t({ id: 'components.nutrition.badge.training', message: 'Training day' }); },
+  get restDayLabel() { return t({ id: 'components.nutrition.badge.restRecovery', message: 'Rest day · recovery' }); },
+  get restDayLabelMinimal() { return t({ id: 'components.nutrition.badge.rest', message: 'Rest day' }); },
+  get trainingDayTap() { return t({ id: 'components.nutrition.badge.trainingHint', message: 'Higher target today because you trained — extra fuel for recovery. Your weekly average is unchanged.' }); },
+  get restDayTap() { return t({ id: 'components.nutrition.badge.restHint', message: 'Recovery day — a bit lower to balance your training days. Your weekly average is unchanged.' }); },
 } as const;
 
 const DAY_MS = 86_400_000;
@@ -34,8 +36,8 @@ function dateLabel(d: Date): string {
   const today = todayKey();
   const yesterday = formatDateKey(Date.now() - DAY_MS);
   const ds = formatDateKey(d.getTime());
-  if (ds === today) return 'Today';
-  if (ds === yesterday) return 'Yesterday';
+  if (ds === today) return t({ id: 'components.nutrition.header.today', message: 'Today' });
+  if (ds === yesterday) return t({ id: 'components.nutrition.header.yesterday', message: 'Yesterday' });
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
@@ -114,7 +116,7 @@ export function NutritionListHeader({
       <View style={styles.header}>
         <TouchableOpacity
           onPress={onPrev}
-          accessibilityLabel="Previous day"
+           accessibilityLabel={t({ id: 'components.nutrition.header.previousA11y', message: 'Previous day' })}
           hitSlop={8}
           style={{ padding: 8 }}
         >
@@ -125,7 +127,7 @@ export function NutritionListHeader({
         </Text>
         <TouchableOpacity
           onPress={onNext}
-          accessibilityLabel="Next day"
+           accessibilityLabel={t({ id: 'components.nutrition.header.nextA11y', message: 'Next day' })}
           hitSlop={8}
           style={{ padding: 8 }}
         >
@@ -154,27 +156,27 @@ export function NutritionListHeader({
               />
             )}
             <MacroRow
-              label="Calories"
+               label={t({ id: 'components.nutrition.header.calories', message: 'Calories' })}
               value={summary.calories}
               target={targets.calories}
               colors={colors}
             />
             <MacroRow
-              label="Protein"
+               label={t({ id: 'components.nutrition.header.protein', message: 'Protein' })}
               value={summary.protein}
               target={targets.protein}
               unit="g"
               colors={colors}
             />
             <MacroRow
-              label="Carbs"
+               label={t({ id: 'components.nutrition.header.carbs', message: 'Carbs' })}
               value={summary.carbs}
               target={targets.carbs}
               unit="g"
               colors={colors}
             />
             <MacroRow
-              label="Fat"
+               label={t({ id: 'components.nutrition.header.fat', message: 'Fat' })}
               value={summary.fat}
               target={targets.fat}
               unit="g"
@@ -191,23 +193,23 @@ export function NutritionListHeader({
             />
             <TouchableOpacity
               onPress={onEditTargets}
-              accessibilityLabel="Edit macro targets"
+               accessibilityLabel={t({ id: 'components.nutrition.header.editTargetsA11y', message: 'Edit macro targets' })}
               accessibilityRole="link"
               style={styles.linkRow}
             >
               <Text variant="caption" style={{ color: colors.primary }}>
-                Edit Targets
+                <Trans id="components.nutrition.header.editTargets">Edit Targets</Trans>
               </Text>
               <MaterialCommunityIcons name="chevron-right" size={14} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onMealTemplates}
-              accessibilityLabel="View meal templates"
+               accessibilityLabel={t({ id: 'components.nutrition.header.mealTemplatesA11y', message: 'View meal templates' })}
               accessibilityRole="link"
               style={[styles.linkRow, { marginTop: 4 }]}
             >
               <Text variant="caption" style={{ color: colors.primary }}>
-                Meal Templates
+                <Trans id="components.nutrition.header.mealTemplates">Meal Templates</Trans>
               </Text>
               <MaterialCommunityIcons name="chevron-right" size={14} color={colors.primary} />
             </TouchableOpacity>
@@ -270,7 +272,7 @@ function DayTypeBadge({
       {/* AC21 (QD3): base calories visible alongside effective */}
       {effectiveCals !== baseCals && (
         <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginLeft: 8 }}>
-          {cappedByFloor ? `Base: ${baseCals} kcal (capped)` : `Base: ${baseCals} kcal`}
+            {cappedByFloor ? <Trans id="components.nutrition.badge.baseCapped">Base: {baseCals} kcal (capped)</Trans> : <Trans id="components.nutrition.badge.base">Base: {baseCals} kcal</Trans>}
         </Text>
       )}
     </TouchableOpacity>

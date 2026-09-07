@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * StackMarkerPill — displays the cable stack marker for a set.
  * BLD-1126: Stack Marker Quick-Pick.
@@ -61,7 +64,7 @@ function StackMarkerPillInner({
       ]}
       accessibilityRole="button"
       accessibilityLabel={a11yLabel}
-      accessibilityHint="Long-press for numeric weight entry"
+      accessibilityHint={t({ id: "session.stackmarkerpill.str1", message: "Long-press for numeric weight entry" })}
       testID="stack-marker-pill"
     >
       <Text

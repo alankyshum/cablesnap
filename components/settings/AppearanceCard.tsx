@@ -5,6 +5,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { fontSizes } from "@/constants/design-tokens";
 import { useThemeMode, type ThemeMode } from "@/lib/theme-preference";
 import type { ThemeColors } from "@/hooks/useThemeColors";
+import { useLingui } from "@lingui/react/macro";
 
 type Props = {
   colors: ThemeColors;
@@ -17,26 +18,27 @@ type Props = {
 
 export default function AppearanceCard({ colors, bareContent = false }: Props) {
   const { themeMode, setThemeMode } = useThemeMode();
+  const { t } = useLingui();
 
   const content = (
     <>
-      <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>Appearance</Text>
+      <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>{t({ id: "settings.appearance.title", message: "Appearance" })}</Text>
       <View style={styles.row}>
-        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>Theme</Text>
+        <Text variant="body" style={{ color: colors.onSurface, flex: 1, fontSize: fontSizes.sm }}>{t({ id: "settings.appearance.theme", message: "Theme" })}</Text>
         <View style={styles.themeToggle}>
           <SegmentedControl
             value={themeMode}
             onValueChange={(val) => setThemeMode(val as ThemeMode)}
             buttons={[
-              { value: "system", label: "Auto" },
-              { value: "light", label: "Light" },
-              { value: "dark", label: "Dark" },
+              { value: "system", label: t({ id: "settings.appearance.auto", message: "Auto" }) },
+              { value: "light", label: t({ id: "settings.appearance.light", message: "Light" }) },
+              { value: "dark", label: t({ id: "settings.appearance.dark", message: "Dark" }) },
             ]}
           />
         </View>
       </View>
       <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginTop: 4 }}>
-        Auto follows your device system setting.
+        {t({ id: "settings.appearance.autoHint", message: "Auto follows your device system setting." })}
       </Text>
     </>
   );

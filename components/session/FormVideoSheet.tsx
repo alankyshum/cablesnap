@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 /**
  * FormVideoSheet.tsx
  *
@@ -135,7 +138,7 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
       setRecordedUri(result?.uri ?? null);
     } catch {
       Sentry.addBreadcrumb({ category: "form-clips", message: "record_error", level: "error" });
-      Alert.alert("Recording failed", "Could not record video. Please try again.");
+      Alert.alert(t({ id: "session.formvideosheet.str14", message: "Recording failed" }), t({ id: "session.formvideosheet.str15", message: "Could not record video. Please try again." }));
     } finally {
       stopTimer();
       setRecording(false);
@@ -177,7 +180,7 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
       onClose();
     } catch (err) {
       Sentry.captureException(err, { tags: { source: "form_clips_save" } });
-      Alert.alert("Save failed", "Could not save clip. Check device storage and try again.");
+      Alert.alert(t({ id: "session.formvideosheet.str16", message: "Save failed" }), t({ id: "session.formvideosheet.str17", message: "Could not save clip. Check device storage and try again." }));
     } finally {
       setSaving(false);
     }
@@ -188,24 +191,20 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
     const canRequest = permission?.canAskAgain !== false;
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
+        <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel={t({ id: "session.formvideosheet.str1", message: "Close" })} accessibilityRole="button">
           <MaterialCommunityIcons name="close" size={28} color={colors.onSurface} />
         </Pressable>
         <View style={styles.permissionContent}>
           <MaterialCommunityIcons name="camera-off" size={48} color={colors.onSurfaceVariant} />
-          <Text variant="heading" style={[styles.permissionTitle, { color: colors.onSurface }]}>
-            Camera access needed
-          </Text>
-          <Text style={[styles.permissionBody, { color: colors.onSurfaceVariant }]}>
-            Camera access is needed to record a form clip. CableSnap stores clips on this device.
-          </Text>
+          <Text variant="heading" style={[styles.permissionTitle, { color: colors.onSurface }]}>{t({ id: "session.formvideosheet.str4", message: "Camera access needed" })}</Text>
+          <Text style={[styles.permissionBody, { color: colors.onSurfaceVariant }]}>{t({ id: "session.formvideosheet.str5", message: "Camera access is needed to record a form clip. CableSnap stores clips on this device." })}</Text>
           {canRequest ? (
             <Pressable
               style={[styles.permBtn, { backgroundColor: colors.primary }]}
               onPress={requestPermission}
               accessibilityRole="button"
             >
-              <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>Grant camera access</Text>
+              <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>{t({ id: "session.formvideosheet.str6", message: "Grant camera access" })}</Text>
             </Pressable>
           ) : (
             <Pressable
@@ -213,7 +212,7 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
               onPress={() => Linking.openSettings()}
               accessibilityRole="button"
             >
-              <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>Open Settings</Text>
+              <Text style={{ color: colors.onPrimary, fontWeight: "600" }}>{t({ id: "session.formvideosheet.str7", message: "Open Settings" })}</Text>
             </Pressable>
           )}
         </View>
@@ -252,13 +251,13 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
       <View style={styles.privacyBanner} pointerEvents="none">
         <MaterialCommunityIcons name="lock-outline" size={14} color="#fff" />
         {backupExclusionOk === true ? (
-          <Text style={styles.privacyText}>Saved on this device only — never uploaded</Text>
+          <Text style={styles.privacyText}>{t({ id: "session.formvideosheet.str8", message: "Saved on this device only — never uploaded" })}</Text>
         ) : (
-          <Text style={styles.privacyText}>Saved locally on your device</Text>
+          <Text style={styles.privacyText}>{t({ id: "session.formvideosheet.str9", message: "Saved locally on your device" })}</Text>
         )}
       </View>
       {/* Close */}
-      <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
+      <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel={t({ id: "session.formvideosheet.str2", message: "Close" })} accessibilityRole="button">
         <MaterialCommunityIcons name="close" size={28} color="#fff" />
       </Pressable>
       {/* Timer */}
@@ -270,11 +269,11 @@ function FormVideoSheetBody({ setId, exerciseId, setNumber, onClose, onClipSaved
       )}
       {/* Record / Stop button — disabled on iOS when backup exclusion failed */}
       <View style={styles.recordBtnRow}>
-        <Text style={styles.setLabel} accessibilityRole="text">Set {setNumber}</Text>
+        <Text style={styles.setLabel} accessibilityRole="text">{t({ id: "session.formvideosheet.str10", message: `Set ${setNumber}` })}</Text>
         {Platform.OS === "ios" && backupExclusionOk === false ? (
           <View style={styles.recordBtnDisabledWrap}>
             <MaterialCommunityIcons name="alert-circle-outline" size={28} color="#f88" />
-            <Text style={styles.recordBtnDisabledText}>Recording unavailable</Text>
+            <Text style={styles.recordBtnDisabledText}>{t({ id: "session.formvideosheet.str11", message: "Recording unavailable" })}</Text>
           </View>
         ) : (
           <Pressable
@@ -311,12 +310,12 @@ function ReviewView({ uri, elapsed, saving, colors, onDiscard, onSave, onClose }
   return (
     // eslint-disable-next-line no-restricted-syntax
     <View style={[styles.container, { backgroundColor: "#000" }]}>
-      <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close" accessibilityRole="button">
+      <Pressable style={styles.closeBtn} onPress={onClose} accessibilityLabel={t({ id: "session.formvideosheet.str3", message: "Close" })} accessibilityRole="button">
         <MaterialCommunityIcons name="close" size={28} color="#fff" />
       </Pressable>
       <View style={styles.reviewCenter}>
         <MaterialCommunityIcons name="video-check" size={64} color="#fff" />
-        <Text style={styles.reviewTitle}>Clip ready</Text>
+        <Text style={styles.reviewTitle}>{t({ id: "session.formvideosheet.str12", message: "Clip ready" })}</Text>
         <Text style={styles.reviewSub}>{elapsed > 0 ? `${elapsed}s` : ""} · 720p · no audio</Text>
       </View>
       <View style={styles.reviewActions}>
@@ -328,7 +327,7 @@ function ReviewView({ uri, elapsed, saving, colors, onDiscard, onSave, onClose }
           disabled={saving}
         >
           {/* eslint-disable-next-line no-restricted-syntax */}
-          <Text style={{ color: "#fff" }}>Re-record</Text>
+          <Text style={{ color: "#fff" }}>{t({ id: "session.formvideosheet.str13", message: "Re-record" })}</Text>
         </Pressable>
         <Pressable
           style={[styles.reviewBtn, { backgroundColor: colors.primary }]}

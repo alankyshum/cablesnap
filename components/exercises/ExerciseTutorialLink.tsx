@@ -8,6 +8,7 @@ import {
   buildTutorialSearchUrl,
   openTutorialForExercise,
 } from "@/lib/exercise-tutorial-link";
+import { t } from "@lingui/core/macro";
 
 export interface ExerciseTutorialLinkProps {
   exerciseName: string;
@@ -29,7 +30,7 @@ export function ExerciseTutorialLink({
   const url = buildTutorialSearchUrl(exerciseName);
   if (!url) return null;
 
-  const label = `Watch form tutorial for ${exerciseName.trim()} — opens YouTube search in browser`;
+  const label = t({ id: "components.exercises.tutorial-link.label", message: `Watch form tutorial for ${exerciseName.trim()} — opens YouTube search in browser` });
 
   return (
     <View style={styles.container}>
@@ -37,7 +38,7 @@ export function ExerciseTutorialLink({
         testID={testID}
         accessibilityRole="link"
         accessibilityLabel={label}
-        accessibilityHint="Opens external content outside the app"
+        accessibilityHint={t({ id: "components.exercises.tutorial-link.hint", message: "Opens external content outside the app" })}
         onPress={() => {
           void openTutorialForExercise(exerciseName);
         }}
@@ -50,7 +51,7 @@ export function ExerciseTutorialLink({
           variant="body"
           style={{ color: colors.primary, fontWeight: "600" }}
         >
-          Watch form tutorial ↗
+          {t({ id: "components.exercises.tutorial-link.cta", message: "Watch form tutorial ↗" })}
         </Text>
         <ExternalLink size={16} color={colors.primary} />
       </Pressable>
@@ -62,8 +63,7 @@ export function ExerciseTutorialLink({
           marginTop: 4,
         }}
       >
-        Opens YouTube search in your browser. External content — not endorsed by
-        CableSnap.
+        {t({ id: "components.exercises.tutorial-link.disclaimer", message: "Opens YouTube search in your browser. External content — not endorsed by CableSnap." })}
       </Text>
     </View>
   );

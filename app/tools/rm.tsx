@@ -18,6 +18,7 @@ import { useFocusEffect } from "expo-router";
 import { getBodySettings } from "../../lib/db";
 import { epley, brzycki, lombardi, average, percentageTable } from "../../lib/rm";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type RMCalculatorContentProps = {
   onPlateCalc?: (weight: number) => void;
@@ -73,9 +74,9 @@ export function RMCalculatorContent({ onPlateCalc }: RMCalculatorContentProps = 
             keyboardType="numeric"
             value={weight}
             onChangeText={setWeight}
-            placeholder="Weight"
+             placeholder={t({ id: "app.tools.rm.weightPlaceholder", message: "Weight" })}
             rightComponent={() => <Text variant="caption" style={{ marginRight: 8 }}>{unit}</Text>}
-            accessibilityLabel={`Weight in ${label}`}
+             accessibilityLabel={t({ id: "app.tools.rm.weightA11y", message: `Weight in ${label}` })}
           />
         </View>
         <Text variant="title" style={{ color: colors.onSurfaceVariant }}>×</Text>
@@ -85,72 +86,72 @@ export function RMCalculatorContent({ onPlateCalc }: RMCalculatorContentProps = 
             keyboardType="numeric"
             value={reps}
             onChangeText={setReps}
-            placeholder="Reps"
-            accessibilityLabel="Number of repetitions"
+             placeholder={t({ id: "app.tools.rm.repsPlaceholder", message: "Reps" })}
+             accessibilityLabel={t({ id: "app.tools.rm.repsA11y", message: "Number of repetitions" })}
           />
         </View>
       </View>
 
       {!valid && weight !== "" && (
         <Text variant="caption" style={{ color: colors.error, marginTop: 8, textAlign: "center" }}>
-          {parsed <= 0 || isNaN(parsed) ? "Enter a weight" : "Enter reps"}
+           {parsed <= 0 || isNaN(parsed) ? t({ id: "app.tools.rm.enterWeight", message: "Enter a weight" }) : t({ id: "app.tools.rm.enterReps", message: "Enter reps" })}
         </Text>
       )}
 
       {warn && (
         <Text variant="caption" style={{ color: colors.error, marginTop: 8, textAlign: "center" }}>
-          ⚠ Estimates become less accurate above 12 reps
+           {t({ id: "app.tools.rm.accuracyWarning", message: "⚠ Estimates become less accurate above 12 reps" })}
         </Text>
       )}
 
       {results && (
         <View style={styles.results}>
           <Text variant="subtitle" style={{ color: colors.onBackground, marginBottom: 12 }}>
-            Estimated 1RM
+             {t({ id: "app.tools.rm.estimatedOneRm", message: "Estimated 1RM" })}
           </Text>
 
           <View style={styles.tableHeader}>
-            <Text variant="caption" style={[styles.tableCell, { color: colors.onSurfaceVariant }]}>Formula</Text>
-            <Text variant="caption" style={[styles.tableCellRight, { color: colors.onSurfaceVariant }]}>Est 1RM</Text>
+             <Text variant="caption" style={[styles.tableCell, { color: colors.onSurfaceVariant }]}>{t({ id: "app.tools.rm.formula", message: "Formula" })}</Text>
+             <Text variant="caption" style={[styles.tableCellRight, { color: colors.onSurfaceVariant }]}>{t({ id: "app.tools.rm.estOneRm", message: "Est 1RM" })}</Text>
           </View>
           <Separator />
           <View>
-            <View style={styles.tableRow} accessibilityLabel={`Epley formula, ${results.epley} ${label}`}>
-              <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>Epley</Text>
+             <View style={styles.tableRow} accessibilityLabel={t({ id: "app.tools.rm.epleyA11y", message: `Epley formula, ${results.epley} ${label}` })}>
+              <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>{t({ id: "app.tools.rm.epley", message: "Epley" })}</Text>
               <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{results.epley} {unit}</Text>
             </View>
             <Separator />
           </View>
           <View>
-            <View style={styles.tableRow} accessibilityLabel={`Brzycki formula, ${results.brzycki} ${label}`}>
-              <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>Brzycki</Text>
+             <View style={styles.tableRow} accessibilityLabel={t({ id: "app.tools.rm.brzyckiA11y", message: `Brzycki formula, ${results.brzycki} ${label}` })}>
+              <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>{t({ id: "app.tools.rm.brzycki", message: "Brzycki" })}</Text>
               <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{results.brzycki} {unit}</Text>
             </View>
             <Separator />
           </View>
           <View>
-            <View style={styles.tableRow} accessibilityLabel={`Lombardi formula, ${results.lombardi} ${label}`}>
-              <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>Lombardi</Text>
+             <View style={styles.tableRow} accessibilityLabel={t({ id: "app.tools.rm.lombardiA11y", message: `Lombardi formula, ${results.lombardi} ${label}` })}>
+              <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>{t({ id: "app.tools.rm.lombardi", message: "Lombardi" })}</Text>
               <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{results.lombardi} {unit}</Text>
             </View>
             <Separator />
           </View>
           <View
             style={[styles.tableRow, { backgroundColor: colors.primaryContainer }]}
-            accessibilityLabel={`Average of all formulas, ${results.average} ${label}`}
+             accessibilityLabel={t({ id: "app.tools.rm.averageA11y", message: `Average of all formulas, ${results.average} ${label}` })}
           >
-            <Text variant="body" style={[styles.tableCell, { color: colors.onSurface, fontWeight: "700" }]}>Average</Text>
+            <Text variant="body" style={[styles.tableCell, { color: colors.onSurface, fontWeight: "700" }]}>{t({ id: "app.tools.rm.average", message: "Average" })}</Text>
             <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface, fontWeight: "700" }]}>{results.average} {unit}</Text>
           </View>
 
           <Text variant="subtitle" style={{ color: colors.onBackground, marginTop: 24, marginBottom: 12 }}>
-            % 1RM Table
+            {t({ id: "app.tools.rm.percentTable", message: "% 1RM Table" })}
           </Text>
 
           <View style={styles.tableHeader}>
-            <Text variant="caption" style={[styles.tableCell, { color: colors.onSurfaceVariant }]}>% 1RM</Text>
-            <Text variant="caption" style={[styles.tableCellRight, { color: colors.onSurfaceVariant }]}>Weight</Text>
-            <Text variant="caption" style={[styles.tableCellRight, { color: colors.onSurfaceVariant }]}>Reps</Text>
+            <Text variant="caption" style={[styles.tableCell, { color: colors.onSurfaceVariant }]}>{t({ id: "app.tools.rm.percentOneRm", message: "% 1RM" })}</Text>
+            <Text variant="caption" style={[styles.tableCellRight, { color: colors.onSurfaceVariant }]}>{t({ id: "app.tools.rm.weight", message: "Weight" })}</Text>
+            <Text variant="caption" style={[styles.tableCellRight, { color: colors.onSurfaceVariant }]}>{t({ id: "app.tools.rm.reps", message: "Reps" })}</Text>
             <View style={styles.tableCellAction} />
           </View>
           <Separator />
@@ -162,7 +163,7 @@ export function RMCalculatorContent({ onPlateCalc }: RMCalculatorContentProps = 
               <View>
                 <View
                   style={styles.tableRow}
-                  accessibilityLabel={`${row.pct} percent of one rep max, ${row.weight} ${label}, ${row.reps} reps`}
+                   accessibilityLabel={t({ id: "app.tools.rm.tableRowA11y", message: `${row.pct} percent of one rep max, ${row.weight} ${label}, ${row.reps} reps` })}
                 >
                   <Text variant="body" style={[styles.tableCell, { color: colors.onSurface }]}>{row.pct}%</Text>
                   <Text variant="body" style={[styles.tableCellRight, { color: colors.onSurface }]}>{row.weight} {unit}</Text>
@@ -176,7 +177,7 @@ export function RMCalculatorContent({ onPlateCalc }: RMCalculatorContentProps = 
                           router.push(`/tools/plates?weight=${row.weight}`);
                         }
                       }}
-                      accessibilityLabel={`Calculate plates for ${row.weight}${unit}`}
+                       accessibilityLabel={t({ id: "app.tools.rm.calculatePlatesA11y", message: `Calculate plates for ${row.weight}${unit}` })}
                       accessibilityRole="button"
                       style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}
                     >
@@ -190,7 +191,7 @@ export function RMCalculatorContent({ onPlateCalc }: RMCalculatorContentProps = 
           />
 
           <Text variant="caption" style={[styles.disclaimer, { color: colors.onSurfaceVariant }]}>
-            Estimates based on submaximal performance. Actual 1RM may vary. Estimates become less accurate above 12 reps.
+            {t({ id: "app.tools.rm.disclaimer", message: "Estimates based on submaximal performance. Actual 1RM may vary. Estimates become less accurate above 12 reps." })}
           </Text>
         </View>
       )}
@@ -203,7 +204,7 @@ export default function RMCalculator() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "1RM Calculator" }} />
+      <Stack.Screen options={{ title: t({ id: "app.tools.rm.title", message: "1RM Calculator" }) }} />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

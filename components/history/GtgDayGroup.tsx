@@ -1,3 +1,5 @@
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 /**
  * BLD-1089: Collapsed "Quick-add sets" group shown per day in the History tab.
  * Renders a summary row per exercise that has GTG sets on a given date.
@@ -30,13 +32,13 @@ export function GtgDayGroup({ dateLabel, entries, colors, onEntryPress }: Props)
         onPress={() => setExpanded((v) => !v)}
         style={styles.header}
         accessibilityRole="button"
-        accessibilityLabel={`Quick-add sets for ${dateLabel}, ${entries.length} exercises, ${totalSets} sets total. ${expanded ? "Collapse" : "Expand"}`}
+         accessibilityLabel={i18n._({ id: "history.gtg.toggleA11y", message: "Quick-add sets for {date}, {exercises} exercises, {sets} sets total. {action, select, collapse {Collapse} expand {Expand}}", values: { date: dateLabel, exercises: entries.length, sets: totalSets, action: expanded ? "collapse" : "expand" } })}
         accessibilityState={{ expanded }}
       >
         <View style={styles.headerLeft}>
           <MaterialCommunityIcons name="lightning-bolt" size={16} color={colors.onSurfaceVariant} style={{ marginRight: 6 }} />
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-            Quick-add sets — {entries.length} exercise{entries.length !== 1 ? "s" : ""}, {totalSets} set{totalSets !== 1 ? "s" : ""}
+             {i18n._({ id: "history.gtg.summary", message: "Quick-add sets — {exercises, plural, one {# exercise} other {# exercises}}, {sets, plural, one {# set} other {# sets}}", values: { exercises: entries.length, sets: totalSets } })}
           </Text>
         </View>
         <MaterialCommunityIcons
@@ -54,11 +56,11 @@ export function GtgDayGroup({ dateLabel, entries, colors, onEntryPress }: Props)
               onPress={() => onEntryPress(entry.id)}
               style={[styles.entryRow, { borderTopColor: colors.outlineVariant }]}
               accessibilityRole="button"
-              accessibilityLabel={`${entry.exercise_name}: ${entry.total_reps} reps across ${entry.set_count} sets`}
+               accessibilityLabel={t({ id: "history.gtg.entryA11y", message: `${entry.exercise_name}: ${entry.total_reps} reps across ${entry.set_count} sets` })}
             >
               <Text style={{ color: colors.onSurface, flex: 1 }}>{entry.exercise_name}</Text>
               <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                {entry.total_reps} rep{entry.total_reps !== 1 ? "s" : ""} · {entry.set_count} set{entry.set_count !== 1 ? "s" : ""}
+                 {i18n._({ id: "history.gtg.entrySummary", message: "{reps, plural, one {# rep} other {# reps}} · {sets, plural, one {# set} other {# sets}}", values: { reps: entry.total_reps, sets: entry.set_count } })}
               </Text>
               <MaterialCommunityIcons name="chevron-right" size={16} color={colors.onSurfaceVariant} style={{ marginLeft: 4 }} />
             </Pressable>

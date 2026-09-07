@@ -8,6 +8,7 @@ import PRStatsRow from "@/components/progress/records/PRStatsRow";
 import RecentPRList from "@/components/progress/records/RecentPRList";
 import AllTimeBestsSection from "@/components/progress/records/AllTimeBestsSection";
 import PRDashboardError from "@/components/progress/records/PRDashboardError";
+import { t } from "@lingui/core/macro";
 
 export default function RecordsPage() {
   const colors = useThemeColors();
@@ -24,7 +25,7 @@ export default function RecordsPage() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Personal Records" }} />
+      <Stack.Screen options={{ title: t({ id: "app.progress.records.title", message: "Personal Records" }) }} />
       <ScrollView
         style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.content}
@@ -38,8 +39,8 @@ export default function RecordsPage() {
         ) : isEmpty ? (
           <EmptyState
             icon="trophy-outline"
-            title="No Records Yet"
-            subtitle="Complete your first workout to start tracking personal records!"
+            title={t({ id: "app.progress.records.emptyTitle", message: "No Records Yet" })}
+            subtitle={t({ id: "app.progress.records.emptySubtitle", message: "Complete your first workout to start tracking personal records!" })}
           />
         ) : (
           <>

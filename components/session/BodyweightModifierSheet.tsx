@@ -1,3 +1,6 @@
+import { initializeI18n } from "@/lib/i18n";
+initializeI18n();
+import { t } from "@lingui/core/macro";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View, TextInput } from "react-native";
 import BottomSheet, {
@@ -172,28 +175,26 @@ export function BodyweightModifierSheet({
           variant="subtitle"
           style={{ color: colors.onSurface, marginBottom: 8 }}
           accessibilityRole="header"
-        >
-          Load modifier
-        </Text>
+        >{t({ id: "session.bodyweightmodifiersheet.str9", message: "Load modifier" })}</Text>
 
         {/* 3-mode segmented control */}
         <View
           style={[styles.segmented, { borderColor: colors.outline }]}
           accessibilityRole="radiogroup"
-          accessibilityLabel="Load mode"
+          accessibilityLabel={t({ id: "session.bodyweightmodifiersheet.str1", message: "Load mode" })}
         >
           <SegmentButton
-            label="Bodyweight"
+            label={t({ id: "session.bodyweightmodifiersheet.str2", message: "Bodyweight" })}
             selected={mode === "bodyweight"}
             onPress={() => onModeChange("bodyweight")}
           />
           <SegmentButton
-            label="Added"
+            label={t({ id: "session.bodyweightmodifiersheet.str3", message: "Added" })}
             selected={mode === "added"}
             onPress={() => onModeChange("added")}
           />
           <SegmentButton
-            label="Assisted"
+            label={t({ id: "session.bodyweightmodifiersheet.str4", message: "Assisted" })}
             selected={mode === "assisted"}
             onPress={() => onModeChange("assisted")}
           />
@@ -239,8 +240,8 @@ export function BodyweightModifierSheet({
                   variant="outline"
                   size="sm"
                   onPress={() => onStep(v)}
-                  label={`+${v}`}
-                  accessibilityLabel={`Add ${v} ${unitLabel}`}
+                  label={t({ id: "session.bodyweightmodifiersheet.dynamic1", message: `+${v}` })}
+                  accessibilityLabel={t({ id: "session.bodyweightmodifiersheet.dynamic2", message: `Add ${v} ${unitLabel}` })}
                 />
               ))}
             </View>
@@ -251,8 +252,8 @@ export function BodyweightModifierSheet({
                   variant="outline"
                   size="sm"
                   onPress={() => onStep(-v)}
-                  label={`${UNICODE_MINUS}${v}`}
-                  accessibilityLabel={`Subtract ${v} ${unitLabel}`}
+                  label={t({ id: "session.bodyweightmodifiersheet.dynamic3", message: `${UNICODE_MINUS}${v}` })}
+                  accessibilityLabel={t({ id: "session.bodyweightmodifiersheet.dynamic4", message: `Subtract ${v} ${unitLabel}` })}
                 />
               ))}
             </View>
@@ -272,7 +273,7 @@ export function BodyweightModifierSheet({
                     backgroundColor: colors.surfaceVariant,
                   },
                 ]}
-                accessibilityLabel={`Load magnitude in ${unitLabel}`}
+                accessibilityLabel={t({ id: "session.bodyweightmodifiersheet.dynamic5", message: `Load magnitude in ${unitLabel}` })}
                 selectTextOnFocus
               />
             </View>
@@ -289,14 +290,14 @@ export function BodyweightModifierSheet({
               setInputText("0");
               onDone(null);
             }}
-            label="Bodyweight only"
-            accessibilityLabel="Clear modifier and persist bodyweight only"
+            label={t({ id: "session.bodyweightmodifiersheet.str5", message: "Bodyweight only" })}
+            accessibilityLabel={t({ id: "session.bodyweightmodifiersheet.str6", message: "Clear modifier and persist bodyweight only" })}
           />
           <Button
             variant="default"
             onPress={handleDone}
-            label="Done"
-            accessibilityLabel="Save load modifier"
+            label={t({ id: "session.bodyweightmodifiersheet.str7", message: "Done" })}
+            accessibilityLabel={t({ id: "session.bodyweightmodifiersheet.str8", message: "Save load modifier" })}
           />
         </View>
       </BottomSheetScrollView>

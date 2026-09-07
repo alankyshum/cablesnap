@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { t } from "@lingui/core/macro";
 import { Text } from "@/components/ui/text";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { OverreachingResult } from "@/lib/overreaching";
@@ -23,7 +24,7 @@ export default function DeloadNudgeCard({ colors, result, onDismiss }: Props) {
         style={styles.header}
         onPress={() => setExpanded((e) => !e)}
         accessibilityRole="button"
-        accessibilityLabel="Your training data suggests you may benefit from a lighter week. Tap to see details."
+        accessibilityLabel={t({ id: "home.deload.openA11y", message: "Your training data suggests you may benefit from a lighter week. Tap to see details." })}
         accessibilityState={{ expanded }}
       >
         <MaterialCommunityIcons
@@ -38,15 +39,15 @@ export default function DeloadNudgeCard({ colors, result, onDismiss }: Props) {
           style={[styles.title, { color: colors.onSurface }]}
           numberOfLines={expanded ? undefined : 2}
         >
-          Consider a lighter training week
+          {t({ id: "home.deload.title", message: "Consider a lighter training week" })}
         </Text>
         <Pressable
           onPress={onDismiss}
           hitSlop={8}
           style={styles.dismiss}
           accessibilityRole="button"
-          accessibilityLabel="Dismiss deload suggestion"
-          accessibilityHint="Hides this suggestion for 7 days"
+          accessibilityLabel={t({ id: "home.deload.dismissA11y", message: "Dismiss deload suggestion" })}
+          accessibilityHint={t({ id: "home.deload.dismissHint", message: "Hides this suggestion for 7 days" })}
         >
           <Ionicons name="close" size={16} color={colors.onSurfaceVariant} />
         </Pressable>
@@ -68,9 +69,9 @@ export default function DeloadNudgeCard({ colors, result, onDismiss }: Props) {
           <Text
             variant="caption"
             style={[styles.guidance, { color: colors.onSurfaceVariant }]}
-            accessibilityLabel="Deload guidance: Try reducing weights to 60% and sets by 40% this week"
+            accessibilityLabel={t({ id: "home.deload.guidanceA11y", message: "Deload guidance: Try reducing weights to 60% and sets by 40% this week" })}
           >
-            Try reducing weights to 60% and sets by 40% this week.
+            {t({ id: "home.deload.guidance", message: "Try reducing weights to 60% and sets by 40% this week." })}
           </Text>
         </View>
       )}

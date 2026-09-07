@@ -1,0 +1,1 @@
+- GitHub release APKs now retain the GitHub distribution channel, while F-Droid APKs retain the F-Droid channel, so update prompts work correctly for GitHub users.

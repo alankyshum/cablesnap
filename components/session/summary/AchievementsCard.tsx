@@ -5,6 +5,8 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "expo-router";
 import type { AchievementDef } from "@/lib/achievements";
+import { t } from "@lingui/core/macro";
+import { i18n } from "@lingui/core";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 
@@ -21,7 +23,7 @@ export default function AchievementsCard({ achievements, colors }: Props) {
   return (
     <Card
       style={StyleSheet.flatten([styles.section, { backgroundColor: colors.tertiaryContainer }])}
-      accessibilityLabel={`${achievements.length} achievement${achievements.length > 1 ? "s" : ""} unlocked`}
+      accessibilityLabel={i18n._({ id: "components.session.summary.achievements.a11y", message: "{count} {count, plural, one {achievement} other {achievements}} unlocked", values: { count: achievements.length } })}
       accessibilityLiveRegion="polite"
     >
       <CardContent>
@@ -63,7 +65,7 @@ export default function AchievementsCard({ achievements, colors }: Props) {
             variant="ghost"
             onPress={() => router.push("/progress/achievements")}
             style={{ marginTop: 4 }}
-            accessibilityLabel={`View ${extraCount} more achievements`}
+            accessibilityLabel={t({ id: "components.session.summary.achievements.more-a11y", message: `View ${extraCount} more achievements` })}
             accessibilityRole="link"
           >
             +{extraCount} more

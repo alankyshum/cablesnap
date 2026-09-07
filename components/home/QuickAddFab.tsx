@@ -1,3 +1,4 @@
+import { t } from "@lingui/core/macro";
 /**
  * BLD-1089: Floating Action Button for Quick Add (home screen).
  * AC1 — bottom-right, anchored above tab bar, 56dp tap target.
@@ -29,12 +30,12 @@ export default function QuickAddFab({ bottomOffset, onPress }: Props) {
       ]}
       accessible
       accessibilityRole="button"
-      accessibilityLabel="Quick add a set, opens dialog"
-      accessibilityHint="Opens a sheet to quickly log a set without starting a workout"
+      accessibilityLabel={t({ id: "home.quickAdd.a11y", message: "Quick add a set, opens dialog" })}
+      accessibilityHint={t({ id: "home.quickAdd.hint", message: "Opens a sheet to quickly log a set without starting a workout" })}
     >
       <View style={styles.fabInner}>
         <MaterialCommunityIcons name="plus" size={24} color={colors.onPrimary} />
-        <Text style={[styles.fabLabel, { color: colors.onPrimary }]}>Quick Add</Text>
+        <Text style={[styles.fabLabel, { color: colors.onPrimary }]}>{t({ id: "home.quickAdd.label", message: "Quick Add" })}</Text>
       </View>
     </Pressable>
   );

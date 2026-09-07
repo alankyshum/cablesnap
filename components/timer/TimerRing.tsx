@@ -4,6 +4,7 @@ import Svg, { Circle } from "react-native-svg"
 import Animated, { useAnimatedProps, SharedValue } from "react-native-reanimated"
 import { format } from "../../lib/timer"
 import { typography } from "../../constants/design-tokens"
+import { t } from "@lingui/core/macro"
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 
@@ -29,7 +30,7 @@ export function TimerRing({ remaining, bgColor, ringProgress, colors }: TimerRin
   }))
 
   return (
-    <View style={styles.ringWrap} accessibilityLabel={`${format(remaining)} remaining`}>
+    <View style={styles.ringWrap} accessibilityLabel={t({ id: "components.timer.timerRing.remainingValueA11y", message: `${format(remaining)} remaining` })}>
       <Svg width={RING_SIZE} height={RING_SIZE} style={styles.ringSvg}>
         <Circle
           cx={RING_SIZE / 2}
@@ -56,7 +57,7 @@ export function TimerRing({ remaining, bgColor, ringProgress, colors }: TimerRin
       <View style={styles.countdown}>
         <Text
           style={[styles.time, { color: colors.onSurface }]}
-          accessibilityLabel={`${remaining} seconds remaining`}
+          accessibilityLabel={t({ id: "components.timer.timerRing.secondsRemainingValueA11y", message: `${remaining} seconds remaining` })}
           accessibilityLiveRegion="polite"
         >
           {format(remaining)}

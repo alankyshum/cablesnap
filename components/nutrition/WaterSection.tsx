@@ -1,3 +1,5 @@
+import { Trans } from "@lingui/react/macro";
+import { t } from "@lingui/core/macro";
 /**
  * BLD-600 — Hydration tracking section in Nutrition tab list header.
  *
@@ -52,12 +54,12 @@ export function WaterSection({
     <View style={styles.wrap}>
       <Pressable
         onPress={handleHeaderPress}
-        accessibilityLabel="Open hydration day detail"
+        accessibilityLabel={t({ id: "components.nutrition.water.openA11y", message: "Open hydration day detail" })}
         accessibilityRole="button"
         style={({ pressed }) => [styles.headerArea, pressed && { opacity: 0.7 }]}
       >
         <View style={styles.headerRow}>
-          <Text variant="caption" style={{ color: colors.onSurface }}>Water</Text>
+          <Text variant="caption" style={{ color: colors.onSurface }}><Trans id="components.nutrition.water.title">Water</Trans></Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{headerLabel}</Text>
         </View>
         <View
@@ -80,7 +82,7 @@ export function WaterSection({
           <Pressable
             key={`preset-${idx}-${amt}`}
             onPress={() => onPresetPress(amt)}
-            accessibilityLabel={`Log ${formatVolume(amt, unit)} of water`}
+            accessibilityLabel={t({ id: "components.nutrition.water.logA11y", message: `Log ${formatVolume(amt, unit)} of water` })}
             accessibilityRole="button"
             style={({ pressed }) => [
               styles.chip,
@@ -109,7 +111,7 @@ export function WaterSection({
         ))}
         <Pressable
           onPress={onCustomPress}
-          accessibilityLabel="Log custom amount of water"
+           accessibilityLabel={t({ id: "components.nutrition.water.customA11y", message: "Log custom amount of water" })}
           accessibilityRole="button"
           style={({ pressed }) => [
             styles.chip,
@@ -128,7 +130,7 @@ export function WaterSection({
             {...(Platform.OS !== "web" ? { accessibilityElementsHidden: true } : {})}
             {...(Platform.OS !== "web" ? { importantForAccessibility: "no-hide-descendants" as const } : {})}
           />
-          <Text variant="caption" style={[{ color: colors.primary }, styles.chipLabel]}>+ Custom</Text>
+          <Text variant="caption" style={[{ color: colors.primary }, styles.chipLabel]}><Trans id="components.nutrition.water.custom">+ Custom</Trans></Text>
         </Pressable>
       </View>
     </View>

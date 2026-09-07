@@ -7,6 +7,7 @@ import { toDisplay } from "@/lib/units";
 import { radii, fontSizes, spacing } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { StrengthGoalRow } from "@/lib/db";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   colors: ThemeColors;
@@ -71,11 +72,11 @@ export default function GoalProgressCard({
 
   const confirmDelete = () => {
     Alert.alert(
-      "Delete Goal",
-      "Are you sure you want to delete this goal?",
+      t({ id: "components.exercise.goal-progress.delete-title", message: "Delete Goal" }),
+      t({ id: "components.exercise.goal-progress.delete-confirm", message: "Are you sure you want to delete this goal?" }),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: onDelete },
+        { text: t({ id: "components.exercise.goal-progress.cancel", message: "Cancel" }), style: "cancel" },
+        { text: t({ id: "components.exercise.goal-progress.delete", message: "Delete" }), style: "destructive", onPress: onDelete },
       ],
     );
   };
@@ -94,13 +95,13 @@ export default function GoalProgressCard({
               color={colors.primary}
             />
             <Text style={{ color: colors.onSurface, fontSize: fontSizes.base, fontWeight: "600", marginLeft: spacing.sm }}>
-              Goal
+              {t({ id: "components.exercise.goal-progress.goal", message: "Goal" })}
             </Text>
           </View>
           <View style={styles.actions}>
             <TouchableOpacity
               onPress={onEdit}
-              accessibilityLabel="Edit goal"
+              accessibilityLabel={t({ id: "components.exercise.goal-progress.edit", message: "Edit goal" })}
               accessibilityRole="button"
               hitSlop={8}
               style={styles.iconButton}
@@ -109,7 +110,7 @@ export default function GoalProgressCard({
             </TouchableOpacity>
             <TouchableOpacity
               onPress={confirmDelete}
-              accessibilityLabel="Delete goal"
+               accessibilityLabel={t({ id: "components.exercise.goal-progress.delete-a11y", message: "Delete goal" })}
               accessibilityRole="button"
               hitSlop={8}
               style={styles.iconButton}

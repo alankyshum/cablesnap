@@ -2,6 +2,15 @@
 // Consumers can import from "lib/db" as before, or from specific modules.
 
 export { getDatabase, getDrizzle, isMemoryFallback, getDatabaseFailure, resetDatabaseInit } from "./helpers";
+export {
+  createCoachWorkoutDraft, getCoachWorkoutDraft, getLatestCoachWorkoutDraftRevision,
+  listCoachWorkoutDraftRevisions, appendCoachWorkoutDraftRevision,
+  restoreCoachWorkoutDraftRevision, startSessionFromCoachWorkoutDraft,
+  CoachWorkoutDraftError,
+  type CreateCoachWorkoutDraftInput,
+  type CoachWorkoutDraft,
+  type CoachWorkoutDraftExercise,
+} from "./coach-workout-drafts";
 export { DatabaseUnavailableError, isDatabaseUnavailableError } from "./errors";
 export type { DatabaseUnavailablePhase } from "./errors";
 
@@ -34,6 +43,8 @@ export {
 
 export {
   createTemplate,
+  createTemplateWithExercises,
+  type CreateTemplateExerciseInput,
   getTemplates,
   getTemplateById,
   updateTemplateName,
@@ -269,6 +280,9 @@ export type {
   BackupV3,
   BackupV7,
   BackupFile,
+  BackupV8,
+  ExportOptions,
+  ImportOptions,
   BackupCategoryName,
   BackupTableName,
   ExportProgress,

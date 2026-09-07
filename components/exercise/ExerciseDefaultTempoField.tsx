@@ -6,6 +6,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes } from "@/constants/design-tokens";
 import { canonicalizeTempo } from "../../lib/workout/tempo-coach";
 import { TempoEditorSheet } from "../session/TempoEditorSheet";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   exerciseId: string;
@@ -61,20 +62,20 @@ export function ExerciseDefaultTempoField({ currentTempo, onSave }: Props) {
           style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}
         >
           {displayTempo
-            ? "New sets inherit this tempo. You can override per set."
-            : "New rep-mode sets will inherit a default tempo if set."}
+            ? t({ id: "components.exercise.default-tempo.inherit", message: "New sets inherit this tempo. You can override per set." })
+            : t({ id: "components.exercise.default-tempo.rep-inherit", message: "New rep-mode sets will inherit a default tempo if set." })}
         </Text>
         <Button
           variant="outline"
           size="sm"
           onPress={handleOpen}
           accessibilityLabel={
-            displayTempo ? `Edit default tempo: ${displayTempo}` : "Set default tempo"
+            displayTempo ? t({ id: "components.exercise.default-tempo.edit-a11y", message: `Edit default tempo: ${displayTempo}` }) : t({ id: "components.exercise.default-tempo.set-a11y", message: "Set default tempo" })
           }
           style={{ alignSelf: "flex-start" }}
         >
           <Text style={{ color: colors.onSurface }}>
-            {displayTempo ? `Edit tempo: ${displayTempo}` : "Set default tempo"}
+            {displayTempo ? t({ id: "components.exercise.default-tempo.edit", message: `Edit tempo: ${displayTempo}` }) : t({ id: "components.exercise.default-tempo.set", message: "Set default tempo" })}
           </Text>
         </Button>
       </View>

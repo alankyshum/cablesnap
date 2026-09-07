@@ -4,6 +4,7 @@ import { TemplateModal } from "./TemplateModal";
 import ExercisePickerSheet from "@/components/ExercisePickerSheet";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { Exercise } from "@/lib/types";
+import { t } from "@lingui/core/macro";
 
 interface SessionDetailFooterProps {
   editing: boolean;
@@ -47,8 +48,8 @@ export function SessionDetailFooter({
           variant="outline"
           onPress={deleteWholeSession}
           style={styles.repeatButton}
-          accessibilityLabel="Delete workout"
-          label="Delete workout"
+          accessibilityLabel={t({ id: "components.session.detail.footer.delete-a11y", message: "Delete workout" })}
+          label={t({ id: "components.session.detail.footer.delete", message: "Delete workout" })}
         />
       )}
       {editing && (
@@ -56,8 +57,8 @@ export function SessionDetailFooter({
           variant="outline"
           onPress={() => setPickerVisible(true)}
           style={styles.repeatButton}
-          accessibilityLabel="Add exercise"
-          label="+ Add exercise"
+          accessibilityLabel={t({ id: "components.session.detail.footer.add-exercise-a11y", message: "Add exercise" })}
+          label={t({ id: "components.session.detail.footer.add-exercise", message: "+ Add exercise" })}
         />
       )}
       <TemplateModal

@@ -163,7 +163,9 @@ describe('Settings Screen Acceptance', () => {
     expect(await findByText('Notifications')).toBeTruthy()
     expect(await findByText('Feedback & Reports')).toBeTruthy()
     expect(await findByText('About')).toBeTruthy()
-    expect(await findByText(/CableSnap v/)).toBeTruthy()
+    const version = await findByText('CableSnap v0.0.0')
+    expect(version).toBeTruthy()
+    expect(JSON.stringify(version.props.children)).not.toMatch(/[{}]/)
     expect(await findByText(/Free & open-source workout tracker/)).toBeTruthy()
   })
 

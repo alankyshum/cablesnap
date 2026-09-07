@@ -13,6 +13,14 @@
 > **One-time reinstall warning for self-hosted-repo users (v0.26.99):** The first release using the production-signed Play-flavor APK changes the self-hosted F-Droid repo signing key from the debug certificate to the production certificate. Users of that repo on that release must export a backup first, then uninstall and reinstall CableSnap once; uninstalling can delete local data. If you installed the app after the boundary release, no action is needed.
 <!-- SIGNING_MIGRATION_NOTICE_END -->
 
+## Installing / Updating
+
+You can install the production-signed `cablesnap.apk` directly from the [latest GitHub release](https://github.com/alankyshum/cablesnap/releases), or add the custom F-Droid repository to receive updates automatically:
+
+`https://alankyshum.github.io/cablesnap/repo`
+
+Both paths use the same package ID and signing key, so updates install in place without an uninstall and preserve app data.
+
 ## Demo
 
 [<img src="https://img.youtube.com/vi/8WLv-Xj03uQ/maxresdefault.jpg" alt="CableSnap promo video" width="240">](https://youtube.com/shorts/8WLv-Xj03uQ)

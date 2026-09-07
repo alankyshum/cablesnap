@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { ACTIVITY_LABELS, ACTIVITY_DESCRIPTIONS, type ActivityLevel } from "../../lib/nutrition-calc";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { t } from "@lingui/core/macro";
 
 type Props = {
   value: ActivityLevel;
@@ -19,7 +20,7 @@ export function ActivityDropdown({ value, onChange, visible, onToggle }: Props) 
       <Pressable
         onPress={onToggle}
         style={[styles.dropdown, { borderColor: colors.outline, backgroundColor: colors.surface }]}
-        accessibilityLabel={`Activity level: ${ACTIVITY_LABELS[value]}`}
+         accessibilityLabel={t({ id: "components.profile.activity.levelValueA11y", message: `Activity level: ${ACTIVITY_LABELS[value]}` })}
         accessibilityRole="button"
         accessibilityState={{ expanded: visible }}
       >
@@ -43,7 +44,7 @@ export function ActivityDropdown({ value, onChange, visible, onToggle }: Props) 
                 styles.dropdownItem,
                 key === value ? { backgroundColor: colors.primaryContainer } : undefined,
               ]}
-              accessibilityLabel={`${ACTIVITY_LABELS[key]}: ${ACTIVITY_DESCRIPTIONS[key]}`}
+                accessibilityLabel={t({ id: "components.profile.activity.optionA11y", message: `${ACTIVITY_LABELS[key]}: ${ACTIVITY_DESCRIPTIONS[key]}` })}
               accessibilityRole="radio"
               accessibilityState={{ selected: key === value }}
             >

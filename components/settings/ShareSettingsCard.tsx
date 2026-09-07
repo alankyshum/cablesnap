@@ -8,6 +8,7 @@ import { useShareSettings } from "@/hooks/useShareSettings";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { stravaLog } from "../../lib/strava-telemetry";
+import { useLingui } from "@lingui/react/macro";
 
 type Props = {
   colors: ThemeColors;
@@ -20,6 +21,7 @@ type Props = {
 
 export default function ShareSettingsCard({ colors, bareContent = false }: Props) {
   const { settings, effectiveCaption, update, DEFAULT_PROMO_CAPTION } = useShareSettings();
+  const { t } = useLingui();
   const [draftCaption, setDraftCaption] = useState("");
   const [editing, setEditing] = useState(false);
 
@@ -42,17 +44,17 @@ export default function ShareSettingsCard({ colors, bareContent = false }: Props
     <>
       {!bareContent && (
         <Text variant="body" style={{ color: colors.onSurface, fontWeight: '600', fontSize: fontSizes.sm, marginBottom: 8 }}>
-          Sharing
+          {t({ id: "settings.sharing.title", message: "Sharing" })}
         </Text>
       )}
 
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
           <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
-            Promo Caption
+            {t({ id: "settings.sharing.promoCaption", message: "Promo Caption" })}
           </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-            {promoEnabled ? (effectiveCaption || DEFAULT_PROMO_CAPTION) : "Off"}
+            {promoEnabled ? (effectiveCaption || DEFAULT_PROMO_CAPTION) : t({ id: "settings.sharing.off", message: "Off" })}
           </Text>
         </View>
         <Switch
@@ -65,7 +67,7 @@ export default function ShareSettingsCard({ colors, bareContent = false }: Props
           }}
           trackColor={{ false: colors.surfaceVariant, true: colors.primary }}
           thumbColor={Platform.OS === "ios" ? undefined : promoEnabled ? colors.primary : colors.onSurfaceVariant}
-          accessibilityLabel="Toggle promotional caption"
+          accessibilityLabel={t({ id: "settings.sharing.togglePromoA11y", message: "Toggle promotional caption" })}
         />
       </View>
 
@@ -89,11 +91,11 @@ export default function ShareSettingsCard({ colors, bareContent = false }: Props
                     borderColor: colors.outline,
                   },
                 ]}
-                accessibilityLabel="Edit promotional caption"
+                accessibilityLabel={t({ id: "settings.sharing.editPromoA11y", message: "Edit promotional caption" })}
               />
               <View style={styles.inputActions}>
-                <Button variant="ghost" size="sm" onPress={() => setEditing(false)} label="Cancel" />
-                <Button variant="default" size="sm" onPress={saveCaption} label="Save" />
+                <Button variant="ghost" size="sm" onPress={() => setEditing(false)} label={t({ id: "common.cancel", message: "Cancel" })} />
+                <Button variant="default" size="sm" onPress={saveCaption} label={t({ id: "common.save", message: "Save" })} />
               </View>
             </View>
           ) : (
@@ -101,8 +103,8 @@ export default function ShareSettingsCard({ colors, bareContent = false }: Props
               variant="outline"
               size="sm"
               onPress={startEditing}
-              label={settings?.promo_caption ? "Edit caption" : "Edit caption (optional)"}
-              accessibilityLabel="Edit promotional caption"
+              label={settings?.promo_caption ? t({ id: "settings.sharing.editCaption", message: "Edit caption" }) : t({ id: "settings.sharing.editCaptionOptional", message: "Edit caption (optional)" })}
+              accessibilityLabel={t({ id: "settings.sharing.editPromoA11y", message: "Edit promotional caption" })}
             />
           )}
         </View>
@@ -111,10 +113,10 @@ export default function ShareSettingsCard({ colors, bareContent = false }: Props
       <View style={[styles.row, { marginTop: spacing.md }]}>
         <View style={{ flex: 1 }}>
           <Text variant="body" style={{ color: colors.onSurface, fontSize: fontSizes.sm }}>
-            Append Promo to Strava
+            {t({ id: "settings.sharing.appendPromo", message: "Append Promo to Strava" })}
           </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-            Append promo caption to Strava activity description
+            {t({ id: "settings.sharing.appendPromoHint", message: "Append promo caption to Strava activity description" })}
           </Text>
         </View>
         <Switch
@@ -125,7 +127,7 @@ export default function ShareSettingsCard({ colors, bareContent = false }: Props
           }}
           trackColor={{ false: colors.surfaceVariant, true: colors.primary }}
           thumbColor={Platform.OS === "ios" ? undefined : stravaDescEnabled ? colors.primary : colors.onSurfaceVariant}
-          accessibilityLabel="Toggle appending promo to Strava description"
+          accessibilityLabel={t({ id: "settings.sharing.toggleAppendA11y", message: "Toggle appending promo to Strava description" })}
         />
       </View>
     </>

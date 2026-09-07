@@ -377,9 +377,13 @@ export function TabsList({ children, style }: TabsListProps) {
   const activeIndex = Math.max(0, tabValues.indexOf(activeTab));
   const reducedMotion = typeof useReducedMotion === 'function' ? useReducedMotion() : false;
   const indicatorIndex = useSharedValue(activeIndex);
-  indicatorIndex.value = reducedMotion
-    ? activeIndex
-    : withSpring(activeIndex, interiorSpring.tabIndicator);
+  useEffect(() => {
+    indicatorIndex.value = reducedMotion
+      ? activeIndex
+      : withSpring(activeIndex, interiorSpring.tabIndicator);
+    // Shared values are stable refs; this effect intentionally follows the active tab only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeIndex, indicatorIndex, reducedMotion]);
   const indicatorStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: `${indicatorIndex.value * 100}%` as unknown as number }],
   }));
