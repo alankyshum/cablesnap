@@ -1,0 +1,42 @@
+{
+  "api_status": "pending",
+  "artifacts": [],
+  "auth": "unknown",
+  "cache": "unknown",
+  "cli": null,
+  "clients": {
+    "generated": false,
+    "importable": false
+  },
+  "commands": [],
+  "composes_with": [],
+  "confirmation": "unknown",
+  "cost": "unknown",
+  "dry_run": "unknown",
+  "effects": ["unknown"],
+  "env_cohort": {
+    "environment_path": null,
+    "id": "claude-code:none:skill-instruction:unknown",
+    "interpreter_version": "unknown",
+    "lock_ownership": "skill-local",
+    "runtime": "skill-instruction",
+    "shared_libraries": false
+  },
+  "errors": [],
+  "executable": false,
+  "fallback": {
+    "direct_substrate_excluded": true,
+    "mode": "none",
+    "sunset": null,
+    "target": null,
+    "version": null
+  },
+  "idempotency": "unknown",
+  "interface": "Instructional skill; no executable API is currently declared.",
+  "library_api": null,
+  "runtime": "skill-instruction",
+  "schema_version": "1.0",
+  "skill_id": "claude-code/roadmap--feature-gate",
+  "status": "narrative-only",
+  "timeout_ms": null
+}
