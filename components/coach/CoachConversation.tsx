@@ -1,12 +1,16 @@
+/* eslint-disable max-lines */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { useRouter } from "expo-router";
 import { ArrowUp, Bot, Square } from "lucide-react-native";
 import { Bubble, Chat, useStreamingMessages, type IMessage, type BubbleProps, type SendProps, type MessageTextProps } from "@kesha-antonov/react-native-chat";
 import { useQueryClient } from "@tanstack/react-query";
+import { bumpQueryVersion } from "@/lib/query";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { useAppendCoachMessage, useCreateCoachSession, coachQueryKeys } from "@/hooks/useCoachSessions";
 import { startCoachAgent } from "@/lib/ai/agent";
-import { coachTools } from "@/lib/ai/tools";
+import { canSendGymPhoto, getCurrentGymPhotoModel } from "@/lib/ai/catalog";
+import { coachToolsForSession } from "@/lib/ai/tools";
 import { toChatErrorState, type AIError, type ChatErrorState } from "@/lib/ai/errors";
 import { t } from "@/lib/i18n";
 import { fontSizes, radii, spacing } from "@/constants/design-tokens";
@@ -16,6 +20,12 @@ import { CoachErrorCard } from "./CoachErrorCard";
 import { CoachMarkdown, hasMarkdownTable } from "./CoachMarkdown";
 import { CoachThinkingIndicator } from "./CoachThinkingIndicator";
 import { CoachToolBadge } from "./CoachToolBadge";
+import { useCoachGymPhoto } from "@/hooks/useCoachGymPhoto";
+import { GYM_PHOTO_MARKER, type PreparedGymPhoto } from "@/lib/coach-gym-photo";
+import { CoachWorkoutDraftCard } from "./CoachWorkoutDraftCard";
+import { CoachGymPhotoComposer } from "./CoachGymPhotoComposer";
+import { useCoachWorkoutDraft } from "@/hooks/useCoachWorkoutDraft";
+import type { CoachWorkoutDraft } from "@/lib/types";
 
 export type CoachConversationProps = {
   messages: CoachMessage[];
@@ -33,6 +43,7 @@ export type CoachConversationProps = {
 };
 
 function toIMessage(message: CoachMessage): IMessage {
+  const draftCard = parseDraftToolCall(message.tool_calls, message.id);
   return {
     _id: message.id,
     text: message.content,
@@ -43,7 +54,67 @@ function toIMessage(message: CoachMessage): IMessage {
         : { _id: 2, name: t({ id: "components.coach.aiCoachName", message: "AI Coach" }) },
     ...(message.role === "system" ? { system: true } : {}),
     ...(message.tool_calls ? { __toolCalls: true } : {}),
+    ...(draftCard ? { __draftCard: draftCard } : {}),
   } as IMessage & { __toolCalls?: boolean };
+}
+
+type DraftCardData = { messageId: string; draftId: string; revision: number; equipment?: Array<{ label: string; confidence?: number; uncertainty?: string }>; draft: CoachWorkoutDraft; reasons?: unknown[] };
+// Structured tool payload validation intentionally keeps all acceptance checks together.
+// eslint-disable-next-line complexity
+export function parseDraftToolCall(value: string | null | undefined, messageId = ""): DraftCardData | null {
+  if (!value) return null;
+  try {
+    const calls = JSON.parse(value) as Array<{ name?: string; toolName?: string; output?: unknown }>;
+    const unwrap = (value: unknown): { ok?: boolean; operation?: unknown; data?: unknown } | undefined => {
+      let current: unknown = value;
+      for (let depth = 0; depth < 4; depth += 1) {
+        if (typeof current === "string") {
+          try { current = JSON.parse(current); } catch { return undefined; }
+        }
+        if (!current || typeof current !== "object") return undefined;
+        const record = current as { type?: unknown; value?: unknown };
+        if (record.type === "json" && "value" in record) { current = record.value; continue; }
+        return current as { ok?: boolean; operation?: unknown; data?: unknown };
+      }
+      return undefined;
+    };
+    const call = [...calls].reverse().find((item) => {
+      const output = unwrap(item.output);
+      const name = item.name ?? item.toolName;
+      return ["create_gym_workout_draft", "modify_gym_workout_draft", "restore_gym_workout_revision"].includes(String(name))
+        && ["create_draft", "modify_draft", "restore_revision"].includes(String(output?.operation));
+    });
+    const output = unwrap(call?.output);
+    if (!output?.ok || !output.data || typeof output.data !== "object") return null;
+    const data = output.data as Record<string, unknown>;
+    if (typeof data.draftId !== "string" || !data.draftId || !Number.isInteger(data.revision) || Number(data.revision) < 1) return null;
+    if (!Array.isArray(data.equipment) || data.equipment.length === 0 || data.equipment.length > 20 || !Array.isArray(data.reasons) || data.reasons.length === 0 || !data.draft || typeof data.draft !== "object") return null;
+    if (!data.equipment.every((item) => {
+      if (!item || typeof item !== "object") return false;
+      const equipment = item as Record<string, unknown>;
+      return typeof equipment.label === "string" && equipment.label.length > 0 && equipment.label.length <= 40
+        && typeof equipment.confidence === "number" && Number.isFinite(equipment.confidence) && equipment.confidence >= 0 && equipment.confidence <= 1
+        && (equipment.uncertainty == null || typeof equipment.uncertainty === "string");
+    })) return null;
+    if (!data.reasons.every((item) => {
+      if (!item || typeof item !== "object") return false;
+      const reason = item as Record<string, unknown>;
+      return ["code", "input", "source", "rule", "bound", "fallback", "uncertainty", "override"].every((key) => reason[key] == null || typeof reason[key] === "string")
+        && Boolean(reason.input ?? reason.source ?? reason.rule);
+    })) return null;
+    const draft = data.draft as Record<string, unknown>;
+    // eslint-disable-next-line complexity
+    if ((draft.name != null && typeof draft.name !== "string") || (draft.estimatedMinutes != null && (typeof draft.estimatedMinutes !== "number" || !Number.isFinite(draft.estimatedMinutes))) || !Array.isArray(draft.exercises) || !draft.exercises.length || draft.exercises.length > 30 || !draft.exercises.every((item) => {
+      if (!item || typeof item !== "object") return false;
+      const exercise = item as Record<string, unknown>;
+      const rest = exercise.rest_seconds ?? exercise.restSeconds;
+      return typeof exercise.exercise_id === "string" && exercise.exercise_id.length > 0
+        && Number.isInteger(exercise.sets) && Number(exercise.sets) > 0 && Number(exercise.sets) <= 20
+        && (typeof exercise.reps === "number" ? Number.isInteger(exercise.reps) && exercise.reps >= 1 && exercise.reps <= 100 : typeof exercise.reps === "string" && exercise.reps.length > 0 && exercise.reps.length <= 30)
+        && Number.isInteger(Number(rest)) && Number(rest) >= 0 && Number(rest) <= 3600;
+    })) return null;
+    return { messageId, draftId: data.draftId, revision: Number(data.revision), equipment: data.equipment as DraftCardData["equipment"], reasons: data.reasons, draft: data.draft as CoachWorkoutDraft };
+  } catch { return null; }
 }
 
 function toIMessages(messages: CoachMessage[]): IMessage[] {
@@ -69,12 +140,19 @@ export function CoachConversation({
   onError,
 }: CoachConversationProps) {
   const colors = useThemeColors();
+  const router = useRouter();
   const { width: viewportWidth } = useWindowDimensions();
   const isNarrowScreen = viewportWidth < 768;
   const queryClient = useQueryClient();
   const append = useAppendCoachMessage();
   const create = useCreateCoachSession();
   const [inFlightTool, setInFlightTool] = useState<string | null>(null);
+  const gymPhoto = useCoachGymPhoto();
+  const { cleanup: cleanupGymPhoto, ensureConsent, consent, pick, consented, disclosure } = gymPhoto;
+  const [pendingGymPhoto, setPendingGymPhoto] = useState<PreparedGymPhoto | null>(null);
+  const [consentVisible, setConsentVisible] = useState(false);
+  const consentResolver = useRef<((accepted: boolean) => void) | null>(null);
+  const pendingGymPhotoRef = useRef<PreparedGymPhoto | null>(null);
   const handleRef = useRef<ReturnType<typeof stream.startStream> | null>(null);
   const runRef = useRef<ReturnType<typeof startCoachAgent> | null>(null);
   const runningSessionIdRef = useRef<string | null>(null);
@@ -84,6 +162,8 @@ export function CoachConversation({
   // Keep chronological data in a normal list so native FlashList can remain enabled
   // while `isAlignedTop` correctly places short conversations below the header.
   const stream = useStreamingMessages<IMessage>({ initialMessages: toIMessages(messages), inverted: false });
+  const activeDraft = useMemo(() => [...messages].reverse().map((message) => parseDraftToolCall(message.tool_calls, message.id)).find(Boolean) ?? null, [messages]);
+  const draft = useCoachWorkoutDraft(activeDraft?.draftId ?? null, activeSessionId);
 
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId;
@@ -114,18 +194,29 @@ export function CoachConversation({
   // session changes null -> its new id, but runningSessionIdRef already contains
   // that id, so the newly-started stream is preserved.
   useEffect(() => {
+    // An attachment belongs to the currently selected conversation even when
+    // no request is running. Always discard it on a session switch; only stop
+    // the stream when the switch actually moves away from its owner.
+    cleanupGymPhoto();
+    pendingGymPhotoRef.current = null;
+    // State must clear synchronously with the session switch so the Send
+    // affordance cannot retain an attachment from another conversation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPendingGymPhoto(null);
     if (runningSessionIdRef.current === null || runningSessionIdRef.current === activeSessionId) return;
     stream.stop();
     runRef.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSessionId]);
+  }, [activeSessionId, cleanupGymPhoto]);
 
   // Unmount always aborts, including while a just-created session is streaming.
   useEffect(() => () => {
     stream.stop();
     runRef.current?.abort();
+    cleanupGymPhoto();
+    pendingGymPhotoRef.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [cleanupGymPhoto]);
 
   // This callback coordinates persistence, streaming, cancellation, and races
   // between navigation and the async SQLite/agent operations.
@@ -133,14 +224,37 @@ export function CoachConversation({
     // eslint-disable-next-line complexity
     async (outgoing: IMessage[]) => {
       const prompt = outgoing[outgoing.length - 1]?.text.trim();
-      if (!prompt || stream.isStreaming) return;
+      const attachment = pendingGymPhoto;
+      const effectivePrompt = attachment ? `${GYM_PHOTO_MARKER}${prompt ? `\n${prompt}` : ""}` : prompt;
+      if (((!effectivePrompt || effectivePrompt === GYM_PHOTO_MARKER) && !attachment) || stream.isStreaming) return;
       if (isMissingKey) {
+        cleanupGymPhoto();
+        pendingGymPhotoRef.current = null;
+        setPendingGymPhoto(null);
         onError?.(toChatErrorState({ kind: "missing_key" }));
         return;
       }
       if (!selectedModelId) {
+        cleanupGymPhoto();
+        pendingGymPhotoRef.current = null;
+        setPendingGymPhoto(null);
         onOpenModelPicker();
         return;
+      }
+      if (attachment) {
+        try {
+          const model = await getCurrentGymPhotoModel(selectedModelId);
+          if (!canSendGymPhoto(model)) throw { kind: "model_lacks_image_input" } satisfies AIError;
+        } catch (error) {
+          cleanupGymPhoto();
+          pendingGymPhotoRef.current = null;
+          setPendingGymPhoto(null);
+          const aiError = error && typeof error === "object" && "kind" in error
+            ? error as AIError
+            : { kind: "catalog_unavailable" } as const;
+          onError?.(toChatErrorState(aiError));
+          return;
+        }
       }
       let sessionId = activeSessionId;
       const sessionAtSend = activeSessionId;
@@ -149,7 +263,7 @@ export function CoachConversation({
       let ownedRun: ReturnType<typeof startCoachAgent> | null = null;
       try {
         if (!sessionId) {
-          const session = await create.mutateAsync({ title: prompt.slice(0, 36), model_id: selectedModelId });
+          const session = await create.mutateAsync({ title: (effectivePrompt || "Gym photo").slice(0, 36), model_id: selectedModelId });
           // Creating the SQLite row is not cancellable. If the user selected a
           // different conversation while it was being created, leave the new
           // empty row in history but never steal focus or start an agent for it.
@@ -160,10 +274,18 @@ export function CoachConversation({
         }
         runOwnerRef.current = owner;
         runningSessionIdRef.current = sessionId;
+        // Recheck immediately before the durable write as the live catalog may
+        // have changed while a new conversation was being created.
+        if (attachment) {
+          const currentModel = await getCurrentGymPhotoModel(selectedModelId);
+          if (!canSendGymPhoto(currentModel)) throw { kind: "model_lacks_image_input" } satisfies AIError;
+        }
         const persistedUser = await append.mutateAsync({
           session_id: sessionId,
           role: "user",
-          content: prompt,
+          // Durable chat state contains only the neutral marker. The actual
+          // request text/photo part is passed to the agent for this turn only.
+          content: attachment ? GYM_PHOTO_MARKER : effectivePrompt,
           model_id: selectedModelId,
         });
         // The user can switch conversations while SQLite is writing. Do not
@@ -180,8 +302,9 @@ export function CoachConversation({
         const run = startCoachAgent({
           sessionId,
           modelId: selectedModelId,
-          prompt,
-          tools: coachTools,
+          prompt: attachment ? (prompt || "Identify the equipment in this gym photo.") : effectivePrompt,
+          tools: coachToolsForSession(sessionId),
+          gymPhoto: attachment ?? undefined,
           signal: handle.signal,
           onEvent: (event) => {
             if (event.type === "delta") handle.push(event.text);
@@ -194,6 +317,11 @@ export function CoachConversation({
         const persisted = await run.done;
         handle.done({ _id: persisted.id });
         await queryClient.invalidateQueries({ queryKey: coachQueryKeys.messages(sessionId) });
+        // Draft tools append revisions during the same assistant turn. Refresh
+        // the durable draft/revision queries so the card never shows a stale
+        // latest revision after a conversational modification or restore.
+        await queryClient.invalidateQueries({ queryKey: ["coach", "workout-draft"] });
+        await queryClient.invalidateQueries({ queryKey: ["coach", "workout-draft-revisions"] });
       } catch (err) {
         const aiError =
           err && typeof err === "object" && "kind" in err ? (err as AIError) : ({ kind: "network_error" } as const);
@@ -202,6 +330,9 @@ export function CoachConversation({
           onError?.(toChatErrorState(aiError));
         }
       } finally {
+        cleanupGymPhoto();
+        pendingGymPhotoRef.current = null;
+        setPendingGymPhoto(null);
         if (runOwnerRef.current === owner) {
           if (handleRef.current === ownedHandle) handleRef.current = null;
           if (runRef.current === ownedRun) runRef.current = null;
@@ -221,6 +352,8 @@ export function CoachConversation({
       create,
       onSessionCreated,
       append,
+      cleanupGymPhoto,
+      pendingGymPhoto,
       queryClient,
     ]
   );
@@ -266,9 +399,37 @@ export function CoachConversation({
           : t({ id: "components.coach.usingTool", message: "Using tool: {tool}" }, { tool: inFlightTool })}...`
     : null;
 
+  // eslint-disable-next-line complexity
   const renderCustomView = useCallback(
+    // eslint-disable-next-line complexity
     ({ currentMessage }: BubbleProps<IMessage>) => {
       const custom = currentMessage as IMessage & { __toolCalls?: boolean };
+      const card = (currentMessage as IMessage & { __draftCard?: DraftCardData }).__draftCard;
+      if (card && activeDraft?.messageId === card.messageId && currentMessage.user?._id === 2) {
+        const durableRevision = draft.draft.data?.revision;
+        const durableDraft = durableRevision?.canonical_draft as CoachWorkoutDraft | undefined;
+        const sourceEquipment = Array.isArray(draft.draft.data?.source_metadata?.equipment) ? draft.draft.data?.source_metadata?.equipment as DraftCardData["equipment"] : undefined;
+        return (
+          <CoachWorkoutDraftCard
+            draft={durableDraft ?? card.draft}
+            equipment={sourceEquipment ?? card.equipment}
+            revision={durableRevision?.version ?? card.revision}
+            reasons={durableRevision?.reason_ledger ?? card.reasons}
+            revisions={draft.revisions.data ?? []}
+            onStart={async () => {
+              const id = await draft.start.mutateAsync();
+              bumpQueryVersion("home");
+              router.push(`/session/${id}`);
+            }}
+            onRestore={async (version) => {
+              const currentVersion = draft.draft.data?.revision?.version ?? card.revision;
+              const restored = await draft.restore.mutateAsync({ version, expectedRevision: currentVersion });
+              if (activeSessionId) await queryClient.invalidateQueries({ queryKey: coachQueryKeys.messages(activeSessionId) });
+              return restored ? { draft: restored.canonical_draft as CoachWorkoutDraft, revision: restored.version, reasons: restored.reason_ledger } : undefined;
+            }}
+          />
+        );
+      }
       const isEmptyAssistantStream = currentMessage.user?._id === 2
         && Boolean(currentMessage.streaming)
         && !currentMessage.text;
@@ -290,7 +451,7 @@ export function CoachConversation({
       }
       return label ? <CoachToolBadge label={label} isStreaming={isToolRunning} /> : null;
     },
-    [toolLabel]
+    [toolLabel, draft, router, activeSessionId, queryClient, activeDraft]
   );
 
   const renderAvatar = useCallback(
@@ -346,6 +507,31 @@ export function CoachConversation({
     [isNarrowScreen]
   );
 
+  const chooseGymPhoto = useCallback(async () => {
+    if (!selectedModelId) { onError?.(toChatErrorState({ kind: "model_not_in_catalog" })); return; }
+    try {
+      const model = await getCurrentGymPhotoModel(selectedModelId);
+      if (!canSendGymPhoto(model)) { onError?.(toChatErrorState({ kind: "model_lacks_image_input" })); return; }
+      if (!consented && !(await ensureConsent())) {
+        const accepted = await new Promise<boolean>((resolve) => {
+          consentResolver.current = resolve;
+          setConsentVisible(true);
+        });
+        if (!accepted) return;
+        await consent();
+      }
+      cleanupGymPhoto();
+      const selected = await pick();
+      pendingGymPhotoRef.current = selected;
+      setPendingGymPhoto(selected);
+    } catch (error) {
+      cleanupGymPhoto();
+      pendingGymPhotoRef.current = null;
+      setPendingGymPhoto(null);
+      onError?.(toChatErrorState(error && typeof error === "object" && "kind" in error ? error as AIError : { kind: "photo_decode_failed" }));
+    }
+  }, [selectedModelId, consented, ensureConsent, consent, cleanupGymPhoto, pick, onError]);
+
   const renderChatEmpty = useCallback(
     () => (
       <View style={styles.emptyStateWrapper}>
@@ -356,10 +542,11 @@ export function CoachConversation({
           onSelectPrompt={(prompt) =>
             send([{ _id: "quick", text: prompt, createdAt: new Date(), user: { _id: 1 } }])
           }
+          onChooseGymPhoto={chooseGymPhoto}
         />
       </View>
     ),
-    [isMissingKey, selectedModelId, onOpenModelPicker, send]
+    [isMissingKey, selectedModelId, onOpenModelPicker, send, chooseGymPhoto]
   );
 
   const renderChatFooter = useCallback(() => {
@@ -413,6 +600,9 @@ export function CoachConversation({
             onPress={() => {
               stream.stop();
               runRef.current?.abort();
+              cleanupGymPhoto();
+              pendingGymPhotoRef.current = null;
+              setPendingGymPhoto(null);
             }}
             accessibilityRole="button"
             accessibilityLabel={t({ id: "components.coach.stop", message: "Stop generating" })}
@@ -425,25 +615,24 @@ export function CoachConversation({
 
       const hasText = Boolean(text?.trim());
       return (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t({ id: "components.coach.sendA11y", message: "Send message" })}
-          disabled={!hasText}
-          onPress={() =>
-            sendMessage?.([{ _id: "send", text: text ?? "", createdAt: new Date(), user: { _id: 1 } }], true)
-          }
-          style={[
-            styles.send,
-            {
-              backgroundColor: hasText ? colors.primary : colors.surfaceVariant,
-            },
-          ]}
-        >
-          <ArrowUp
-            size={18}
-            color={hasText ? colors.onPrimary : colors.onSurfaceVariant}
-          />
-        </Pressable>
+        <View style={styles.composerColumn}>
+          {consented && <Text accessibilityLabel={disclosure} style={[styles.photoDisclosure, { color: colors.onSurfaceVariant }]}>{disclosure}</Text>}
+          <View style={styles.sendRow}>
+            <CoachGymPhotoComposer
+            hasPhoto={Boolean(pendingGymPhoto)}
+            previewUri={pendingGymPhoto?.uri}
+            disabled={stream.isStreaming}
+            onRemove={() => { cleanupGymPhoto(); pendingGymPhotoRef.current = null; setPendingGymPhoto(null); }}
+            onPick={chooseGymPhoto} />
+            <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t({ id: "components.coach.sendA11y", message: "Send message" })}
+            disabled={!hasText && !pendingGymPhoto}
+            onPress={() => sendMessage?.([{ _id: "send", text: text ?? "", createdAt: new Date(), user: { _id: 1 } }], true)}
+            style={[styles.send, { backgroundColor: hasText || pendingGymPhoto ? colors.primary : colors.surfaceVariant }]}
+            ><ArrowUp size={18} color={hasText || pendingGymPhoto ? colors.onPrimary : colors.onSurfaceVariant} /></Pressable>
+          </View>
+        </View>
       );
     },
     [
@@ -454,6 +643,11 @@ export function CoachConversation({
       colors.onPrimary,
       colors.surfaceVariant,
       colors.onSurfaceVariant,
+      consented,
+      disclosure,
+      pendingGymPhoto,
+      cleanupGymPhoto,
+      chooseGymPhoto,
     ]
   );
 
@@ -535,6 +729,32 @@ export function CoachConversation({
           />
         )}
       </View>
+      <Modal visible={consentVisible} transparent animationType="fade" onRequestClose={() => {
+        setConsentVisible(false);
+        consentResolver.current?.(false);
+        consentResolver.current = null;
+      }}>
+        <View style={styles.consentOverlay}>
+          <View
+            accessibilityViewIsModal
+            accessibilityRole="alert"
+            style={[styles.consentCard, { backgroundColor: colors.surface, borderColor: colors.outlineVariant }]}
+          >
+            <Text accessibilityRole="header" style={[styles.consentTitle, { color: colors.onSurface }]}>
+              {t({ id: "components.coach.gymPhotoPrivacyTitle", message: "Gym photo privacy" })}
+            </Text>
+            <Text style={[styles.consentText, { color: colors.onSurfaceVariant }]}>{disclosure}</Text>
+            <View style={styles.consentActions}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t({ id: "components.coach.cancel", message: "Cancel" })} onPress={() => { setConsentVisible(false); consentResolver.current?.(false); consentResolver.current = null; }} style={styles.consentButton}>
+                <Text style={{ color: colors.onSurface }}>{t({ id: "components.coach.cancel", message: "Cancel" })}</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={t({ id: "components.coach.privacyUnderstand", message: "I understand" })} onPress={() => { setConsentVisible(false); consentResolver.current?.(true); consentResolver.current = null; }} style={[styles.consentButton, { backgroundColor: colors.primary }]}>
+                <Text style={{ color: colors.onPrimary }}>{t({ id: "components.coach.privacyUnderstand", message: "I understand" })}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -589,6 +809,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: spacing.sm,
   },
+  sendRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  composerColumn: { flexDirection: "column", alignItems: "stretch", maxWidth: "100%" },
+  consentOverlay: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.base, backgroundColor: "rgba(0,0,0,0.45)" },
+  consentCard: { width: "100%", maxWidth: 520, borderWidth: 1, borderRadius: radii.md, padding: spacing.base },
+  consentTitle: { fontSize: fontSizes.lg, fontWeight: "700", marginBottom: spacing.sm },
+  consentText: { fontSize: fontSizes.sm, lineHeight: 20 },
+  consentActions: { flexDirection: "row", justifyContent: "flex-end", gap: spacing.sm, marginTop: spacing.lg },
+  consentButton: { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: radii.sm, alignItems: "center", justifyContent: "center" },
+  photoDisclosure: { flex: 1, fontSize: fontSizes.xs, lineHeight: 15 },
+  photoButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   assistantAvatar: {
     width: 32,
     height: 32,

@@ -1,3 +1,4 @@
+/* eslint-disable complexity -- initialization retry branches are intentional. */
 import { useEffect, useMemo, useState } from "react";
 import { Platform } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
@@ -20,7 +21,7 @@ function webNeedsUnsupportedFallback(): boolean {
   return !detectWebSharedMemorySupport().supported;
 }
 
-// BLD-1796: dev/test-only. Load the lazy `test-seed` chunk and run the scenario
+// BLD-1796: dev/audit-only. Load the lazy `test-seed` chunk and run the scenario
 // seed, retrying the DYNAMIC IMPORT on a transient "Failed to fetch" (the chunk
 // dropped by the shared `npx serve` static origin under N concurrently
 // cold-booting Playwright workers). A rejected dynamic import is not cached, so
@@ -28,9 +29,10 @@ function webNeedsUnsupportedFallback(): boolean {
 // `runScenarioSeedWithRetry` owns the (also-bounded) retry of `seedScenario()`
 // itself — that covers the "Sync operation timeout" class on the seed's drizzle
 // writes. Both retries are inert outside WebDriver (single attempt), and this
-// whole helper is only reached from an `if (__DEV__)` block, so production is
-// untouched. Kept thin and self-contained: its loop must NOT depend on the lazy
-// module it is trying to load.
+// whole helper is only reached from the dev-or-explicit-audit condition below,
+// so ordinary production builds (where the EXPO_PUBLIC flag is unset) strip it.
+// Kept thin and self-contained: its loop must NOT depend on the lazy module it
+// is trying to load.
 const SEED_IMPORT_MAX_ATTEMPTS = 5;
 const SEED_IMPORT_RETRY_BACKOFF_MS = 150;
 
@@ -107,11 +109,12 @@ export function useAppInit() {
         const complete = skipOnboarding || (await isOnboardingComplete());
         setOnboarded(complete);
 
-        // Visual-UX-audit scenario seed (dev + web + __TEST_SCENARIO__ only).
-        // Wrapped in `if (__DEV__)` so Metro strips the dynamic import and the
-        // `__TEST_SCENARIO__` string from production bundles — enforced by
-        // `scripts/verify-scenario-hook-not-in-bundle.sh`.
-        if (__DEV__) {
+        // Visual-UX-audit scenario seed (dev OR explicit audit build + web +
+        // __TEST_SCENARIO__ only). The explicit flag is a CI audit artifact:
+        // normal production builds leave it unset, allowing Metro to strip this
+        // hook and its scenario string; verify-scenario-hook-not-in-bundle.sh
+        // enforces that ordinary-production hygiene.
+        if (__DEV__ || process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED === "1") {
           // BLD-1796: under Playwright (navigator.webdriver) the lazy import +
           // seed is retried on transient failures — "Failed to fetch" (the lazy
           // `test-seed` chunk dropped by the shared `npx serve` static origin
@@ -122,8 +125,8 @@ export function useAppInit() {
           // at high worker counts. The retry loop wraps the dynamic import
           // itself, because a REJECTED dynamic import is not cached — a retry
           // genuinely re-fetches the chunk. Outside WebDriver this is a single
-          // attempt (no behavior change); the whole block is dev-only, so
-          // production is untouched. `seedScenario()` is idempotent
+          // attempt (no behavior change); ordinary production is untouched.
+          // `seedScenario()` is idempotent
           // (DELETE-then-reinsert fixed-id rows), so re-running it is safe.
           try {
             await runScenarioSeedWithImportRetry();

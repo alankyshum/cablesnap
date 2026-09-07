@@ -44,16 +44,16 @@ appId: com.persoack.cablesnap
       id: "model-catalog-list"
     timeout: 30000
 # Native-only gesture regression. Option 9 starts outside the viewport on both
-# phone portrait and tablet landscape. Swipe from the registered Gorhom list so
-# this exercises RNGH touch coordination rather than DOM scrolling or adb input.
+# phone portrait and tablet landscape. Scroll the registered Gorhom list until
+# it is visible so Maestro exercises RNGH touch coordination rather than DOM
+# scrolling or adb input, while tolerating variable row heights.
 - assertNotVisible:
     id: model-catalog-option-9
-- swipe:
-    from:
-      id: model-catalog-list
-    direction: UP
-- assertVisible:
-    id: model-catalog-option-9
+- scrollUntilVisible:
+    element:
+      id: model-catalog-option-9
+    direction: DOWN
+    timeout: 30
 - tapOn:
     id: model-catalog-option-9
 - extendedWaitUntil:

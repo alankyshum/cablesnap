@@ -10629,6 +10629,191 @@
     "srcHash": "87eeaff10e47",
     "origin": "human"
   },
+  "components.coach.thinking": {
+    "message": "Thinking...",
+    "srcHash": "57cceac7e7c8",
+    "origin": "human"
+  },
+  "components.coach.thinkingA11y": {
+    "message": "AI Coach is thinking",
+    "srcHash": "5e8d14850447",
+    "origin": "human"
+  },
+  "components.coach.usingTool": {
+    "message": "Using tool: {tool}",
+    "srcHash": "91bec32f3e3c",
+    "origin": "human"
+  },
+  "ai.errors.modelLacksImageInput": {
+    "message": "This model cannot receive gym photos. Choose a model with image input and tools.",
+    "srcHash": "c9f37e2db732",
+    "origin": "human"
+  },
+  "ai.errors.openSettings": {
+    "message": "Open Settings",
+    "srcHash": "a7bde1bda7d6",
+    "origin": "human"
+  },
+  "ai.errors.photoCancelled": {
+    "message": "Photo upload cancelled.",
+    "srcHash": "e5fdbfaf206a",
+    "origin": "human"
+  },
+  "ai.errors.photoConsent": {
+    "message": "Review and accept the photo privacy disclosure before uploading.",
+    "srcHash": "5b4b4751b5ff",
+    "origin": "human"
+  },
+  "ai.errors.photoPermission": {
+    "message": "Photo library access is required. You can allow it in Settings.",
+    "srcHash": "4126e3764644",
+    "origin": "human"
+  },
+  "ai.errors.photoProcessing": {
+    "message": "That photo could not be prepared safely. Choose another image and try again.",
+    "srcHash": "a10e742e7764",
+    "origin": "human"
+  },
+  "ai.errors.pickCompatibleModel": {
+    "message": "Pick compatible model",
+    "srcHash": "a4a6dcb904ca",
+    "origin": "human"
+  },
+  "components.coach.chooseGymPhoto": {
+    "message": "Choose a gym photo from your library",
+    "srcHash": "cb938f23fa57",
+    "origin": "human"
+  },
+  "components.coach.closeRevisionHistory": {
+    "message": "Close revision history",
+    "srcHash": "157a1d5e4970",
+    "origin": "human"
+  },
+  "components.coach.draftFallbackName": {
+    "message": "Workout draft",
+    "srcHash": "c23b4215f495",
+    "origin": "human"
+  },
+  "components.coach.draftReasonFallback": {
+    "message": "Bounded local workout rules",
+    "srcHash": "45750d88f279",
+    "origin": "human"
+  },
+  "components.coach.draftReasonsTitle": {
+    "message": "Why this draft",
+    "srcHash": "ce3678db848e",
+    "origin": "human"
+  },
+  "components.coach.draftRevisionHistory": {
+    "message": "Revision history",
+    "srcHash": "2aa201e63d67",
+    "origin": "human"
+  },
+  "components.coach.draftRevisionLabel": {
+    "message": "Revision {version}",
+    "srcHash": "43083296c4c4",
+    "origin": "human"
+  },
+  "components.coach.draftSavedRevision": {
+    "message": "Saved · revision {revision}",
+    "srcHash": "af04b412e9e1",
+    "origin": "human"
+  },
+  "components.coach.libraryOnlyHint": {
+    "message": "Library only; no camera capture",
+    "srcHash": "64da318542d6",
+    "origin": "human"
+  },
+  "components.coach.openRevisionHistoryA11y": {
+    "message": "Open workout revision history",
+    "srcHash": "c415e8099edf",
+    "origin": "human"
+  },
+  "components.coach.removeGymPhoto": {
+    "message": "Remove selected gym photo",
+    "srcHash": "d611dc881fe6",
+    "origin": "human"
+  },
+  "components.coach.restoreRevision": {
+    "message": "Restore",
+    "srcHash": "43b5b0548fb7",
+    "origin": "human"
+  },
+  "components.coach.restoreRevisionA11y": {
+    "message": "Restore revision {version}",
+    "srcHash": "0023ebbff1cc",
+    "origin": "human"
+  },
+  "components.coach.revisionHistory": {
+    "message": "History",
+    "srcHash": "942586cf08fc",
+    "origin": "human"
+  },
+  "components.coach.startDraft": {
+    "message": "Start workout",
+    "srcHash": "2d6903d67f08",
+    "origin": "human"
+  },
+  "components.coach.startDraftA11y": {
+    "message": "Start this workout",
+    "srcHash": "521700e052db",
+    "origin": "human"
+  },
+  "components.coach.startDraftHint": {
+    "message": "Creates one workout session and opens it",
+    "srcHash": "eb18c3fda664",
+    "origin": "human"
+  },
+  "components.coach.startingDraft": {
+    "message": "Starting…",
+    "srcHash": "c6df2e10ad30",
+    "origin": "human"
+  },
+  "components.coach.promptGymPhotoTitle": {
+    "message": "Build from a gym photo",
+    "srcHash": "0eee27cbbc67",
+    "origin": "human"
+  },
+  "components.coach.promptGymPhotoBody": {
+    "message": "Upload a gym photo and I’ll identify visible equipment, then build a saved workout draft.",
+    "srcHash": "d2ab39316530",
+    "origin": "human"
+  },
+  "components.coach.gymPhotoSuggestionA11y": {
+    "message": "Build a workout from a gym photo",
+    "srcHash": "fcccd580b9f9",
+    "origin": "human"
+  },
+  "components.coach.gymPhotoPrivacyTitle": {
+    "message": "Gym photo privacy",
+    "srcHash": "f244377df26b",
+    "origin": "human"
+  },
+  "components.coach.privacyUnderstand": {
+    "message": "I understand",
+    "srcHash": "c4d3f620c13a",
+    "origin": "human"
+  },
+  "components.coach.gymPhotoReady": {
+    "message": "Selected gym photo ready to send",
+    "srcHash": "bfd4c87753e6",
+    "origin": "human"
+  },
+  "components.coach.startLightGuidance": {
+    "message": "Start light and adjust after a controlled first set",
+    "srcHash": "4ae915e9990a",
+    "origin": "human"
+  },
+  "components.coach.startDraftError": {
+    "message": "This workout could not be started. Please try again.",
+    "srcHash": "a502275e052b",
+    "origin": "human"
+  },
+  "components.coach.restoreRevisionError": {
+    "message": "This revision could not be restored. Please try again.",
+    "srcHash": "4701bacc66c3",
+    "origin": "human"
+  },
   "settings.about.buyCoffeeA11y": {
     "message": "Buy me a coffee",
     "srcHash": "168a66f9a115",
@@ -11697,21 +11882,6 @@
   "components.coach.toolCreateTemplate": {
     "message": "Creating workout template",
     "srcHash": "c71e91ff884b",
-    "origin": "human"
-  },
-  "components.coach.thinking": {
-    "message": "Thinking...",
-    "srcHash": "57cceac7e7c8",
-    "origin": "human"
-  },
-  "components.coach.thinkingA11y": {
-    "message": "AI Coach is thinking",
-    "srcHash": "5e8d14850447",
-    "origin": "human"
-  },
-  "components.coach.usingTool": {
-    "message": "Using tool: {tool}",
-    "srcHash": "91bec32f3e3c",
     "origin": "human"
   }
 }

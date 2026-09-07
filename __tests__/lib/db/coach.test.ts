@@ -56,7 +56,7 @@ describe("coach data layer", () => {
     await expect(coach.getLastCoachModel()).resolves.toBe("stealth/ox-alpha");
   });
 
-  it("orders messages and deletes them with their session", async () => {
+  it("orders children before deleting a session", async () => {
     const coach = require("../../../lib/db/coach") as typeof import("../../../lib/db/coach");
     mockDrizzleGet({ id: "message-1", session_id: sessionId, role: "user", content: "Hello", tool_calls: null, created_at: 2, error: null });
     await coach.appendMessage({ session_id: sessionId, role: "user", content: "Hello" });
@@ -67,8 +67,14 @@ describe("coach data layer", () => {
       { id: "message-2", session_id: sessionId, role: "assistant", content: "Hi", tool_calls: null, created_at: 3, error: null },
     ]);
     expect((await coach.getMessages(sessionId)).map((message) => message.content)).toEqual(["Hello", "Hi"]);
+    mockDrizzleAll([{ id: "draft-1" }, { id: "draft-2" }]);
     await coach.deleteSession(sessionId);
-    expect(mockDrizzleDb.delete).toHaveBeenCalledTimes(2);
+    expect(mockDrizzleDb.delete).toHaveBeenCalledTimes(5);
+    const deleteOrder = mockDrizzleDb.delete.mock.invocationCallOrder;
+    expect(deleteOrder[0]).toBeLessThan(deleteOrder[1]);
+    expect(deleteOrder[1]).toBeLessThan(deleteOrder[2]);
+    expect(deleteOrder[2]).toBeLessThan(deleteOrder[3]);
+    expect(deleteOrder[3]).toBeLessThan(deleteOrder[4]);
   });
 
   it("uses a transaction for the message-before-session cascade", async () => {
@@ -96,5 +102,16 @@ describe("coach data layer", () => {
       content: " ",
       error: JSON.stringify({ kind: "empty_response" }),
     })).resolves.toEqual(expect.objectContaining({ error: expect.any(String) }));
+  });
+
+  it("accepts an empty assistant row when it contains structured results", async () => {
+    const coach = require("../../../lib/db/coach") as typeof import("../../../lib/db/coach");
+    mockDrizzleGet({ id: "message-structured", session_id: sessionId, role: "assistant", content: "", tool_calls: JSON.stringify([{ toolCallId: "call-1", name: "create_gym_workout_draft", input: {}, output: { ok: true } }]), created_at: 4, error: null });
+    await expect(coach.appendMessage({
+      session_id: sessionId,
+      role: "assistant",
+      content: "",
+      tool_calls: JSON.stringify([{ toolCallId: "call-1", name: "create_gym_workout_draft", input: {}, output: { ok: true } }]),
+    })).resolves.toEqual(expect.objectContaining({ content: "" }));
   });
 });

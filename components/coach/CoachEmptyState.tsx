@@ -1,18 +1,19 @@
 import React, { useMemo } from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
-import { Bot, ChevronRight, Key, Sparkles, TrendingUp, Utensils, Zap } from "lucide-react-native";
+import { Bot, ChevronRight, Image as ImageIcon, Key, Sparkles } from "lucide-react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { fontSizes, radii, spacing } from "@/constants/design-tokens";
-import { i18n, t } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
 
 export type CoachEmptyStateProps = {
   isMissingKey: boolean;
   selectedModelId: string | null;
   onOpenModelPicker: () => void;
   onSelectPrompt: (prompt: string) => void;
+  onChooseGymPhoto?: () => void;
 };
 
 export function CoachEmptyState({
@@ -20,48 +21,16 @@ export function CoachEmptyState({
   selectedModelId,
   onOpenModelPicker,
   onSelectPrompt,
+  onChooseGymPhoto,
 }: CoachEmptyStateProps) {
   const colors = useThemeColors();
   const router = useRouter();
 
-  const promptSuggestions = useMemo(
-    () => [
-      {
-        icon: TrendingUp,
-        title: t({
-          id: "components.coach.promptReviewWorkoutTitle",
-          message: "Review Workout Progress",
-        }),
-        prompt: t({
-          id: "components.coach.promptReviewWorkoutBody",
-          message: "How is my strength and volume progressing over my recent workouts?",
-        }),
-      },
-      {
-        icon: Utensils,
-        title: t({
-          id: "components.coach.promptNutritionTitle",
-          message: "Nutrition & Macros",
-        }),
-        prompt: t({
-          id: "components.coach.promptNutritionBody",
-          message: "What should I focus on eating today to hit my macro targets?",
-        }),
-      },
-      {
-        icon: Zap,
-        title: t({
-          id: "components.coach.promptTechniqueTitle",
-          message: "Exercise Technique",
-        }),
-        prompt: t({
-          id: "components.coach.promptTechniqueBody",
-          message: "What are the key cues for a strong and safe cable chest press?",
-        }),
-      },
-    ],
-    []
-  );
+  const promptSuggestions = useMemo(() => [{
+    icon: ImageIcon,
+    title: t({ id: "components.coach.promptGymPhotoTitle", message: "Build from a gym photo" }),
+    prompt: t({ id: "components.coach.promptGymPhotoBody", message: "Upload a gym photo and I’ll identify visible equipment, then build a saved workout draft." }),
+  }], []);
 
   if (isMissingKey) {
     return (
@@ -152,13 +121,9 @@ export function CoachEmptyState({
           return (
             <TouchableOpacity
               key={index}
-              onPress={() => onSelectPrompt(item.prompt)}
+               onPress={() => onChooseGymPhoto ? onChooseGymPhoto() : onSelectPrompt(item.prompt)}
               accessibilityRole="button"
-              accessibilityLabel={i18n._({
-                id: "components.coach.suggestionA11y",
-                message: "Suggestion: {title}",
-                values: { title: item.title },
-              })}
+               accessibilityLabel={t({ id: "components.coach.gymPhotoSuggestionA11y", message: "Build a workout from a gym photo" })}
               style={[
                 styles.suggestionItem,
                 {

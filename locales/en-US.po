@@ -13820,3 +13820,138 @@ msgstr "AI Coach is thinking"
 msgid "components.coach.usingTool"
 msgstr "Using tool: {tool}"
 
+#. js-lingui-explicit-id
+msgid "ai.errors.modelLacksImageInput"
+msgstr "This model cannot receive gym photos. Choose a model with image input and tools."
+
+#. js-lingui-explicit-id
+msgid "ai.errors.openSettings"
+msgstr "Open Settings"
+
+#. js-lingui-explicit-id
+msgid "ai.errors.photoCancelled"
+msgstr "Photo upload cancelled."
+
+#. js-lingui-explicit-id
+msgid "ai.errors.photoConsent"
+msgstr "Review and accept the photo privacy disclosure before uploading."
+
+#. js-lingui-explicit-id
+msgid "ai.errors.photoPermission"
+msgstr "Photo library access is required. You can allow it in Settings."
+
+#. js-lingui-explicit-id
+msgid "ai.errors.photoProcessing"
+msgstr "That photo could not be prepared safely. Choose another image and try again."
+
+#. js-lingui-explicit-id
+msgid "ai.errors.pickCompatibleModel"
+msgstr "Pick compatible model"
+
+#. js-lingui-explicit-id
+msgid "components.coach.chooseGymPhoto"
+msgstr "Choose a gym photo from your library"
+
+#. js-lingui-explicit-id
+msgid "components.coach.closeRevisionHistory"
+msgstr "Close revision history"
+
+#. js-lingui-explicit-id
+msgid "components.coach.draftFallbackName"
+msgstr "Workout draft"
+
+#. js-lingui-explicit-id
+msgid "components.coach.draftReasonFallback"
+msgstr "Bounded local workout rules"
+
+#. js-lingui-explicit-id
+msgid "components.coach.draftReasonsTitle"
+msgstr "Why this draft"
+
+#. js-lingui-explicit-id
+msgid "components.coach.draftRevisionHistory"
+msgstr "Revision history"
+
+#. js-lingui-explicit-id
+msgid "components.coach.draftRevisionLabel"
+msgstr "Revision {version}"
+
+#. js-lingui-explicit-id
+msgid "components.coach.draftSavedRevision"
+msgstr "Saved · revision {revision}"
+
+#. js-lingui-explicit-id
+msgid "components.coach.libraryOnlyHint"
+msgstr "Library only; no camera capture"
+
+#. js-lingui-explicit-id
+msgid "components.coach.openRevisionHistoryA11y"
+msgstr "Open workout revision history"
+
+#. js-lingui-explicit-id
+msgid "components.coach.removeGymPhoto"
+msgstr "Remove selected gym photo"
+
+#. js-lingui-explicit-id
+msgid "components.coach.restoreRevision"
+msgstr "Restore"
+
+#. js-lingui-explicit-id
+msgid "components.coach.restoreRevisionA11y"
+msgstr "Restore revision {version}"
+
+#. js-lingui-explicit-id
+msgid "components.coach.revisionHistory"
+msgstr "History"
+
+#. js-lingui-explicit-id
+msgid "components.coach.startDraft"
+msgstr "Start workout"
+
+#. js-lingui-explicit-id
+msgid "components.coach.startDraftA11y"
+msgstr "Start this workout"
+
+#. js-lingui-explicit-id
+msgid "components.coach.startDraftHint"
+msgstr "Creates one workout session and opens it"
+
+#. js-lingui-explicit-id
+msgid "components.coach.startingDraft"
+msgstr "Starting…"
+
+#. js-lingui-explicit-id
+msgid "components.coach.promptGymPhotoTitle"
+msgstr "Build from a gym photo"
+
+#. js-lingui-explicit-id
+msgid "components.coach.promptGymPhotoBody"
+msgstr "Upload a gym photo and I’ll identify visible equipment, then build a saved workout draft."
+
+#. js-lingui-explicit-id
+msgid "components.coach.gymPhotoSuggestionA11y"
+msgstr "Build a workout from a gym photo"
+
+#. js-lingui-explicit-id
+msgid "components.coach.gymPhotoPrivacyTitle"
+msgstr "Gym photo privacy"
+
+#. js-lingui-explicit-id
+msgid "components.coach.privacyUnderstand"
+msgstr "I understand"
+
+#. js-lingui-explicit-id
+msgid "components.coach.gymPhotoReady"
+msgstr "Selected gym photo ready to send"
+
+#. js-lingui-explicit-id
+msgid "components.coach.startLightGuidance"
+msgstr "Start light and adjust after a controlled first set"
+
+#. js-lingui-explicit-id
+msgid "components.coach.startDraftError"
+msgstr "This workout could not be started. Please try again."
+
+#. js-lingui-explicit-id
+msgid "components.coach.restoreRevisionError"
+msgstr "This revision could not be restored. Please try again."

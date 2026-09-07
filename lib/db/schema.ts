@@ -448,7 +448,7 @@ export const coachSessions = sqliteTable("coach_sessions", {
 
 export const coachMessages = sqliteTable("coach_messages", {
   id: text("id").primaryKey(),
-  session_id: text("session_id").notNull().references(() => coachSessions.id),
+  session_id: text("session_id").notNull().references(() => coachSessions.id, { onDelete: "cascade" }),
   role: text("role").notNull(),
   content: text("content").notNull(),
   // Nullable for messages written before model attribution was introduced.
@@ -458,6 +458,30 @@ export const coachMessages = sqliteTable("coach_messages", {
   error: text("error"),
 }, (table) => [
   index("idx_coach_messages_session_created_at").on(table.session_id, table.created_at),
+]);
+
+export const coachWorkoutDrafts = sqliteTable("coach_workout_drafts", {
+  id: text("id").primaryKey(),
+  coach_session_id: text("coach_session_id").notNull().references(() => coachSessions.id, { onDelete: "cascade" }),
+  latest_revision: integer("latest_revision").notNull().default(1),
+  status: text("status").notNull().default("active"),
+  source_kind: text("source_kind").notNull(),
+  source_metadata: text("source_metadata").notNull().default("{}"),
+  created_at: integer("created_at").notNull(),
+  updated_at: integer("updated_at").notNull(),
+}, (table) => [index("idx_coach_workout_drafts_session").on(table.coach_session_id, table.updated_at)]);
+
+export const coachWorkoutDraftRevisions = sqliteTable("coach_workout_draft_revisions", {
+  id: text("id").primaryKey(),
+  draft_id: text("draft_id").notNull().references(() => coachWorkoutDrafts.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  canonical_draft: text("canonical_draft").notNull(),
+  reason_ledger: text("reason_ledger").notNull().default("[]"),
+  change_reason: text("change_reason").notNull(),
+  created_at: integer("created_at").notNull(),
+}, (table) => [
+  index("idx_coach_workout_draft_revisions_draft_version").on(table.draft_id, table.version),
+  uniqueIndex("uq_coach_workout_draft_revisions_draft_version").on(table.draft_id, table.version),
 ]);
 
 // ─── Strength Goals ─────────────────────────────────────────────────────────
@@ -556,3 +580,5 @@ export type StackCalibrationRow = typeof stackCalibrations.$inferSelect;
 export type SetMediaRow = typeof setMedia.$inferSelect;
 export type CoachSessionRow = typeof coachSessions.$inferSelect;
 export type CoachMessageRow = typeof coachMessages.$inferSelect;
+export type CoachWorkoutDraftRow = typeof coachWorkoutDrafts.$inferSelect;
+export type CoachWorkoutDraftRevisionRow = typeof coachWorkoutDraftRevisions.$inferSelect;

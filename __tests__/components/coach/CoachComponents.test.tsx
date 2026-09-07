@@ -624,10 +624,10 @@ describe("CoachEmptyState", () => {
     );
 
     expect(getByText("How can I help you today?")).toBeTruthy();
-    expect(getByText("Review Workout Progress")).toBeTruthy();
-    fireEvent.press(getByText("Review Workout Progress"));
+    expect(getByText("Build from a gym photo")).toBeTruthy();
+    fireEvent.press(getByText("Build from a gym photo"));
     expect(onSelectPrompt).toHaveBeenCalledWith(
-      "How is my strength and volume progressing over my recent workouts?"
+      "Upload a gym photo and I’ll identify visible equipment, then build a saved workout draft."
     );
   });
 });
