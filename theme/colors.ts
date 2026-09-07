@@ -78,8 +78,8 @@ const lightColors = {
   pacingRest: "#08415C",
 
   // Workout-frequency heatmap solid luminance ramp (BLD-3877, Tritanopia-safe)
-  heatmapFreq1: "#90CAF9",
-  heatmapFreq2: "#1E88E5",
+  heatmapFreq1: "#509BF1",
+  heatmapFreq2: "#225DA0",
   heatmapFreq3: "#0A2540",
   // Shadows & overlays
   shadow: "#000000",
@@ -166,8 +166,8 @@ const darkColors = {
   pacingRest: "#A5F3FC",
 
   // Workout-frequency heatmap solid luminance ramp (BLD-3877, Tritanopia-safe)
-  heatmapFreq1: "#2196F3",
-  heatmapFreq2: "#90CAF9",
+  heatmapFreq1: "#27619B",
+  heatmapFreq2: "#24A4F9",
   heatmapFreq3: "#E3F2FD",
   // Shadows & overlays
   shadow: "#000000",
