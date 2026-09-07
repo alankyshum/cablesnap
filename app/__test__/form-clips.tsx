@@ -8,14 +8,14 @@
  * so the Record CTA is fully visible and assertable in Playwright.
  *
  * Guards (all three must hold — any false => component renders `null`):
- *   1. `__DEV__ === true`                                    (not a prod build)
+ *   1. `__DEV__ === true` or `EXPO_PUBLIC_E2E_SCENARIO_SEED === "1"`
  *   2. `Platform.OS === "web"`                               (native targets never mount)
  *   3. `typeof window !== "undefined" && window.__FORM_CLIPS_HARNESS__ != null`
  *
  * Bundle hygiene: the only runtime reference to `__FORM_CLIPS_HARNESS__`
- * is inside an `if (__DEV__)` branch. Metro folds `__DEV__` to `false` in
- * production builds and strips the branch, so the string does not appear in
- * the prod web bundle. Enforced by
+ * is inside a dev-or-audit branch. Ordinary production builds leave the flag
+ * unset, so Metro strips the branch and the string does not appear in the prod
+ * web bundle. Enforced by
  * `scripts/verify-scenario-hook-not-in-bundle.sh` (needle added for BLD-1123).
  *
  * Seed shape mirrors `FormClipsHarnessSeed` (defined below) and is written
@@ -42,7 +42,7 @@ export default function FormClipsHarness() {
   const [seed, setSeed] = useState<FormClipsHarnessSeed | null>(null);
 
   useEffect(() => {
-    if (__DEV__) {
+    if (__DEV__ || process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED === "1") {
       if (Platform.OS !== "web") return;
       if (typeof window === "undefined") return;
 
@@ -69,7 +69,7 @@ export default function FormClipsHarness() {
     }
   }, []);
 
-  if (!__DEV__) return null;
+  if (!__DEV__ && process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED !== "1") return null;
   if (Platform.OS !== "web") return null;
   if (!seed) return null;
 

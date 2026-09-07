@@ -17,7 +17,14 @@ export type AIError =
   | ServerError
   | AbortedByUser
   | EmptyResponseError
-  | StepLimitReachedError;
+  | StepLimitReachedError
+  | ModelLacksImageInputError
+  | PhotoPermissionDeniedError
+  | PhotoCancelledError
+  | PhotoDecodeError
+  | PhotoTooLargeError
+  | PhotoConsentRequiredError
+  | PhotoUnsupportedTypeError;
 
 export type MissingKeyError = { readonly kind: "missing_key" };
 export type InvalidKeyError = { readonly kind: "invalid_key"; readonly status: 401 };
@@ -46,6 +53,13 @@ export type ServerError = { readonly kind: "server_error"; readonly status: numb
 export type AbortedByUser = { readonly kind: "aborted_by_user" };
 export type EmptyResponseError = { readonly kind: "empty_response" };
 export type StepLimitReachedError = { readonly kind: "step_limit_reached" };
+export type ModelLacksImageInputError = { readonly kind: "model_lacks_image_input" };
+export type PhotoPermissionDeniedError = { readonly kind: "photo_permission_denied" };
+export type PhotoCancelledError = { readonly kind: "photo_cancelled" };
+export type PhotoDecodeError = { readonly kind: "photo_decode_failed" };
+export type PhotoTooLargeError = { readonly kind: "photo_too_large" };
+export type PhotoConsentRequiredError = { readonly kind: "photo_consent_required" };
+export type PhotoUnsupportedTypeError = { readonly kind: "photo_unsupported_type" };
 
 /**
  * The sole OpenRouter wire-format seam. HTTP responses are classified from their
@@ -136,6 +150,8 @@ export type ChatErrorState = {
        | "retry_network"
        | "retry_empty_response"
        | "retry_step_limit"
+       | "pick_compatible_model"
+       | "open_photo_settings"
        | "dismiss";
     readonly label: string;
     readonly href?: "settings/ai-key" | "https://openrouter.ai/credits";
@@ -209,6 +225,11 @@ export function toChatErrorState(err: AIError): ChatErrorState {
         }),
         recovery: { kind: "pick_another_model", label: t({ id: "ai.errors.pickAnotherModel", message: "Pick another model" }) },
       };
+    case "model_lacks_image_input":
+      return {
+        message: t({ id: "ai.errors.modelLacksImageInput", message: "This model cannot receive gym photos. Choose a model with image input and tools." }),
+        recovery: { kind: "pick_compatible_model", label: t({ id: "ai.errors.pickCompatibleModel", message: "Pick compatible model" }) },
+      };
     case "catalog_unavailable":
       return {
         message: t({
@@ -264,5 +285,15 @@ export function toChatErrorState(err: AIError): ChatErrorState {
         }),
         recovery: { kind: "retry_step_limit", label: t({ id: "ai.errors.retry", message: "Retry" }) },
       };
+    case "photo_permission_denied":
+      return { message: t({ id: "ai.errors.photoPermission", message: "Photo library access is required. You can allow it in Settings." }), recovery: { kind: "open_photo_settings", label: t({ id: "ai.errors.openSettings", message: "Open Settings" }) } };
+    case "photo_cancelled":
+      return { message: t({ id: "ai.errors.photoCancelled", message: "Photo upload cancelled." }), recovery: { kind: "dismiss", label: t({ id: "ai.errors.dismiss", message: "Dismiss" }) } };
+    case "photo_decode_failed":
+    case "photo_too_large":
+    case "photo_unsupported_type":
+      return { message: t({ id: "ai.errors.photoProcessing", message: "That photo could not be prepared safely. Choose another image and try again." }), recovery: { kind: "dismiss", label: t({ id: "ai.errors.dismiss", message: "Dismiss" }) } };
+    case "photo_consent_required":
+      return { message: t({ id: "ai.errors.photoConsent", message: "Review and accept the photo privacy disclosure before uploading." }), recovery: { kind: "dismiss", label: t({ id: "ai.errors.dismiss", message: "Dismiss" }) } };
   }
 }

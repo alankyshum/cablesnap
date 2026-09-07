@@ -4,16 +4,17 @@
  * Renders PacingCard with pacing data seeded from `window.__SESSION_PACING_HARNESS__`.
  *
  * Guards:
- *   1. `__DEV__ === true`
+ *   1. `__DEV__ === true` or `EXPO_PUBLIC_E2E_SCENARIO_SEED === "1"`
  *   2. `Platform.OS === "web"`
  *   3. `typeof window !== "undefined" && window.__SESSION_PACING_HARNESS__ != null`
  *
  * Bundle hygiene: ALL references to `__SESSION_PACING_HARNESS__` are inside the
- * `if (__DEV__)` branch in `useEffect`. Metro folds `__DEV__` to `false` in
- * production builds and tree-shakes the entire branch.
+ * dev-or-audit branch in `useEffect`. Ordinary production builds leave the
+ * explicit flag unset, so Metro strips the entire branch.
  *
  * Refs: BLD-1144. Precedent: BLD-1137 (rest-coach.tsx).
  */
+/* eslint-disable design-tokens -- test harness styling is intentionally self-contained. */
 import { useEffect, useState } from "react";
 import { Platform, ScrollView } from "react-native";
 import PacingCard from "@/components/session/summary/PacingCard";
@@ -31,7 +32,7 @@ export default function SessionPacingHarness() {
   const [seed, setSeed] = useState<HarnessSeed | null>(null);
 
   useEffect(() => {
-    if (__DEV__) {
+    if (__DEV__ || process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED === "1") {
       if (Platform.OS !== "web") return;
       if (typeof window === "undefined") return;
 
@@ -48,7 +49,7 @@ export default function SessionPacingHarness() {
     }
   }, []);
 
-  if (!__DEV__) return null;
+  if (!__DEV__ && process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED !== "1") return null;
   if (Platform.OS !== "web") return null;
   if (!seed?.harnessActive || !seed.pacing) return null;
 

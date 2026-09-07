@@ -11274,6 +11274,41 @@
     "srcHash": "4317b5d9a79d",
     "origin": "human"
   },
+  "ai.errors.modelLacksImageInput": {
+    "message": "此模型無法接收健身房照片。請選擇支援圖片輸入與工具的模型。",
+    "srcHash": "c9f37e2db732",
+    "origin": "human"
+  },
+  "ai.errors.openSettings": {
+    "message": "開啟設定",
+    "srcHash": "a7bde1bda7d6",
+    "origin": "human"
+  },
+  "ai.errors.photoCancelled": {
+    "message": "照片上傳已取消。",
+    "srcHash": "e5fdbfaf206a",
+    "origin": "human"
+  },
+  "ai.errors.photoConsent": {
+    "message": "上傳前請查看並接受照片隱私聲明。",
+    "srcHash": "5b4b4751b5ff",
+    "origin": "human"
+  },
+  "ai.errors.photoPermission": {
+    "message": "需要照片圖庫存取權限。你可以在設定中允許。",
+    "srcHash": "4126e3764644",
+    "origin": "human"
+  },
+  "ai.errors.photoProcessing": {
+    "message": "無法安全準備這張照片。請選擇另一張圖片再試一次。",
+    "srcHash": "a10e742e7764",
+    "origin": "human"
+  },
+  "ai.errors.pickCompatibleModel": {
+    "message": "選擇相容模型",
+    "srcHash": "a4a6dcb904ca",
+    "origin": "human"
+  },
   "components.coach.toggleSidebar": {
     "message": "Toggle sessions sidebar（AI 教練）",
     "srcHash": "fab4b855ff73",
@@ -11659,6 +11694,33 @@
     "srcHash": "c71e91ff884b",
     "origin": "human"
   },
+  "components.coach.chooseGymPhoto": { "message": "從圖庫選擇健身房照片", "srcHash": "cb938f23fa57", "origin": "human" },
+  "components.coach.closeRevisionHistory": { "message": "關閉版本歷史", "srcHash": "157a1d5e4970", "origin": "human" },
+  "components.coach.draftFallbackName": { "message": "訓練草稿", "srcHash": "c23b4215f495", "origin": "human" },
+  "components.coach.draftReasonFallback": { "message": "受限的本機訓練規則", "srcHash": "45750d88f279", "origin": "human" },
+  "components.coach.draftReasonsTitle": { "message": "為何是這份草稿", "srcHash": "ce3678db848e", "origin": "human" },
+  "components.coach.draftRevisionHistory": { "message": "版本歷史", "srcHash": "2aa201e63d67", "origin": "human" },
+  "components.coach.draftRevisionLabel": { "message": "版本 {version}", "srcHash": "43083296c4c4", "origin": "human" },
+  "components.coach.draftSavedRevision": { "message": "已儲存 · 版本 {revision}", "srcHash": "af04b412e9e1", "origin": "human" },
+  "components.coach.libraryOnlyHint": { "message": "僅限圖庫；不使用相機拍攝", "srcHash": "64da318542d6", "origin": "human" },
+  "components.coach.openRevisionHistoryA11y": { "message": "開啟訓練版本歷史", "srcHash": "c415e8099edf", "origin": "human" },
+  "components.coach.removeGymPhoto": { "message": "移除選取的健身房照片", "srcHash": "d611dc881fe6", "origin": "human" },
+  "components.coach.restoreRevision": { "message": "還原", "srcHash": "43b5b0548fb7", "origin": "human" },
+  "components.coach.restoreRevisionA11y": { "message": "還原版本 {version}", "srcHash": "0023ebbff1cc", "origin": "human" },
+  "components.coach.revisionHistory": { "message": "歷史", "srcHash": "942586cf08fc", "origin": "human" },
+  "components.coach.startDraft": { "message": "開始訓練", "srcHash": "2d6903d67f08", "origin": "human" },
+  "components.coach.startDraftA11y": { "message": "開始這次訓練", "srcHash": "521700e052db", "origin": "human" },
+  "components.coach.startDraftHint": { "message": "建立一個訓練課程並開啟它", "srcHash": "eb18c3fda664", "origin": "human" },
+  "components.coach.startingDraft": { "message": "正在開始…", "srcHash": "c6df2e10ad30", "origin": "human" },
+  "components.coach.promptGymPhotoTitle": { "message": "從健身房照片建立訓練", "srcHash": "0eee27cbbc67", "origin": "human" },
+  "components.coach.promptGymPhotoBody": { "message": "上傳健身房照片，我會辨識可見器材並建立已儲存的訓練草稿。", "srcHash": "d2ab39316530", "origin": "human" },
+  "components.coach.gymPhotoSuggestionA11y": { "message": "從健身房照片建立訓練", "srcHash": "fcccd580b9f9", "origin": "human" },
+  "components.coach.gymPhotoPrivacyTitle": { "message": "健身房照片隱私", "srcHash": "f244377df26b", "origin": "human" },
+  "components.coach.privacyUnderstand": { "message": "我瞭解", "srcHash": "c4d3f620c13a", "origin": "human" },
+  "components.coach.gymPhotoReady": { "message": "已選取健身房照片，可供傳送", "srcHash": "bfd4c87753e6", "origin": "human" },
+  "components.coach.startDraftError": { "message": "無法開始這次訓練，請再試一次。", "srcHash": "a502275e052b", "origin": "human" },
+  "components.coach.restoreRevisionError": { "message": "無法還原此版本，請再試一次。", "srcHash": "4701bacc66c3", "origin": "human" },
+  "components.coach.startLightGuidance": { "message": "先從輕重量開始，完成受控的第一組後再調整", "srcHash": "4ae915e9990a", "origin": "human" },
   "components.coach.thinking": {
     "message": "思考中...",
     "srcHash": "57cceac7e7c8",

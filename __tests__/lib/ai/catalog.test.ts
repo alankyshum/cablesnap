@@ -1,4 +1,5 @@
 import {
+  getCurrentGymPhotoModel,
   getModel,
   getModelCatalog,
   invalidateModelCatalog,
@@ -8,7 +9,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const models = [
-  { id: "provider/with-tools", name: "With tools", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: ["tools"] },
+  { id: "provider/with-tools", name: "With tools", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: ["tools"], architecture: { input_modalities: ["text"] } },
+  { id: "provider/vision-tools", name: "Vision tools", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: ["tools"], architecture: { input_modalities: ["text", "image"] } },
   { id: "provider/no-tools", name: "No tools", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: [] },
 ];
 
@@ -26,7 +28,10 @@ describe("OpenRouter model catalog", () => {
 
   it("fetches live data and filters to models supporting tools", async () => {
     fetchMock.mockResolvedValue(response(models));
-    await expect(listModels()).resolves.toEqual([expect.objectContaining({ id: "provider/with-tools" })]);
+    await expect(listModels()).resolves.toEqual([
+      expect.objectContaining({ id: "provider/with-tools" }),
+      expect.objectContaining({ id: "provider/vision-tools" }),
+    ]);
   });
 
   it("throws for an unknown model instead of falling back", async () => {
@@ -37,6 +42,25 @@ describe("OpenRouter model catalog", () => {
   it("throws separately when a catalog model lacks tools", async () => {
     fetchMock.mockResolvedValue(response(models));
     await expect(getModel("provider/no-tools")).rejects.toEqual({ kind: "model_lacks_tools" });
+  });
+
+  it("preserves live modality data and does not infer vision from tools", async () => {
+    fetchMock.mockResolvedValue(response(models));
+    const catalog = await getModelCatalog();
+    expect(catalog.models.find((model) => model.id === "provider/vision-tools")).toEqual(expect.objectContaining({
+      inputModalities: ["text", "image"],
+      supportsImageInput: true,
+    }));
+    expect(catalog.models.find((model) => model.id === "provider/with-tools")).toEqual(expect.objectContaining({
+      supportsImageInput: false,
+    }));
+  });
+
+  it("requires a fresh successful catalog for the photo preflight", async () => {
+    fetchMock.mockResolvedValue(response(models));
+    await expect(getCurrentGymPhotoModel("provider/vision-tools")).resolves.toEqual(expect.objectContaining({ supportsImageInput: true }));
+    fetchMock.mockRejectedValueOnce(new Error("offline"));
+    await expect(getCurrentGymPhotoModel("provider/vision-tools")).rejects.toEqual({ kind: "catalog_unavailable" });
   });
 
   it("uses the last cache and flags it stale after a refresh failure", async () => {

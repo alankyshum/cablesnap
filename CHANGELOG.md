@@ -23,6 +23,9 @@ marker) at release time.
 ## Unreleased
 
 - Fixed uneven vertical spacing around the "Record a clip" button in the empty Form Library state, and evened out the clip remove-button inset.
+- AI Coach can build a saved, revisioned workout draft from a consented gym photo without persisting the photo, then open the workout only when the draft card is pressed.
+- Gym-photo workout draft flows now use a local synthetic photo fixture in end-to-end tests, avoiding network-shaped test input.
+- CI UX scenario audits now run against an explicit production-shaped web bundle with deterministic test seeding, stronger harness guards, and a static-export entrypoint check.
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->
