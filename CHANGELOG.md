@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - AI Coach can build a saved, revisioned workout draft from a consented gym photo without persisting the photo, then open the workout only when the draft card is pressed.
+- Gym-photo workout draft flows now use a local synthetic photo fixture in end-to-end tests, avoiding network-shaped test input.
 
 ## v0.26.115 — 2026-08-27
 <!-- versionCode: 183 -->
