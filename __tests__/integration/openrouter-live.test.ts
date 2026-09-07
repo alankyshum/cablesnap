@@ -52,6 +52,17 @@ const OX_ALPHA_MODEL = "stealth/ox-alpha";
 const NO_TOOLS_MODEL = "google/lyria-3-clip-preview";
 const WRONG_KEY = `sk-or-v1-${"0".repeat(64)}`;
 const live = Boolean(process.env.OPENROUTER_TEST_API_KEY);
+const visionModel = process.env.OPENROUTER_VISION_TEST_MODEL;
+const liveVision = Boolean(process.env.OPENROUTER_TEST_API_KEY && visionModel);
+
+const SYNTHETIC_GYM_JPEG = Uint8Array.from([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+  0xff, 0xd9,
+]);
+
+function b64(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString("base64");
+}
 
 function errorKind(error: unknown): string {
   return error && typeof error === "object" && "kind" in error
@@ -203,3 +214,63 @@ describeLive(live ? "OpenRouter live integration suite" : "OpenRouter live integ
     }
   });
 });
+
+/**
+ * Strict multimodal proof. This is deliberately separate from the historical
+ * text/tool smoke tests above: Nemotron and other free models are never used
+ * as an implicit vision fallback. Missing either required variable skips this
+ * opt-in block with an actionable runbook message; a configured model that
+ * fails capability preflight fails rather than being silently downgraded.
+ */
+const describeVision = liveVision ? describe : describe.skip;
+describeVision(
+  liveVision
+    ? "OpenRouter live multimodal proof"
+    : "OpenRouter live multimodal proof (skipped: set OPENROUTER_TEST_API_KEY and OPENROUTER_VISION_TEST_MODEL; see test:ai:live runbook)",
+  () => {
+    it("preflights tools + image input, then returns structured equipment from a synthetic gym image", async () => {
+      const modelId = visionModel as string;
+      const catalogResponse = await fetch("https://openrouter.ai/api/v1/models");
+      if (!catalogResponse.ok) throw new Error(`OpenRouter vision preflight catalog HTTP ${catalogResponse.status}`);
+      const catalog = await catalogResponse.json() as { data?: Array<{ id?: unknown; supported_parameters?: unknown; input_modalities?: unknown; architecture?: { input_modalities?: unknown } }> };
+      const selected = catalog.data?.find((model) => model.id === modelId);
+      const parameters = Array.isArray(selected?.supported_parameters) ? selected.supported_parameters : [];
+      const modalities = selected?.input_modalities ?? selected?.architecture?.input_modalities;
+      const inputs = Array.isArray(modalities) ? modalities.map((item) => String(item).toLowerCase()) : [];
+      if (!selected || !parameters.includes("tools") || !(inputs.includes("image") || inputs.includes("image_url"))) {
+        throw new Error(`Configured OPENROUTER_VISION_TEST_MODEL lacks required live tools + image input capability: ${modelId}`);
+      }
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_TEST_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: modelId,
+          messages: [{ role: "user", content: [
+            { type: "text", text: "Classify only visible gym equipment in this synthetic image. Use the tool; do not invent a workout." },
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${b64(SYNTHETIC_GYM_JPEG)}` } },
+          ] }],
+          tools: [{ type: "function", function: {
+            name: "detect_gym_equipment",
+            description: "Return visible equipment only.",
+            parameters: { type: "object", properties: { equipment: { type: "array", items: { type: "object", properties: { label: { type: "string" }, confidence: { type: "number" } }, required: ["label", "confidence"] } } }, required: ["equipment"] },
+          } }],
+          tool_choice: { type: "function", function: { name: "detect_gym_equipment" } },
+        }),
+      });
+      if (!response.ok) throw new Error(`OpenRouter vision inference HTTP ${response.status}`);
+      const payload = await response.json() as { choices?: Array<{ message?: { tool_calls?: Array<{ function?: { name?: unknown; arguments?: unknown } }> } }> };
+      const call = payload.choices?.[0]?.message?.tool_calls?.find((item) => item.function?.name === "detect_gym_equipment");
+      expect(call?.function?.name).toBe("detect_gym_equipment");
+      const result = JSON.parse(String(call?.function?.arguments ?? "{}")) as { equipment?: Array<{ label?: unknown; confidence?: unknown }> };
+      expect(result.equipment?.length).toBeGreaterThan(0);
+      expect(result.equipment).toEqual(expect.arrayContaining([
+        expect.objectContaining({ label: expect.any(String), confidence: expect.any(Number) }),
+      ]));
+      // Do not print request, image, key, provider payload, or tool arguments.
+      console.info(`OpenRouter vision preflight verified model=${modelId} tools=true image_input=true structured_equipment=true`);
+    });
+  },
+);

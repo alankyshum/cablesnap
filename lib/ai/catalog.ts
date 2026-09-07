@@ -23,6 +23,9 @@ export type CatalogModel = {
   readonly contextLength: number | null;
   readonly pricing: ModelPricing;
   readonly supportedParameters: readonly string[];
+  /** Validated OpenRouter input modalities (for example text, image). */
+  readonly inputModalities?: readonly string[];
+  readonly supportsImageInput?: boolean;
 };
 
 export type ModelCatalog = {
@@ -38,6 +41,8 @@ type RawModel = {
   context_length?: unknown;
   pricing?: unknown;
   supported_parameters?: unknown;
+  architecture?: unknown;
+  input_modalities?: unknown;
 };
 
 type CachedCatalog = {
@@ -52,12 +57,19 @@ function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+// The normalization branches intentionally mirror the provider's optional wire fields.
+// eslint-disable-next-line complexity
 function normalizeModel(raw: RawModel): CatalogModel | null {
   if (typeof raw.id !== "string" || typeof raw.name !== "string") return null;
   const supportedParameters = Array.isArray(raw.supported_parameters)
     ? raw.supported_parameters.filter((item): item is string => typeof item === "string")
     : [];
   const pricing = raw.pricing && typeof raw.pricing === "object" ? raw.pricing as Record<string, unknown> : {};
+  const architecture = raw.architecture && typeof raw.architecture === "object" ? raw.architecture as Record<string, unknown> : {};
+  const modalitiesValue = raw.input_modalities ?? architecture.input_modalities;
+  const inputModalities = Array.isArray(modalitiesValue)
+    ? modalitiesValue.filter((item): item is string => typeof item === "string").map((item) => item.toLowerCase())
+    : [];
   return {
     id: raw.id,
     name: raw.name,
@@ -71,6 +83,8 @@ function normalizeModel(raw: RawModel): CatalogModel | null {
       ...(typeof pricing.internal_reasoning === "string" ? { internalReasoning: pricing.internal_reasoning } : {}),
     },
     supportedParameters,
+    inputModalities,
+    supportsImageInput: inputModalities.includes("image") || inputModalities.includes("image_url"),
   };
 }
 
@@ -124,6 +138,23 @@ export async function getModel(id: string, options?: { readonly forceRefresh?: b
   }
   void catalog;
   return model;
+}
+
+/** Photo requests require a successful fresh catalog response, never stale cache. */
+export async function getCurrentGymPhotoModel(id: string): Promise<CatalogModel> {
+  const catalog = await getModelCatalog({ forceRefresh: true });
+  if (catalog.stale) throw { kind: "catalog_unavailable" } satisfies CatalogUnavailableError;
+  const model = catalog.models.find((item) => item.id === id);
+  if (!model) {
+    const all = cachedCatalog?.allModels.find((item) => item.id === id);
+    if (all && !all.supportedParameters.includes("tools")) throw { kind: "model_lacks_tools" } satisfies ModelLacksToolsError;
+    throw { kind: "model_not_in_catalog" } satisfies ModelNotInCatalogError;
+  }
+  return model;
+}
+
+export function canSendGymPhoto(model: Pick<CatalogModel, "supportedParameters" | "supportsImageInput">): boolean {
+  return model.supportedParameters.includes("tools") && model.supportsImageInput === true;
 }
 
 export function invalidateModelCatalog(): void {

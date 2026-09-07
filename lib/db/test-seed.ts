@@ -38,6 +38,7 @@ export const SUPPORTED_SCENARIOS = [
   "active-gating-empty",
   "active-gating-live",
   "pinned-note",
+  "gym-photo",
 ] as const;
 
 export type ScenarioKey = (typeof SUPPORTED_SCENARIOS)[number];
@@ -206,12 +207,27 @@ export async function seedScenario(): Promise<void> {
     case "pinned-note":
       await seedPinnedNote(db);
       break;
+    case "gym-photo":
+      await seedGymPhoto(db);
+      break;
   }
 
   // Flag the page as ready for screenshot capture.
   if (typeof document !== "undefined" && document.body) {
     document.body.dataset.testReady = "true";
   }
+}
+
+/** Deterministic local exercise required by the structured gym-photo E2E. */
+export async function seedGymPhoto(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+): Promise<void> {
+  await db.runAsync(
+    `INSERT OR IGNORE INTO exercises
+       (id, name, category, primary_muscles, secondary_muscles, equipment, instructions, difficulty, is_custom)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ["e2e-dumbbell-press", "E2E Dumbbell Press", "chest", "[\"chest\"]", "[]", "dumbbell", "Press.", "beginner", 0],
+  );
 }
 
 // Exported for unit tests; also lets scenario specs exercise fixtures directly.

@@ -1,12 +1,12 @@
 /* eslint-disable max-lines */
 import { test, expect, type Page } from "@playwright/test";
-import { navigateTo, skipOnboarding, enablePerWorkerDb } from "../helpers";
+import { navigateTo, skipOnboarding, enablePerWorkerDb, enableGymPhotoFixture, enableExerciseFixture, dismissUpdateDialog, clearGymPhotoConsent } from "../helpers";
 
 const MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free";
 const VALID_TEST_KEY = `sk-or-v1-${"a".repeat(64)}`;
 const CATALOG = {
   data: [
-    { id: MODEL, name: "Nemotron test model", context_length: 32768, pricing: { prompt: "0", completion: "0" }, supported_parameters: ["tools"] },
+    { id: MODEL, name: "Nemotron test model", context_length: 32768, pricing: { prompt: "0", completion: "0" }, supported_parameters: ["tools"], architecture: { input_modalities: ["text"] } },
     ...Array.from({ length: 30 }, (_, index) => ({
       id: `test/model-${String(index + 1).padStart(2, "0")}`,
       name: `Scrollable model ${String(index + 1).padStart(2, "0")}`,
@@ -43,9 +43,204 @@ async function openCoach(page: Page, testInfo: { parallelIndex: number }, catalo
   await navigateTo(page, "/ai-coach");
   await expect(page.getByRole("button", { name: "Select AI Model" }).first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByLabel(/chat\.\.\.|AI Coach anything|model above/)).toBeVisible({ timeout: 10_000 });
-  const update = page.getByText("Skip this version", { exact: true });
-  if (await update.isVisible().catch(() => false)) await update.click({ force: true });
+  await dismissUpdateDialog(page);
 }
+
+const VISION_MODEL = "test/vision-tools";
+const VISION_CATALOG = {
+  data: [{ id: VISION_MODEL, name: "Synthetic vision tools", context_length: 32768, pricing: { prompt: "0", completion: "0" }, supported_parameters: ["tools"], architecture: { input_modalities: ["text", "image"] } }],
+};
+
+const GYM_EXERCISE = {
+  id: "e2e-dumbbell-press", name: "E2E Dumbbell Press", category: "chest",
+  primary_muscles: ["chest"], secondary_muscles: [], equipment: "dumbbell",
+  instructions: "Press.", difficulty: "beginner", is_custom: false,
+};
+
+test("text/tool-only catalog model blocks gym-photo upload", async ({ page }, testInfo) => {
+  await enableGymPhotoFixture(page);
+  await enableExerciseFixture(page, [GYM_EXERCISE]);
+  await enablePerWorkerDb(page, testInfo.parallelIndex);
+  await page.addInitScript((key) => {
+    localStorage.setItem("cablesnap.e2e.live-key", "1");
+    sessionStorage.setItem("cablesnap.secure-store.openrouter_api_key", key);
+  }, VALID_TEST_KEY);
+  await page.route("**openrouter.ai/api/v1/models", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: [{ id: "test/text-tools", name: "Text tools", supported_parameters: ["tools"], architecture: { input_modalities: ["text"] } }] }) }));
+  await page.route("**openrouter.ai/api/v1/key", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: {} }) }));
+  await skipOnboarding(page);
+  await page.goto("/ai-coach");
+   await expect(page.getByRole("button", { name: "Select AI Model" }).first()).toBeVisible({ timeout: 20_000 });
+  await dismissUpdateDialog(page);
+   await page.getByText("Select Model", { exact: true }).click();
+  await expect(page.getByTestId("model-catalog-list")).toBeAttached({ timeout: 15_000 });
+  await page.getByTestId("model-search-input").fill("text-tools", { force: true });
+  await expect(page.getByTestId("model-row-test/text-tools")).toBeAttached({ timeout: 15_000 });
+  await page.getByTestId("model-row-test/text-tools").click({ force: true });
+  await expect(page.getByRole("button", { name: /Active Model: test\/text-tools/ })).toBeVisible();
+  await page.getByRole("button", { name: "Choose a gym photo from your library" }).dispatchEvent("click");
+  await expect(page.getByText(/cannot receive gym photos|image input and tools/i)).toBeVisible({ timeout: 15_000 });
+});
+
+test("mocked gym-photo selection sends one bounded image request and keeps media out of durable chat", async ({ page }, testInfo) => {
+  await enableGymPhotoFixture(page);
+  await enablePerWorkerDb(page, testInfo.parallelIndex);
+  await page.addInitScript((key) => {
+    localStorage.setItem("cablesnap.e2e.live-key", "1");
+    sessionStorage.setItem("cablesnap.secure-store.openrouter_api_key", key);
+  }, VALID_TEST_KEY);
+  await page.route("**openrouter.ai/api/v1/models", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VISION_CATALOG) }));
+  await page.route("**openrouter.ai/api/v1/key", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: {} }) }));
+  await skipOnboarding(page);
+  await page.goto("/ai-coach");
+  await expect(page.getByRole("button", { name: "Select AI Model" }).first()).toBeVisible({ timeout: 20_000 });
+  await dismissUpdateDialog(page);
+  await clearGymPhotoConsent(page);
+   await page.getByText("Select Model", { exact: true }).click();
+   await page.getByTestId(`model-row-${VISION_MODEL}`).dispatchEvent("click");
+   await expect(page.getByRole("button", { name: /Active Model: test\/vision-tools/ })).toBeVisible();
+  const requestBodies: string[] = [];
+  await page.route("**openrouter.ai/api/v1/chat/completions", async (route) => {
+    requestBodies.push(route.request().postData() ?? "");
+    await route.fulfill({ status: 200, contentType: "text/event-stream", body: sse("Photo request accepted") });
+  });
+   await page.getByRole("button", { name: "Choose a gym photo from your library" }).dispatchEvent("click");
+   await expect(page.getByText("Gym photo privacy", { exact: true })).toBeVisible({ timeout: 10_000 });
+   await page.getByRole("button", { name: "I understand", exact: true }).click({ force: true });
+   await expect(page.getByLabel("Selected gym photo ready to send", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
+  await expect(page.getByText("Photo request accepted", { exact: true })).toBeVisible({ timeout: 20_000 });
+  expect(requestBodies).toHaveLength(1);
+  expect(requestBodies[0]).toContain("image");
+  const request = JSON.parse(requestBodies[0]) as { messages?: Array<{ content?: Array<{ type?: string; image?: unknown; image_url?: unknown }> }> };
+  const imagePart = request.messages?.at(-1)?.content?.find((part) => part.type === "image" || part.type === "image_url");
+  expect(imagePart).toBeDefined();
+  const userPayload = JSON.stringify(request.messages?.filter((message) => Array.isArray(message.content)));
+  expect(userPayload).not.toMatch(/e2e:\/\/synthetic|file:\/\/|exif|location/i);
+   await page.reload();
+   await expect(page.getByTestId("GC_CONTENT").getByText("[Gym photo uploaded]", { exact: true })).toBeVisible({ timeout: 20_000 });
+   await page.getByRole("button", { name: "Choose a gym photo from your library" }).dispatchEvent("click");
+   await expect(page.getByText("Gym photo privacy", { exact: true })).toHaveCount(0);
+  expect(await page.locator("body").innerText()).not.toMatch(/e2e:\/\/synthetic|file:\/\/|base64|exif|location/i);
+});
+
+test("gym photo follows the persisted structured draft, revision, restore, and explicit start flow", async ({ page }, testInfo) => {
+  await enableGymPhotoFixture(page);
+  await enableExerciseFixture(page, [GYM_EXERCISE]);
+  await enablePerWorkerDb(page, testInfo.parallelIndex);
+  await page.addInitScript((key) => {
+    localStorage.setItem("cablesnap.e2e.live-key", "1");
+    sessionStorage.setItem("cablesnap.secure-store.openrouter_api_key", key);
+  }, VALID_TEST_KEY);
+  await page.route("**openrouter.ai/api/v1/models", (route) => {
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(VISION_CATALOG) });
+  });
+  await page.route("**openrouter.ai/api/v1/key", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: {} }) }));
+  await skipOnboarding(page);
+  await page.goto("/ai-coach");
+   await expect(page.getByRole("button", { name: "Select AI Model" }).first()).toBeVisible({ timeout: 20_000 });
+  await clearGymPhotoConsent(page);
+  const update = page.getByText("Skip this version", { exact: true });
+  if (await update.isVisible({ timeout: 5_000 }).catch(() => false)) await update.click({ force: true });
+
+   await page.getByText("Select Model", { exact: true }).click();
+  await expect(page.getByTestId("model-catalog-list")).toBeAttached({ timeout: 15_000 });
+  await page.getByTestId("model-search-input").fill("vision-tools", { force: true });
+  await expect(page.getByTestId(`model-row-${VISION_MODEL}`)).toBeAttached({ timeout: 15_000 });
+  await page.getByTestId(`model-row-${VISION_MODEL}`).click({ force: true });
+  await expect(page.getByRole("button", { name: /Active Model: test\/vision-tools/ })).toBeVisible();
+    await page.getByRole("button", { name: "Choose a gym photo from your library" }).dispatchEvent("click");
+    await expect(page.getByText("Gym photo privacy", { exact: true })).toBeVisible();
+     await page.getByRole("button", { name: "Cancel", exact: true }).click({ force: true });
+     await expect(page.getByLabel("Selected gym photo ready to send", { exact: true })).toHaveCount(0);
+     await expect(page.getByText("Gym photo privacy", { exact: true })).toHaveCount(0);
+     // Reload deliberately proves cancellation did not persist consent and avoids
+     // depending on the composer hook's in-memory hydration timing.
+     await page.reload();
+     await expect(page.getByRole("button", { name: /Active Model: test\/vision-tools/ })).toBeVisible({ timeout: 20_000 });
+     await page.getByRole("button", { name: "Choose a gym photo from your library" }).click({ force: true });
+     await page.getByRole("button", { name: "I understand", exact: true }).click({ force: true });
+     await expect(page.getByText("Gym photo privacy", { exact: true })).toHaveCount(0);
+     await expect(page.getByLabel("Selected gym photo ready to send", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByLabel(/Gym photos are sent directly/i)).toBeVisible();
+
+  const requests: string[] = [];
+  let toolRound = 0;
+   await page.route("**openrouter.ai/api/v1/chat/completions", async (route) => {
+    const body = route.request().postData() ?? "";
+    requests.push(body);
+    const parsed = JSON.parse(body) as { messages?: unknown[] };
+    console.log(`[gym-e2e] round=${toolRound} roles=${JSON.stringify((parsed.messages ?? []).map((m) => typeof m === "object" && m !== null ? (m as { role?: string }).role : null))}`);
+    if (toolRound === 0) {
+      toolRound += 1;
+      await route.fulfill({ status: 200, contentType: "text/event-stream", body: toolCallSse("detect-1", "detect_gym_equipment", { equipment: [{ label: "dumbbell", confidence: 0.94 }] }) });
+      return;
+    }
+    if (toolRound === 1) {
+      toolRound += 1;
+      await route.fulfill({ status: 200, contentType: "text/event-stream", body: toolCallSse("create-1", "create_gym_workout_draft", { equipment: [{ label: "dumbbell", confidence: 0.94 }] }) });
+      return;
+    }
+    const messages = parsed.messages as Array<{ role?: string; content?: unknown }>;
+    const lastUser = [...messages].reverse().find((message) => message.role === "user");
+    const currentPrompt = typeof lastUser?.content === "string" ? lastUser.content : JSON.stringify(lastUser?.content ?? "");
+    const draftId = JSON.stringify(messages).match(/draftId[^a-zA-Z0-9]+([a-zA-Z0-9-]+)/)?.[1] ?? "";
+    if (currentPrompt.includes("Make it a 30 minute plan")) {
+      await route.fulfill({ status: 200, contentType: "text/event-stream", body: toolCallSse("modify-1", "modify_gym_workout_draft", { draftId, expectedRevision: 1, change: { kind: "time_cap", minutes: 30 } }) });
+      return;
+    }
+    if (/restore/i.test(currentPrompt)) {
+      await route.fulfill({ status: 200, contentType: "text/event-stream", body: toolCallSse("restore-1", "restore_gym_workout_revision", { draftId, version: 1, expectedRevision: 2 }) });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "text/event-stream", body: sse("Saved draft.") });
+  });
+  await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
+  await expect(page.getByTestId("coach-workout-draft-card")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("dumbbell", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Saved · revision 1/)).toBeVisible();
+  await expect(page.getByText(/Why this plan|Reasons|duration/i).first()).toBeVisible();
+  expect(page.url()).toMatch(/ai-coach/);
+  expect(requests.length).toBeGreaterThanOrEqual(1);
+  expect(requests[0]).toContain("image_url");
+  const firstRequest = JSON.parse(requests[0]) as { messages?: unknown[] };
+  expect(JSON.stringify(firstRequest.messages?.filter((message) => typeof message === "object" && message !== null && "content" in message && Array.isArray((message as { content?: unknown }).content))))
+    .not.toMatch(/e2e:\/\/synthetic|file:\/\/|location/i);
+
+  // Chat modification must append a durable revision without navigating.
+  const beforeModify = page.url();
+  await composer(page).fill("Make it a 30 minute plan", { force: true });
+  await page.getByRole("button", { name: "send message" }).dispatchEvent("click");
+  await expect(page.getByText(/Saved · revision 2/)).toBeVisible({ timeout: 30_000 });
+  expect(page.url()).toBe(beforeModify);
+  await page.reload();
+  await expect(page.getByText(/Saved · revision 2/)).toBeVisible({ timeout: 30_000 });
+
+  // History restore appends a new latest revision rather than replacing rows.
+  await page.getByRole("button", { name: "Open workout revision history" }).click({ force: true });
+  await expect(page.getByText(/Revision 1/i)).toBeVisible();
+  const restore = page.getByRole("button", { name: /Restore revision 1/i });
+  if (await restore.count()) await restore.dispatchEvent("click");
+  else await page.getByText(/Restore/i).first().dispatchEvent("click");
+  await expect(page.getByText("Saved · revision 3", { exact: true })).toBeVisible({ timeout: 30_000 });
+  expect(page.url()).toBe(beforeModify);
+
+  // Two rapid card presses create one session and one navigation.
+  let sessionNavigations = 0;
+  page.on("framenavigated", (frame) => { if (frame.url().includes("/session/")) sessionNavigations += 1; });
+  const start = page.getByTestId("coach-workout-draft-start");
+  await Promise.all([start.dispatchEvent("click"), start.dispatchEvent("click")]);
+  await expect(page).toHaveURL(/\/session\/[^/]+/, { timeout: 30_000 });
+  expect(sessionNavigations).toBe(1);
+  const sessionId = new URL(page.url()).pathname.split("/").at(-1);
+  const sessionState = await page.evaluate(async () => {
+    const db = (globalThis as typeof globalThis & { __cablesnap_db?: { getAllAsync<T>(sql: string): Promise<T[]> } }).__cablesnap_db;
+    const rows = await db?.getAllAsync<{ id: string; set_count: number }>("SELECT id, (SELECT COUNT(*) FROM workout_sets WHERE session_id = workout_sessions.id) AS set_count FROM workout_sessions WHERE kind = 'workout' AND completed_at IS NULL");
+    return rows ?? [];
+  });
+  expect(sessionState).toHaveLength(1);
+  expect(sessionState[0].id).toBe(sessionId);
+  expect(sessionState[0].set_count).toBeGreaterThan(0);
+});
 
 async function seedKeyThroughSettings(page: Page) {
   // key-vault.ts uses this exact namespaced sessionStorage key on web. The real
@@ -63,9 +258,19 @@ function composer(page: Page) {
 }
 
 function sse(text: string, done = true) {
+  const base = { id: "chatcmpl-e2e", object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: VISION_MODEL };
   return [
-    `data: ${JSON.stringify({ id: "chatcmpl-e2e", choices: [{ delta: { content: text } }] })}\n\n`,
-    ...(done ? [`data: ${JSON.stringify({ choices: [{ finish_reason: "stop" }] })}\n\n`, "data: [DONE]\n\n"] : []),
+    `data: ${JSON.stringify({ ...base, choices: [{ index: 0, delta: { role: "assistant", content: text }, finish_reason: null }] })}\n\n`,
+    ...(done ? [`data: ${JSON.stringify({ ...base, choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n`, "data: [DONE]\n\n"] : []),
+  ].join("");
+}
+
+function toolCallSse(callId: string, name: string, args: unknown) {
+  const base = { id: "chatcmpl-gym-e2e", object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: VISION_MODEL };
+  return [
+    `data: ${JSON.stringify({ ...base, choices: [{ index: 0, delta: { role: "assistant", tool_calls: [{ index: 0, id: callId, type: "function", function: { name, arguments: JSON.stringify(args) } }] }, finish_reason: null }] })}\n\n`,
+    `data: ${JSON.stringify({ ...base, choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }] })}\n\n`,
+    "data: [DONE]\n\n",
   ].join("");
 }
 
