@@ -37,7 +37,10 @@ on:
 # Multiple dispatches against the same ref shouldn't pile up.
 concurrency:
   group: ux-audit-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel an in-flight PR assertion run when a newer commit arrives;
+  # the check must settle so the PR has an actionable result. Push/scheduled
+  # audits may still cancel superseded runs to avoid piling up.
+  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
 
 permissions:
   contents: read
@@ -65,7 +68,7 @@ jobs:
     timeout-minutes: 20
     concurrency:
       group: scenario-gate-pr-${{ github.ref }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
