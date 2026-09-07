@@ -41,7 +41,11 @@ export function CoachErrorCard({
 
     switch (recovery.kind) {
       case "pick_another_model":
+      case "pick_compatible_model":
         onPickModel?.();
+        break;
+      case "open_photo_settings":
+        Linking.openSettings().catch(() => {});
         break;
       case "refresh_catalog":
         onRefreshCatalog?.();

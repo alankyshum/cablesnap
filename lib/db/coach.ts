@@ -1,7 +1,7 @@
 import { asc, desc, eq } from "drizzle-orm";
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction } from "./helpers";
-import { appSettings, coachMessages, coachSessions } from "./schema";
+import { appSettings, coachMessages, coachSessions, coachWorkoutDraftRevisions, coachWorkoutDrafts } from "./schema";
 
 export const LAST_COACH_MODEL_KEY = "ai_coach.last_model_id";
 export const NEW_CHAT_MODEL_KEY = "ai_coach.new_chat_model_id";
@@ -96,6 +96,16 @@ export async function deleteSession(id: string): Promise<void> {
   const db = await getDrizzle();
   await withTransaction(async () => {
     await db.delete(coachMessages).where(eq(coachMessages.session_id, id));
+    // Delete explicitly for upgraded databases whose original foreign keys
+    // cannot be rewritten additively to include ON DELETE CASCADE.
+    const drafts = await db.select({ id: coachWorkoutDrafts.id })
+      .from(coachWorkoutDrafts)
+      .where(eq(coachWorkoutDrafts.coach_session_id, id))
+      .all();
+    for (const draft of drafts) {
+      await db.delete(coachWorkoutDraftRevisions).where(eq(coachWorkoutDraftRevisions.draft_id, draft.id));
+    }
+    await db.delete(coachWorkoutDrafts).where(eq(coachWorkoutDrafts.coach_session_id, id));
     await db.delete(coachSessions).where(eq(coachSessions.id, id));
   });
 }
@@ -104,7 +114,13 @@ export async function appendMessage(
   input: Pick<AppendCoachMessage, "session_id" | "role" | "content"> &
     Partial<Pick<AppendCoachMessage, "tool_calls" | "error" | "model_id">>,
 ): Promise<CoachMessage> {
-  if (input.role === "assistant" && input.error == null && input.content.trim() === "") {
+  const hasStructuredToolCalls = typeof input.tool_calls === "string" && (() => {
+    try {
+      const parsed: unknown = JSON.parse(input.tool_calls);
+      return Array.isArray(parsed) && parsed.length > 0 && parsed.every((call) => call !== null && typeof call === "object");
+    } catch { return false; }
+  })();
+  if (input.role === "assistant" && input.error == null && input.content.trim() === "" && !hasStructuredToolCalls) {
     throw new Error("Assistant messages without content must include an error");
   }
   const db = await getDrizzle();

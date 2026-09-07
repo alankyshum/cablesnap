@@ -4,12 +4,14 @@ import * as path from "path";
 const PORT = process.env.PLAYWRIGHT_PORT || "8088";
 const BASE_URL = `http://localhost:${PORT}`;
 const E2E_WEB_DIST = path.resolve(__dirname, `.expo/e2e-web-${PORT}`);
+const REPOSITORY_WEB_DIST = path.resolve(__dirname, "dist");
 const SERVE_CONFIG = path.resolve(__dirname, "e2e/serve-coop-coep.json");
 
-// Never use shared dist/: Android exports can overwrite the web artifact, and
-// stale artifacts can make Playwright exercise another build. Every run owns a
-// port-scoped web export, including CI.
-const staticServerCommand = `node -e "require('fs').rmSync(process.argv[1], { recursive: true, force: true })" '${E2E_WEB_DIST}' && npx expo export -p web --output-dir '${E2E_WEB_DIST}' && npx serve -s '${E2E_WEB_DIST}' -l ${PORT} -c '${SERVE_CONFIG}'`;
+// CI prepares the repository dist/ bundle before Playwright starts. Local runs
+// retain the port-scoped export so separate runs cannot exercise stale output.
+const staticServerCommand = process.env.E2E_USE_STATIC === "1"
+  ? `npx serve -s '${REPOSITORY_WEB_DIST}' -l ${PORT} -c '${SERVE_CONFIG}'`
+  : `node -e "require('fs').rmSync(process.argv[1], { recursive: true, force: true })" '${E2E_WEB_DIST}' && npx expo export -p web --output-dir '${E2E_WEB_DIST}' && npx serve -s '${E2E_WEB_DIST}' -l ${PORT} -c '${SERVE_CONFIG}'`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -65,10 +67,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    // Always serve a static bundle for Playwright. Local runs build into a
-    // port-scoped isolated directory; CI serves the bundle explicitly
-    // prepared by its workflow. A shared dist/ is unsafe because Android
-    // exports can overwrite the web artifact (see BLD-517).
+    // Always serve a static bundle for Playwright. CI serves the bundle
+    // explicitly prepared by its workflow; local runs build into a port-scoped
+    // isolated directory. A shared dist/ is only used when CI has prepared it.
     //
     // BLD-658: scenario specs need `crossOriginIsolated === true` so the
     // expo-sqlite Web Worker can use SharedArrayBuffer; otherwise

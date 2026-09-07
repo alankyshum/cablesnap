@@ -3,14 +3,16 @@ import type { JSONValue, ModelMessage, Tool } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { fetch as expoFetch } from "expo/fetch";
 
-import { getModel } from "./catalog";
+import { canSendGymPhoto, getCurrentGymPhotoModel, getModel } from "./catalog";
 import { parseOpenRouterError, type AIError } from "./errors";
 import * as keyVault from "./key-vault";
 import { appendMessage, getMessages, type CoachMessage } from "../db/coach";
+import type { PreparedGymPhoto } from "../coach-gym-photo";
+import { GYM_PHOTO_MARKER } from "../coach-gym-photo";
 
 const OPENROUTER_API = "https://openrouter.ai/api/v1";
 export const MAX_HISTORY_MESSAGES = 20;
-export const COACH_SYSTEM_PROMPT = "You are a practical, supportive fitness coach. Use the available local-data tools when a question depends on workout or nutrition history; never invent data. Create a workout template only when the user clearly asks you to save or create one, and claim it was created only when the tool reports success. Give safe, actionable guidance, acknowledge uncertainty, and do not diagnose medical conditions. This is a BYOK app with no server relay; only allowlisted fitness fields and explicitly requested template writes are available through tools.";
+export const COACH_SYSTEM_PROMPT = "You are a practical, supportive fitness coach. Use the available local-data tools when a question depends on workout or nutrition history; never invent data. For a gym photo, use equipment classification followed by the deterministic workout-draft tool; equipment labels/confidence are the only vision authority. Never choose exercises, sets, reps, rest, duration, loads, reasons, or revisions yourself. Use the saved draft tools for later text changes, and claim a draft was saved or restored only when the tool reports ok. Never send or repeat photo bytes, URI, EXIF, location, or provider payload in text or tool arguments. Create a workout template only when the user clearly asks you to save or create one, and do not start a workout from a model tool. Give safe, actionable guidance, acknowledge uncertainty, and do not diagnose medical conditions. This is a BYOK app with no server relay; only allowlisted fitness fields and explicitly requested writes are available through tools.";
 
 /** The only seam T12 needs: add a named AI SDK tool to this object. */
 // AI SDK tool inputs and outputs are intentionally heterogeneous in this registry.
@@ -19,8 +21,8 @@ export type CoachTools = Record<string, Tool<any, any>>;
 
 export type CoachAgentEvent =
   | { readonly type: "delta"; readonly text: string }
-  | { readonly type: "tool-call"; readonly name: string; readonly input: unknown }
-  | { readonly type: "tool-result"; readonly name: string; readonly output: unknown };
+  | { readonly type: "tool-call"; readonly toolCallId?: string; readonly name: string; readonly input: unknown }
+  | { readonly type: "tool-result"; readonly toolCallId?: string; readonly name: string; readonly input?: unknown; readonly output: unknown };
 
 export type CoachAgentOptions = {
   readonly sessionId: string;
@@ -29,6 +31,7 @@ export type CoachAgentOptions = {
   readonly tools?: CoachTools;
   readonly signal?: AbortSignal;
   readonly onEvent?: (event: CoachAgentEvent) => void;
+  readonly gymPhoto?: PreparedGymPhoto;
 };
 
 export type CoachAgentRun = {
@@ -122,17 +125,18 @@ function asAIError(error: unknown): AIError {
 
 // eslint-disable-next-line complexity
 async function executeCoachAgent(options: CoachAgentOptions, controller?: AbortController): Promise<CoachMessage> {
-  const { sessionId, modelId, prompt, tools = {}, onEvent } = options;
+  const { sessionId, modelId, prompt, tools = {}, onEvent, gymPhoto } = options;
 
   // Resolve before reading the key or constructing a provider: no inference request
   // can occur for a missing, unknown, or tool-incompatible model.
-  await getModel(modelId);
+  const model = gymPhoto ? await getCurrentGymPhotoModel(modelId) : await getModel(modelId);
+  if (gymPhoto && !canSendGymPhoto(model)) throw { kind: "model_lacks_image_input" } satisfies AIError;
   const persisted = await getMessages(sessionId);
   const history = persistedMessagesToModelMessages(persisted);
   const apiKey = await keyVault.get();
   if (!apiKey) throw { kind: "missing_key" } satisfies AIError;
   const signal = controller?.signal ?? options.signal;
-  const toolCalls: Array<{ name: string; input: unknown; output?: unknown }> = [];
+  const toolCalls = new Map<string, { toolCallId: string; name: string; input: unknown; output?: unknown }>();
 
   const openrouter = createOpenRouter({
     apiKey,
@@ -151,27 +155,30 @@ async function executeCoachAgent(options: CoachAgentOptions, controller?: AbortC
       system: usedToolCompatibilityFallback
         ? `${COACH_SYSTEM_PROMPT} Local data tools are unavailable for this response; do not claim to have read local records.`
         : COACH_SYSTEM_PROMPT,
-      messages: [...history, { role: "user", content: prompt }],
+      messages: [...history, { role: "user", content: gymPhoto
+          ? [{ type: "text", text: GYM_PHOTO_MARKER + "\n" + prompt }, { type: "image", image: gymPhoto.bytes, mediaType: gymPhoto.mediaType }]
+          : prompt }],
       tools: activeTools,
       toolChoice: "auto",
       stopWhen: stepCountIs(3),
       abortSignal: signal,
       maxRetries: 0,
-      onChunk: async ({ chunk }) => {
-        if (chunk.type === "tool-call") {
-          toolCalls.push({ name: chunk.toolName, input: chunk.input });
-          onEvent?.({ type: "tool-call", name: chunk.toolName, input: chunk.input });
-        } else if (chunk.type === "tool-result") {
-          const call = toolCalls.find((item) => item.name === chunk.toolName && item.output === undefined);
-          if (call) call.output = chunk.output;
-          onEvent?.({ type: "tool-result", name: chunk.toolName, output: chunk.output });
-        }
-      },
     });
 
     try {
       for await (const part of result.fullStream) {
         if (part.type === "error") throw asAIError(part.error);
+        if (part.type === "tool-call") {
+          const call = { toolCallId: part.toolCallId, name: part.toolName, input: part.input };
+          toolCalls.set(part.toolCallId, call);
+          onEvent?.({ type: "tool-call", ...call });
+        } else if (part.type === "tool-result") {
+          const call = toolCalls.get(part.toolCallId);
+          if (call) {
+            call.output = part.output;
+            onEvent?.({ type: "tool-result", toolCallId: part.toolCallId, name: part.toolName, input: call.input, output: part.output });
+          }
+        }
         if (part.type === "reasoning-delta") reasoning += part.text;
         else if (part.type === "finish") finishReason = part.finishReason;
         else if (part.type === "text-delta") {
@@ -184,25 +191,30 @@ async function executeCoachAgent(options: CoachAgentOptions, controller?: AbortC
       throw asAIError(error);
     }
     if (signal?.aborted) throw { kind: "aborted_by_user" } satisfies AIError;
-    if (text.trim() !== "") break;
+    if (text.trim() !== "" || [...toolCalls.values()].some((call) => "output" in call)) break;
 
     // Some catalog entries advertise tool support but silently return a 200
     // completion with null content, no usage, and no tool call whenever tools
     // are present. Retry that exact protocol failure once without advertising
     // tools; real tool runs, reasoning-only responses, and non-stop finishes do
     // not qualify and retain their existing error behavior.
-    const canRetryWithoutTools = !usedToolCompatibilityFallback
+    const canRetryWithoutTools = !gymPhoto
+      && !usedToolCompatibilityFallback
       && Object.keys(activeTools).length > 0
-      && toolCalls.length === 0
+      && toolCalls.size === 0
       && reasoning.trim() === ""
       && finishReason === "stop";
-    if (!canRetryWithoutTools) throw { kind: "empty_response" } satisfies AIError;
+    if (!canRetryWithoutTools) {
+      if ([...toolCalls.values()].some((call) => "output" in call)) break;
+      throw { kind: "empty_response" } satisfies AIError;
+    }
     activeTools = {};
     usedToolCompatibilityFallback = true;
   }
 
   // This is deliberately the sole assistant write, after the stream is complete.
-  return appendMessage({ session_id: sessionId, role: "assistant", content: text, model_id: modelId, ...(toolCalls.length > 0 ? { tool_calls: JSON.stringify(toolCalls) } : {}) });
+  const ledger = [...toolCalls.values()];
+  return appendMessage({ session_id: sessionId, role: "assistant", content: text, model_id: modelId, ...(ledger.length > 0 ? { tool_calls: JSON.stringify(ledger) } : {}) });
 }
 
 export function startCoachAgent(options: CoachAgentOptions): CoachAgentRun {

@@ -604,9 +604,8 @@ describe("AiCoachScreen Integration", () => {
     const { getByText } = renderScreen(<AiCoachScreen />);
 
     expect(getByText("How can I help you today?")).toBeTruthy();
-    expect(getByText("Review Workout Progress")).toBeTruthy();
-    expect(getByText("Nutrition & Macros")).toBeTruthy();
-    expect(getByText("Exercise Technique")).toBeTruthy();
+    expect(getByText("Build from a gym photo")).toBeTruthy();
+    expect(getByText("Upload a gym photo and I’ll identify visible equipment, then build a saved workout draft.")).toBeTruthy();
   });
 
   it("renders tool in flight state during agent run", async () => {
@@ -638,29 +637,29 @@ describe("AiCoachScreen Integration", () => {
       expect(capturedOnEvent).not.toBeNull();
     });
 
-    capturedOnEvent!({ type: "delta", text: "Bench progress is " });
+    await act(async () => capturedOnEvent!({ type: "delta", text: "Bench progress is " }));
     await waitFor(() => expect(getByText("Bench progress is ")).toBeTruthy());
-    capturedOnEvent!({ type: "delta", text: "improving." });
+    await act(async () => capturedOnEvent!({ type: "delta", text: "improving." }));
     await waitFor(() => expect(getByText("Bench progress is improving.")).toBeTruthy());
 
     // Trigger tool-call event
-    capturedOnEvent!({
+    await act(async () => capturedOnEvent!({
       type: "tool-call",
       name: "exercise_history",
       input: { exerciseName: "Bench Press" },
-    });
+    }));
 
     const toolBadge = await findByText("Analyzing exercise progress...");
     expect(toolBadge).toBeTruthy();
 
-    capturedOnEvent!({
+    await act(async () => capturedOnEvent!({
       type: "tool-result",
       name: "exercise_history",
       output: { entries: [] },
-    });
+    }));
     await waitFor(() => expect(queryByText("Analyzing exercise progress...")).toBeNull());
 
-    resolveDone({ id: "msg-done", role: "assistant", content: "Bench progress looks solid" });
+    await act(async () => resolveDone({ id: "msg-done", role: "assistant", content: "Bench progress looks solid" }));
   });
 
   it("renders distinct error states for network and rate-limit errors", async () => {

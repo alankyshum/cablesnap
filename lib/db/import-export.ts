@@ -43,6 +43,8 @@ export type BackupTableName =
   | "meal_templates"
   | "meal_template_items"
   | "coach_sessions"
+  | "coach_workout_drafts"
+  | "coach_workout_draft_revisions"
   | "coach_messages";
 
 export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
@@ -69,6 +71,8 @@ export const BACKUP_TABLE_LABELS: Record<BackupTableName, string> = {
   meal_templates: "Meal Templates",
   meal_template_items: "Meal Template Items",
   coach_sessions: "AI Coach Sessions",
+  coach_workout_drafts: "AI Coach Workout Drafts",
+  coach_workout_draft_revisions: "AI Coach Workout Draft Revisions",
   coach_messages: "AI Coach Messages",
 };
 
@@ -98,6 +102,8 @@ export const IMPORT_TABLE_ORDER: BackupTableName[] = [
   "meal_templates",
   "meal_template_items",
   "coach_sessions",
+  "coach_workout_drafts",
+  "coach_workout_draft_revisions",
   "coach_messages",
 ];
 
@@ -178,7 +184,7 @@ export const BACKUP_CATEGORY_TABLES: Record<BackupCategoryName, BackupTableName[
   rest_timer_settings: ["app_settings"],
   app_preferences: ["app_settings"],
   achievements: ["achievements_earned"],
-  ai_coach: ["coach_sessions", "coach_messages"],
+  ai_coach: ["coach_sessions", "coach_workout_drafts", "coach_workout_draft_revisions", "coach_messages"],
 };
 
 type BackupCategorySection = Partial<Record<BackupTableName, unknown[]>>;
@@ -256,8 +262,9 @@ function getSelectedCategorySet(selectedCategories?: BackupCategoryName[]): Set<
 
 function getSelectedTableOrder(selectedCategories?: BackupCategoryName[], includeAiCoach = true): BackupTableName[] {
   const selected = getSelectedCategorySet(selectedCategories);
+  const aiCoachTables = new Set(BACKUP_CATEGORY_TABLES.ai_coach);
   return IMPORT_TABLE_ORDER.filter((table) =>
-    (includeAiCoach || (table !== "coach_sessions" && table !== "coach_messages")) &&
+    (includeAiCoach || !aiCoachTables.has(table)) &&
     BACKUP_CATEGORY_ORDER.some((category) => selected.has(category) && BACKUP_CATEGORY_TABLES[category].includes(table))
   );
 }
