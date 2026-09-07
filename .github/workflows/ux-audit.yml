@@ -2,8 +2,8 @@ name: UX Audit (Daily Visual Capture)
 
 # Daily visual UX audit capture (BLD-481, unblocks BLD-645).
 #
-# Exports the web bundle in dev mode (so the `__TEST_SCENARIO__` seed hook is
-# active) and runs the scenario specs at the `mobile` viewport. Each scenario
+# Exports the web bundle with the explicit E2E audit seed flag and runs the
+# scenario specs at the `mobile` viewport. Each scenario
 # emits a baseline screenshot AND three CVD-emulated variants (deuteranopia /
 # protanopia / tritanopia) via Chromium DevTools Protocol's
 # `Emulation.setEmulatedVisionDeficiency` — see `e2e/scenarios/capture-with-cvd.ts`
@@ -82,8 +82,16 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Export web bundle (dev mode for scenario seed hook)
-        run: npx expo export -p web --dev --no-minify
+      - name: Export web bundle (explicit E2E scenario seed hook)
+        env:
+          EXPO_PUBLIC_E2E_SCENARIO_SEED: '1'
+        run: npx expo export -p web --no-minify
+
+      - name: Verify exported script entrypoint
+        run: >-
+          node -e "const fs=require('fs'); const html=fs.readFileSync('dist/index.html','utf8');
+          if (!/<script\\b[^>]*\\bsrc=['\"][^'\"]+['\"]/i.test(html))
+          throw new Error('dist/index.html has no external JavaScript script entrypoint');"
 
       - name: Run scenario assertions (mobile only, no visual diff)
         # SCENARIO_ASSERT_ONLY=1 skips toHaveScreenshot() in adaptive-rest.spec.ts
@@ -131,11 +139,17 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Export web bundle (dev mode for scenario seed hook)
-        # `--dev --no-minify` keeps `__DEV__=true` so `if (__DEV__)`-gated
-        # scenario hooks (lib/db/test-seed.ts) execute. Static export avoids
-        # Metro cold-start in CI (BLD-517).
-        run: npx expo export -p web --dev --no-minify
+      - name: Export web bundle (explicit E2E scenario seed hook)
+        env:
+          EXPO_PUBLIC_E2E_SCENARIO_SEED: '1'
+        # Static export avoids Metro cold-start in CI (BLD-517).
+        run: npx expo export -p web --no-minify
+
+      - name: Verify exported script entrypoint
+        run: >-
+          node -e "const fs=require('fs'); const html=fs.readFileSync('dist/index.html','utf8');
+          if (!/<script\\b[^>]*\\bsrc=['\"][^'\"]+['\"]/i.test(html))
+          throw new Error('dist/index.html has no external JavaScript script entrypoint');"
 
       - name: Inject E2E-only audit text font (fontless-container fix, BLD-2586)
         # No-op here: ubuntu-latest already has /usr/share/fonts (installed by

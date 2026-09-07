@@ -1,5 +1,5 @@
 /**
- * Scenario seed hook for visual UX audit — WEB-ONLY, DEV-ONLY.
+ * Scenario seed hook for visual UX audit — WEB-ONLY, DEV-ONLY or explicit CI audit.
  *
  * Ordering (TL#2, option b — preferred):
  *   Production `getDatabase()`/`seed()` runs first (on web the DB falls back
@@ -10,14 +10,15 @@
  *   gate screenshot capture on it.
  *
  * Guards (all three must hold — any false => `seedScenario()` is a no-op):
- *   1. `__DEV__ === true`                                    (not a prod build)
+ *   1. `__DEV__ === true` OR `EXPO_PUBLIC_E2E_SCENARIO_SEED === "1"`
+ *                                                              (explicit audit build)
  *   2. `Platform.OS === 'web'`                               (native targets never seed)
  *   3. `typeof window !== 'undefined' && window.__TEST_SCENARIO__ != null`
  *
- * **Bundle hygiene (TL#3):** this module is only imported from inside an
- * `if (__DEV__)` branch in `hooks/useAppInit.ts`, so Metro strips the whole
- * module (and the `__TEST_SCENARIO__` string) in production. The top-level
- * `if (!__DEV__) return` inside the function is belt-and-suspenders.
+ * **Bundle hygiene (TL#3):** this module is only imported from the
+ * dev-or-explicit-audit branch in `hooks/useAppInit.ts`; ordinary production
+ * builds leave the flag unset so Metro strips the hook and scenario string.
+ * The guard here is belt-and-suspenders.
  * `scripts/verify-scenario-hook-not-in-bundle.sh` enforces this at PR time.
  *
  * Supported v1 scenario keys (unknown key => warn + no-op):
@@ -49,9 +50,10 @@ declare global {
   }
 }
 
-/** Only true inside the three guarded states. Exported for unit tests. */
+/** Only true inside the dev/audit, web, and injected-scenario states. */
 export function guardsAllow(): boolean {
-  if (typeof __DEV__ === "undefined" || !__DEV__) return false;
+  const explicitE2E = process.env.EXPO_PUBLIC_E2E_SCENARIO_SEED === "1";
+  if ((typeof __DEV__ === "undefined" || !__DEV__) && !explicitE2E) return false;
   if (Platform.OS !== "web") return false;
   if (typeof window === "undefined") return false;
   if (!window.__TEST_SCENARIO__) return false;
