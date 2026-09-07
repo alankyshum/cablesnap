@@ -66,10 +66,14 @@ function normalizeModel(raw: RawModel): CatalogModel | null {
     : [];
   const pricing = raw.pricing && typeof raw.pricing === "object" ? raw.pricing as Record<string, unknown> : {};
   const architecture = raw.architecture && typeof raw.architecture === "object" ? raw.architecture as Record<string, unknown> : {};
-  const modalitiesValue = raw.input_modalities ?? architecture.input_modalities;
-  const inputModalities = Array.isArray(modalitiesValue)
-    ? modalitiesValue.filter((item): item is string => typeof item === "string").map((item) => item.toLowerCase())
-    : [];
+  // OpenRouter has exposed modalities at both locations over time. Treat them
+  // as a union: an empty top-level array must not mask architecture metadata.
+  const inputModalities = [...new Set(
+    [raw.input_modalities, architecture.input_modalities]
+      .filter(Array.isArray)
+      .flatMap((modalities) => modalities.filter((item): item is string => typeof item === "string"))
+      .map((item) => item.toLowerCase()),
+  )];
   return {
     id: raw.id,
     name: raw.name,
@@ -149,6 +153,9 @@ export async function getCurrentGymPhotoModel(id: string): Promise<CatalogModel>
     const all = cachedCatalog?.allModels.find((item) => item.id === id);
     if (all && !all.supportedParameters.includes("tools")) throw { kind: "model_lacks_tools" } satisfies ModelLacksToolsError;
     throw { kind: "model_not_in_catalog" } satisfies ModelNotInCatalogError;
+  }
+  if (model.supportsImageInput !== true) {
+    throw { kind: "model_lacks_image_input" };
   }
   return model;
 }

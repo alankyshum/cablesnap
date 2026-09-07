@@ -412,9 +412,12 @@ export function ModelPicker({
           initialNumToRender={15}
           maxToRenderPerBatch={20}
           windowSize={7}
+          // Keep the row rendering logic together so accessibility and badges stay in sync.
+          // eslint-disable-next-line complexity
           renderItem={({ item, index }) => {
             const isSelected = selectedModelId === item.id;
             const hasTools = item.supportedParameters.includes("tools");
+            const hasImageInput = item.supportsImageInput === true;
             const contextStr = formatContextLength(item.contextLength);
             const pricingStr = formatModelPricing(item.pricing);
 
@@ -422,7 +425,7 @@ export function ModelPicker({
               <Pressable
                 onPress={() => handleSelect(item.id)}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.name}, ${item.id}, ${contextStr}, ${pricingStr}${hasTools ? ", supports tools" : ""}${isSelected ? ", selected" : ""}`}
+                accessibilityLabel={`${item.name}, ${item.id}, ${contextStr}, ${pricingStr}${hasTools ? ", supports tools" : ""}${hasImageInput ? ", supports Photos image input" : ""}${isSelected ? ", selected" : ""}`}
                 accessibilityState={{ selected: isSelected }}
                 testID={`model-row-${item.id}`}
                 style={({ pressed }) => [
@@ -471,6 +474,27 @@ export function ModelPicker({
                             ]}
                           >
                             {t({ id: "components.coach.toolsBadge", message: "Tools" })}
+                          </Text>
+                        </View>
+                      )}
+                      {hasImageInput && (
+                        <View
+                          style={[
+                            styles.toolBadge,
+                            {
+                              backgroundColor: isSelected ? colors.primary : colors.secondaryContainer,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.toolBadgeText,
+                              {
+                                color: isSelected ? colors.onPrimary : colors.onSecondaryContainer,
+                              },
+                            ]}
+                          >
+                            {t({ id: "components.coach.photosBadge", message: "Photos" })}
                           </Text>
                         </View>
                       )}

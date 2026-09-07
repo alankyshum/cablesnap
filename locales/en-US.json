@@ -10645,8 +10645,8 @@
     "origin": "human"
   },
   "ai.errors.modelLacksImageInput": {
-    "message": "This model cannot receive gym photos. Choose a model with image input and tools.",
-    "srcHash": "c9f37e2db732",
+    "message": "The latest OpenRouter catalog does not advertise image input for this model. Choose a model marked Photos and Tools.",
+    "srcHash": "3d375d8bd986",
     "origin": "human"
   },
   "ai.errors.openSettings": {
@@ -10675,8 +10675,8 @@
     "origin": "human"
   },
   "ai.errors.pickCompatibleModel": {
-    "message": "Pick compatible model",
-    "srcHash": "a4a6dcb904ca",
+    "message": "Choose a Photos and Tools model",
+    "srcHash": "ecbeb25c1dd1",
     "origin": "human"
   },
   "components.coach.chooseGymPhoto": {
@@ -11848,6 +11848,11 @@
     "message": "Tools",
     "srcHash": "9a6b0766590f",
     "origin": "human"
+  },
+  "components.coach.photosBadge": {
+    "message": "Photos",
+    "srcHash": "2a0dcc32d412",
+    "origin": "machine"
   },
   "components.coach.noModelsAvailable": {
     "message": "No models available in catalog.",

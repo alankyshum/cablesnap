@@ -227,8 +227,8 @@ export function toChatErrorState(err: AIError): ChatErrorState {
       };
     case "model_lacks_image_input":
       return {
-        message: t({ id: "ai.errors.modelLacksImageInput", message: "This model cannot receive gym photos. Choose a model with image input and tools." }),
-        recovery: { kind: "pick_compatible_model", label: t({ id: "ai.errors.pickCompatibleModel", message: "Pick compatible model" }) },
+        message: t({ id: "ai.errors.modelLacksImageInput", message: "The latest OpenRouter catalog does not advertise image input for this model. Choose a model marked Photos and Tools." }),
+        recovery: { kind: "pick_compatible_model", label: t({ id: "ai.errors.pickCompatibleModel", message: "Choose a Photos and Tools model" }) },
       };
     case "catalog_unavailable":
       return {

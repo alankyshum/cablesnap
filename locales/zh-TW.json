@@ -11275,8 +11275,8 @@
     "origin": "human"
   },
   "ai.errors.modelLacksImageInput": {
-    "message": "此模型無法接收健身房照片。請選擇支援圖片輸入與工具的模型。",
-    "srcHash": "c9f37e2db732",
+    "message": "最新的 OpenRouter 目錄未宣告此模型支援圖片輸入。請選擇標示 Photos 和 Tools 的模型。",
+    "srcHash": "3d375d8bd986",
     "origin": "human"
   },
   "ai.errors.openSettings": {
@@ -11305,8 +11305,8 @@
     "origin": "human"
   },
   "ai.errors.pickCompatibleModel": {
-    "message": "選擇相容模型",
-    "srcHash": "a4a6dcb904ca",
+    "message": "選擇標示 Photos 和 Tools 的模型",
+    "srcHash": "ecbeb25c1dd1",
     "origin": "human"
   },
   "components.coach.toggleSidebar": {
@@ -11658,6 +11658,11 @@
     "message": "Tools（AI 教練）",
     "srcHash": "9a6b0766590f",
     "origin": "human"
+  },
+  "components.coach.photosBadge": {
+    "message": "照片",
+    "srcHash": "2a0dcc32d412",
+    "origin": "machine"
   },
   "components.coach.noModelsAvailable": {
     "message": "沒有模型s available in 目錄.",

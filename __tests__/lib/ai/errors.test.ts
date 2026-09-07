@@ -13,6 +13,7 @@ const errors: AIError[] = [
   { kind: "upstream_provider_unavailable", status: 429 },
   { kind: "model_not_in_catalog" },
   { kind: "model_lacks_tools" },
+  { kind: "model_lacks_image_input" },
   { kind: "catalog_unavailable" },
   { kind: "stale_catalog_warning" },
   { kind: "network_error" },
@@ -43,6 +44,10 @@ describe("AI error taxonomy", () => {
     expect(toChatErrorState({ kind: "model_lacks_tools" }).recovery.kind).toBe(
       "pick_another_model"
     );
+    expect(toChatErrorState({ kind: "model_lacks_image_input" })).toEqual({
+      message: "The latest OpenRouter catalog does not advertise image input for this model. Choose a model marked Photos and Tools.",
+      recovery: { kind: "pick_compatible_model", label: "Choose a Photos and Tools model" },
+    });
     expect(toChatErrorState({ kind: "missing_key" }).recovery.href).toBe("settings/ai-key");
     expect(toChatErrorState({ kind: "invalid_key", status: 401 }).recovery.href).toBe(
       "settings/ai-key"

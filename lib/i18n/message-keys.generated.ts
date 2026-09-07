@@ -471,6 +471,7 @@ export type MessageKey =
   | "components.coach.noModelsAvailable"
   | "components.coach.noModelsMatching"
   | "components.coach.openRevisionHistoryA11y"
+  | "components.coach.photosBadge"
   | "components.coach.placeholder"
   | "components.coach.privacyDisclaimer"
   | "components.coach.privacyUnderstand"

@@ -11,6 +11,10 @@ import { resolve } from "node:path";
 const models = [
   { id: "provider/with-tools", name: "With tools", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: ["tools"], architecture: { input_modalities: ["text"] } },
   { id: "provider/vision-tools", name: "Vision tools", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: ["tools"], architecture: { input_modalities: ["text", "image"] } },
+  { id: "provider/astra", name: "Astra", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: ["tools"], input_modalities: [], architecture: { input_modalities: ["file", "image", "text"] } },
+  { id: "provider/direct-image-url", name: "Direct image URL", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: ["tools"], input_modalities: ["image_url"] },
+  { id: "provider/text-tools", name: "Text tools", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: ["tools"], input_modalities: ["text"] },
+  { id: "provider/image-no-tools", name: "Image no tools", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: [], input_modalities: ["image"] },
   { id: "provider/no-tools", name: "No tools", context_length: 1000, pricing: { prompt: "1", completion: "2" }, supported_parameters: [] },
 ];
 
@@ -28,10 +32,10 @@ describe("OpenRouter model catalog", () => {
 
   it("fetches live data and filters to models supporting tools", async () => {
     fetchMock.mockResolvedValue(response(models));
-    await expect(listModels()).resolves.toEqual([
+    await expect(listModels()).resolves.toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "provider/with-tools" }),
       expect.objectContaining({ id: "provider/vision-tools" }),
-    ]);
+    ]));
   });
 
   it("throws for an unknown model instead of falling back", async () => {
@@ -54,6 +58,20 @@ describe("OpenRouter model catalog", () => {
     expect(catalog.models.find((model) => model.id === "provider/with-tools")).toEqual(expect.objectContaining({
       supportsImageInput: false,
     }));
+  });
+
+  it("unions top-level and architecture modalities and requires tools for photos", async () => {
+    fetchMock.mockResolvedValue(response(models));
+    const catalog = await getModelCatalog();
+    expect(catalog.models.find((model) => model.id === "provider/astra")).toEqual(expect.objectContaining({
+      inputModalities: ["file", "image", "text"],
+      supportsImageInput: true,
+    }));
+    expect(catalog.models.find((model) => model.id === "provider/direct-image-url")).toEqual(expect.objectContaining({ supportsImageInput: true }));
+    expect(catalog.models.find((model) => model.id === "provider/text-tools")).toEqual(expect.objectContaining({ supportsImageInput: false }));
+    expect(catalog.models.find((model) => model.id === "provider/image-no-tools")).toBeUndefined();
+    await expect(getCurrentGymPhotoModel("provider/text-tools")).rejects.toEqual({ kind: "model_lacks_image_input" });
+    await expect(getCurrentGymPhotoModel("provider/image-no-tools")).rejects.toEqual({ kind: "model_lacks_tools" });
   });
 
   it("requires a fresh successful catalog for the photo preflight", async () => {

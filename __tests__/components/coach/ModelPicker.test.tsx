@@ -95,6 +95,7 @@ describe("ModelPicker", () => {
           contextLength: 128000,
           pricing: { prompt: "0.00000015", completion: "0.0000006" },
           supportedParameters: ["tools"],
+          supportsImageInput: true,
         }),
         createFixtureModel({
           id: "fixture-org/model-beta-notools",
@@ -171,7 +172,7 @@ describe("ModelPicker", () => {
   });
 
   it("displays model details: verbatim id, name, context length, pricing, tools badge", () => {
-    const { getByText } = render(
+    const { getByText, getByTestId } = render(
       <ModelPicker onSelectModel={jest.fn()} selectedModelId="fixture-org/model-alpha" />
     );
 
@@ -180,7 +181,16 @@ describe("ModelPicker", () => {
     expect(getByText("128k context")).toBeTruthy();
     expect(getByText("Prompt: $0.15/1M · Comp: $0.60/1M")).toBeTruthy();
     expect(getByText("Tools")).toBeTruthy();
+    expect(getByText("Photos")).toBeTruthy();
+    expect(getByTestId("model-row-fixture-org/model-alpha").props.accessibilityLabel).toContain("supports Photos image input");
     expect(getByText("Selected: fixture-org/model-alpha")).toBeTruthy();
+  });
+
+  it("does not show Photos or advertise image input for text-only tools models", () => {
+    mockCatalogData = { ...mockCatalogData!, models: [createFixtureModel({ id: "fixture-org/text-only", name: "Text Only" })] };
+    const { queryByText, getByTestId } = render(<ModelPicker onSelectModel={jest.fn()} />);
+    expect(queryByText("Photos")).toBeNull();
+    expect(getByTestId("model-row-fixture-org/text-only").props.accessibilityLabel).not.toContain("Photos");
   });
 
   it("invokes onSelectModel with model ID when tapped", () => {
