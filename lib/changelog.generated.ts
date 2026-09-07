@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.116",
+    "date": "2026-09-07",
+    "versionCode": 184,
+    "body": "- AI Coach can build a saved, revisioned workout draft from a consented gym photo without persisting the photo, then open the workout only when the draft card is pressed.\n- Gym-photo workout draft flows now use a local synthetic photo fixture in end-to-end tests, avoiding network-shaped test input.\n- CI UX scenario audits now run against an explicit production-shaped web bundle with deterministic test seeding, stronger harness guards, and a static-export entrypoint check."
+  },
+  {
     "version": "0.26.115",
     "date": "2026-08-27",
     "versionCode": 183,

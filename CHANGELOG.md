@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.116 — 2026-09-07
+<!-- versionCode: 184 -->
+
 - AI Coach can build a saved, revisioned workout draft from a consented gym photo without persisting the photo, then open the workout only when the draft card is pressed.
 - Gym-photo workout draft flows now use a local synthetic photo fixture in end-to-end tests, avoiding network-shaped test input.
 - CI UX scenario audits now run against an explicit production-shaped web bundle with deterministic test seeding, stronger harness guards, and a static-export entrypoint check.
