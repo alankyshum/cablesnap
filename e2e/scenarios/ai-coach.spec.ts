@@ -75,10 +75,11 @@ test("text/tool-only catalog model blocks gym-photo upload", async ({ page }, te
   await expect(page.getByTestId("model-catalog-list")).toBeAttached({ timeout: 15_000 });
   await page.getByTestId("model-search-input").fill("text-tools", { force: true });
   await expect(page.getByTestId("model-row-test/text-tools")).toBeAttached({ timeout: 15_000 });
-  await page.getByTestId("model-row-test/text-tools").click({ force: true });
+  await dismissUpdateDialog(page);
+  await page.getByTestId("model-row-test/text-tools").dispatchEvent("click");
   await expect(page.getByRole("button", { name: /Active Model: test\/text-tools/ })).toBeVisible();
   await page.getByRole("button", { name: "Choose a gym photo from your library" }).dispatchEvent("click");
-  await expect(page.getByText(/cannot receive gym photos|image input and tools/i)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("The latest OpenRouter catalog does not advertise image input for this model. Choose a model marked Photos and Tools.", { exact: true })).toBeVisible({ timeout: 15_000 });
 });
 
 test("mocked gym-photo selection sends one bounded image request and keeps media out of durable chat", async ({ page }, testInfo) => {
