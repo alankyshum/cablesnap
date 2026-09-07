@@ -4,7 +4,7 @@ import { Stack, useFocusEffect } from "expo-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { useThemeColors } from "@/hooks/useThemeColors";
-import { spacing, radii } from "@/constants/design-tokens";
+import { fontSizes, spacing, radii } from "@/constants/design-tokens";
 import { useToast } from "@/components/ui/bna-toast";
 import KeyStatusCard from "@/components/settings/KeyStatusCard";
 import { get, set, delete as deleteKey, has, keyFormat } from "@/lib/ai/key-vault";
@@ -136,7 +136,7 @@ export default function AIKeySettingsScreen() {
             />
           )}
           <View style={styles.actions}>
-            {!saved && <Action label="Save key" onPress={saveKey} colors={colors} disabled={busy} />}
+            {!saved && <Action testID="save-openrouter-key" label="Save key" onPress={saveKey} colors={colors} disabled={busy} />}
             {saved && <Action label="Validate" onPress={validateKey} colors={colors} disabled={busy} />}
             {saved && <Action label="Remove" onPress={removeKey} colors={colors} disabled={busy} />}
           </View>
@@ -151,9 +151,9 @@ export default function AIKeySettingsScreen() {
   );
 }
 
-function Action({ label, onPress, colors, disabled }: { label: string; onPress: () => void; colors: ReturnType<typeof useThemeColors>; disabled: boolean }) {
+function Action({ label, onPress, colors, disabled, testID }: { label: string; onPress: () => void; colors: ReturnType<typeof useThemeColors>; disabled: boolean; testID?: string }) {
   return (
-    <Pressable disabled={disabled} onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={[styles.button, { borderColor: colors.onSurface, opacity: disabled ? 0.5 : 1 }]}>
+    <Pressable testID={testID} disabled={disabled} onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={[styles.button, { borderColor: colors.onSurface, opacity: disabled ? 0.5 : 1 }]}>
       <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>{label}</Text>
     </Pressable>
   );
@@ -162,7 +162,7 @@ function Action({ label, onPress, colors, disabled }: { label: string; onPress: 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: spacing.base, gap: spacing.md },
-  input: { borderWidth: 1, borderRadius: radii.sm, padding: spacing.md, fontSize: 16 },
+  input: { borderWidth: 1, borderRadius: radii.sm, padding: spacing.md, fontSize: fontSizes.base },
   masked: { borderWidth: 1, borderRadius: radii.sm, padding: spacing.md, gap: spacing.xs },
   actions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
   button: { borderWidth: 1, borderRadius: radii.sm, minHeight: 48, justifyContent: "center", paddingHorizontal: spacing.md },

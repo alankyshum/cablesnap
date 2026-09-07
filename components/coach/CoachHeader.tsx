@@ -73,6 +73,7 @@ export function CoachHeader({
 
           {/* Active Model Selector Chip */}
           <TouchableOpacity
+            testID="coach-model-picker"
             onPress={onOpenModelPicker}
             disabled={disabled}
             accessibilityRole="button"
