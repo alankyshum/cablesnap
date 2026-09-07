@@ -22,6 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
+- Settings: uniform vertical rhythm between Units and Appearance toggle rows (uses `spacing.sm` token; no more compounding `marginBottom`+`marginTop`).
 - AI Coach can build a saved, revisioned workout draft from a consented gym photo without persisting the photo, then open the workout only when the draft card is pressed.
 - Gym-photo workout draft flows now use a local synthetic photo fixture in end-to-end tests, avoiding network-shaped test input.
 - CI UX scenario audits now run against an explicit production-shaped web bundle with deterministic test seeding, stronger harness guards, and a static-export entrypoint check.
