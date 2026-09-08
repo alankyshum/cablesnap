@@ -1,0 +1,1 @@
+- AI Coach now marks models that support both tool calling and gym-photo input, and rejects photo requests when the live catalog does not advertise image support.

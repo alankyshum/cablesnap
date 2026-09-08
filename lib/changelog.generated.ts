@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.117",
+    "date": "2026-09-08",
+    "versionCode": 185,
+    "body": "- AI Coach now marks models that support both tool calling and gym-photo input, and rejects photo requests when the live catalog does not advertise image support."
+  },
+  {
     "version": "0.26.116",
     "date": "2026-09-07",
     "versionCode": 184,

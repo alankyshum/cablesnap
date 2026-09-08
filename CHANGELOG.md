@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.117 — 2026-09-08
+<!-- versionCode: 185 -->
+
 - AI Coach now marks models that support both tool calling and gym-photo input, and rejects photo requests when the live catalog does not advertise image support.
 
 ## v0.26.116 — 2026-09-07
