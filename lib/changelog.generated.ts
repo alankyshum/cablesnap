@@ -10,10 +10,10 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
-    "version": "0.26.117",
-    "date": "2026-09-08",
-    "versionCode": 185,
-    "body": "- AI Coach now marks models that support both tool calling and gym-photo input, and rejects photo requests when the live catalog does not advertise image support."
+    "version": "0.26.118",
+    "date": "2026-09-16",
+    "versionCode": 186,
+    "body": "- Editing a set's weight or reps now brings later sets in the same exercise up to match when the new value is higher, so working sets keep pace automatically.\n- AI Coach now marks models that support both tool calling and gym-photo input, and rejects photo requests when the live catalog does not advertise image support."
   },
   {
     "version": "0.26.116",
