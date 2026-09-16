@@ -81,6 +81,10 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # Android stopped serving the legacy `tools` package (setup-android#537);
+          # override the default `tools platform-tools` to avoid the failed install.
+          packages: 'platform-tools'
 
       # ---------------------------------------------------------------
       # PASS 1 — BASELINE build (no react-native-health-connect dep)

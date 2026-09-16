@@ -122,6 +122,10 @@ jobs:
       - name: Set up Android SDK
         if: steps.kvm.outputs.kvm_present == 'true'
         uses: android-actions/setup-android@v3
+        with:
+          # Android stopped serving the legacy `tools` package (setup-android#537);
+          # override the default `tools platform-tools` to avoid the failed install.
+          packages: 'platform-tools'
 
       - name: Set up Node.js
         if: steps.kvm.outputs.kvm_present == 'true'

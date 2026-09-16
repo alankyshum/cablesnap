@@ -368,6 +368,10 @@ jobs:
       - name: Set up Android SDK
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         uses: android-actions/setup-android@v3
+        with:
+          # Android stopped serving the legacy `tools` package (setup-android#537);
+          # override the default `tools platform-tools` to avoid the failed install.
+          packages: 'platform-tools'
 
       # Node.js + npm install already happened earlier (before changelog
       # promotion + regen). The cached node_modules are reused here for
