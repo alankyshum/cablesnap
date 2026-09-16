@@ -1,25 +1,30 @@
 flows:
-  - flows/*
+  - flows/onboarding.yaml
+  - flows/add-food.yaml
+  - flows/log-set.yaml
+  - flows/start-workout.yaml
+  - flows/view-progress.yaml
 
-# Deterministic flow order for the CI regression gate (BLD-1735).
+# The CI gate runs exactly the five credential-free regression flows. The
+# native-only ai-coach.yaml scenario requires a valid OpenRouter key, and CI is
+# deliberately secret-free; running it there asserts the intentional
+# key-required placeholder rather than a usable composer. It remains available
+# for credentialed native testing outside this gate.
 #
-# Maestro runs discovered flows in a NON-deterministic order by default and does
-# NOT reset app state between flows in a `maestro test <dir>` run. Our flows are
-# not self-contained: only onboarding.yaml does `launchApp: { clearState: true }`
-# and walks through onboarding; the other four use a bare `launchApp` and assume
-# the app is already past onboarding (e.g. add-food taps "Nutrition",
-# start-workout asserts "Workouts"). Without a fixed order the gate is flaky —
-# if a leaf flow runs first on the fresh install it lands on the Welcome screen
-# and fails.
+# Maestro does NOT reset app state between flows in a `maestro test <dir>` run.
+# Only onboarding.yaml does `launchApp: { clearState: true }` and walks through
+# onboarding; the four leaf flows use a bare `launchApp` and assume the app is
+# already past onboarding. Without a fixed order, a leaf flow can run first on
+# a fresh install and land on the Welcome screen.
 #
 # `executionOrder.flowsOrder` (supported since well before the pinned Maestro
 # 1.39.0 — see WorkspaceConfig.ExecutionOrder) runs the named flows first, in
-# this exact sequence, before any remaining flows. We put onboarding first so it
-# clears state and leaves the app on the main tabs; the four leaf flows then run
-# against that established state. Names are the flow file stems (these flows set
-# no `name:`). continueOnFailure:false makes onboarding a hard prerequisite — if
-# it fails there is no point cascading the dependent flows, and the gate fails
-# fast and deterministically.
+# this exact sequence. We put onboarding first so it clears state and leaves
+# the app on the main tabs; the four leaf flows then run against that established
+# state. Names are the flow file stems (these flows set no `name:`).
+# continueOnFailure:false makes onboarding a hard prerequisite — if it fails
+# there is no point cascading the dependent flows, and the gate fails fast and
+# deterministically.
 executionOrder:
   continueOnFailure: false
   flowsOrder:
@@ -28,4 +33,3 @@ executionOrder:
     - log-set
     - start-workout
     - view-progress
-    - ai-coach
