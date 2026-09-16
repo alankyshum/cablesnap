@@ -95,7 +95,7 @@
     "expo-status-bar": "~55.0.5",
     "expo-system-ui": "~55.0.16",
     "expo-video": "^55.0.16",
-    "expo-video-thumbnails": "^55.0.14",
+    "expo-video-thumbnails": "^55.0.16",
     "expo-web-browser": "~55.0.14",
     "lucide-react-native": "^1.22.0",
     "marked": "^12.0.2",
