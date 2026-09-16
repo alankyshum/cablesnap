@@ -603,6 +603,64 @@ function saveCache(id: string, entry: CacheEntry): void {
   fs.writeFileSync(cachePathFor(id), JSON.stringify(entry, null, 2));
 }
 
+function parseSubsetIds(argv: string[]): Set<string> | null {
+  const idsFlagIdx = argv.indexOf("--ids");
+  return idsFlagIdx >= 0 && argv[idsFlagIdx + 1]
+    ? new Set(argv[idsFlagIdx + 1].split(",").map((s) => s.trim()).filter(Boolean))
+    : null;
+}
+
+function getPilotEntry(id: string, exById: Map<string, Exercise>, manifest: Manifest) {
+  const ex = exById.get(id);
+  if (!ex) throw new Error(`unknown pilot id: ${id}`);
+  const alt = manifest.get(id);
+  if (!alt) throw new Error(`manifest missing entry for ${id}`);
+  if (alt.startAlt === alt.endAlt) {
+    throw new Error(
+      `${id}: startAlt === endAlt; alt text collapsed semantically. Run regen-alt-text.ts before curation.`,
+    );
+  }
+  if (alt.safetyNote && alt.safetyNote.length > 300) {
+    console.warn(
+      `[curate] WARNING: ${id} safetyNote is ${alt.safetyNote.length} chars (>300). Consider shortening.`,
+    );
+  }
+  return { ex, alt };
+}
+
+type GateSummaryEntry = {
+  id: string;
+  verdict: string;
+  safetyClass: SafetyClass;
+  blocking: boolean;
+  visual: string;
+  technique: string;
+  cached: boolean;
+  skipped: boolean;
+};
+
+function reportGateSummary(gateSummary: GateSummaryEntry[], allCovered: boolean): void {
+  console.log("\n[curate] gate summary:");
+  for (const r of gateSummary) {
+    const tag = r.skipped ? " (skipped)" : r.cached ? " (cached)" : "";
+    const blockTag = r.blocking ? "BLOCK" : "PASS ";
+    console.log(
+      `  ${r.id.padEnd(12)} verdict=${r.verdict.padEnd(22)} safety=${r.safetyClass.padEnd(10)} gate=${blockTag}${tag}`,
+    );
+  }
+  const blocking = gateSummary.filter((r) => !r.skipped && r.blocking);
+  if (blocking.length > 0) {
+    console.log(
+      `\n[curate] ${blocking.length}/${gateSummary.length} exercises BLOCK the curation gate. Address findings and re-run.`,
+    );
+    process.exitCode = 2;
+  } else if (allCovered) {
+    console.log(
+      `\n[curate] all ${gateSummary.length}/${gateSummary.length} PASS the curation gate.`,
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const openaiKey = process.env.OPENAI_API_KEY;
   const perplexityKey = process.env.PERPLEXITY_API_KEY;
@@ -619,11 +677,7 @@ async function main(): Promise<void> {
   // file is always complete). Useful when wake budgets force per-exercise
   // execution and earlier results are already cached.
   const argv = process.argv.slice(2);
-  const idsFlagIdx = argv.indexOf("--ids");
-  const subsetIds: Set<string> | null =
-    idsFlagIdx >= 0 && argv[idsFlagIdx + 1]
-      ? new Set(argv[idsFlagIdx + 1].split(",").map((s) => s.trim()).filter(Boolean))
-      : null;
+  const subsetIds = parseSubsetIds(argv);
   // --skip-uncached: don't make any LLM calls; only emit blocks for
   // exercises that already have a cached panel output. Lets the operator
   // produce a partial CURATION snapshot to inspect mid-run progress.
@@ -646,32 +700,10 @@ async function main(): Promise<void> {
   const ts = new Date().toISOString();
 
   const blocks: string[] = [];
-  const gateSummary: Array<{
-    id: string;
-    verdict: string;
-    safetyClass: SafetyClass;
-    blocking: boolean;
-    visual: string;
-    technique: string;
-    cached: boolean;
-    skipped: boolean;
-  }> = [];
+  const gateSummary: GateSummaryEntry[] = [];
 
   for (const id of PILOT_EXERCISE_IDS) {
-    const ex = exById.get(id);
-    if (!ex) throw new Error(`unknown pilot id: ${id}`);
-    const alt = manifest.get(id);
-    if (!alt) throw new Error(`manifest missing entry for ${id}`);
-    if (alt.startAlt === alt.endAlt) {
-      throw new Error(
-        `${id}: startAlt === endAlt; alt text collapsed semantically. Run regen-alt-text.ts before curation.`,
-      );
-    }
-    if (alt.safetyNote && alt.safetyNote.length > 300) {
-      console.warn(
-        `[curate] WARNING: ${id} safetyNote is ${alt.safetyNote.length} chars (>300). Consider shortening.`,
-      );
-    }
+    const { ex, alt } = getPilotEntry(id, exById, manifest);
 
     const proposal = buildProposal(ex, alt);
     const proposalHash = crypto
@@ -803,25 +835,7 @@ async function main(): Promise<void> {
     );
   }
 
-  console.log("\n[curate] gate summary:");
-  for (const r of gateSummary) {
-    const tag = r.skipped ? " (skipped)" : r.cached ? " (cached)" : "";
-    const blockTag = r.blocking ? "BLOCK" : "PASS ";
-    console.log(
-      `  ${r.id.padEnd(12)} verdict=${r.verdict.padEnd(22)} safety=${r.safetyClass.padEnd(10)} gate=${blockTag}${tag}`,
-    );
-  }
-  const blocking = gateSummary.filter((r) => !r.skipped && r.blocking);
-  if (blocking.length > 0) {
-    console.log(
-      `\n[curate] ${blocking.length}/${gateSummary.length} exercises BLOCK the curation gate. Address findings and re-run.`,
-    );
-    process.exitCode = 2;
-  } else if (allCovered) {
-    console.log(
-      `\n[curate] all ${gateSummary.length}/${gateSummary.length} PASS the curation gate.`,
-    );
-  }
+  reportGateSummary(gateSummary, allCovered);
 }
 
 // Only run main() when invoked as a CLI entry point. Importing this module

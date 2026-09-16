@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
 import type { SetType, TemplateExercise } from "../lib/types";
 import { SET_TYPE_CYCLE, SET_TYPE_LABELS } from "../lib/types";
-import { fontSizes } from "../constants/design-tokens";
+import { fontSizes, radii, spacing } from "../constants/design-tokens";
 import { useThemeColors } from "@/hooks/useThemeColors";
 
 function normalizeEditorSetTypes(setTypes: SetType[] | undefined, targetSets: number): SetType[] {
@@ -33,6 +33,19 @@ const DEFAULT_SETS = 3;
 const DEFAULT_REPS = "8-12";
 const DEFAULT_REST = 90;
 
+function getEditorDefaults(exercise: TemplateExercise | null) {
+  return {
+    sets: exercise?.target_sets ?? DEFAULT_SETS,
+    reps: exercise?.target_reps ?? DEFAULT_REPS,
+    rest: exercise?.rest_seconds ?? DEFAULT_REST,
+    setTypes: exercise?.set_types,
+  };
+}
+
+function editorFieldError(value: string, valid: boolean, message: string) {
+  return value.length > 0 && !valid ? message : undefined;
+}
+
 export default function EditExerciseModal({
   visible,
   exercise,
@@ -40,23 +53,24 @@ export default function EditExerciseModal({
   onDismiss,
 }: Props) {
   const colors = useThemeColors();
-  const initialSets = visible ? String((exercise?.target_sets ?? DEFAULT_SETS)) : "";
-  const initialReps = visible ? (exercise?.target_reps ?? DEFAULT_REPS) : "";
-  const initialRest = visible ? String((exercise?.rest_seconds ?? DEFAULT_REST)) : "";
+  const defaults = getEditorDefaults(exercise);
+  const initialSets = visible ? String(defaults.sets) : "";
+  const initialReps = visible ? defaults.reps : "";
+  const initialRest = visible ? String(defaults.rest) : "";
 
   const [sets, setSets] = useState(initialSets);
   const [reps, setReps] = useState(initialReps);
   const [rest, setRest] = useState(initialRest);
-  const [setTypes, setSetTypes] = useState<SetType[]>(normalizeEditorSetTypes(exercise?.set_types, exercise?.target_sets ?? DEFAULT_SETS));
+  const [setTypes, setSetTypes] = useState<SetType[]>(normalizeEditorSetTypes(defaults.setTypes, defaults.sets));
   const [prevVisible, setPrevVisible] = useState(visible);
 
   // Reset state when modal opens (derived state pattern)
   if (visible && !prevVisible) {
-    const nextTargetSets = exercise?.target_sets ?? DEFAULT_SETS;
+    const nextTargetSets = defaults.sets;
     setSets(String(nextTargetSets));
-    setReps(exercise?.target_reps ?? DEFAULT_REPS);
-    setRest(String(exercise?.rest_seconds ?? DEFAULT_REST));
-    setSetTypes(normalizeEditorSetTypes(exercise?.set_types, nextTargetSets));
+    setReps(defaults.reps);
+    setRest(String(defaults.rest));
+    setSetTypes(normalizeEditorSetTypes(defaults.setTypes, nextTargetSets));
   }
   if (visible !== prevVisible) {
     setPrevVisible(visible);
@@ -132,7 +146,7 @@ export default function EditExerciseModal({
                 variant="outline"
                 containerStyle={styles.input}
                 accessibilityLabel="Target sets"
-                error={sets.length > 0 && !setsValid ? "Invalid sets" : undefined}
+                error={editorFieldError(sets, setsValid, "Invalid sets")}
               />
 
               <Input
@@ -143,7 +157,7 @@ export default function EditExerciseModal({
                 containerStyle={styles.input}
                 accessibilityLabel="Target reps"
                 placeholder="e.g. 8-12, 5, AMRAP"
-                error={reps.length > 0 && !repsValid ? "Invalid reps" : undefined}
+                error={editorFieldError(reps, repsValid, "Invalid reps")}
               />
 
               <Input
@@ -154,12 +168,12 @@ export default function EditExerciseModal({
                 variant="outline"
                 containerStyle={styles.input}
                 accessibilityLabel="Rest time in seconds"
-                error={rest.length > 0 && !restValid ? "Invalid rest time" : undefined}
+                error={editorFieldError(rest, restValid, "Invalid rest time")}
               />
 
               {setsValid && (
                 <View style={styles.setTypeSection}>
-                  <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+                  <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: spacing.sm }}>
                     Set types
                   </Text>
                   <View style={styles.setTypeGrid}>
@@ -218,31 +232,31 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    padding: spacing.xl,
   },
   card: {
     width: "100%",
     maxWidth: 400,
     maxHeight: "90%",
-    borderRadius: 16,
+    borderRadius: radii.xl,
   },
   cardContent: {
-    padding: 20,
+    padding: spacing.lg,
   },
   title: {
-    marginBottom: 16,
+    marginBottom: spacing.base,
     fontWeight: "700",
   },
   input: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   setTypeSection: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   setTypeGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: spacing.sm,
   },
   setTypeChip: {
     minHeight: 40,
@@ -250,8 +264,8 @@ const styles = StyleSheet.create({
   buttons: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: 8,
-    gap: 8,
+    marginTop: spacing.sm,
+    gap: spacing.sm,
   },
   button: {
     minWidth: 56,

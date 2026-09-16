@@ -178,16 +178,19 @@ async function extractRewrites(
   return { startAlt: parsed.startAlt, endAlt: parsed.endAlt };
 }
 
+function parseSubsetIds(argv: string[]): Set<string> | null {
+  const idsFlagIdx = argv.indexOf("--ids");
+  return idsFlagIdx >= 0 && argv[idsFlagIdx + 1]
+    ? new Set(argv[idsFlagIdx + 1].split(",").map((s) => s.trim()).filter(Boolean))
+    : null;
+}
+
 async function main(): Promise<void> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY required");
   const argv = process.argv.slice(2);
   const dryRun = argv.includes("--dry-run");
-  const idsFlagIdx = argv.indexOf("--ids");
-  const subsetIds: Set<string> | null =
-    idsFlagIdx >= 0 && argv[idsFlagIdx + 1]
-      ? new Set(argv[idsFlagIdx + 1].split(",").map((s) => s.trim()).filter(Boolean))
-      : null;
+  const subsetIds = parseSubsetIds(argv);
 
   // Need exercise names (for the extractor prompt). Read them via simple
   // pass over seedExercises in a Node-importable way.

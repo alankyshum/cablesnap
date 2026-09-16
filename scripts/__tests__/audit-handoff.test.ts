@@ -415,6 +415,10 @@ d("audit-handoff.sh — BLD-2109", () => {
     });
   });
 
+  registerIdempotencyAndVerificationTests();
+});
+
+function registerIdempotencyAndVerificationTests() {
   describe("AC4: idempotency — issue already ≥ in_review → no-op", () => {
     it("--issue-id pointing to an in_review/ux-designer issue → exits 0, no new mutations", () => {
       const existingIssue: ClipIssue = {
@@ -707,4 +711,4 @@ d("audit-handoff.sh — BLD-2109", () => {
       }
     });
   });
-});
+}

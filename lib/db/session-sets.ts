@@ -243,6 +243,13 @@ export async function addSet(
   };
 }
 
+function resolveBatchSetPrescription(s: Parameters<typeof addSetsBatch>[0][number]) {
+  const resolvedType: SetType = s.setType ?? (s.isWarmup ? "warmup" : "normal");
+  // AC1.1 / AC1.3: inherit exercise default_tempo when no explicit tempo is provided.
+  const resolvedTempo = s.tempo ?? s.exerciseDefaultTempo ?? null;
+  return { resolvedType, resolvedTempo };
+}
+
 export async function addSetsBatch(
   sets: {
     sessionId: string;
@@ -272,9 +279,7 @@ export async function addSetsBatch(
   }[]
 ): Promise<WorkoutSet[]> {
   const results: WorkoutSet[] = sets.map((s) => {
-    const resolvedType: SetType = s.setType ?? (s.isWarmup ? "warmup" : "normal");
-    // AC1.1 / AC1.3: inherit exercise default_tempo when no explicit tempo is provided.
-    const resolvedTempo = s.tempo ?? s.exerciseDefaultTempo ?? null;
+    const { resolvedType, resolvedTempo } = resolveBatchSetPrescription(s);
     return {
       id: uuid(),
       session_id: s.sessionId,

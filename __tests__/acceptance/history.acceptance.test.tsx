@@ -504,6 +504,10 @@ describe('Workout History & Calendar Acceptance', () => {
     })
   })
 
+  registerFilterTests()
+})
+
+function registerFilterTests() {
   // ---------------------------------------------------------------------------
   // BLD-938 — Filter UI behavioural coverage
   //
@@ -692,4 +696,4 @@ describe('Workout History & Calendar Acceptance', () => {
       ).toBeTruthy()
     })
   })
-})
+}

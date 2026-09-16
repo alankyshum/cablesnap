@@ -7,7 +7,7 @@ import { getDatabase, withTransaction } from "./helpers";
 import { normalizeSetType, bulkInsertSegments } from "./sets";
 import type { BulkSegmentInput } from "./sets";
 import { uuid } from "../uuid";
-import type { ImportedSession } from "../csv-import";
+import type { ImportedSession, ImportedSet } from "../csv-import";
 import type { MatchResult } from "../exercise-matcher";
 import type { NlpResult } from "../exercise-nlp";
 import type { Category, Equipment, Difficulty, MuscleGroup } from "../types";
@@ -44,6 +44,33 @@ function nlpToDbValues(nlp: NlpResult): {
     primary_muscles: (nlp.primary_muscles as MuscleGroup[]).join(",") || "full_body",
     secondary_muscles: (nlp.secondary_muscles as MuscleGroup[]).join(","),
   };
+}
+
+function parseImportedSegments(set: ImportedSet, completedAt: number): BulkSegmentInput[] {
+  const repParts = (set.mini_set_reps ?? "").split(";").slice(0, 8);
+  const weightParts = (set.mini_set_weights ?? "").split(";");
+  const restParts = (set.mini_set_rests ?? "").split(";");
+
+  const segments: BulkSegmentInput[] = [];
+  for (let si = 0; si < repParts.length; si++) {
+    const repStr = repParts[si];
+    if (!repStr) continue;
+    const reps = parseInt(repStr, 10);
+    if (isNaN(reps)) continue;
+    const weightStr = weightParts[si] ?? "";
+    const segWeight = weightStr !== "" ? parseFloat(weightStr) : null;
+    const restStr = restParts[si] ?? "";
+    const restSecs = restStr !== "" ? parseInt(restStr, 10) : null;
+
+    segments.push({
+      segmentNumber: si + 1,
+      reps,
+      weight: segWeight !== null && isNaN(segWeight) ? null : segWeight,
+      restAfterSeconds: restSecs !== null && isNaN(restSecs) ? null : restSecs,
+      completedAt,
+    });
+  }
+  return segments;
 }
 
 // ---- Main import function ----
@@ -161,30 +188,7 @@ export async function importCsvSessions(
         // in sync with the imported data (architecture invariant: sets.ts is the
         // only file that may write workout_set_segments).
         if (set.mini_set_reps) {
-          const repParts = set.mini_set_reps.split(";").slice(0, 8);
-          const weightParts = (set.mini_set_weights ?? "").split(";");
-          const restParts = (set.mini_set_rests ?? "").split(";");
-
-          const segments: BulkSegmentInput[] = [];
-          for (let si = 0; si < repParts.length; si++) {
-            const repStr = repParts[si];
-            if (!repStr) continue;
-            const reps = parseInt(repStr, 10);
-            if (isNaN(reps)) continue;
-            const weightStr = weightParts[si] ?? "";
-            const segWeight = weightStr !== "" ? parseFloat(weightStr) : null;
-            const restStr = restParts[si] ?? "";
-            const restSecs = restStr !== "" ? parseInt(restStr, 10) : null;
-
-            segments.push({
-              segmentNumber: si + 1,
-              reps,
-              weight: segWeight !== null && isNaN(segWeight) ? null : segWeight,
-              restAfterSeconds: restSecs !== null && isNaN(restSecs) ? null : restSecs,
-              completedAt,
-            });
-          }
-          await bulkInsertSegments(setId, segments);
+          await bulkInsertSegments(setId, parseImportedSegments(set, completedAt));
         }
       }
 

@@ -24,6 +24,14 @@ function voltra(ex: Voltra): Exercise {
 export function seedExercises(): Exercise[] {
   counter = 0;
   return [
+    ...seedCoreArmsBack(),
+    ...seedChestLegsShoulders(),
+    ...communityExercises(),
+  ];
+}
+
+function seedCoreArmsBack(): Exercise[] {
+  return [
     // ── Abs & Core (9) ──────────────────────────────────────
     voltra({
       name: "Abdominal Crunches",
@@ -273,6 +281,11 @@ export function seedExercises(): Exercise[] {
       attachment: "handle",
     }),
 
+  ];
+}
+
+function seedChestLegsShoulders(): Exercise[] {
+  return [
     // ── Chest (9) ────────────────────────────────────────────
     voltra({
       name: "Bench Fly",
@@ -541,6 +554,5 @@ export function seedExercises(): Exercise[] {
       instructions: "1. Attach rope to high mount on rack.\n2. Kneel facing the Voltra, grip rope behind head.\n3. Crunch downward, pulling elbows toward knees.\n4. Squeeze abs hard at the bottom of the movement.\n5. Return slowly to upright kneeling position.",
       attachment: "rope",
     }),
-    ...communityExercises(),
   ];
 }

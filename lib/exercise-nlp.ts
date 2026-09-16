@@ -62,6 +62,54 @@ function findPhraseMatch<T>(
   return null;
 }
 
+function findMuscles(normalized: string): MuscleGroup[] {
+  const foundMuscles: MuscleGroup[] = [];
+  for (const [phrases, muscle] of MUSCLE_KEYWORDS) {
+    for (const phrase of phrases) {
+      const pattern = new RegExp(
+        `\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+        "i"
+      );
+      if (pattern.test(normalized)) {
+        if (!foundMuscles.includes(muscle)) foundMuscles.push(muscle);
+        break;
+      }
+    }
+  }
+  return foundMuscles;
+}
+
+function isRedundantModifier(namePrefix: string, archetypeNameTokens: string | null, equipment: Equipment | null): boolean {
+  // Avoid duplicating modifier if it's already part of archetype name.
+  if (archetypeNameTokens && archetypeNameTokens.toLowerCase().includes(namePrefix.toLowerCase())) return true;
+  // Skip "cable" modifier if equipment is already cable.
+  if (namePrefix === "Cable" && equipment === "cable") return true;
+  if (namePrefix === "Front" && archetypeNameTokens?.toLowerCase().includes("front")) return true;
+  if (namePrefix === "Hammer" && archetypeNameTokens?.toLowerCase().includes("hammer")) return true;
+  if (namePrefix === "Overhead" && archetypeNameTokens?.toLowerCase().includes("overhead")) return true;
+  if (namePrefix === "Preacher" && archetypeNameTokens?.toLowerCase().includes("preacher")) return true;
+  if (namePrefix === "Hanging" && archetypeNameTokens?.toLowerCase().includes("hanging")) return true;
+  return false;
+}
+
+function findModifiers(normalized: string, archetypeNameTokens: string | null, equipment: Equipment | null): string[] {
+  const matchedModifiers: string[] = [];
+  for (const mod of MODIFIERS) {
+    for (const phrase of mod.phrases) {
+      const pattern = new RegExp(
+        `\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+        "i"
+      );
+      if (pattern.test(normalized)) {
+        if (isRedundantModifier(mod.namePrefix, archetypeNameTokens, equipment)) break;
+        matchedModifiers.push(mod.namePrefix);
+        break;
+      }
+    }
+  }
+  return matchedModifiers;
+}
+
 // ---- Main parser ----
 
 export function parseExerciseDescription(input: string): NlpResult {
@@ -115,19 +163,7 @@ export function parseExerciseDescription(input: string): NlpResult {
 
   // 4. Fallback: extract muscles from text if no archetype matched
   if (!matchedArchetype) {
-    const foundMuscles: MuscleGroup[] = [];
-    for (const [phrases, muscle] of MUSCLE_KEYWORDS) {
-      for (const phrase of phrases) {
-        const pattern = new RegExp(
-          `\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-          "i"
-        );
-        if (pattern.test(normalized)) {
-          if (!foundMuscles.includes(muscle)) foundMuscles.push(muscle);
-          break;
-        }
-      }
-    }
+    const foundMuscles = findMuscles(normalized);
     if (foundMuscles.length > 0) {
       primaryMuscles = foundMuscles;
       confidence.primary_muscles = "medium";
@@ -139,36 +175,7 @@ export function parseExerciseDescription(input: string): NlpResult {
   }
 
   // 5. Extract modifiers
-  const matchedModifiers: string[] = [];
-  for (const mod of MODIFIERS) {
-    for (const phrase of mod.phrases) {
-      const pattern = new RegExp(
-        `\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-        "i"
-      );
-      if (pattern.test(normalized)) {
-        // Avoid duplicating modifier if it's already part of archetype name
-        if (archetypeNameTokens && archetypeNameTokens.toLowerCase().includes(mod.namePrefix.toLowerCase())) {
-          break;
-        }
-        // Skip "cable" modifier if equipment is already cable
-        if (mod.namePrefix === "Cable" && equipment === "cable") break;
-        // Skip "front" if archetype already contains it
-        if (mod.namePrefix === "Front" && archetypeNameTokens?.toLowerCase().includes("front")) break;
-        // Skip "hammer" if archetype already has it
-        if (mod.namePrefix === "Hammer" && archetypeNameTokens?.toLowerCase().includes("hammer")) break;
-        // Skip "overhead" if archetype already has it
-        if (mod.namePrefix === "Overhead" && archetypeNameTokens?.toLowerCase().includes("overhead")) break;
-        // Skip "preacher" if archetype already has it
-        if (mod.namePrefix === "Preacher" && archetypeNameTokens?.toLowerCase().includes("preacher")) break;
-        // Skip "hanging" if archetype already has it
-        if (mod.namePrefix === "Hanging" && archetypeNameTokens?.toLowerCase().includes("hanging")) break;
-
-        matchedModifiers.push(mod.namePrefix);
-        break;
-      }
-    }
-  }
+  const matchedModifiers = findModifiers(normalized, archetypeNameTokens, equipment);
 
   // 6. Build name
   let name: string;
