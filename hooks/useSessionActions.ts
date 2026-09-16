@@ -452,6 +452,60 @@ export function useSessionActions({
         updateGroupSet(setId, { reps: rounded });
         await updateSet(setId, resolvedSet.weight, rounded);
       }
+
+      if ((field === "weight" || field === "reps") && num !== null) {
+        const nextValue = field === "weight" ? num : Math.round(num);
+        const updates: { id: string; weight: number | null; reps: number | null }[] = [];
+        const preUpdateSnapshot = new Map<string, { weight: number | null; reps: number | null }>();
+
+        for (const candidate of parentGroup.sets) {
+          if (candidate.id === setId || candidate.set_number <= resolvedSet.set_number) continue;
+          if (resolvedSet.set_type !== "warmup" && candidate.set_type === "warmup") continue;
+          const currentValue = candidate[field] ?? -Infinity;
+          if (!(nextValue > currentValue)) continue;
+          const weight = field === "weight" ? nextValue : candidate.weight;
+          const reps = field === "reps" ? nextValue : candidate.reps;
+          preUpdateSnapshot.set(candidate.id, { weight: candidate.weight, reps: candidate.reps });
+          updates.push({ id: candidate.id, weight, reps });
+        }
+
+        if (updates.length > 0) {
+          setGroups((prev) =>
+            prev.map((g) => {
+              if (g.exercise_id !== parentGroup.exercise_id) return g;
+              return {
+                ...g,
+                sets: g.sets.map((s) => {
+                  const patch = updates.find((u) => u.id === s.id);
+                  if (!patch) return s;
+                  return { ...s, weight: patch.weight, reps: patch.reps };
+                }),
+              };
+            })
+          );
+
+          try {
+            await updateSetsBatch(updates);
+          } catch (err) {
+            setGroups((prev) =>
+              prev.map((g) => {
+                if (g.exercise_id !== parentGroup.exercise_id) return g;
+                return {
+                  ...g,
+                  sets: g.sets.map((s) => {
+                    const snap = preUpdateSnapshot.get(s.id);
+                    if (!snap) return s;
+                    return { ...s, weight: snap.weight, reps: snap.reps };
+                  }),
+                };
+              })
+            );
+            showError("Failed to save set cascade");
+            // eslint-disable-next-line no-console
+            console.warn("[handleUpdate] set cascade persist failed:", err);
+          }
+        }
+      }
     }
     // BLD-1122 AC17: weight/reps changes affect plateau window
     queryClient.invalidateQueries({ queryKey: ["plateau"] });

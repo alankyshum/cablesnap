@@ -19,6 +19,7 @@
 
 const mockUpdateSet = jest.fn().mockResolvedValue(undefined);
 const mockUpdateSetDuration = jest.fn().mockResolvedValue(undefined);
+const mockUpdateSetsBatch = jest.fn().mockResolvedValue(undefined);
 
 jest.mock("../../lib/db", () => ({
   addSet: jest.fn(),
@@ -47,6 +48,7 @@ jest.mock("../../lib/db/session-sets", () => ({
   getLastBodyweightModifier: jest.fn(),
   updateSetBodyweightModifier: jest.fn(),
   getPreviousSetsBatch: jest.fn().mockResolvedValue({}),
+  updateSetsBatch: (...args: any[]) => mockUpdateSetsBatch(...args),
 }));
 
 jest.mock("../../lib/query", () => ({
@@ -198,6 +200,67 @@ describe("useSessionActions — handleUpdate persistence (BLD-2760)", () => {
 
     expect(params.updateGroupSet).toHaveBeenCalledWith("s1", { duration_seconds: 45 });
     expect(mockUpdateSetDuration).toHaveBeenCalledWith("s1", 45);
+  });
+
+  it("weight/reps cascades only to later max-increasing sets, with warmup gating", async () => {
+    const group = makeGroup([
+      { id: "s1", set_number: 1, weight: 20, reps: 10, duration_seconds: null, completed: false, set_type: "warmup" },
+      { id: "s2", set_number: 2, weight: 30, reps: 8, duration_seconds: null, completed: false, set_type: "warmup" },
+      { id: "s3", set_number: 3, weight: 100, reps: 5, duration_seconds: null, completed: false, set_type: "normal" },
+      { id: "s4", set_number: 4, weight: 110, reps: 5, duration_seconds: null, completed: false, set_type: "normal" },
+      { id: "s5", set_number: 5, weight: 130, reps: 5, duration_seconds: null, completed: false, set_type: "normal" },
+    ]);
+    const params = makeParams([group]);
+    const { result } = renderHook(() => useSessionActions(params));
+    await act(async () => { await flush(); });
+
+    await act(async () => {
+      await result.current.handleUpdate("s3", "weight", "120");
+    });
+
+    expect(mockUpdateSetsBatch).toHaveBeenCalledTimes(1);
+    expect(mockUpdateSetsBatch).toHaveBeenCalledWith([
+      { id: "s4", weight: 120, reps: 5 },
+    ]);
+
+    mockUpdateSetsBatch.mockClear();
+    const warmupGroup = makeGroup([
+      { id: "w1", set_number: 1, weight: 20, reps: 10, duration_seconds: null, completed: false, set_type: "warmup" },
+      { id: "w2", set_number: 2, weight: 30, reps: 8, duration_seconds: null, completed: false, set_type: "warmup" },
+      { id: "w3", set_number: 3, weight: 80, reps: 5, duration_seconds: null, completed: false, set_type: "normal" },
+    ]);
+    const warmupParams = makeParams([warmupGroup]);
+    const warmupHook = renderHook(() => useSessionActions(warmupParams));
+    await act(async () => { await flush(); });
+
+    await act(async () => {
+      await warmupHook.result.current.handleUpdate("w1", "weight", "40");
+    });
+
+    expect(mockUpdateSetsBatch).toHaveBeenCalledTimes(1);
+    expect(mockUpdateSetsBatch).toHaveBeenCalledWith([
+      { id: "w2", weight: 40, reps: 8 },
+    ]);
+
+    mockUpdateSetsBatch.mockClear();
+    const repsGroup = makeGroup([
+      { id: "r1", set_number: 1, weight: 100, reps: 5, duration_seconds: null, completed: false, set_type: "normal" },
+      { id: "r2", set_number: 2, weight: 100, reps: 6, duration_seconds: null, completed: false, set_type: "normal" },
+      { id: "r3", set_number: 3, weight: 100, reps: 7, duration_seconds: null, completed: false, set_type: "normal" },
+    ]);
+    const repsParams = makeParams([repsGroup]);
+    const repsHook = renderHook(() => useSessionActions(repsParams));
+    await act(async () => { await flush(); });
+
+    await act(async () => {
+      await repsHook.result.current.handleUpdate("r1", "reps", "9");
+    });
+
+    expect(mockUpdateSetsBatch).toHaveBeenCalledTimes(1);
+    expect(mockUpdateSetsBatch).toHaveBeenCalledWith([
+      { id: "r2", weight: 100, reps: 9 },
+      { id: "r3", weight: 100, reps: 9 },
+    ]);
   });
 
   it("unknown setId is a silent no-op", async () => {

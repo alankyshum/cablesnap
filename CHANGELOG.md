@@ -22,12 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Editing a set's weight or reps now brings later sets in the same exercise up to match when the new value is higher, so working sets keep pace automatically.
+- AI Coach now marks models that support both tool calling and gym-photo input, and rejects photo requests when the live catalog does not advertise image support.
 
 ## v0.26.117 — 2026-09-08
 <!-- versionCode: 185 -->
-
-- AI Coach now marks models that support both tool calling and gym-photo input, and rejects photo requests when the live catalog does not advertise image support.
 
 ## v0.26.116 — 2026-09-07
 <!-- versionCode: 184 -->
