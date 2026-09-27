@@ -23,9 +23,9 @@ Both paths use the same package ID and signing key, so updates install in place 
 
 ## Demo
 
-[<img src="https://img.youtube.com/vi/8WLv-Xj03uQ/maxresdefault.jpg" alt="CableSnap promo video" width="240">](https://youtube.com/shorts/8WLv-Xj03uQ)
+[<img src="assets/demo/cablesnap-poster.jpg" alt="CableSnap product film — play video" width="480">](assets/demo/cablesnap.mp4)
 
-▶️ **[Watch the promo (YouTube Shorts)](https://youtube.com/shorts/8WLv-Xj03uQ)**
+▶️ **[Watch the CableSnap product film](assets/demo/cablesnap.mp4)**
 
 ## Screenshots
 
