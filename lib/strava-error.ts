@@ -75,7 +75,7 @@ export function getStravaUserMessage(err: unknown): string {
       case "config":
         return t({ id: "stravaError.config", message: "Strava isn't set up correctly. Please contact support." });
       case "app_inactive":
-        return t({ id: "stravaError.appInactive", message: "Strava app access is inactive. Please contact support." });
+        return t({ id: "stravaError.appInactive", message: "Strava integration is temporarily unavailable. Please try again later." });
       case "local_read":
         return t({ id: "stravaError.localRead", message: "Failed to read workout data. Please try again." });
       case "unknown":

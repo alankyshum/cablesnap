@@ -1882,7 +1882,7 @@ describe("Strava Integration — Friendly Error Mapping (BLD-505)", () => {
       expect(strava.getStravaUserMessage(new strava.StravaError("config", "Strava proxy URL not configured")))
         .toMatch(/isn't set up correctly/i);
       expect(strava.getStravaUserMessage(new strava.StravaError("app_inactive", "app is inactive")))
-        .toMatch(/app access is inactive/i);
+        .toMatch(/temporarily unavailable/i);
     });
 
     it("falls back to generic retry message for unknown errors (no raw API text leaks)", () => {
