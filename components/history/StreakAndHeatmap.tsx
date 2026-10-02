@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { i18n } from "@lingui/core";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { spacing } from "@/constants/design-tokens";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { Icon } from "@/components/ui/icon";
@@ -71,10 +72,10 @@ export default function StreakAndHeatmap({
 }
 
 const styles = StyleSheet.create({
-  streakCard: { marginBottom: 12 },
-  streakRow: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingVertical: 4 },
-  streakItem: { alignItems: "center", gap: 2 },
-  heatmapSection: { marginBottom: 12 },
-  heatmapHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, paddingHorizontal: 4 },
+  streakCard: { marginBottom: spacing.md },
+  streakRow: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingVertical: spacing.xs },
+  streakItem: { alignItems: "center", gap: spacing.xxs },
+  heatmapSection: { marginBottom: spacing.md },
+  heatmapHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: spacing.sm, paddingHorizontal: spacing.xs },
   heatmapLoading: { height: 120, alignItems: "center", justifyContent: "center" },
 });
