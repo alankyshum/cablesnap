@@ -5,6 +5,7 @@
 import { getDatabase } from "./helpers";
 import { uuid } from "../uuid";
 import type { GymProfileRow, CableStackRow, StackCalibrationRow } from "./schema";
+import { generateCalibrations } from "../cable-stack";
 
 export type { GymProfileRow, CableStackRow, StackCalibrationRow };
 
@@ -255,3 +256,63 @@ export const softDeleteGymProfile = deleteGymProfile;
 export const listCableStacks = getCableStacksForGym;
 export const softDeleteCableStack = deleteCableStack;
 export const listCalibrations = getCalibrationsByStack;
+
+// ── Generative Stack Calibrations (BLD-3816) ──────────────────────────────────
+
+export type GenerateStackCalibrationsParams = {
+  startWeight: number;
+  increment: number;
+  count: number;
+};
+
+/**
+ * Generates calibration rows for a cable stack from generator params.
+ *
+ * In a single db.withTransactionAsync:
+ *   1. Writes gen_* metadata to cable_stacks.
+ *   2. Upserts calibration rows for markers 1..count.
+ *   3. Deletes orphaned markers (count+1)..M when the new count is smaller
+ *      than the previous calibration count (QD Safeguard A).
+ *
+ * Callers are responsible for QD Safeguard B (overwrite confirmation before calling
+ * this function when existing calibration rows would be replaced).
+ */
+export async function generateStackCalibrations(
+  stackId: string,
+  params: GenerateStackCalibrationsParams
+): Promise<void> {
+  const result = generateCalibrations(params);
+  if (!result.ok) {
+    throw new Error(`generateStackCalibrations: invalid params — ${result.error}`);
+  }
+
+  const { startWeight, increment, count } = params;
+  const calibrations = result.calibrations;
+  const db = await getDatabase();
+
+  await db.withTransactionAsync(async () => {
+    const now = Date.now();
+
+    // 1. Write gen_* advisory metadata to cable_stacks.
+    await db.runAsync(
+      "UPDATE cable_stacks SET gen_start_weight = ?, gen_increment = ?, gen_marker_count = ?, updated_at = ? WHERE id = ?",
+      [startWeight, increment, count, now, stackId]
+    );
+
+    // 2. Upsert calibration rows for markers 1..count.
+    for (const cal of calibrations) {
+      const id = uuid();
+      await db.runAsync(
+        "INSERT INTO stack_calibrations (id, stack_id, marker, true_weight) VALUES (?, ?, ?, ?) ON CONFLICT(stack_id, marker) DO UPDATE SET true_weight = excluded.true_weight",
+        [id, stackId, cal.marker, cal.trueWeight]
+      );
+    }
+
+    // 3. QD Safeguard A: delete orphaned markers (count+1)..M when count shrunk.
+    await db.runAsync(
+      "DELETE FROM stack_calibrations WHERE stack_id = ? AND marker > ?",
+      [stackId, count]
+    );
+  });
+}
+

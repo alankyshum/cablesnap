@@ -186,6 +186,7 @@ export {
   getDefaultGym,
   getActiveGymCount,
   getSessionsByGym,
+  generateStackCalibrations,
 } from "./gym-profiles";
 export type {
   GymProfileRow,
@@ -194,6 +195,7 @@ export type {
   GymProfile,
   CableStack,
   StackCalibration,
+  GenerateStackCalibrationsParams,
 } from "./gym-profiles";
 
 export {

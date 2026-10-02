@@ -204,6 +204,11 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // Keeping this invocation in Phase 2 makes the additive chat DDL part of the
   // migration phase without changing the existing extension-table ordering.
   await createExtensionTables(database);
+  // BLD-3816: generative cable stack definition metadata.
+  // advisory only — resolution path never reads gen_* columns.
+  await addColumnIfMissing(database, "cable_stacks", "gen_start_weight", "REAL NULL");
+  await addColumnIfMissing(database, "cable_stacks", "gen_increment", "REAL NULL");
+  await addColumnIfMissing(database, "cable_stacks", "gen_marker_count", "INTEGER NULL");
   // BLD: assistant attribution. Nullable so all existing messages remain valid.
   await addColumnIfMissing(database, "coach_messages", "model_id", "TEXT DEFAULT NULL");
   } catch (err) {
