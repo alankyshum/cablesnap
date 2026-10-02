@@ -606,4 +606,35 @@ describe("PacingCard — protanopia boundary (BLD-3880)", () => {
     expect(getByTestId("pacing-seg-working-pattern", { includeHiddenElements: true })).toBeTruthy();
     expect(getByTestId("pacing-seg-other-pattern", { includeHiddenElements: true })).toBeTruthy();
   });
+
+  // ── 15. Protanopia-safe inter-segment divider tests (BLD-3871 / BLD-3880) ──
+  it("renders inter-segment dividers when all three pacing segments are present", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    expect(getByTestId("pacing-divider-working-rest", { includeHiddenElements: true })).toBeTruthy();
+    expect(getByTestId("pacing-divider-rest-other", { includeHiddenElements: true })).toBeTruthy();
+  });
+
+  it("renders exactly 1 divider when only two segments are present", () => {
+    // working and rest are present, other is 0
+    const pacing = makePacing({ working: 900, rest: 900, other: 0, gross: 1800 });
+    const { getByTestId, queryByTestId } = render(<PacingCard pacing={pacing} />);
+    expect(getByTestId("pacing-divider-working-rest", { includeHiddenElements: true })).toBeTruthy();
+    expect(queryByTestId("pacing-divider-rest-other", { includeHiddenElements: true })).toBeNull();
+  });
+
+  it("renders NO dividers when only one segment is present", () => {
+    const pacing = makePacing({ working: 0, rest: 1800, other: 0, gross: 1800 });
+    const { queryByTestId } = render(<PacingCard pacing={pacing} />);
+    expect(queryByTestId("pacing-divider-working-rest", { includeHiddenElements: true })).toBeNull();
+    expect(queryByTestId("pacing-divider-rest-other", { includeHiddenElements: true })).toBeNull();
+    expect(queryByTestId("pacing-divider-working-other", { includeHiddenElements: true })).toBeNull();
+  });
+
+  it("renders dividers with the theme divider color", () => {
+    const { getByTestId } = render(<PacingCard pacing={makePacing()} />);
+    const divider = getByTestId("pacing-divider-working-rest", { includeHiddenElements: true });
+    const style = divider.props.style;
+    const flat = Array.isArray(style) ? Object.assign({}, ...style) : style;
+    expect(flat.backgroundColor).toBeTruthy();
+  });
 });
