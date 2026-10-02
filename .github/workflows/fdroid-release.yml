@@ -154,6 +154,9 @@ jobs:
         if: always()
         run: rm -f fdroid/keystore.p12
 
+      - name: Include privacy policy page
+        run: cp docs/privacy-policy.html fdroid/privacy-policy.html
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: fdroid
