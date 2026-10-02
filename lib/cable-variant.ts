@@ -127,6 +127,7 @@ export function getAttachmentLabel(attachment: Attachment): string {
     case "squat_harness": return i18n._({ id: "app.exercise.id.attachment.squatHarness", message: "Squat Harness" });
     case "carabiner": return i18n._({ id: "app.exercise.id.attachment.carabiner", message: "Carabiner" });
   }
+  return ATTACHMENT_LABELS[attachment];
 }
 
 /** Localized mount-position label shared by all cable-vocabulary consumers. */
@@ -137,6 +138,7 @@ export function getMountPositionLabel(position: MountPosition): string {
     case "low": return i18n._({ id: "app.tools.cableFinder.mount.low", message: "Low" });
     case "floor": return i18n._({ id: "app.tools.cableFinder.mount.floor", message: "Floor" });
   }
+  return MOUNT_POSITION_LABELS[position];
 }
 
 /**
