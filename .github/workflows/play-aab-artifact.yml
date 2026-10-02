@@ -31,6 +31,8 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Generate native project
+        env:
+          CABLESNAP_DISTRIBUTION_CHANNEL: play
         run: npx expo prebuild --clean --platform android
 
       - name: Configure production signing
@@ -59,6 +61,7 @@ jobs:
 
       - name: Build Play release bundle
         env:
+          CABLESNAP_DISTRIBUTION_CHANNEL: play
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           set -euo pipefail

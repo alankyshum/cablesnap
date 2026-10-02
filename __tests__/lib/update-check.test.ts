@@ -122,6 +122,13 @@ describe("checkForUpdate", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it("does not fetch or write settings for Play builds", async () => {
+    (Constants.expoConfig as unknown as { extra: { distributionChannel: string } }).extra.distributionChannel = "play";
+    await expect(checkForUpdate()).resolves.toBeNull();
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockedSet).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["non-200", { ok: false, status: 500 }],
     ["403 rate limit", { ok: false, status: 403 }],
@@ -158,6 +165,7 @@ describe("checkForUpdate", () => {
 it("resolves the channel and asset URL from the centralized map", () => {
   expect(resolveDistributionChannel({ distributionChannel: "fdroid" })).toBe("fdroid");
   expect(resolveDistributionChannel({ distributionChannel: "github" })).toBe("github");
+  expect(resolveDistributionChannel({ distributionChannel: "play" })).toBe("play");
   expect(resolveDistributionChannel({})).toBeUndefined();
   expect(resolveReleaseUrl(release("v1.2.4"), "github")).toBe("https://example.test/app.apk");
 });

@@ -63,6 +63,7 @@ jobs:
 
       - name: Generate Play Android project
         env:
+          CABLESNAP_DISTRIBUTION_CHANNEL: play
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -98,6 +99,7 @@ jobs:
 
       - name: Build release AAB
         env:
+          CABLESNAP_DISTRIBUTION_CHANNEL: play
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

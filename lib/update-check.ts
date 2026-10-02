@@ -1,8 +1,8 @@
 import { deleteAppSetting, getAppSetting, setAppSetting } from "@/lib/db/settings";
 import Constants from "expo-constants";
 import { GITHUB_REPO } from "@/constants/github";
-export type DistributionChannel = "github" | "fdroid";
-export const ASSET_NAMES: Record<DistributionChannel, string | undefined> = { github: "cablesnap.apk", fdroid: undefined };
+export type DistributionChannel = "github" | "fdroid" | "play";
+export const ASSET_NAMES: Record<DistributionChannel, string | undefined> = { github: "cablesnap.apk", fdroid: undefined, play: undefined };
 const DISMISSED_TAG_KEY = "update.dismissedTag";
 const LAST_CHECKED_AT_KEY = "update.lastCheckedAt";
 // The bridge checks on mount and whenever the app returns to the foreground;
@@ -17,7 +17,7 @@ type ExpoConfig = { version?: string; extra?: { distributionChannel?: Distributi
 function getExpoConfig(): ExpoConfig | null { return Constants.expoConfig; }
 
 export function resolveDistributionChannel(extra: { distributionChannel?: DistributionChannel } | undefined): DistributionChannel | undefined {
-  return extra?.distributionChannel === "github" || extra?.distributionChannel === "fdroid"
+  return extra?.distributionChannel === "github" || extra?.distributionChannel === "fdroid" || extra?.distributionChannel === "play"
     ? extra.distributionChannel
     : undefined;
 }

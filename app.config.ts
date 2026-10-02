@@ -9,6 +9,11 @@ import { ExpoConfig, ConfigContext } from "expo/config";
 // the dev client for the normal Expo Go / dev-client workflow.
 const isCI = process.env.CI === "true";
 const isFdroidBuild = process.env.CABLESNAP_FDROID === "1";
+const distributionChannel = isFdroidBuild
+  ? "fdroid"
+  : process.env.CABLESNAP_DISTRIBUTION_CHANNEL === "play"
+    ? "play"
+    : "github";
 const sentryPlugin = [
   "@sentry/react-native/expo",
   {
@@ -41,7 +46,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#FF6038", // eslint-disable-line no-restricted-syntax
     },
     package: "com.persoack.cablesnap",
-    versionCode: 186,
+  versionCode: 187,
   },
   web: {
     favicon: "./assets/favicon.png",
@@ -105,7 +110,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   owner: "alankyshum",
   extra: {
     fdroidBuild: isFdroidBuild,
-    distributionChannel: isFdroidBuild ? "fdroid" : "github",
+    distributionChannel,
     ...(isFdroidBuild
       ? {}
       : {
