@@ -252,7 +252,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
         style={styles.legend}
         accessibilityLabel="Heatmap legend: 0, 1, 2, and 3 or more workouts"
       >
-        <Text variant="caption" style={{ fontSize: fontSizes.xs, color: colors.onSurfaceVariant }}>
+        <Text variant="caption" style={{ fontSize: fontSizes.xs, color: colors.onSurfaceVariant, lineHeight: 18 }}>
           Less
         </Text>
         {[0, 1, 2, 3].map((level) => (
@@ -273,7 +273,7 @@ export default function WorkoutHeatmap({ data, weeks = 16, onDayPress, totalAllT
             {renderCellLabel(level, 18)}
           </View>
         ))}
-        <Text variant="caption" style={{ fontSize: fontSizes.xs, color: colors.onSurfaceVariant }}>
+        <Text variant="caption" style={{ fontSize: fontSizes.xs, color: colors.onSurfaceVariant, lineHeight: 18 }}>
           More
         </Text>
       </View>
