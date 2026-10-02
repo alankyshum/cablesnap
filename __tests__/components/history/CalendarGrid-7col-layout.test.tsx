@@ -21,7 +21,8 @@ const colors = {
   error: "#f00",
 } as unknown as ThemeColors;
 
-function CalendarHarness({ cellSize, dotMap = new Map() }: { cellSize: number; dotMap?: Map<string, number> }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CalendarHarness({ cellSize, dotMap = new Map(), scheduleMap = new Map() }: { cellSize: number; dotMap?: Map<string, number>; scheduleMap?: Map<number, any> }) {
   const sv = useSharedValue(0);
   const animatedCalendarStyle = useAnimatedStyle(() => ({ transform: [{ translateX: sv.value }] }));
   const swipeGesture = Gesture.Pan();
@@ -32,7 +33,7 @@ function CalendarHarness({ cellSize, dotMap = new Map() }: { cellSize: number; d
       year={2026}
       month={3}
       dotMap={dotMap}
-      scheduleMap={new Map()}
+      scheduleMap={scheduleMap}
       selected={null}
       animatedCalendarStyle={animatedCalendarStyle}
       swipeGesture={swipeGesture}
@@ -219,6 +220,64 @@ describe("CalendarGrid dot indicator size (BLD-2747, BLD-3498)", () => {
       return s != null && s.width === 8 && s.height === 8;
     });
     expect(emptyDotViews.length).toBe(0);
+    unmount();
+  });
+});
+
+// ─── BLD-3661: Calendar dots centering and layout ───────────────────────────
+
+describe("CalendarGrid dots centering (BLD-3661)", () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+
+  const dotMap = new Map([
+    ["2026-04-05", 1], // April 5th
+    ["2026-04-06", 2], // April 6th
+  ]);
+
+  const scheduleMap = new Map([
+    [1, { id: "1", day_of_week: 1, template_id: "42", template_name: "Upper Body", exercise_count: 0, created_at: 0 }], // April 7th (Tuesday = index 1)
+  ]);
+
+  it("asserts that dots container style centers children with full-width anchoring", () => {
+    const { getByTestId, unmount } = render(
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <CalendarHarness cellSize={48} dotMap={dotMap} scheduleMap={scheduleMap} />
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+
+    const { StyleSheet } = require("react-native");
+
+    // 1 workout dot: "cal-day-2026-04-05-workout"
+    const workoutContainer1 = getByTestId("cal-day-2026-04-05-workout");
+    const style1 = StyleSheet.flatten(workoutContainer1.props.style);
+    expect(style1.position).toBe("absolute");
+    expect(style1.left).toBe(0);
+    expect(style1.right).toBe(0);
+    expect(style1.justifyContent).toBe("center");
+    expect(style1.bottom).toBe(4);
+
+    // 2 workout dots: "cal-day-2026-04-06-workout"
+    const workoutContainer2 = getByTestId("cal-day-2026-04-06-workout");
+    const style2 = StyleSheet.flatten(workoutContainer2.props.style);
+    expect(style2.position).toBe("absolute");
+    expect(style2.left).toBe(0);
+    expect(style2.right).toBe(0);
+    expect(style2.justifyContent).toBe("center");
+    expect(style2.bottom).toBe(4);
+
+    // Scheduled hollow dot: "cal-day-2026-04-07-scheduled"
+    const scheduledContainer = getByTestId("cal-day-2026-04-07-scheduled");
+    const styleSched = StyleSheet.flatten(scheduledContainer.props.style);
+    expect(styleSched.position).toBe("absolute");
+    expect(styleSched.left).toBe(0);
+    expect(styleSched.right).toBe(0);
+    expect(styleSched.justifyContent).toBe("center");
+    expect(styleSched.bottom).toBe(4);
+
     unmount();
   });
 });

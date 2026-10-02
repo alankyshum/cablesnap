@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   monthSummary: { textAlign: "center", marginBottom: spacing.sm },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" },
   cell: { alignItems: "center", justifyContent: "center", marginVertical: 2, minHeight: MIN_TOUCH_TARGET },
-  dots: { flexDirection: "row", gap: 3, position: "absolute", bottom: 4 },
+  dots: { flexDirection: "row", gap: 3, position: "absolute", bottom: 4, left: 0, right: 0, justifyContent: "center" },
   dot: { width: 8, height: 8, borderRadius: radii.pill },
   /** CVD-safe luminance affordance: dark outline makes unselected dots distinguishable
    *  without relying on the coral hue alone (WCAG 1.4.1). Applied only when !isSel.
