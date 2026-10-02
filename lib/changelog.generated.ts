@@ -10,9 +10,15 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.119",
+    "date": "2026-10-02",
+    "versionCode": 187,
+    "body": "- Google Play builds now stay on the Play Store update path instead of prompting users to install APK updates from GitHub."
+  },
+  {
     "version": "0.26.118",
     "date": "2026-09-16",
-    "versionCode": 186,
+    "versionCode": 187,
     "body": "- Editing a set's weight or reps now brings later sets in the same exercise up to match when the new value is higher, so working sets keep pace automatically.\n- AI Coach now marks models that support both tool calling and gym-photo input, and rejects photo requests when the live catalog does not advertise image support."
   },
   {

@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.119 — 2026-10-02
+<!-- versionCode: 187 -->
+
 - Google Play builds now stay on the Play Store update path instead of prompting users to install APK updates from GitHub.
 
 ## v0.26.118 — 2026-09-16
