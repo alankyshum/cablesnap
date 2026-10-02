@@ -1,50 +1,75 @@
 appId: com.persoack.cablesnap
 ---
-# Native-only regression flow. The release APK cannot safely receive a test key:
-# SecureStore validation is intentionally unchanged. Before running this flow,
-# save a valid OpenRouter key in Settings > AI Provider on the emulator (or use
-# a dev build with the normal settings UI). Never put a key in this repository.
+# Native-only regression flow. CI intentionally runs without a test key, so
+# this covers the safe no-key state while retaining the full chat path for a
+# local/dev run where a valid OpenRouter key is already stored on the emulator.
+# Never put a key in this repository.
 - launchApp
 - tapOn: "AI Coach"
 - extendedWaitUntil:
     visible: "AI Coach"
     timeout: 90000
-- assertVisible: "Ask your AI Coach anything..."
-- tapOn: "Active Model: .*"
-- extendedWaitUntil:
-    visible: "Select AI Model"
-    timeout: 30000
-# Native-only gesture regression. Option 9 starts outside the viewport on both
-# phone portrait and tablet landscape. Swipe from the registered Gorhom list so
-# this exercises RNGH touch coordination rather than DOM scrolling or adb input.
-- assertNotVisible:
-    id: model-catalog-option-9
-- swipe:
-    from:
-      id: model-catalog-list
-    direction: UP
-- assertVisible:
-    id: model-catalog-option-9
-- tapOn:
-    id: model-catalog-option-9
-- extendedWaitUntil:
-    notVisible: "Select AI Model"
-    timeout: 30000
-- assertVisible: "Active Model: .*"
-- tapOn: "Ask your AI Coach anything..."
-- inputText: "How did my last workout go?"
-- hideKeyboard
-- tapOn:
-    point: "95%,82%"
-- extendedWaitUntil:
-    visible: "Stop generating"
-    timeout: 90000
-- tapOn:
-    point: "95%,82%"
-- assertNotVisible: "Stop generating"
-# Kill and relaunch after cancellation. This verifies a clean native remount
-# without being blocked by Expo's dev-only canceled-fetch error overlay.
-- stopApp
-- launchApp
-- tapOn: "AI Coach"
-- assertVisible: "Ask your AI Coach anything..."
+
+# Secret-free CI path: verify the coach explains why chat is unavailable and
+# still remounts cleanly after the app is restarted.
+- runFlow:
+    when:
+      visible: "API Key Required"
+    commands:
+      - assertVisible: "API Key Required"
+      - assertVisible: "Add OpenRouter API Key"
+      - assertVisible: "Add your OpenRouter key in Settings to chat with AI Coach and receive personalized workout insights."
+      - stopApp
+      - launchApp
+      - tapOn: "AI Coach"
+      - extendedWaitUntil:
+          visible: "API Key Required"
+          timeout: 90000
+      - assertVisible: "API Key Required"
+
+# Credentialed/dev path: preserve the model-picker gesture and streaming
+# cancellation coverage when a valid key is available on the emulator.
+- runFlow:
+    when:
+      visible: "Ask your AI Coach anything..."
+    commands:
+      - tapOn: "Active Model: .*"
+      - extendedWaitUntil:
+          visible: "Select AI Model"
+          timeout: 30000
+      # Native-only gesture regression. Option 9 starts outside the viewport on
+      # both phone portrait and tablet landscape.
+      - assertNotVisible:
+          id: model-catalog-option-9
+      - swipe:
+          from:
+            id: model-catalog-list
+          direction: UP
+      - assertVisible:
+          id: model-catalog-option-9
+      - tapOn:
+          id: model-catalog-option-9
+      - extendedWaitUntil:
+          notVisible: "Select AI Model"
+          timeout: 30000
+      - assertVisible: "Active Model: .*"
+      - tapOn: "Ask your AI Coach anything..."
+      - inputText: "How did my last workout go?"
+      - hideKeyboard
+      - tapOn:
+          point: "95%,82%"
+      - extendedWaitUntil:
+          visible: "Stop generating"
+          timeout: 90000
+      - tapOn:
+          point: "95%,82%"
+      - assertNotVisible: "Stop generating"
+      # Kill and relaunch after cancellation. This verifies a clean native
+      # remount without being blocked by a dev-only canceled-fetch overlay.
+      - stopApp
+      - launchApp
+      - tapOn: "AI Coach"
+      - extendedWaitUntil:
+          visible: "Ask your AI Coach anything..."
+          timeout: 90000
+      - assertVisible: "Ask your AI Coach anything..."
