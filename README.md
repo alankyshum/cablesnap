@@ -30,9 +30,10 @@ Both paths use the same package ID and signing key, so updates install in place 
 ## Screenshots
 
 <p align="center">
-  <img src="assets/store-screenshots/workouts-store-pixel9.png" alt="Workouts" width="200">
-  <img src="assets/store-screenshots/nutrition-store-pixel9.png" alt="Nutrition" width="200">
-  <img src="assets/store-screenshots/progress-store-pixel9.png" alt="Progress" width="200">
+  <img width="200" alt="04-exercises" src="https://github.com/user-attachments/assets/91fee3a9-8fd8-4bbd-8364-54320f38156a" />
+  <img width="200" alt="03-progress" src="https://github.com/user-attachments/assets/31c01257-8f2b-4d69-9324-d99db50d33e9" />
+  <img width="200" alt="02-nutrition" src="https://github.com/user-attachments/assets/f759b9d4-8764-49cd-87ce-71aca49549b5" />
+  <img width="200" alt="01-workouts" src="https://github.com/user-attachments/assets/c93df0e0-3e89-4cf0-a3c9-9364b24866e7" />
 </p>
 
 ## Features
