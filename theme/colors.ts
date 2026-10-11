@@ -39,6 +39,10 @@ const lightColors = {
   input: "#E5E7EB",
   ring: "#FF6038",
 
+  // Button outline specific tokens for CVD contrast (BLD-4678)
+  buttonOutlineBorder: "#7B848F", // WCAG 3.44:1 vs #F3F4F6 surface, 3.63:1 vs #FAFAFA background
+  buttonOutlineText: "#E64522",   // WCAG 3.64:1 vs #F3F4F6 surface, 3.83:1 vs #FAFAFA background
+
   // Text colors
   text: "#1A2138",
   textMuted: "#6B7280",
@@ -134,6 +138,10 @@ const darkColors = {
   border: "#30363D",
   input: "rgba(255, 255, 255, 0.15)",
   ring: "#FF7A55",
+
+  // Button outline specific tokens for CVD contrast (BLD-4678)
+  buttonOutlineBorder: "#8B949E", // WCAG 5.62:1 vs #161B22 surface, 6.15:1 vs #0D1117 background
+  buttonOutlineText: "#FF7A55",   // WCAG 6.72:1 vs #161B22 surface, 7.35:1 vs #0D1117 background
 
   // Text colors
   text: "#F0F2F5",
