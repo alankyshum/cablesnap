@@ -54,7 +54,7 @@ jobs:
           set -euo pipefail
           LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
           AUTHOR='${{ github.event.pull_request.user.login }}'
-          if printf '%s' "$LABELS" | grep -q '"skip-changelog"'; then
+          if [[ "$LABELS" == *'"skip-changelog"'* ]]; then
             echo "::notice::PR is labeled \`skip-changelog\` — bypassing CHANGELOG gate."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           elif [ "$AUTHOR" = 'dependabot[bot]' ]; then
@@ -117,7 +117,8 @@ jobs:
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
 
-          if ! git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qx 'CHANGELOG.md'; then
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          if ! awk '$0 == "CHANGELOG.md" { found = 1 } END { exit found ? 0 : 1 }' <<< "$CHANGED_FILES"; then
             cat <<'MSG'
           ::error::This PR touches user-facing code but does not modify CHANGELOG.md.
 
