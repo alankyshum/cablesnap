@@ -9,7 +9,7 @@ type ThemePreferenceContextType = {
 };
 
 export const ThemePreferenceContext = createContext<ThemePreferenceContextType>({
-  themeMode: "system",
+  themeMode: "dark",
   setThemeMode: () => {},
 });
 
@@ -18,11 +18,11 @@ export function useThemeMode() {
 }
 
 export function ThemePreferenceProvider({ children }: { children: React.ReactNode }) {
-  const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("dark");
 
   useEffect(() => {
     getAppSetting("theme_mode").then((val) => {
-      if (val === "light" || val === "dark") setThemeModeState(val);
+      if (val === "system" || val === "light" || val === "dark") setThemeModeState(val);
     }).catch(() => {});
   }, []);
 

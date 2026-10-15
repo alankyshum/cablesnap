@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- The app now starts in dark mode by default while still honoring a saved appearance choice.
 
 ## v0.26.119 — 2026-10-02
 <!-- versionCode: 187 -->
