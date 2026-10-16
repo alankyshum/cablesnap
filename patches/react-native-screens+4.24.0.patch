@@ -1,0 +1,14 @@
+diff --git a/node_modules/react-native-screens/android/build.gradle b/node_modules/react-native-screens/android/build.gradle
+index 885faa6..6184695 100644
+--- a/node_modules/react-native-screens/android/build.gradle
++++ b/node_modules/react-native-screens/android/build.gradle
+@@ -213,7 +213,5 @@ repositories {
+-    maven {
+-        url "${reactNativeRootDir}/android"
+-    }
+-
++    // CableSnap uses RN >= 0.71 from Maven Central. The legacy local Maven URL
++    // makes F-Droid's scanner delete this build script, silently unlinking Screens.
+     mavenCentral()
+     mavenLocal()
+     google()
