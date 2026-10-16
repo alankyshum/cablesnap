@@ -123,6 +123,32 @@ jobs:
       - name: Lint
         run: npm run lint -- --max-warnings=17
 
+  fdroid-native-scan:
+    name: F-Droid native scanner
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: 'npm'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Prepare F-Droid dependency manifest
+        run: node scripts/fdroid-prepare.js init
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Check autolinked native build scripts
+        run: uv run scripts/test-fdroid-native-build-scripts.py
+
   jest:
     name: Jest
     runs-on: ubuntu-latest

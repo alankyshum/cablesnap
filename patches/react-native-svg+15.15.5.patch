@@ -1,3 +1,18 @@
+diff --git a/node_modules/react-native-svg/android/build.gradle b/node_modules/react-native-svg/android/build.gradle
+index 4fe912c..1f6fea1 100644
+--- a/node_modules/react-native-svg/android/build.gradle
++++ b/node_modules/react-native-svg/android/build.gradle
+@@ -129,8 +129,6 @@ repositories {
+     mavenCentral()
+     mavenLocal()
+     google()
+-    maven {
+-        // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+-        url "$rootDir/../node_modules/react-native/android"
+-    }
++    // CableSnap uses RN >= 0.71 from Maven Central. The legacy local Maven URL
++    // makes F-Droid's scanner delete this build script, silently unlinking SVG.
+ }
 diff --git a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js b/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
 index d57e7c8..094b71c 100644
 --- a/node_modules/react-native-svg/lib/commonjs/web/utils/prepare.js
