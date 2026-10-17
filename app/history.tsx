@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { i18n } from "@lingui/core";
 import { StyleSheet, View, FlatList, Pressable } from "react-native";
+import { spacing } from "@/constants/design-tokens";
 import React, { useCallback, useMemo, useState } from "react";
 import { Text } from "@/components/ui/text";
 import { Chip } from "@/components/ui/chip";
@@ -114,7 +115,7 @@ function HistoryScreen() {
         keyExtractor={(item) => item.type === "gtg" ? `gtg-${item.dateKey}` : item.id}
         renderItem={renderItem}
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: 16, paddingBottom: tabBarHeight }}
+        contentContainerStyle={{ paddingHorizontal: layout.horizontalPadding, paddingVertical: spacing.base, paddingBottom: tabBarHeight }}
         onEndReached={h.useFilteredQueryPath ? h.loadMoreFiltered : undefined}
         onEndReachedThreshold={0.5}
         ListHeaderComponent={
@@ -272,13 +273,13 @@ export default function History() {
 }
 
 const styles = StyleSheet.create({
-  search: { marginBottom: 12 },
-  chip: { alignSelf: "flex-start", marginBottom: 12, marginTop: 4 },
-  empty: { alignItems: "center", paddingVertical: 24, gap: 12 },
+  search: { marginBottom: spacing.md },
+  chip: { alignSelf: "flex-start", marginBottom: spacing.md, marginTop: spacing.xs },
+  empty: { alignItems: "center", paddingVertical: spacing.xl, gap: spacing.md },
   filterCaption: {
     fontSize: 12,
     fontStyle: "italic",
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   calendarWrap: {
     // Wrapper is needed so we can dim/disable the calendar block in filter mode.
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
   resultCount: {
     fontSize: 13,
     fontWeight: "500",
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   clearFiltersButton: {
     paddingVertical: 10,
