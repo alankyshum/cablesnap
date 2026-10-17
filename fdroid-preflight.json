@@ -18,9 +18,19 @@
     "com/th3rdwave/safeareacontext/"
   ],
   "bannedClassPatterns": [
+    "io/sentry/",
     "com/google/android/gms/wearable/",
     "com/google/firebase/provider/FirebaseInitProvider",
     "com/google/mlkit/common/internal/MlKitInitProvider"
+  ],
+  "bannedNativeLibraryPatterns": [
+    "(?:^|/)libsentry[^/]*\\.so$"
+  ],
+  "bannedArchiveEntryPatterns": [
+    "(?:^|/)sentry-debug-meta\\.properties$"
+  ],
+  "bannedManifestPatterns": [
+    "io\\.sentry\\."
   ],
   "fdroidserverVersion": "2.4.5",
   "ciPaths": [

@@ -169,7 +169,20 @@ def verify_apk(args):
             with zipfile.ZipFile(apk) as z:
                 names=z.namelist(); dex=b"".join(z.read(n) for n in names if re.fullmatch(r"classes\d*\.dex",n))
                 for pat in cfg.get("expectedClassPatterns",[]): report.add(f"{label}.expected.{pat}",re.search(pat.encode(),dex)!=None,"present in DEX")
-                for pat in cfg.get("bannedClassPatterns",[]): report.add(f"{label}.banned.{pat}",re.search(pat.encode(),dex)==None,"absent from DEX")
+                for pat in cfg.get("bannedClassPatterns",[]):
+                    hit=re.search(pat.encode(),dex)!=None
+                    report.add(f"{label}.banned.{pat}",not hit,"present in DEX" if hit else "absent from DEX")
+                for pat in cfg.get("bannedNativeLibraryPatterns",[]):
+                    hits=[n for n in names if n.startswith("lib/") and re.search(pat,n,re.I)]
+                    report.add(f"{label}.banned-native.{pat}",not hits,"absent" if not hits else ", ".join(hits))
+                for pat in cfg.get("bannedArchiveEntryPatterns",[]):
+                    hits=[n for n in names if re.search(pat,n,re.I)]
+                    report.add(f"{label}.banned-entry.{pat}",not hits,"absent" if not hits else ", ".join(hits))
+                manifest=z.read("AndroidManifest.xml") if "AndroidManifest.xml" in names else b""
+                manifest_text="\n".join((manifest.decode("utf-8",errors="ignore"),manifest.decode("utf-16le",errors="ignore"),manifest[1:].decode("utf-16le",errors="ignore")))
+                for pat in cfg.get("bannedManifestPatterns",[]):
+                    hit=re.search(pat,manifest_text,re.I)!=None
+                    report.add(f"{label}.banned-manifest.{pat}",not hit,"absent" if not hit else "present in AndroidManifest.xml")
                 found=sorted(set(n.split("/")[1] for n in names if n.startswith("lib/") and n.count("/")>1)); all_abis.update(found)
                 report.add(f"{label}.native-libraries",bool(found),f"ABIs in artifact: {found}")
         except Exception as e: report.add(label+".open",False,e)
