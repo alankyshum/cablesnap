@@ -22,7 +22,8 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Calendar month navigation**: added spacing between the month label and the prev/next chevrons for clearer visual separation.
+- **CI**: Increased the Android backup XML validation timeout to accommodate dependency installation and Expo prebuild variability without weakening the gate.
 
 ## v0.26.119 — 2026-10-02
 <!-- versionCode: 187 -->
