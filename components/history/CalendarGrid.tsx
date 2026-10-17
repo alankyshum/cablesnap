@@ -103,69 +103,77 @@ export default function CalendarGrid({
     const dotBorderColor = colors.onBackground;
 
     return (
+      // BLD-3654: Separate touch target (full column width) from visual highlight
+      // (cellSize × cellSize centred square). Previously the highlight was painted
+      // directly on the Pressable, which made it wider than tall on narrow viewports
+      // (column width > cellSize), so the ring shifted right of the date glyph.
       <Pressable key={key} ref={isSel ? selectedCellRef : undefined} onPress={() => onTapDay(key)} accessibilityLabel={label} accessibilityRole="button"
-        style={[styles.cell, {
-          width: COLUMN_WIDTH_PCT, height: cellSize, borderRadius: cellSize / 2,
+        style={[styles.cell, { width: COLUMN_WIDTH_PCT, height: cellSize }]}>
+        {/* Inner highlight: always a perfect circle (cellSize × cellSize) centred
+            within the full-width touch target. Today ring + background live here. */}
+        <View style={[styles.highlight, {
+          width: cellSize, height: cellSize, borderRadius: cellSize / 2,
           borderWidth: isToday ? 2 : 0, borderColor: isToday ? colors.primary : "transparent",
           backgroundColor: cellBg,
         }]}>
-        <Text variant="caption" style={{ color: isSel ? colors.onPrimary : colors.onBackground, fontSize: fontSizes.sm * scale }}>{day}</Text>
+          <Text variant="caption" style={{ color: isSel ? colors.onPrimary : colors.onBackground, fontSize: fontSizes.sm * scale }}>{day}</Text>
 
-        {/* Workout markers — filled dot + outline ring (CVD-safe: shape encoding) */}
-        {count > 0 && (
-          <View style={styles.dots} testID={`cal-day-${key}-workout`}>
-            {count >= 3 ? (
-              /* Count badge: numeric glyph with CVD-safe luminance border (BLD-2742) */
-              <View style={[
-                styles.countBadge,
-                { backgroundColor: isSel ? colors.onPrimary : colors.primary },
-                !isSel && styles.countBadgeBorder,
-                !isSel && { borderColor: colors.onBackground },
-              ]}>
-                <Text style={[styles.countBadgeText, { color: isSel ? colors.primary : colors.onPrimary }]}>{count}</Text>
-              </View>
-            ) : (
-              <>
-                {/* CVD fix: dot has both fill AND borderWidth ring so it reads as
-                    a distinct shape (ringed circle) in grayscale. */}
-                 <View
-                   testID={`cal-dot-${key}-0`}
-                   style={[
-                     styles.dot,
-                     { backgroundColor: dotColor },
-                     !isSel && [styles.dotBorder, { borderColor: dotBorderColor }],
-                   ]}
-                 />
-                 {count > 1 && (
+          {/* Workout markers — filled dot + outline ring (CVD-safe: shape encoding) */}
+          {count > 0 && (
+            <View style={styles.dots} testID={`cal-day-${key}-workout`}>
+              {count >= 3 ? (
+                /* Count badge: numeric glyph with CVD-safe luminance border (BLD-2742) */
+                <View style={[
+                  styles.countBadge,
+                  { backgroundColor: isSel ? colors.onPrimary : colors.primary },
+                  !isSel && styles.countBadgeBorder,
+                  !isSel && { borderColor: colors.onBackground },
+                ]}>
+                  <Text style={[styles.countBadgeText, { color: isSel ? colors.primary : colors.onPrimary }]}>{count}</Text>
+                </View>
+              ) : (
+                <>
+                  {/* CVD fix: dot has both fill AND borderWidth ring so it reads as
+                      a distinct shape (ringed circle) in grayscale. */}
                    <View
-                     testID={`cal-dot-${key}-1`}
+                     testID={`cal-dot-${key}-0`}
                      style={[
                        styles.dot,
                        { backgroundColor: dotColor },
                        !isSel && [styles.dotBorder, { borderColor: dotBorderColor }],
                      ]}
                    />
-                )}
-              </>
-            )}
-          </View>
-        )}
+                   {count > 1 && (
+                     <View
+                       testID={`cal-dot-${key}-1`}
+                       style={[
+                         styles.dot,
+                         { backgroundColor: dotColor },
+                         !isSel && [styles.dotBorder, { borderColor: dotBorderColor }],
+                       ]}
+                     />
+                  )}
+                </>
+              )}
+            </View>
+          )}
 
-        {/* Scheduled hollow dot — hollow circle (transparent fill + border ring).
-            Only rendered when no workouts logged. Distinguishable from workout dots
-            (filled) and rest days (no dot) in pure grayscale. */}
-        {count === 0 && isScheduled && (
-          <View style={styles.dots} testID={`cal-day-${key}-scheduled`}>
-            <View
-              testID={`cal-dot-${key}-scheduled`}
-              style={[styles.dot, {
-                backgroundColor: "transparent",
-                borderWidth: 1,
-                borderColor: isSel ? colors.onPrimary : colors.primary,
-              }]}
-            />
-          </View>
-        )}
+          {/* Scheduled hollow dot — hollow circle (transparent fill + border ring).
+              Only rendered when no workouts logged. Distinguishable from workout dots
+              (filled) and rest days (no dot) in pure grayscale. */}
+          {count === 0 && isScheduled && (
+            <View style={styles.dots} testID={`cal-day-${key}-scheduled`}>
+              <View
+                testID={`cal-dot-${key}-scheduled`}
+                style={[styles.dot, {
+                  backgroundColor: "transparent",
+                  borderWidth: 1,
+                  borderColor: isSel ? colors.onPrimary : colors.primary,
+                }]}
+              />
+            </View>
+          )}
+        </View>
       </Pressable>
     );
   };
@@ -215,6 +223,9 @@ const styles = StyleSheet.create({
   monthSummary: { textAlign: "center", marginBottom: spacing.sm },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "flex-start" },
   cell: { alignItems: "center", justifyContent: "center", marginVertical: 2, minHeight: MIN_TOUCH_TARGET },
+  /** BLD-3654: Inner highlight surface. Always a square (cellSize×cellSize) so the
+   *  circle/ring is centred over the date glyph regardless of column width. */
+  highlight: { alignItems: "center", justifyContent: "center" },
   dots: { flexDirection: "row", gap: 3, position: "absolute", bottom: 4 },
   dot: { width: 8, height: 8, borderRadius: radii.pill },
   /** CVD-safe luminance affordance: dark outline makes unselected dots distinguishable
