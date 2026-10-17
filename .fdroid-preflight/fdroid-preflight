@@ -191,8 +191,10 @@ def build_cmd(args):
     root=Path(args.repo).resolve(); cfg,_=get_config(root,args.config); report=Report(args.json)
     cmd=cfg.get("buildCommand")
     if not cmd: report.add("build.config",False,"buildCommand missing from config"); return report.finish()
-    q=run(cmd if isinstance(cmd,list) else ["sh","-lc",cmd],cwd=root)
-    report.add("build.recipe",q.returncode==0,q.stdout[-4000:])
+    command=cmd if isinstance(cmd,list) else ["sh","-lc",cmd]
+    q=run(command,cwd=root) if args.json else subprocess.run(command,cwd=root)
+    detail=(q.stdout[-4000:] if args.json else ("completed" if q.returncode==0 else f"failed with exit {q.returncode}"))
+    report.add("build.recipe",q.returncode==0,detail)
     if q.returncode==0:
         apks=[]
         for pattern in cfg.get("buildApkGlobs",["unsigned/*.apk"]): apks += list(root.glob(pattern))
@@ -203,12 +205,23 @@ def build_cmd(args):
 
 def install_ci(args):
     root=Path(args.repo).resolve(); dest=root/".fdroid-preflight/fdroid-preflight"; source=Path(__file__).resolve()
+    cfg,_=get_config(root,args.config)
+    paths=cfg.get("ciPaths") or [cfg["recipePath"],cfg.get("fastlanePath","fastlane/metadata/android/en-US")+"/**",args.config]
+    quoted="\n".join("      - '"+str(x).replace("'","''")+"'" for x in paths)
+    workflow=("name: F-Droid Preflight\n\non:\n  pull_request:\n    paths:\n"+quoted+"\n"
+      "  push:\n    tags: ['v*']\n  workflow_dispatch:\n\npermissions:\n  contents: read\n\n"
+      "jobs:\n  lint:\n    runs-on: ubuntu-latest\n    timeout-minutes: 15\n    steps:\n"
+      "      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n"
+      "      - uses: ruby/setup-ruby@v1\n        with:\n          ruby-version: '3.3'\n"
+      "      - name: F-Droid static and fdroidserver checks\n        run: .fdroid-preflight/fdroid-preflight lint --repo .\n")
+    workflow_path=root/".github/workflows/fdroid-preflight.yml"
     if args.check:
-        ok=dest.exists() and hashlib.sha256(dest.read_bytes()).digest()==hashlib.sha256(source.read_bytes()).digest()
-        print("vendor is current" if ok else "vendor drift: run fdroid-preflight install-ci --repo .")
+        ok=dest.exists() and dest.read_bytes()==source.read_bytes() and workflow_path.exists() and workflow_path.read_text()==workflow
+        print("vendor and workflow are current" if ok else "vendor/workflow drift: run fdroid-preflight install-ci --repo .")
         return 0 if ok else 1
     dest.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(source,dest); dest.chmod(0o755)
-    print(f"installed {dest}"); return 0
+    workflow_path.parent.mkdir(parents=True,exist_ok=True); workflow_path.write_text(workflow)
+    print(f"installed {dest} and {workflow_path}"); return 0
 
 def main():
     p=argparse.ArgumentParser(prog="fdroid-preflight"); p.add_argument("--version",action="version",version=VERSION)
@@ -217,6 +230,6 @@ def main():
     q=sub.add_parser("lint",parents=[common]); q.add_argument("--static-only",action="store_true"); q.add_argument("--offline",action="store_true"); q.set_defaults(func=lint_cmd)
     q=sub.add_parser("verify-apk",parents=[common]); q.add_argument("--adb",action="store_true"); q.add_argument("apks",nargs="+"); q.set_defaults(func=verify_apk)
     q=sub.add_parser("build",parents=[common]); q.set_defaults(func=build_cmd)
-    q=sub.add_parser("install-ci"); q.add_argument("--repo",default="."); q.add_argument("--check",action="store_true"); q.set_defaults(func=install_ci)
+    q=sub.add_parser("install-ci"); q.add_argument("--repo",default="."); q.add_argument("--config",default="fdroid-preflight.json"); q.add_argument("--check",action="store_true"); q.set_defaults(func=install_ci)
     args=p.parse_args(); return args.func(args)
 if __name__=="__main__": raise SystemExit(main())
