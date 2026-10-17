@@ -32,17 +32,17 @@ export default function StreakAndHeatmap({
           <View style={styles.streakItem} accessibilityLabel={t({ id: "history.streak.currentA11y", message: `Current streak: ${currentStreak} weeks` })}>
             <Icon name={Flame} size={20} color={colors.primary} />
             <Text variant="subtitle" style={{ color: colors.onSurface }}>{currentStreak}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "history.streak.current", message: "current streak" })}</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>{t({ id: "history.streak.current", message: "current streak" })}</Text>
           </View>
           <View style={styles.streakItem} accessibilityLabel={t({ id: "history.streak.longestA11y", message: `Longest streak: ${longestStreak} weeks` })}>
             <Icon name={Trophy} size={20} color={colors.primary} />
             <Text variant="subtitle" style={{ color: colors.onSurface }}>{longestStreak}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "history.streak.longest", message: "longest streak" })}</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>{t({ id: "history.streak.longest", message: "longest streak" })}</Text>
           </View>
           <View style={styles.streakItem} accessibilityLabel={t({ id: "history.streak.totalA11y", message: `Total workouts: ${totalWorkouts}` })}>
             <Icon name={Dumbbell} size={20} color={colors.primary} />
             <Text variant="subtitle" style={{ color: colors.onSurface }}>{totalWorkouts}</Text>
-            <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>{t({ id: "history.streak.workouts", message: "workouts" })}</Text>
+            <Text variant="caption" style={{ color: colors.onSurfaceVariant, textAlign: "center" }}>{t({ id: "history.streak.workouts", message: "workouts" })}</Text>
           </View>
         </CardContent>
       </Card>
@@ -72,8 +72,8 @@ export default function StreakAndHeatmap({
 
 const styles = StyleSheet.create({
   streakCard: { marginBottom: 12 },
-  streakRow: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingVertical: 4 },
-  streakItem: { alignItems: "center", gap: 2 },
+  streakRow: { flexDirection: "row", justifyContent: "space-around", alignItems: "flex-start", paddingVertical: 4 },
+  streakItem: { flex: 1, alignItems: "center", gap: 2 },
   heatmapSection: { marginBottom: 12 },
   heatmapHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, paddingHorizontal: 4 },
   heatmapLoading: { height: 120, alignItems: "center", justifyContent: "center" },

@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Aligned streak summary icons and text** — Aligns the vertical positioning of the current streak, longest streak, and workouts icons and text on the workout history screen. ([BLD-3641](/BLD/issues/BLD-3641))
 
 ## v0.26.119 — 2026-10-02
 <!-- versionCode: 187 -->
@@ -303,6 +303,7 @@ _No user-facing changes yet._
 
 - **F-Droid CI now invokes source sanitization explicitly after prebuild**, ensuring the generated native project uses the same clean source graph as the config plugin.
 - **Improved Progress empty-state text contrast** — Increases the contrast of the description text on the Progress tab empty-state screen to meet WCAG AA guidelines. ([BLD-3657](/BLD/issues/BLD-3657))
+
 
 
 ## v0.26.89 — 2026-07-26
