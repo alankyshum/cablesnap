@@ -15,6 +15,8 @@ export const spacing = {
   xxxl: 48,
 } as const;
 
+export const PROGRESS_TAB_SPACING = spacing.base; // 16px (BLD-3648)
+
 export type SpacingKey = keyof typeof spacing;
 
 export function space(key: SpacingKey): number {
