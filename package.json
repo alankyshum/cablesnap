@@ -58,7 +58,7 @@
     "@lingui/message-utils": "6.6.0",
     "@lingui/react": "6.6.0",
     "@openrouter/ai-sdk-provider": "1.5.4",
-    "@quidone/react-native-wheel-picker": "^1.6.4",
+    "@quidone/react-native-wheel-picker": "^1.7.0",
     "@react-native-community/netinfo": "11.5.2",
     "@sentry/react-native": "^8.9.2",
     "@shopify/flash-list": "2.0.2",
