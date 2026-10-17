@@ -1,17 +1,19 @@
 ---
 name: fdroid-submit-app
-description: Create and validate a CableSnap F-Droid app submission MR to the official fdroiddata repository. Use when handling new-app metadata, recipe pre-flight, scanner cleanup, ABI splits, maintainer replies, or fork build verification.
+description: Coordinate CableSnap-specific F-Droid submission work. Use for CableSnap new-app or update MRs; defer generic recipe, metadata, scanner, build, APK, and maintainer workflow checks to the global fdroid-preflight skill.
 ---
 
 # Goal
 
 Prepare a new CableSnap app submission to the official F-Droid repository with maintainer-ready metadata, recipe checks, scanner handling, and evidence before opening the MR.
 
+Load and follow the global `fdroid-preflight` skill first. This file only adds CableSnap context; do not duplicate its checks here. The app-specific policy is `fdroid-preflight.json`, and `fdroid-foss-build` owns CableSnap's Gradle, manifest, and dependency-removal internals.
+
 # F-Droid App Submission
 
 Use this skill when preparing or reviewing a CableSnap MR against gitlab.com/fdroid/fdroiddata. The guidance below reflects the current submission workflow and MR !43886.
 
-## PRE-FLIGHT (do BEFORE opening the MR)
+## CableSnap context
 
 ### 1. Fastlane metadata — in the APP repo, NOT fdroiddata
 

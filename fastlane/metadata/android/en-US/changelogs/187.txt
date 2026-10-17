@@ -1,0 +1,1 @@
+Fix F-Droid native module autolinking after scanner cleanup and update the release build.

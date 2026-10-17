@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""Reusable F-Droid recipe and APK preflight. Python stdlib; Ruby parses YAML."""
+from __future__ import annotations
+
+import argparse, hashlib, json, os, re, shutil, struct, subprocess, sys, tempfile, time, zipfile
+from pathlib import Path
+
+VERSION = "1"
+
+class Report:
+    def __init__(self, json_mode=False): self.items=[]; self.json_mode=json_mode
+    def add(self, name, ok, detail, level="error"):
+        self.items.append({"check":name,"ok":bool(ok),"level":level,"detail":str(detail)})
+        if not self.json_mode:
+            mark="PASS" if ok else ("WARN" if level=="warning" else "FAIL")
+            print(f"[{mark}] {name}: {detail}")
+    def finish(self):
+        if self.json_mode: print(json.dumps({"version":VERSION,"checks":self.items},indent=2))
+        return 1 if any(not x["ok"] and x["level"]=="error" for x in self.items) else 0
+
+def run(cmd, cwd=None, check=False, env=None):
+    return subprocess.run(cmd,cwd=cwd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,check=check,env=env)
+
+def load_yaml(path: Path):
+    ruby='require "yaml"; require "json"; puts JSON.generate(YAML.safe_load(File.read(ARGV[0]), permitted_classes: [], aliases: true))'
+    p=run(["ruby","-e",ruby,str(path)])
+    if p.returncode: raise RuntimeError("Ruby/YAML could not parse recipe: "+p.stdout.strip())
+    return json.loads(p.stdout)
+
+def nested_text(value):
+    if isinstance(value,str): return [value]
+    if isinstance(value,list): return sum((nested_text(x) for x in value),[])
+    if isinstance(value,dict): return sum((nested_text(x) for x in value.values()),[])
+    return []
+
+def png_size(path):
+    with open(path,"rb") as f:
+        data=f.read(24)
+    return struct.unpack(">II",data[16:24]) if data[:8]==b"\x89PNG\r\n\x1a\n" else None
+
+def regex_value(path, pattern):
+    if not path.exists(): return None
+    m=re.search(pattern,path.read_text(errors="replace"),re.M)
+    return m.group(1) if m else None
+
+def get_config(root, named):
+    path=(root/named).resolve()
+    if not path.is_file(): raise RuntimeError(f"config not found: {path}")
+    return json.loads(path.read_text()),path
+
+def recipe_checks(root, cfg, recipe, data, report, offline=False):
+    appid=cfg["appId"]; builds=data.get("Builds") or []
+    report.add("recipe.parse",isinstance(data,dict) and bool(builds),f"{recipe} ({len(builds)} builds)")
+    forbidden=[x for x in ("Summary","Description") if x in data]
+    report.add("recipe.upstream-metadata",not forbidden,"no Summary/Description keys" if not forbidden else "fdroiddata keys forbidden: "+", ".join(forbidden))
+    af=data.get("AntiFeatures",{})
+    afok=isinstance(af,dict) and all(isinstance(v,dict) and isinstance(v.get("en-US"),str) and v["en-US"].strip() for v in af.values())
+    report.add("recipe.antifeatures",afok,"map form with en-US reasons required")
+    if cfg.get("requiresNonFreeNet"):
+        report.add("recipe.nonfreenet",isinstance(af,dict) and "NonFreeNet" in af,"NonFreeNet declared for proprietary network services")
+    repo=data.get("Repo") or data.get("SourceCode")
+    shas=[]
+    for i,b in enumerate(builds):
+        sha=str(b.get("commit","")); ok=bool(re.fullmatch(r"[0-9a-fA-F]{40}",sha)); shas.append(sha)
+        report.add(f"build[{i}].commit",ok,sha or "missing (must be full 40-character SHA)")
+    if not offline and repo and shas and all(re.fullmatch(r"[0-9a-fA-F]{40}",x) for x in shas):
+        with tempfile.TemporaryDirectory(prefix="fdroid-preflight-source-") as td:
+            p=run(["git","init","-q",td]); unique=sorted(set(shas))
+            ok=True; out=[]
+            clean_git=os.environ.copy(); clean_git["GIT_CONFIG_GLOBAL"]="/dev/null"
+            for sha in unique:
+                q=run(["git","fetch","-q","--depth=1",str(repo),sha],cwd=td,env=clean_git); ok &= q.returncode==0; out.append(q.stdout.strip())
+            report.add("source.commit-reachable",ok,"all declared commits fetched" if ok else "commit not reachable: "+" ".join(out))
+    scan=[]
+    for b in builds: scan += nested_text(b.get("scanignore",[]))
+    broad=[x for x in scan if x.rstrip("/") in ("node_modules",".","android","src") or "*" in x]
+    report.add("scanner.scanignore",not broad,"narrow entries" if not broad else "broad/forbidden: "+", ".join(sorted(set(broad))))
+    commands=[]
+    for b in builds: commands += nested_text(b.get("build",[]))
+    dangerous=[x for x in commands if re.search(r"\b(curl|wget)\b",x) or re.search(r"\b(npm|yarn|pnpm)\s+(install|add)\b",x)]
+    allowed=[re.compile(x) for x in cfg.get("allowedBuildNetworkPatterns",[])]
+    bad=[x for x in dangerous if not any(p.search(x) for p in allowed)]
+    report.add("scanner.no-redownload",not bad,"no build-stage network/dependency restoration" if not bad else "; ".join(bad))
+    source_files=cfg.get("dependencyFiles",["package.json","package-lock.json","build.gradle","settings.gradle"])
+    hits=[]
+    for rel in source_files:
+        for f in root.glob(rel):
+            if f.is_file():
+                text=f.read_text(errors="replace")
+                for pat in cfg.get("bannedDependencyPatterns",[]):
+                    if re.search(pat,text,re.I): hits.append(f"{f.relative_to(root)}:{pat}")
+    report.add("source.banned-dependencies",not hits,"none found" if not hits else "; ".join(hits[:20]))
+    ops=data.get("VercodeOperation") or []
+    expected=cfg.get("abis",[])
+    opok=(not expected) or (isinstance(ops,list) and ops==[f"1000 * %c + {i+1}" for i in range(len(expected))])
+    report.add("updates.vercode-operation",opok,str(ops))
+    if expected:
+        abi_builds=[]
+        for b in builds:
+            text="\n".join(nested_text(b.get("prebuild",[]))+nested_text(b.get("build",[])))
+            abi=next((a for a in sorted(expected,key=len,reverse=True) if a in text),None); abi_builds.append(abi)
+        report.add("updates.abi-order",abi_builds==expected,f"declared {abi_builds}; expected {expected}")
+        report.add("updates.vercode-token",all("$$VERCODE$$" in "\n".join(nested_text(b)) for b in builds),"$$VERCODE$$ present in every build")
+    latest=max(builds,key=lambda b:int(b.get("versionCode",0)),default={})
+    report.add("updates.current-version",str(data.get("CurrentVersion"))==str(latest.get("versionName")) and int(data.get("CurrentVersionCode",-1))==int(latest.get("versionCode",-2)),f"Current={data.get('CurrentVersion')}/{data.get('CurrentVersionCode')}, latest={latest.get('versionName')}/{latest.get('versionCode')}")
+    ucd=data.get("UpdateCheckData")
+    resolved=False; detail="missing"
+    if isinstance(ucd,str):
+        parts=ucd.split("|")
+        if len(parts)==4:
+            vc=regex_value(root/parts[0],parts[1]); vn=regex_value(root/parts[2],parts[3]); resolved=bool(vc and vn); detail=f"versionName={vn}, versionCode={vc}"
+            if resolved: resolved=(str(vc)==str(latest.get("versionCode",0))[:len(str(vc))] and str(vn)==str(latest.get("versionName")))
+    report.add("updates.updatecheckdata",resolved,detail)
+    report.add("updates.modes",bool(data.get("AutoUpdateMode")) and bool(data.get("UpdateCheckMode")),f"{data.get('AutoUpdateMode')} / {data.get('UpdateCheckMode')}")
+    irreversible=[x for x in ("Binaries","AllowedAPKSigningKeys") if x in data]
+    report.add("recipe.irreversible-reproducible",not irreversible,"not enabled" if not irreversible else "irreversible at merge: "+", ".join(irreversible),"warning")
+    meta=root/cfg.get("fastlanePath","fastlane/metadata/android/en-US")
+    limits={"title.txt":50,"short_description.txt":80,"full_description.txt":4000}
+    for rel,limit in limits.items():
+        p=meta/rel; n=len(p.read_text().strip()) if p.exists() else -1
+        report.add("fastlane."+rel,p.exists() and n<=limit,f"{n} characters (limit {limit})")
+    vcbase=str(latest.get("versionCode","")); vcbase=vcbase[:-3] if expected and len(vcbase)>3 else vcbase
+    change=meta/"changelogs"/(vcbase+".txt"); size=change.stat().st_size if change.exists() else -1
+    report.add("fastlane.changelog",change.exists() and size<=500,f"{change} ({size} bytes; limit 500)")
+    icon=meta/"images/icon.png"; dims=png_size(icon) if icon.exists() else None
+    report.add("fastlane.icon",dims==(512,512),f"{icon}: {dims}")
+    shots=list((meta/"images/phoneScreenshots").glob("*.png"))
+    report.add("fastlane.phone-screenshots",bool(shots),f"{len(shots)} PNG(s)")
+
+def fdroidserver_checks(root,cfg,recipe,report):
+    version=cfg.get("fdroidserverVersion","2.4.5")
+    with tempfile.TemporaryDirectory(prefix="fdroid-preflight-data-") as td:
+        clone=Path(td)/"fdroiddata"; venv=Path(td)/"venv"
+        q=run(["git","clone","-q","--depth=1",cfg.get("fdroiddataRepo","https://gitlab.com/fdroid/fdroiddata.git"),str(clone)])
+        if q.returncode: report.add("fdroidserver.checkout",False,q.stdout); return
+        shutil.copy2(recipe,clone/"metadata"/f"{cfg['appId']}.yml")
+        run(["git","config","user.email","preflight@example.invalid"],cwd=clone)
+        run(["git","config","user.name","F-Droid Preflight"],cwd=clone)
+        run(["git","add",f"metadata/{cfg['appId']}.yml"],cwd=clone)
+        run(["git","commit","-q","-m","candidate recipe"],cwd=clone)
+        q=run([sys.executable,"-m","venv",str(venv)])
+        pip=venv/"bin/pip"; fdroid=venv/"bin/fdroid"
+        q=run([str(pip),"-q","install",f"fdroidserver=={version}"])
+        if q.returncode: report.add("fdroidserver.install",False,q.stdout); return
+        q=run([str(fdroid),"lint","-f",cfg["appId"]],cwd=clone)
+        report.add("fdroidserver.lint",q.returncode==0,q.stdout.strip()[-2000:] or "ok")
+        before=(clone/"metadata"/f"{cfg['appId']}.yml").read_bytes()
+        q=run([str(fdroid),"rewritemeta",cfg["appId"]],cwd=clone)
+        after=(clone/"metadata"/f"{cfg['appId']}.yml").read_bytes()
+        report.add("fdroidserver.rewritemeta",q.returncode==0 and before==after,"canonical; no diff" if before==after else "rewritemeta changed recipe")
+        run(["git","reset","--hard","-q","HEAD"],cwd=clone)
+        env=os.environ.copy(); env["GIT_SSH_COMMAND"]="/usr/bin/false"; env["GIT_CONFIG_GLOBAL"]="/dev/null"
+        q=run([str(fdroid),"checkupdates",cfg["appId"]],cwd=clone,env=env)
+        report.add("fdroidserver.checkupdates",q.returncode==0,q.stdout.strip()[-2000:] or "ok")
+
+def lint_cmd(args):
+    root=Path(args.repo).resolve(); cfg,_=get_config(root,args.config); recipe=(root/cfg["recipePath"]).resolve(); report=Report(args.json)
+    try: data=load_yaml(recipe); recipe_checks(root,cfg,recipe,data,report,args.offline)
+    except Exception as e: report.add("recipe.load",False,e); return report.finish()
+    if not args.static_only: fdroidserver_checks(root,cfg,recipe,report)
+    return report.finish()
+
+def verify_apk(args):
+    root=Path(args.repo).resolve(); cfg,_=get_config(root,args.config); report=Report(args.json)
+    all_abis=set()
+    for name in args.apks:
+        apk=Path(name); label=apk.name
+        try:
+            with zipfile.ZipFile(apk) as z:
+                names=z.namelist(); dex=b"".join(z.read(n) for n in names if re.fullmatch(r"classes\d*\.dex",n))
+                for pat in cfg.get("expectedClassPatterns",[]): report.add(f"{label}.expected.{pat}",re.search(pat.encode(),dex)!=None,"present in DEX")
+                for pat in cfg.get("bannedClassPatterns",[]): report.add(f"{label}.banned.{pat}",re.search(pat.encode(),dex)==None,"absent from DEX")
+                found=sorted(set(n.split("/")[1] for n in names if n.startswith("lib/") and n.count("/")>1)); all_abis.update(found)
+                report.add(f"{label}.native-libraries",bool(found),f"ABIs in artifact: {found}")
+        except Exception as e: report.add(label+".open",False,e)
+    expected=cfg.get("abis",[])
+    report.add("apk-set.abis",not expected or all_abis==set(expected),f"found {sorted(all_abis)}; expected {expected}")
+    if args.adb:
+        package=cfg.get("adbPackage",cfg.get("appId")); component=cfg.get("adbComponent")
+        if not component or len(args.apks)!=1:
+            report.add("adb.smoke",False,"adbComponent and exactly one APK are required")
+        else:
+            commands=(["adb","install","-r",args.apks[0]],["adb","shell","am","force-stop",package],["adb","logcat","-c"],["adb","shell","am","start","-W","-n",component])
+            results=[run(x) for x in commands]; time.sleep(3); logs=run(["adb","logcat","-d","-t","1000"]).stdout
+            crashed=bool(re.search(r"FATAL EXCEPTION|Process: "+re.escape(package)+r".*has died|Unable to start activity",logs,re.S))
+            ok=all(x.returncode==0 for x in results) and not crashed
+            report.add("adb.smoke",ok,"cold start stayed alive" if ok else "install/start failed or crash found in logcat")
+    return report.finish()
+
+def build_cmd(args):
+    root=Path(args.repo).resolve(); cfg,_=get_config(root,args.config); report=Report(args.json)
+    cmd=cfg.get("buildCommand")
+    if not cmd: report.add("build.config",False,"buildCommand missing from config"); return report.finish()
+    q=run(cmd if isinstance(cmd,list) else ["sh","-lc",cmd],cwd=root)
+    report.add("build.recipe",q.returncode==0,q.stdout[-4000:])
+    if q.returncode==0:
+        apks=[]
+        for pattern in cfg.get("buildApkGlobs",["unsigned/*.apk"]): apks += list(root.glob(pattern))
+        if apks:
+            ns=argparse.Namespace(repo=str(root),config=args.config,json=args.json,adb=False,apks=[str(x) for x in apks]); return max(report.finish(),verify_apk(ns))
+        report.add("build.artifacts",False,"no APK matched buildApkGlobs")
+    return report.finish()
+
+def install_ci(args):
+    root=Path(args.repo).resolve(); dest=root/".fdroid-preflight/fdroid-preflight"; source=Path(__file__).resolve()
+    if args.check:
+        ok=dest.exists() and hashlib.sha256(dest.read_bytes()).digest()==hashlib.sha256(source.read_bytes()).digest()
+        print("vendor is current" if ok else "vendor drift: run fdroid-preflight install-ci --repo .")
+        return 0 if ok else 1
+    dest.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(source,dest); dest.chmod(0o755)
+    print(f"installed {dest}"); return 0
+
+def main():
+    p=argparse.ArgumentParser(prog="fdroid-preflight"); p.add_argument("--version",action="version",version=VERSION)
+    sub=p.add_subparsers(dest="command",required=True)
+    common=argparse.ArgumentParser(add_help=False); common.add_argument("--repo",default="."); common.add_argument("--config",default="fdroid-preflight.json"); common.add_argument("--json",action="store_true")
+    q=sub.add_parser("lint",parents=[common]); q.add_argument("--static-only",action="store_true"); q.add_argument("--offline",action="store_true"); q.set_defaults(func=lint_cmd)
+    q=sub.add_parser("verify-apk",parents=[common]); q.add_argument("--adb",action="store_true"); q.add_argument("apks",nargs="+"); q.set_defaults(func=verify_apk)
+    q=sub.add_parser("build",parents=[common]); q.set_defaults(func=build_cmd)
+    q=sub.add_parser("install-ci"); q.add_argument("--repo",default="."); q.add_argument("--check",action="store_true"); q.set_defaults(func=install_ci)
+    args=p.parse_args(); return args.func(args)
+if __name__=="__main__": raise SystemExit(main())
