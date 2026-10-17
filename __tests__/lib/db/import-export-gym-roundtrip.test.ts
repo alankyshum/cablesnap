@@ -67,7 +67,7 @@ describe("import-export gym round-trip", () => {
       "g1", "Home Gym", "", 1, 1, 1, null,
     ]);
     expect(insertCalls.find((call) => call.sql.includes("INSERT OR IGNORE INTO cable_stacks"))?.params).toEqual([
-      "stack-1", "g1", "Dual Pulley", "kg", 2, 2, 2, null,
+      "stack-1", "g1", "Dual Pulley", "kg", 2, 2, 2, null, null, null, null,
     ]);
     expect(insertCalls.find((call) => call.sql.includes("INSERT OR IGNORE INTO stack_calibrations"))?.params).toEqual([
       "cal-1", "stack-1", 10, 30,

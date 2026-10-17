@@ -105,6 +105,61 @@ export function parseCalibrationBulkPaste(input: string): BulkParseResult {
   return { accepted, skipped };
 }
 
+// ── Generative Stack Definitions (BLD-3816) ───────────────────────────────────
+
+export type GenerateCalibrationParams = {
+  startWeight: number;
+  increment: number;
+  count: number;
+};
+
+export type GeneratedCalibration = {
+  marker: number;
+  trueWeight: number;
+};
+
+export type GenerateCalibrationError =
+  | "count_must_be_positive"
+  | "increment_must_be_nonzero"
+  | "start_weight_must_be_positive";
+
+export type GenerateCalibrationResult =
+  | { ok: true; calibrations: GeneratedCalibration[] }
+  | { ok: false; error: GenerateCalibrationError };
+
+/**
+ * Pure generator for cable stack calibrations.
+ * Returns markers 1..count with trueWeight = startWeight + (marker-1)*increment.
+ * Markers are integer-indexed. startWeight and increment may be REAL (e.g. 2.5kg).
+ * No side-effects — callers are responsible for DB writes.
+ */
+export function generateCalibrations(
+  params: GenerateCalibrationParams
+): GenerateCalibrationResult {
+  const { startWeight, increment, count } = params;
+
+  if (!Number.isFinite(startWeight) || startWeight <= 0) {
+    return { ok: false, error: "start_weight_must_be_positive" };
+  }
+  if (!Number.isFinite(increment) || increment === 0) {
+    return { ok: false, error: "increment_must_be_nonzero" };
+  }
+  if (!Number.isInteger(count) || count <= 0) {
+    return { ok: false, error: "count_must_be_positive" };
+  }
+
+  const calibrations: GeneratedCalibration[] = [];
+  for (let i = 1; i <= count; i++) {
+    calibrations.push({
+      marker: i,
+      trueWeight: startWeight + (i - 1) * increment,
+    });
+  }
+  return { ok: true, calibrations };
+}
+
+// ── Bulk Paste Parser ─────────────────────────────────────────────────────────
+
 /**
  * Builds a human-readable toast message for a bulk-paste result.
  */

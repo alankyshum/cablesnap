@@ -1,7 +1,7 @@
-/* eslint-disable max-lines-per-function */
+/* eslint-disable max-lines-per-function, max-lines, complexity */
 import { useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, FlatList, Pressable, StyleSheet, Switch, View } from "react-native";
+import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { Stack, useFocusEffect } from "expo-router";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react-native";
 import SwipeToDelete from "@/components/SwipeToDelete";
@@ -18,6 +18,7 @@ import {
   createCableStack,
   createGymProfile,
   deleteCalibration,
+  generateStackCalibrations,
   listCableStacks,
   listCalibrations,
   listGymProfiles,
@@ -31,13 +32,18 @@ import {
   type GymProfile,
   type StackCalibration,
 } from "@/lib/db";
-import { buildBulkPasteToast, parseCalibrationBulkPaste } from "@/lib/cable-stack";
+import { buildBulkPasteToast, generateCalibrations, parseCalibrationBulkPaste } from "@/lib/cable-stack";
 import { useLingui } from "@lingui/react/macro";
 import { i18n } from "@lingui/core";
 
 type GymDraft = { name: string; notes: string; isDefault: boolean };
 type StackDraft = { name: string; unit: "kg" | "lb" };
 type CalibrationDraft = { marker: string; weight: string; bulk: string };
+type StackMode = "generate" | "manual";
+type GenDraft = { startWeight: string; increment: string; count: string };
+
+/** Max number of preview rows shown inline before truncating with "… and N more". */
+const GEN_PREVIEW_MAX = 10;
 
 export default function GymProfilesScreen() {
   const colors = useThemeColors();
@@ -59,6 +65,9 @@ export default function GymProfilesScreen() {
   const [newGymName, setNewGymName] = useState("");
   const [newGymNotes, setNewGymNotes] = useState("");
   const [newGymDefault, setNewGymDefault] = useState(false);
+  // BLD-3816: Generate/Manual stack mode and generator draft state.
+  const [stackModes, setStackModes] = useState<Record<string, StackMode>>({});
+  const [genDrafts, setGenDrafts] = useState<Record<string, GenDraft>>({});
 
   const load = useCallback(async () => {
     try {
@@ -100,6 +109,33 @@ export default function GymProfilesScreen() {
         if (Object.keys(prev).length > 0) return prev;
         return Object.fromEntries(nextGyms.map((gym, index) => [gym.id, index === 0]));
       });
+
+      // BLD-3816: default mode — "generate" for stacks with 0 calibrations, "manual" for existing.
+      const calibrationMap = Object.fromEntries(calibrationEntries);
+      setStackModes((prev) => {
+        const next = { ...prev };
+        for (const stack of allStacks) {
+          if (next[stack.id] === undefined) {
+            next[stack.id] = (calibrationMap[stack.id] ?? []).length === 0 ? "generate" : "manual";
+          }
+        }
+        return next;
+      });
+      // Populate genDrafts from stored gen_* metadata for previously-generated stacks.
+      setGenDrafts((prev) => {
+        const next = { ...prev };
+        for (const stack of allStacks) {
+          if (next[stack.id] === undefined) {
+            const s = stack as CableStack & { gen_start_weight?: number | null; gen_increment?: number | null; gen_marker_count?: number | null };
+            next[stack.id] = {
+              startWeight: s.gen_start_weight != null ? String(s.gen_start_weight) : "",
+              increment: s.gen_increment != null ? String(s.gen_increment) : "",
+              count: s.gen_marker_count != null ? String(s.gen_marker_count) : "",
+            };
+          }
+        }
+        return next;
+      });
     } catch {
       toast.error(t({ id: "settings.gymProfiles.loadFailed", message: "Failed to load gym profiles" }));
     } finally {
@@ -138,6 +174,13 @@ export default function GymProfilesScreen() {
     setCalibrationDrafts((prev) => ({
       ...prev,
       [stackId]: { ...(prev[stackId] ?? { marker: "", weight: "", bulk: "" }), ...patch },
+    }));
+  }, []);
+
+  const updateGenDraft = useCallback((stackId: string, patch: Partial<GenDraft>) => {
+    setGenDrafts((prev) => ({
+      ...prev,
+      [stackId]: { ...(prev[stackId] ?? { startWeight: "", increment: "", count: "" }), ...patch },
     }));
   }, []);
 
@@ -323,6 +366,83 @@ export default function GymProfilesScreen() {
     }
   }, [load, queryClient, t, toast]);
 
+  /**
+   * BLD-3816: Generates calibration rows from the generator params.
+   * Implements QD Safeguard B: confirms before overwriting any existing rows
+   * (generated or manual), skipping confirmation only when the regen produces
+   * identical values.
+   */
+  const handleGenerate = useCallback(async (stackId: string) => {
+    const draft = genDrafts[stackId] ?? { startWeight: "", increment: "", count: "" };
+
+    const startWeight = Number(draft.startWeight);
+    const increment = Number(draft.increment);
+    const count = Number(draft.count);
+
+    // Validate inputs.
+    if (!Number.isFinite(startWeight) || startWeight <= 0) {
+      toast.error("Start weight must be greater than 0");
+      return;
+    }
+    if (!Number.isFinite(increment) || increment === 0) {
+      toast.error("Increment must not be zero");
+      return;
+    }
+    if (!Number.isInteger(count) || count <= 0) {
+      toast.error("Count must be a whole number greater than 0");
+      return;
+    }
+
+    const genResult = generateCalibrations({ startWeight, increment, count });
+    if (!genResult.ok) {
+      toast.error("Invalid generator parameters");
+      return;
+    }
+    const newCals = genResult.calibrations;
+
+    const existingCals = (calibrationsByStack[stackId] ?? []).slice().sort((a, b) => a.marker - b.marker);
+
+    // QD Safeguard B: check if save would overwrite any existing calibration rows.
+    // Skip confirmation only when the regen produces identical values to what already exists.
+    const isIdentical =
+      existingCals.length === newCals.length &&
+      newCals.every((nc, idx) => {
+        const ec = existingCals[idx];
+        return ec?.marker === nc.marker && ec?.true_weight === nc.trueWeight;
+      });
+
+    const doGenerate = async () => {
+      try {
+        await generateStackCalibrations(stackId, { startWeight, increment, count });
+        queryClient.invalidateQueries({ queryKey: ["stack-calibrations"] });
+        toast.success(`Generated ${count} marker${count === 1 ? "" : "s"}`);
+        // Switch to manual mode so the user can review and edit the generated calibrations.
+        setStackModes((prev) => ({ ...prev, [stackId]: "manual" }));
+        await load();
+      } catch {
+        toast.error("Failed to generate calibrations");
+      }
+    };
+
+    if (existingCals.length > 0 && !isIdentical) {
+      // QD Safeguard B: confirm before overwriting existing rows.
+      Alert.alert(
+        "Overwrite calibrations?",
+        `This will replace the existing ${existingCals.length} marker${existingCals.length === 1 ? "" : "s"} for this stack with ${count} generated marker${count === 1 ? "" : "s"}. This cannot be undone.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Generate",
+            style: "destructive",
+            onPress: () => { void doGenerate(); },
+          },
+        ]
+      );
+    } else {
+      await doGenerate();
+    }
+  }, [calibrationsByStack, genDrafts, load, queryClient, toast]);
+
   const listHeader = useMemo(() => (
     <View style={styles.headerBlock}>
       <Text variant="heading" style={{ color: colors.onSurface, marginBottom: 8 }}>
@@ -455,6 +575,23 @@ export default function GymProfilesScreen() {
                           const calibrationDraft = calibrationDrafts[stack.id] ?? { marker: "", weight: "", bulk: "" };
                           const calibrations = (calibrationsByStack[stack.id] ?? []).slice().sort((a, b) => a.marker - b.marker);
                           const stackExpanded = !!expandedStacks[stack.id];
+                          const stackMode = stackModes[stack.id] ?? (calibrations.length === 0 ? "generate" : "manual");
+                          const genDraft = genDrafts[stack.id] ?? { startWeight: "", increment: "", count: "" };
+
+                          // BLD-3816: live preview for generate mode.
+                          const genPreviewItems: Array<{ marker: number; trueWeight: number }> = (() => {
+                            const sw = Number(genDraft.startWeight);
+                            const inc = Number(genDraft.increment);
+                            const cnt = Number(genDraft.count);
+                            if (!Number.isFinite(sw) || sw <= 0 || !Number.isFinite(inc) || inc === 0 || !Number.isInteger(cnt) || cnt <= 0) {
+                              return [];
+                            }
+                            const r = generateCalibrations({ startWeight: sw, increment: inc, count: Math.min(cnt, GEN_PREVIEW_MAX) });
+                            return r.ok ? r.calibrations : [];
+                          })();
+                          const totalCount = Number(genDraft.count);
+                          const previewOverflow = Number.isInteger(totalCount) && totalCount > GEN_PREVIEW_MAX ? totalCount - GEN_PREVIEW_MAX : 0;
+
                           return (
                             <SwipeToDelete key={stack.id} onDelete={() => confirmDeleteStack(stack)} widthBasis="container">
                               <View style={[styles.stackCard, { borderColor: colors.outlineVariant }]}> 
@@ -483,52 +620,142 @@ export default function GymProfilesScreen() {
                                     <View style={styles.spacer} />
                                     <Button variant="outline" onPress={() => handleSaveStack(stack.id)}>{t({ id: "settings.gymProfiles.saveStack", message: "Save Stack" })}</Button>
 
+                                    {/* BLD-3816: Generate / Manual segmented control */}
                                     <View style={styles.sectionHeader}>
                                       <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>{t({ id: "settings.gymProfiles.markerCalibrations", message: "Marker calibrations" })}</Text>
                                     </View>
-                                    {calibrations.map((calibration) => (
-                                      <View key={`${stack.id}-${calibration.marker}`} style={styles.calibrationRow}>
-                                         <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
-                                           {t({ id: "settings.gymProfiles.markerValue", message: `Marker ${calibration.marker} — ${calibration.true_weight} ${stack.unit}` })}
-                                        </Text>
-                                        <Button variant="ghost" size="sm" onPress={() => handleDeleteCalibration(stack.id, calibration.marker)}>
-                                           {t({ id: "common.delete", message: "Delete" })}
-                                        </Button>
-                                      </View>
-                                    ))}
-                                    <View style={styles.inlineInputs}>
-                                      <View style={{ flex: 1 }}>
-                                        <Input
-                                          label={t({ id: "settings.gymProfiles.marker", message: "Marker" })}
-                                          value={calibrationDraft.marker}
-                                          onChangeText={(value) => updateCalibrationDraft(stack.id, { marker: value })}
-                                          keyboardType="numeric"
-                                          variant="outline"
-                                        />
-                                      </View>
-                                      <View style={{ flex: 1 }}>
-                                        <Input
-                                          label={`Weight (${stack.unit})`}
-                                          value={calibrationDraft.weight}
-                                          onChangeText={(value) => updateCalibrationDraft(stack.id, { weight: value })}
-                                          keyboardType="decimal-pad"
-                                          variant="outline"
-                                        />
-                                      </View>
-                                    </View>
-                                     <Button variant="outline" onPress={() => handleSaveCalibration(stack.id)}>{t({ id: "settings.gymProfiles.saveMarker", message: "Save Marker" })}</Button>
-                                    <View style={styles.spacer} />
-                                    <Input
-                                       label={t({ id: "settings.gymProfiles.bulkPaste", message: "Bulk paste" })}
-                                       placeholder={t({ id: "settings.gymProfiles.bulkPlaceholder", message: "1=5\n2=7.5\n3=10" })}
-                                      value={calibrationDraft.bulk}
-                                      onChangeText={(value) => updateCalibrationDraft(stack.id, { bulk: value })}
-                                      type="textarea"
-                                      rows={4}
-                                      variant="outline"
+                                    <SegmentedControl
+                                      value={stackMode}
+                                      onValueChange={(value) => setStackModes((prev) => ({ ...prev, [stack.id]: value as StackMode }))}
+                                      buttons={[
+                                        { value: "generate", label: "Generate" },
+                                        { value: "manual", label: "Manual" },
+                                      ]}
                                     />
                                     <View style={styles.spacer} />
-                                     <Button variant="outline" onPress={() => handleBulkPaste(stack.id)}>{t({ id: "settings.gymProfiles.applyBulk", message: "Apply Bulk Paste" })}</Button>
+
+                                    {stackMode === "generate" ? (
+                                      /* ── Generate mode UI ── */
+                                      <View>
+                                        <View style={styles.inlineInputs}>
+                                          <View style={{ flex: 1 }}>
+                                            <Input
+                                              label={`Start (${stack.unit})`}
+                                              value={genDraft.startWeight}
+                                              onChangeText={(value) => updateGenDraft(stack.id, { startWeight: value })}
+                                              keyboardType="decimal-pad"
+                                              variant="outline"
+                                              accessibilityLabel={`Start weight in ${stack.unit}`}
+                                            />
+                                          </View>
+                                          <View style={{ flex: 1 }}>
+                                            <Input
+                                              label={`Step (${stack.unit})`}
+                                              value={genDraft.increment}
+                                              onChangeText={(value) => updateGenDraft(stack.id, { increment: value })}
+                                              keyboardType="decimal-pad"
+                                              variant="outline"
+                                              accessibilityLabel={`Increment in ${stack.unit}`}
+                                            />
+                                          </View>
+                                          <View style={{ flex: 1 }}>
+                                            <Input
+                                              label="Count"
+                                              value={genDraft.count}
+                                              onChangeText={(value) => updateGenDraft(stack.id, { count: value })}
+                                              keyboardType="number-pad"
+                                              variant="outline"
+                                              accessibilityLabel="Number of markers"
+                                            />
+                                          </View>
+                                        </View>
+
+                                        {/* Live preview */}
+                                        {genPreviewItems.length > 0 ? (
+                                          <View style={styles.genPreview}>
+                                            <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 4 }}>
+                                              Preview
+                                            </Text>
+                                            <ScrollView style={{ maxHeight: 160 }}>
+                                              {genPreviewItems.map((item) => (
+                                                <Text
+                                                  key={item.marker}
+                                                  variant="body"
+                                                  style={{ color: colors.onSurface, paddingVertical: 2 }}
+                                                  accessibilityLabel={`Pin ${item.marker}, ${item.trueWeight} ${stack.unit}`}
+                                                >
+                                                  Pin {item.marker} → {item.trueWeight} {stack.unit}
+                                                </Text>
+                                              ))}
+                                              {previewOverflow > 0 ? (
+                                                <Text variant="caption" style={{ color: colors.onSurfaceVariant, paddingVertical: 2 }}>
+                                                  … and {previewOverflow} more
+                                                </Text>
+                                              ) : null}
+                                            </ScrollView>
+                                          </View>
+                                        ) : null}
+
+                                        <Button
+                                          variant="outline"
+                                          onPress={() => { void handleGenerate(stack.id); }}
+                                          accessibilityLabel="Generate calibrations from parameters"
+                                        >
+                                          Generate
+                                        </Button>
+                                      </View>
+                                    ) : (
+                                      /* ── Manual mode UI (existing behavior) ── */
+                                      <View>
+                                        {calibrations.map((calibration) => (
+                                          <View key={`${stack.id}-${calibration.marker}`} style={styles.calibrationRow}>
+                                            <Text variant="body" style={{ color: colors.onSurface, flex: 1 }}>
+                                              {t({ id: "settings.gymProfiles.markerValue", message: `Marker ${calibration.marker} — ${calibration.true_weight} ${stack.unit}` })}
+                                            </Text>
+                                            <Button variant="ghost" size="sm" onPress={() => handleDeleteCalibration(stack.id, calibration.marker)}>
+                                              {t({ id: "common.delete", message: "Delete" })}
+                                            </Button>
+                                          </View>
+                                        ))}
+                                        <View style={styles.inlineInputs}>
+                                          <View style={{ flex: 1 }}>
+                                            <Input
+                                              label={t({ id: "settings.gymProfiles.marker", message: "Marker" })}
+                                              value={calibrationDraft.marker}
+                                              onChangeText={(value) => updateCalibrationDraft(stack.id, { marker: value })}
+                                              keyboardType="numeric"
+                                              variant="outline"
+                                            />
+                                          </View>
+                                          <View style={{ flex: 1 }}>
+                                            <Input
+                                              label={`Weight (${stack.unit})`}
+                                              value={calibrationDraft.weight}
+                                              onChangeText={(value) => updateCalibrationDraft(stack.id, { weight: value })}
+                                              keyboardType="decimal-pad"
+                                              variant="outline"
+                                            />
+                                          </View>
+                                        </View>
+                                        <Button variant="outline" onPress={() => handleSaveCalibration(stack.id)}>
+                                          {t({ id: "settings.gymProfiles.saveMarker", message: "Save Marker" })}
+                                        </Button>
+                                        <View style={styles.spacer} />
+                                        <Input
+                                          label={t({ id: "settings.gymProfiles.bulkPaste", message: "Bulk paste" })}
+                                          placeholder={t({ id: "settings.gymProfiles.bulkPlaceholder", message: "1=5\n2=7.5\n3=10" })}
+                                          value={calibrationDraft.bulk}
+                                          onChangeText={(value) => updateCalibrationDraft(stack.id, { bulk: value })}
+                                          type="textarea"
+                                          rows={4}
+                                          variant="outline"
+                                        />
+                                        <View style={styles.spacer} />
+                                        <Button variant="outline" onPress={() => handleBulkPaste(stack.id)}>
+                                          {t({ id: "settings.gymProfiles.applyBulk", message: "Apply Bulk Paste" })}
+                                        </Button>
+                                      </View>
+                                    )}
                                   </View>
                                 ) : null}
                               </View>
@@ -639,4 +866,8 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   spacer: { height: 12 },
+  genPreview: {
+    marginBottom: 12,
+    paddingLeft: 4,
+  },
 });
