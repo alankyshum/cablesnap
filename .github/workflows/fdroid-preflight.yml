@@ -1,0 +1,40 @@
+name: F-Droid Preflight
+
+on:
+  pull_request:
+    paths:
+      - '.fdroid-preflight/**'
+      - 'fdroid-preflight.json'
+      - 'fdroid/**'
+      - 'fastlane/metadata/android/**'
+      - 'app.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/fdroid-prepare.js'
+      - 'plugins/**'
+      - 'modules/expo-wearos-bridge/**'
+      - 'metro.config.js'
+      - 'babel.config.js'
+      - 'lib/fdroid-sentry-stub.tsx'
+      - 'patches/**'
+      - '.github/workflows/fdroid-preflight.yml'
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - name: F-Droid static and fdroidserver checks
+        run: .fdroid-preflight/fdroid-preflight lint --repo .
