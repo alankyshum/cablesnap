@@ -1,0 +1,57 @@
+{
+  "appId": "com.persoack.cablesnap",
+  "recipePath": "fdroid/metadata/com.persoack.cablesnap.yml",
+  "fastlanePath": "fastlane/metadata/android/en-US",
+  "requiresNonFreeNet": true,
+  "abis": ["armeabi-v7a", "arm64-v8a", "x86", "x86_64"],
+  "dependencyFiles": ["package.json", "android/**/*.gradle", "android/**/*.gradle.kts"],
+  "bannedDependencyPatterns": [
+    "com\\.google\\.firebase",
+    "com\\.google\\.android\\.gms:(?!play-services-location)",
+    "com\\.google\\.mlkit",
+    "installreferrer"
+  ],
+  "allowedBuildNetworkPatterns": ["^npm install --ignore-scripts --no-save --omit=optional$"],
+  "expectedClassPatterns": [
+    "com/horcrux/svg/",
+    "com/swmansion/rnscreens/",
+    "com/th3rdwave/safeareacontext/"
+  ],
+  "bannedClassPatterns": [
+    "io/sentry/",
+    "com/google/android/gms/wearable/",
+    "com/google/firebase/provider/FirebaseInitProvider",
+    "com/google/mlkit/common/internal/MlKitInitProvider"
+  ],
+  "bannedNativeLibraryPatterns": [
+    "(?:^|/)libsentry[^/]*\\.so$"
+  ],
+  "bannedArchiveEntryPatterns": [
+    "(?:^|/)sentry-debug-meta\\.properties$"
+  ],
+  "bannedManifestPatterns": [
+    "io\\.sentry\\."
+  ],
+  "fdroidserverVersion": "2.4.5",
+  "ciPaths": [
+    ".fdroid-preflight/**",
+    "fdroid-preflight.json",
+    "fdroid/**",
+    "fastlane/metadata/android/**",
+    "app.config.ts",
+    "package.json",
+    "package-lock.json",
+    "scripts/fdroid-prepare.js",
+    "plugins/**",
+    "modules/expo-wearos-bridge/**",
+    "metro.config.js",
+    "babel.config.js",
+    "lib/fdroid-sentry-stub.tsx",
+    "patches/**",
+    ".github/workflows/fdroid-preflight.yml"
+  ],
+  "adbPackage": "com.persoack.cablesnap",
+  "adbComponent": "com.persoack.cablesnap/.MainActivity",
+  "buildCommand": ["bash", ".fdroid-preflight/build.sh"],
+  "buildApkGlobs": [".fdroid-preflight/work/unsigned/*.apk"]
+}
