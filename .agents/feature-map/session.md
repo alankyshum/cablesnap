@@ -24,3 +24,4 @@ Live workout logging from the first set through rest timing, completion, summary
 
 ## Gotchas
 - Preserve timer behavior across backgrounding and notification permissions; set writes feed summary, PR, and history queries.
+- “Last” values and previous-workout prefill come from the most recent other session with a completed set for that exercise; untouched placeholder sets are not attempts.
