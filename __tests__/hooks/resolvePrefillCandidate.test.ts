@@ -7,6 +7,7 @@
  * useSessionActions-add-set-prefill.test.ts and a new
  * useSessionActions-add-set-prev-workout.test.ts.
  */
+// GH-964: incomplete historical sets must never supply a zero-weight prefill.
 
 import {
   resolvePrefillCandidate,
@@ -207,5 +208,18 @@ describe("derivePristinePrefillCandidate", () => {
         "reps",
       ),
     ).toEqual({ weight: 95, reps: 5, duration_seconds: null });
+  });
+
+  it("GH-964: ignores a zero-weight incomplete set and uses the completed set", () => {
+    expect(
+      derivePristinePrefillCandidate(
+        pristineRow(),
+        [
+          prevRow({ weight: 0, reps: 0, completed: false }),
+          prevRow({ weight: 80, reps: 10, completed: true }),
+        ],
+        "reps",
+      ),
+    ).toEqual({ weight: 80, reps: 10, duration_seconds: null });
   });
 });

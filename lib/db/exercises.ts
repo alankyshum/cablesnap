@@ -295,6 +295,7 @@ export async function getProgressionSuggestion(
      FROM workout_sets ws
      JOIN workout_sessions s ON s.id = ws.session_id
      WHERE ws.exercise_id = ?
+       AND ws.completed = 1
        AND s.completed_at >= ?`,
     [exerciseId, thirtyDaysAgo]
   );
@@ -308,7 +309,8 @@ export async function getProgressionSuggestion(
      FROM workout_sets ws
      JOIN workout_sessions s ON s.id = ws.session_id
      WHERE ws.exercise_id = ?
-       AND s.completed_at IS NOT NULL
+        AND ws.completed = 1
+        AND s.completed_at IS NOT NULL
      ORDER BY s.completed_at DESC
      LIMIT 1`,
     [exerciseId]
@@ -369,6 +371,7 @@ export async function getProgressionSuggestion(
      FROM workout_sets ws
      JOIN workout_sessions s ON s.id = ws.session_id
      WHERE ws.exercise_id = ?
+       AND ws.completed = 1
        AND s.completed_at >= ?`,
     [nextExercise.id, thirtyDaysAgo]
   );

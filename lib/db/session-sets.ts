@@ -670,7 +670,7 @@ export async function getPreviousSets(
       sql`${workoutSets.session_id} = (
         SELECT ${workoutSessions.id} FROM ${workoutSessions}
         JOIN ${workoutSets} ws2 ON ws2.session_id = ${workoutSessions.id}
-        WHERE ws2.exercise_id = ${exerciseId} AND ${workoutSessions.completed_at} IS NOT NULL AND ${workoutSessions.id} != ${currentSessionId}
+        WHERE ws2.exercise_id = ${exerciseId} AND ws2.completed = 1 AND ${workoutSessions.completed_at} IS NOT NULL AND ${workoutSessions.id} != ${currentSessionId}
         ORDER BY ${workoutSessions.completed_at} DESC LIMIT 1
       )`
     ))
@@ -686,7 +686,9 @@ export async function getPreviousSetsBatch(
   if (exerciseIds.length === 0) return {};
   const result: Record<string, { set_number: number; weight: number | null; reps: number | null; duration_seconds: number | null; set_type: SetType; completed: boolean; rpe: number | null; pulley_pin: number | null; side?: "left" | "right" | null }[]> = {};
   const db = await getDrizzle();
-  // Step 1: Find all completed sessions per exercise, ordered by most recent
+  // Step 1: Find sessions with completed sets per exercise, ordered by most recent.
+  // A completed session can still contain untouched placeholder sets; those
+  // must not make it the exercise's previous attempt (GH-964).
   const sessionRows = await db
     .select({
       exercise_id: workoutSets.exercise_id,
@@ -696,6 +698,7 @@ export async function getPreviousSetsBatch(
     .innerJoin(workoutSets, eq(workoutSets.session_id, workoutSessions.id))
     .where(and(
       inArray(workoutSets.exercise_id, exerciseIds),
+      eq(workoutSets.completed, 1),
       isNotNull(workoutSessions.completed_at),
       sql`${workoutSessions.id} != ${currentSessionId}`
     ))
