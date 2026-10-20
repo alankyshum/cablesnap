@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.120",
+    "date": "2026-10-20",
+    "versionCode": 187005,
+    "body": "- Internal agent tooling now maps product features to routes and code, checks structural drift before commits, and refreshes semantic guidance during local release preparation."
+  },
+  {
     "version": "0.26.119",
     "date": "2026-10-02",
     "versionCode": 187,

@@ -1,0 +1,1 @@
+- Internal agent tooling now maps product features to routes and code, checks structural drift before commits, and refreshes semantic guidance during local release preparation.

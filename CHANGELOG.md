@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.120 — 2026-10-20
+<!-- versionCode: 187005 -->
+
 - Internal agent tooling now maps product features to routes and code, checks structural drift before commits, and refreshes semantic guidance during local release preparation.
 
 ## v0.26.119 — 2026-10-02
