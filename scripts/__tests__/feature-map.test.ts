@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { inspectFeatureMap, runFeatureMap } from "../feature-map";
+import { affectedFeatures, inspectFeatureMap, runFeatureMap, type Feature } from "../feature-map";
 
 function fixture(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "feature-map-"));
@@ -46,5 +46,15 @@ describe("feature-map generator", () => {
     writeFeature(root, ["/"], ["components/moved/**"]);
     expect(inspectFeatureMap(root).errors).toContainEqual(expect.stringContaining("matches no files"));
     expect(runFeatureMap(root, true)).toBe(1);
+  });
+
+  it("maps changed paths and routes to affected features", () => {
+    const features: Feature[] = [
+      { id: "example", title: "Example", aliases: [], routes: ["/example/[id]"], paths: ["components/example/**"], file: ".agents/feature-map/example.md" },
+      { id: "other", title: "Other", aliases: [], routes: ["/other"], paths: ["lib/other.ts"], file: ".agents/feature-map/other.md" },
+    ];
+    expect(affectedFeatures(features, ["components/example/Card.tsx"]).map((feature) => feature.id)).toEqual(["example"]);
+    expect(affectedFeatures(features, ["app/example/[id].tsx"]).map((feature) => feature.id)).toEqual(["example"]);
+    expect(affectedFeatures(features, ["hooks/unclaimed.ts"])).toEqual([]);
   });
 });

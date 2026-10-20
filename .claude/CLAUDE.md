@@ -177,7 +177,7 @@ Available tools (require dev server running — see above):
 
 ### Agent feature map
 
-For any vague or feature-level prompt, read `.agents/feature-map/README.md` first, then open the matching feature file before changing code. When adding, renaming, or removing a user-facing feature or route, update its feature file in the same commit. The pre-commit hook regenerates the index and enforces route/path coverage.
+For any vague or feature-level prompt, read `.agents/feature-map/README.md` first, then open the matching feature file before changing code. When adding, renaming, or removing a user-facing feature or route, update its feature file in the same commit. Pre-commit remains deterministic and only enforces structural route/path coverage; semantic freshness is reviewed locally before a release with `npm run feature-map:review`.
 
 Files inside `app/` are treated as routes by Expo Router. Non-route files (helpers, hooks, sub-components, styles, data) **must** be prefixed with `_` to exclude them from routing.
 

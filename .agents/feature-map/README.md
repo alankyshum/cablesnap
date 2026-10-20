@@ -18,7 +18,7 @@ For vague or feature-level work, search aliases below, open the matching feature
 | [session](./session.md) | Workout Session and Rest Timer | active workout, logging sets, rest timer, workout timer, finish workout, session summary, edit workout, quick add session | `/day-session/[id]`, `/session/[id]`, `/session/detail/[id]`, `/session/summary/[id]` |
 | [settings-data](./settings-data.md) | Settings, Backups, and Imports | settings, preferences, backup, restore, CSV import, export data, gym profiles, advanced sets, notifications, units, theme, feedback | `/feedback`, `/settings`, `/settings/advanced-sets`, `/settings/backups`, `/settings/gym-profiles`, `/settings/import-backup`, `/settings/import-workouts` |
 | [templates-programs](./templates-programs.md) | Workout Templates and Programs | routine, workout template, program builder, training plan, schedule, pick template, starter plan | `/program/[id]`, `/program/create`, `/program/pick-template`, `/template/[id]`, `/template/create` |
-| [tools](./tools.md) | Workout Tools | plate calculator, plates, 1RM calculator, one rep max, interval timer, cable finder, cable setup | `/tools`, `/tools/cable-finder`, `/tools/plates`, `/tools/rm`, `/tools/timer` |
+| [tools](./tools.md) | Workout Tools | workout tools, wrench, plate calculator, plates, barbell loading, bar weight, 1RM calculator, one rep max, % 1RM table, interval timer, tabata, EMOM, AMRAP, cable finder, cable setup | `/tools`, `/tools/cable-finder`, `/tools/plates`, `/tools/rm`, `/tools/timer` |
 | [workouts](./workouts.md) | Workouts Home and History | workouts tab, home screen, quick start, workout history, calendar, recent workouts, GTG | `/`, `/history` |
 
 ## Route → feature

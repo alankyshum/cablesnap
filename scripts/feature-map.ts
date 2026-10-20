@@ -34,7 +34,7 @@ function walk(root: string, relative = ""): string[] {
     });
 }
 
-function routeFromFile(file: string): string | null {
+export function routeFromFile(file: string): string | null {
   if (!/^app\/.*\.(?:ts|tsx|js|jsx)$/.test(file)) return null;
   const withoutApp = file.replace(/^app\//, "").replace(/\.(?:ts|tsx|js|jsx)$/, "");
   const segments = withoutApp.split("/");
@@ -96,7 +96,7 @@ function parseFeature(root: string, file: string, errors: string[]): Feature | n
   };
 }
 
-function globRegex(glob: string): RegExp {
+export function globRegex(glob: string): RegExp {
   let pattern = "^";
   for (let i = 0; i < glob.length; i += 1) {
     const char = glob[i];
@@ -108,6 +108,14 @@ function globRegex(glob: string): RegExp {
     else pattern += char.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
   }
   return new RegExp(`${pattern}$`);
+}
+
+export function affectedFeatures(features: Feature[], changedFiles: string[]): Feature[] {
+  return features.filter((feature) => changedFiles.some((file) => {
+    const route = routeFromFile(file);
+    return feature.paths.some((pattern) => globRegex(pattern).test(file))
+      || (route !== null && feature.routes.includes(route));
+  }));
 }
 
 function renderIndex(features: Feature[]): string {
