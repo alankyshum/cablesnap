@@ -18,12 +18,13 @@ then GitHub Actions builds the APK and deploys to the F-Droid repo.
 The preferred and automated release path is via the GitHub Actions `scheduled-release.yml` workflow, which runs automatically every 12 hours or can be triggered manually. Local compilation/build is a fallback.
 
 1. **Populate CHANGELOG.md**: Add user-facing changes to the `## Unreleased` section of `CHANGELOG.md` at the repo root.
-2. **Commit & Push**: Commit the `CHANGELOG.md` edits to `main` and push to `origin/main`.
-3. **Trigger Workflow**: Run the workflow immediately using the GitHub CLI:
+2. **Review the agent feature map locally**: Run `npm run feature-map:review`. This uses a locally installed and authenticated `claude`, `codex`, or `opencode` CLI to semantically refresh feature areas changed since the last release tag. Review the resulting map diff and include correct edits in the release commit. This step cannot run in GitHub Actions because local CLI logins are unavailable there.
+3. **Commit & Push**: Commit the `CHANGELOG.md` and reviewed feature-map edits to `main`, then push to `origin/main`.
+4. **Trigger Workflow**: Run the workflow immediately using the GitHub CLI:
    ```bash
    gh workflow run scheduled-release.yml
    ```
-4. **CI Automation**: The pipeline will automatically:
+5. **CI Automation**: The pipeline will automatically:
    - Verify `## Unreleased` is populated (gates release if empty)
    - Compute and apply version & versionCode bumps across files (`package.json`, `app.config.ts`, metadata)
    - Regenerate changelog artifacts and F-Droid sidecars
@@ -125,19 +126,23 @@ debugging arc. Preserve these guardrails when editing
 Before committing and pushing to trigger a release, run validation gates:
 
 ```bash
-# 1. All unit tests pass
+# 1. Semantically review feature areas changed since the last release tag (local CLI only)
+npm run feature-map:review
+git diff -- .agents/feature-map
+
+# 2. All unit tests pass
 npm test
 
-# 2. Lint checks pass (0 errors)
+# 3. Lint checks pass (0 errors)
 npm run lint
 
-# 3. TypeScript compiles clean
+# 4. TypeScript compiles clean
 npm run typecheck
 
-# 4. No uncommitted changes
+# 5. No uncommitted changes after accepting and committing the review
 git status --porcelain
 
-# 5. On main branch
+# 6. On main branch
 git branch --show-current
 ```
 

@@ -1,1 +1,9 @@
+#!/bin/sh
+set -e
+
+if git diff --cached --name-only --diff-filter=ACMRD | grep -Eq '^(app|components|lib|hooks)/|^\.agents/feature-map/'; then
+  npm run feature-map
+  git add .agents/feature-map/README.md
+fi
+
 npx lint-staged
