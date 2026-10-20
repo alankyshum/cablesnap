@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.121",
+    "date": "2026-10-20",
+    "versionCode": 187006,
+    "body": "- Last-workout values and set prefills now ignore sessions where an exercise was left unfinished, preserving the most recent completed attempt instead of showing zero weight."
+  },
+  {
     "version": "0.26.120",
     "date": "2026-10-20",
     "versionCode": 187005,

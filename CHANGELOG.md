@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.121 — 2026-10-20
+<!-- versionCode: 187006 -->
+
 - Last-workout values and set prefills now ignore sessions where an exercise was left unfinished, preserving the most recent completed attempt instead of showing zero weight.
 
 ## v0.26.120 — 2026-10-20

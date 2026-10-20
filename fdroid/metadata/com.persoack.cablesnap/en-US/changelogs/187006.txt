@@ -1,0 +1,1 @@
+- Last-workout values and set prefills now ignore sessions where an exercise was left unfinished, preserving the most recent completed attempt instead of showing zero weight.
