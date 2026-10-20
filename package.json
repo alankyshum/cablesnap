@@ -8,6 +8,8 @@
   },
   "scripts": {
     "changelog:gen": "tsx scripts/generate-changelog.ts",
+    "feature-map": "tsx scripts/feature-map.ts",
+    "feature-map:check": "tsx scripts/feature-map.ts --check",
     "prestart": "npm run changelog:gen",
     "start": "expo start",
     "preandroid": "npm run changelog:gen",

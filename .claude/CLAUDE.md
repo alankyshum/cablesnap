@@ -175,6 +175,10 @@ Available tools (require dev server running — see above):
 
 ## Expo Router — File Conventions
 
+### Agent feature map
+
+For any vague or feature-level prompt, read `.agents/feature-map/README.md` first, then open the matching feature file before changing code. When adding, renaming, or removing a user-facing feature or route, update its feature file in the same commit. The pre-commit hook regenerates the index and enforces route/path coverage.
+
 Files inside `app/` are treated as routes by Expo Router. Non-route files (helpers, hooks, sub-components, styles, data) **must** be prefixed with `_` to exclude them from routing.
 
 - `app/_screen-config.ts` — config/data file (underscore prefix)
