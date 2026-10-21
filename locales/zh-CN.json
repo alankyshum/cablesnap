@@ -11998,5 +11998,15 @@
     "message": "诊断资料可能包含最近的画面、操作、错误、装置详细资料及可见的记录内容。分享前请先检查预览。",
     "srcHash": "fc19f5084d50",
     "origin": "human"
+  },
+  "feedback.header": {
+    "message": "意见回馈与问题回报",
+    "srcHash": "1b3860a00589",
+    "origin": "human"
+  },
+  "feedback.shake.preparing": {
+    "message": "正在准备意见回馈",
+    "srcHash": "8fac052b3ba5",
+    "origin": "human"
   }
 }

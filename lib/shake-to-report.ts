@@ -28,15 +28,25 @@ export class ShakeDetector {
 
 /** Keeps async capture/navigation from opening more than one feedback modal. */
 export class ShakeLaunchGate {
-  private active = false;
+  private activeToken: number | null = null;
+  private generation = 0;
 
-  begin(): boolean {
-    if (this.active) return false;
-    this.active = true;
-    return true;
+  begin(): number | null {
+    if (this.activeToken !== null) return null;
+    this.generation += 1;
+    this.activeToken = this.generation;
+    return this.activeToken;
   }
 
-  reset(): void {
-    this.active = false;
+  owns(token: number): boolean {
+    return this.activeToken === token;
+  }
+
+  cancel(token: number): void {
+    if (this.activeToken === token) this.activeToken = null;
+  }
+
+  resetAfterFeedbackExit(): void {
+    this.activeToken = null;
   }
 }

@@ -11890,5 +11890,15 @@
     "message": "診斷資料可能包含最近的畫面、操作、錯誤、裝置詳細資料及可見的記錄內容。分享前請先檢查預覽。",
     "srcHash": "fc19f5084d50",
     "origin": "human"
+  },
+  "feedback.header": {
+    "message": "意見回饋與問題回報",
+    "srcHash": "1b3860a00589",
+    "origin": "human"
+  },
+  "feedback.shake.preparing": {
+    "message": "正在準備意見回饋",
+    "srcHash": "8fac052b3ba5",
+    "origin": "human"
   }
 }

@@ -11998,5 +11998,15 @@
     "message": "Diagnostic data can include recent screens, actions, errors, device details, and visible log content. Review the preview before sharing.",
     "srcHash": "fc19f5084d50",
     "origin": "human"
+  },
+  "feedback.header": {
+    "message": "Feedback & Reports",
+    "srcHash": "1b3860a00589",
+    "origin": "human"
+  },
+  "feedback.shake.preparing": {
+    "message": "Preparing feedback",
+    "srcHash": "8fac052b3ba5",
+    "origin": "human"
   }
 }

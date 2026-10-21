@@ -11,7 +11,7 @@ import { ChevronUp, ChevronDown, ExternalLink, Share2, X } from "lucide-react-na
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import NetInfo from "@react-native-community/netinfo";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   generateGitHubURL,
@@ -238,25 +238,10 @@ export default function FeedbackScreen() {
   );
 
   const ITEMS = ["form"] as const;
-  const shakeIntro = fromShake ? (
-    <View style={styles.modalIntro}>
-      <View style={styles.modalIntroCopy}>
-        <Text variant="subtitle" style={{ color: colors.onSurface }} accessibilityRole="header">
-          {t({ id: "feedback.shake.title", message: "Report what you saw" })}
-        </Text>
-        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-          {t({ id: "feedback.shake.subtitle", message: "A screenshot was attempted before this overlay opened." })}
-        </Text>
-      </View>
-      <Button
-        variant="ghost"
-        size="icon"
-        icon={X}
-        onPress={() => router.back()}
-        accessibilityLabel={t({ id: "feedback.closeA11y", message: "Close feedback and return to the previous screen" })}
-        testID="feedback-close"
-      />
-    </View>
+  const shakeContext = fromShake ? (
+    <Text variant="caption" style={[styles.shakeContext, { color: colors.onSurfaceVariant }]}>
+      {t({ id: "feedback.shake.subtitle", message: "A screenshot was attempted before this overlay opened." })}
+    </Text>
   ) : null;
   const typePicker = fromShake ? (
     <View style={[styles.lockedType, { backgroundColor: colors.surfaceVariant }]}>
@@ -290,6 +275,23 @@ export default function FeedbackScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={80}
     >
+      <Stack.Screen
+        options={fromShake ? {
+          title: t({ id: "feedback.shake.title", message: "Report what you saw" }),
+          headerBackVisible: false,
+          headerLeft: () => null,
+          headerRight: () => (
+            <Button
+              variant="ghost"
+              size="icon"
+              icon={X}
+              onPress={() => router.back()}
+              accessibilityLabel={t({ id: "feedback.closeA11y", message: "Close feedback and return to the previous screen" })}
+              testID="feedback-close"
+            />
+          ),
+        } : { title: t({ id: "feedback.header", message: "Feedback & Reports" }) }}
+      />
       <FlatList
         data={ITEMS}
         keyExtractor={(item) => item}
@@ -299,7 +301,7 @@ export default function FeedbackScreen() {
         keyboardDismissMode="on-drag"
         renderItem={() => (
           <View style={styles.form} accessibilityViewIsModal={fromShake || undefined} testID="feedback-form">
-            {shakeIntro}
+            {shakeContext}
             <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
               Report Type
             </Text>
@@ -374,6 +376,7 @@ export default function FeedbackScreen() {
         onPress={handleGitHub}
         disabled={!valid || cooldown > 0}
         style={styles.btn}
+        testID="feedback-open-github"
          accessibilityLabel={t({ id: "feedback.github.a11y", message: "Open report on GitHub" })}
          label={cooldown > 0 ? t({ id: "feedback.github.cooldown", message: `Open on GitHub (${cooldown}s)` }) : t({ id: "feedback.github.open", message: "Open on GitHub" })}
       />
@@ -384,6 +387,7 @@ export default function FeedbackScreen() {
         onPress={handleShare}
         disabled={!valid || cooldown > 0}
         style={styles.btn}
+        testID="feedback-share-report"
          accessibilityLabel={t({ id: "feedback.share.a11y", message: "Share report" })}
          label={cooldown > 0 ? t({ id: "feedback.share.cooldown", message: `Share Report (${cooldown}s)` }) : t({ id: "feedback.share.label", message: "Share Report" })}
       />
@@ -398,8 +402,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 40 },
   form: { width: "100%", maxWidth: 600, alignSelf: "center" },
-  modalIntro: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
-  modalIntroCopy: { flex: 1, gap: 4 },
+  shakeContext: { marginBottom: 16 },
   lockedType: { minHeight: 44, justifyContent: "center", paddingHorizontal: 16, borderRadius: 8, marginBottom: 8 },
   segment: { marginBottom: 8 },
   input: { marginBottom: 4 },

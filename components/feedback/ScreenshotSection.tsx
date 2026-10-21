@@ -18,7 +18,7 @@ type Props = {
 
 export function ScreenshotSection(props: Props) {
   const { colors, state, uri, consented } = props;
-  const compact = useWindowDimensions().width <= 320;
+  const compact = useWindowDimensions().width < 600;
   if (state === "none") return null;
 
   return (
@@ -57,7 +57,7 @@ export function ScreenshotSection(props: Props) {
               testID="feedback-screenshot-consent"
             />
           </View>
-          <View style={[styles.actions, compact && styles.actionsCompact]}>
+          <View style={[styles.actions, compact && styles.actionsCompact]} testID="feedback-screenshot-actions">
             <Button
               variant="outline"
               icon={Share2}
@@ -73,6 +73,7 @@ export function ScreenshotSection(props: Props) {
               icon={Trash2}
               onPress={props.onRemove}
               style={styles.action}
+              testID="feedback-remove-screenshot"
               label={t({ id: "feedback.screenshot.remove", message: "Remove screenshot" })}
               accessibilityHint={t({ id: "feedback.screenshot.removeHint", message: "Deletes the temporary screenshot now" })}
             />

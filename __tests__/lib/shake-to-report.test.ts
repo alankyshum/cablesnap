@@ -25,9 +25,19 @@ describe("ShakeDetector", () => {
 describe("ShakeLaunchGate overlay lifecycle", () => {
   it("blocks reentry until the overlay has closed", () => {
     const gate = new ShakeLaunchGate();
-    expect(gate.begin()).toBe(true);
-    expect(gate.begin()).toBe(false);
-    gate.reset();
-    expect(gate.begin()).toBe(true);
+    const first = gate.begin();
+    expect(first).toBe(1);
+    expect(gate.begin()).toBeNull();
+    gate.resetAfterFeedbackExit();
+    expect(gate.begin()).toBe(2);
+  });
+
+  it("ignores cancellation from a stale generation", () => {
+    const gate = new ShakeLaunchGate();
+    const first = gate.begin()!;
+    gate.cancel(first);
+    const second = gate.begin()!;
+    gate.cancel(first);
+    expect(gate.owns(second)).toBe(true);
   });
 });
