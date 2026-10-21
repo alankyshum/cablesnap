@@ -43,8 +43,8 @@ describe("feedback screen padding (BLD-177)", () => {
     expect(src).toContain(
       "contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding, paddingBottom: Math.max(40, insets.bottom + 24) }]}"
     );
-    expect(src).toMatch(/content:\s*\{[^}]*padding:\s*16/);
-    expect(src).toMatch(/content:\s*\{[^}]*paddingBottom:\s*40/);
+    expect(src).toMatch(/content:\s*\{[^}]*padding:\s*spacing\.base/);
+    expect(src).toMatch(/content:\s*\{[^}]*paddingBottom:\s*spacing\.lg \* 2/);
     expect(src).not.toMatch(
       /contentContainerStyle=\{\{\s*paddingHorizontal/
     );

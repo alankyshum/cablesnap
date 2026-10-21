@@ -11,7 +11,7 @@ Profile and app preferences, reminders, appearance/units, data export/import/bac
 
 ## Sub-features
 - Backup categories/auto-backup/restore, CSV workout import/export, sharing, form-clip storage and release notes.
-- Android users can shake to capture the current screen and open the existing feedback form as a modal. Screenshots stay temporary and require explicit review and consent before separate sharing.
+- Native users can shake to capture the current screen and open the existing feedback form as a modal. The default-on behavior can be disabled in the Feedback & Reports settings tile; screenshots stay temporary and are shared separately.
 
 ## How to get to it (user POV)
 - Tap **Settings**, then the relevant tile or row.

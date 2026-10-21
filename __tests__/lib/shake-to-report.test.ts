@@ -1,9 +1,22 @@
+// GitHub #963: shake threshold, cooldown, lifecycle, and persisted setting.
+jest.mock("../../lib/db/settings", () => ({
+  getAppSetting: jest.fn(),
+  setAppSetting: jest.fn(),
+}));
+
 import {
+  canListenForShake,
+  getShakeToReportEnabled,
   SHAKE_COOLDOWN_MS,
   SHAKE_THRESHOLD,
   ShakeDetector,
   ShakeLaunchGate,
+  setShakeToReportEnabled,
 } from "../../lib/shake-to-report";
+import { getAppSetting, setAppSetting } from "../../lib/db/settings";
+
+const mockGetAppSetting = getAppSetting as jest.MockedFunction<typeof getAppSetting>;
+const mockSetAppSetting = setAppSetting as jest.MockedFunction<typeof setAppSetting>;
 
 describe("ShakeDetector", () => {
   it("requires a delta at or above the threshold", () => {
@@ -39,5 +52,20 @@ describe("ShakeLaunchGate overlay lifecycle", () => {
     const second = gate.begin()!;
     gate.cancel(first);
     expect(gate.owns(second)).toBe(true);
+  });
+});
+
+describe("shake listener preference", () => {
+  it("defaults on, persists opt-out, and gates web/background/unavailable sensors", async () => {
+    mockGetAppSetting.mockResolvedValue(null);
+    expect(await getShakeToReportEnabled()).toBe(true);
+    await setShakeToReportEnabled(false);
+    expect(mockSetAppSetting).toHaveBeenCalledWith("shake_to_report", "0");
+    expect(canListenForShake("android", true, true, true)).toBe(true);
+    expect(canListenForShake("ios", true, true, true)).toBe(true);
+    expect(canListenForShake("web", true, true, true)).toBe(false);
+    expect(canListenForShake("android", false, true, true)).toBe(false);
+    expect(canListenForShake("android", true, false, true)).toBe(false);
+    expect(canListenForShake("android", true, true, false)).toBe(false);
   });
 });

@@ -1,92 +1,75 @@
 import { t } from "@lingui/core/macro";
-import { Image, StyleSheet, Switch, useWindowDimensions, View } from "react-native";
-import { Share2, Trash2 } from "lucide-react-native";
+import { Image, StyleSheet, Switch, View } from "react-native";
+import { Camera, RefreshCw, Share2, Trash2 } from "lucide-react-native";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { radii, spacing } from "@/constants/design-tokens";
 import type { ThemeColors } from "@/hooks/useThemeColors";
 import type { FeedbackScreenshotState, FeedbackScreenshotUri } from "@/hooks/useFeedbackScreenshot";
+import { useLayout } from "@/lib/layout";
 
 type Props = {
   colors: ThemeColors;
   state: FeedbackScreenshotState;
   uri: FeedbackScreenshotUri | null;
-  consented: boolean;
-  onConsentChange: (value: boolean) => void;
+  included: boolean;
+  capturing: boolean;
+  onIncludedChange: (value: boolean) => void;
+  onCapture: () => void;
   onRemove: () => void;
   onShare: () => void;
 };
 
 export function ScreenshotSection(props: Props) {
-  const { colors, state, uri, consented } = props;
-  const compact = useWindowDimensions().width < 600;
+  const { colors, state, uri, included, capturing } = props;
+  const layout = useLayout();
   if (state === "none") return null;
 
   return (
-    <View style={[styles.section, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]} testID="feedback-screenshot-section">
+    <View style={styles.section} testID="feedback-screenshot-section">
       <Text variant="subtitle" style={{ color: colors.onSurface }}>
         {t({ id: "feedback.screenshot.title", message: "Screenshot" })}
       </Text>
       {state === "ready" && uri ? (
         <>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant }} accessibilityLiveRegion="polite">
-            {t({ id: "feedback.screenshot.captured", message: "Screenshot captured. Review it before sharing." })}
-          </Text>
-          <Image
-            source={typeof uri === "string" ? { uri } : uri}
-            resizeMode="contain"
-            style={[styles.preview, { backgroundColor: colors.background, borderColor: colors.border }]}
-            accessibilityRole="image"
-            accessibilityLabel={t({ id: "feedback.screenshot.previewA11y", message: "Preview of the screen captured before feedback opened" })}
-            testID="feedback-screenshot-preview"
-          />
-          <View style={styles.consentRow}>
-            <View style={styles.consentCopy}>
-              <Text variant="body" style={{ color: colors.onSurface }}>
-                {t({ id: "feedback.screenshot.consent", message: "I reviewed this screenshot and consent to sharing it" })}
-              </Text>
-              <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                {t({ id: "feedback.screenshot.privacy", message: "Screenshots can contain names, notifications, workout details, or other visible personal information. It is never attached automatically." })}
-              </Text>
+          <View style={[styles.previewLayout, layout.compact && styles.previewLayoutCompact]}>
+            <Image
+              source={typeof uri === "string" ? { uri } : uri}
+              resizeMode="contain"
+              style={[styles.thumbnail, layout.compact && styles.thumbnailCompact, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}
+              accessibilityRole="image"
+              accessibilityLabel={t({ id: "feedback.screenshot.previewA11y", message: "Screenshot preview" })}
+              testID="feedback-screenshot-preview"
+            />
+            <View style={[styles.actions, layout.compact && styles.actionsCompact]} testID="feedback-screenshot-actions">
+              <Button variant="outline" icon={RefreshCw} onPress={props.onCapture} loading={capturing} style={styles.action} testID="feedback-retake-screenshot" label={t({ id: "feedback.screenshot.retake", message: "Retake" })} accessibilityHint={t({ id: "feedback.screenshot.retakeHint", message: "Replaces the current screenshot" })} />
+              <Button variant="outline" icon={Share2} onPress={props.onShare} style={styles.action} testID="feedback-share-screenshot" label={t({ id: "feedback.screenshot.share", message: "Share Screenshot" })} accessibilityHint={t({ id: "feedback.screenshot.shareHint", message: "Shares the PNG separately from the report" })} />
+              <Button variant="ghost" icon={Trash2} onPress={props.onRemove} style={styles.action} testID="feedback-remove-screenshot" label={t({ id: "feedback.screenshot.remove", message: "Remove" })} accessibilityHint={t({ id: "feedback.screenshot.removeHint", message: "Removes and deletes the temporary screenshot" })} />
             </View>
+          </View>
+          <View style={styles.includeRow}>
+            <Text variant="body" style={{ color: colors.onSurface }}>
+              {t({ id: "feedback.screenshot.include", message: "Include screenshot" })}
+            </Text>
             <Switch
-              value={consented}
-              onValueChange={props.onConsentChange}
+              value={included}
+              onValueChange={props.onIncludedChange}
               accessibilityRole="switch"
-              accessibilityLabel={t({ id: "feedback.screenshot.consentA11y", message: "Consent to share reviewed screenshot" })}
-              accessibilityState={{ checked: consented }}
-              testID="feedback-screenshot-consent"
+              accessibilityLabel={t({ id: "feedback.screenshot.includeA11y", message: "Include screenshot when sharing" })}
+              accessibilityState={{ checked: included }}
+              testID="feedback-include-screenshot"
             />
           </View>
-          <View style={[styles.actions, compact && styles.actionsCompact]} testID="feedback-screenshot-actions">
-            <Button
-              variant="outline"
-              icon={Share2}
-              onPress={props.onShare}
-              disabled={!consented}
-              style={styles.action}
-              testID="feedback-share-screenshot"
-              label={t({ id: "feedback.screenshot.share", message: "Share screenshot separately" })}
-              accessibilityHint={t({ id: "feedback.screenshot.shareHint", message: "Opens the system share sheet for this PNG after consent" })}
-            />
-            <Button
-              variant="ghost"
-              icon={Trash2}
-              onPress={props.onRemove}
-              style={styles.action}
-              testID="feedback-remove-screenshot"
-              label={t({ id: "feedback.screenshot.remove", message: "Remove screenshot" })}
-              accessibilityHint={t({ id: "feedback.screenshot.removeHint", message: "Deletes the temporary screenshot now" })}
-            />
-          </View>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+            {t({ id: "feedback.screenshot.privacy", message: "Review the screenshot for sensitive information before sharing." })}
+          </Text>
         </>
       ) : (
-        <View accessibilityLiveRegion="polite" accessible>
+        <View style={[styles.failure, { backgroundColor: colors.surfaceVariant }]} accessibilityLiveRegion="polite">
           <Text variant="body" style={{ color: colors.onSurface }}>
-            {t({ id: "feedback.screenshot.failed", message: "Screenshot unavailable. You can still send feedback and diagnostics." })}
+            {t({ id: "feedback.screenshot.unavailable", message: "Screenshot unavailable" })}
           </Text>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-            {t({ id: "feedback.screenshot.noRetry", message: "Capture was not retried because the feedback overlay is now visible." })}
-          </Text>
+          <Button variant="outline" icon={Camera} onPress={props.onCapture} loading={capturing} style={styles.tryAgain} testID="feedback-screenshot-try-again" label={t({ id: "feedback.screenshot.tryAgain", message: "Try Again" })} accessibilityHint={t({ id: "feedback.screenshot.tryAgainHint", message: "Attempts to capture the current screen again" })} />
         </View>
       )}
     </View>
@@ -94,11 +77,15 @@ export function ScreenshotSection(props: Props) {
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: 16, padding: 12, borderWidth: 1, borderRadius: 12, gap: 12 },
-  preview: { width: "100%", height: 240, borderWidth: 1, borderRadius: 8 },
-  consentRow: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 12 },
-  consentCopy: { flex: 1, gap: 4 },
-  actions: { flexDirection: "row", gap: 8 },
-  actionsCompact: { flexDirection: "column" },
-  action: { flex: 1, minHeight: 44 },
+  section: { marginTop: spacing.base, gap: spacing.sm },
+  previewLayout: { flexDirection: "row", gap: spacing.md, alignItems: "flex-start" },
+  previewLayoutCompact: { flexDirection: "column" },
+  thumbnail: { width: "65%", maxHeight: 280, minHeight: 180, borderWidth: 1, borderRadius: radii.md },
+  thumbnailCompact: { width: "100%" },
+  actions: { flex: 1, gap: spacing.sm },
+  actionsCompact: { width: "100%" },
+  action: { minHeight: 48, width: "100%" },
+  includeRow: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  failure: { padding: spacing.md, borderRadius: radii.md, gap: spacing.sm },
+  tryAgain: { minHeight: 48, alignSelf: "flex-start" },
 });

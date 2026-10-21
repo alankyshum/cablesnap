@@ -11935,28 +11935,28 @@
     "origin": "human"
   },
   "feedback.screenshot.previewA11y": {
-    "message": "开启意见回馈前所撷取画面的预览",
-    "srcHash": "48e92e2dbacb",
+    "message": "萤幕截图预览",
+    "srcHash": "626a796ab7aa",
     "origin": "human"
   },
   "feedback.screenshot.privacy": {
-    "message": "萤幕截图可能包含姓名、通知、训练内容或其他可见的个人资讯，绝不会自动附加。",
-    "srcHash": "7d62d0f88d1f",
+    "message": "分享前请检查萤幕截图是否包含敏感资讯。",
+    "srcHash": "049998951111",
     "origin": "human"
   },
   "feedback.screenshot.remove": {
-    "message": "移除萤幕截图",
-    "srcHash": "765fbf1dc874",
+    "message": "移除",
+    "srcHash": "2d304036338e",
     "origin": "human"
   },
   "feedback.screenshot.removeHint": {
-    "message": "立即删除暂存萤幕截图",
-    "srcHash": "72b339614ac3",
+    "message": "移除并删除暂存萤幕截图",
+    "srcHash": "988cf9bff936",
     "origin": "human"
   },
   "feedback.screenshot.share": {
-    "message": "另行分享萤幕截图",
-    "srcHash": "6a25049f234b",
+    "message": "分享萤幕截图",
+    "srcHash": "eaf74e0120d5",
     "origin": "human"
   },
   "feedback.screenshot.shareAction": {
@@ -11975,8 +11975,8 @@
     "origin": "human"
   },
   "feedback.screenshot.shareHint": {
-    "message": "同意后，为此 PNG 开启系统分享选单",
-    "srcHash": "200ac9491254",
+    "message": "将 PNG 与回报内容分开分享",
+    "srcHash": "e24fa4ca4bc7",
     "origin": "human"
   },
   "feedback.screenshot.title": {
@@ -12007,6 +12007,66 @@
   "feedback.shake.preparing": {
     "message": "正在准备意见回馈",
     "srcHash": "8fac052b3ba5",
+    "origin": "human"
+  },
+  "feedback.screenshot.captureSuccess": {
+    "message": "已撷取萤幕截图",
+    "srcHash": "5b3e9a495e2f",
+    "origin": "human"
+  },
+  "feedback.screenshot.include": {
+    "message": "包含萤幕截图",
+    "srcHash": "9be5c493ce1f",
+    "origin": "human"
+  },
+  "feedback.screenshot.includeA11y": {
+    "message": "分享时包含萤幕截图",
+    "srcHash": "8c9960f6939b",
+    "origin": "human"
+  },
+  "feedback.screenshot.retake": {
+    "message": "重新撷取",
+    "srcHash": "1e6828423fec",
+    "origin": "human"
+  },
+  "feedback.screenshot.retakeHint": {
+    "message": "取代目前的萤幕截图",
+    "srcHash": "e9d692bee5b8",
+    "origin": "human"
+  },
+  "feedback.screenshot.tryAgain": {
+    "message": "再试一次",
+    "srcHash": "37274f773c8d",
+    "origin": "human"
+  },
+  "feedback.screenshot.tryAgainHint": {
+    "message": "再次尝试撷取目前画面",
+    "srcHash": "cbdd13bee69f",
+    "origin": "human"
+  },
+  "feedback.screenshot.unavailable": {
+    "message": "无法取得萤幕截图",
+    "srcHash": "8ac1334571ba",
+    "origin": "human"
+  },
+  "settings.feedback.shake": {
+    "message": "摇晃以回报",
+    "srcHash": "252a940bc71f",
+    "origin": "human"
+  },
+  "settings.feedback.shakeA11y": {
+    "message": "摇晃以回报",
+    "srcHash": "079de24ed7dd",
+    "origin": "human"
+  },
+  "settings.feedback.shakeA11yHint": {
+    "message": "摇晃手机时开启意见回馈并撷取目前画面",
+    "srcHash": "a0f68b9218d3",
+    "origin": "human"
+  },
+  "settings.feedback.shakeHint": {
+    "message": "摇晃手机即可开启附有萤幕截图的意见回馈。",
+    "srcHash": "da1dde77b97f",
     "origin": "human"
   }
 }

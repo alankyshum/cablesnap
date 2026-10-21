@@ -3,7 +3,7 @@ export type ScreenConfig = {
   options: {
     headerShown: boolean;
     title?: string;
-    presentation?: "modal";
+    presentation?: "modal" | "fullScreenModal";
     animation?: "slide_from_bottom";
   };
 };
@@ -22,7 +22,7 @@ export const SCREEN_CONFIGS: ScreenConfig[] = [
   { name: "session/[id]", options: { headerShown: true, title: "Workout" } },
   { name: "session/detail/[id]", options: { headerShown: true, title: "Workout Summary" } },
   { name: "errors", options: { headerShown: true, title: "Error Log" } },
-  { name: "feedback", options: { headerShown: true, title: "Feedback & Reports", presentation: "modal", animation: "slide_from_bottom" } },
+  { name: "feedback", options: { headerShown: true, title: "Feedback & Reports", presentation: "fullScreenModal" } },
   { name: "strava-callback", options: { headerShown: false } },
   { name: "body", options: { headerShown: false } },
   { name: "progress", options: { headerShown: false } },

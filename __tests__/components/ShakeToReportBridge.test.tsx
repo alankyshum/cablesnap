@@ -10,6 +10,8 @@ const mockRemoveAppState = jest.fn();
 const mockCapture = jest.fn();
 const mockSetPending = jest.fn();
 const mockRemoveScreenshot = jest.fn();
+const mockToastInfo = jest.fn();
+const mockGetAppSetting = jest.fn().mockResolvedValue(null);
 
 jest.mock("expo-router", () => ({
   usePathname: () => mockPathname,
@@ -29,6 +31,13 @@ jest.mock("../../lib/feedback-screenshot", () => ({
   captureFeedbackScreenshot: () => mockCapture(),
   setPendingFeedbackScreenshot: (value: unknown) => mockSetPending(value),
   removeFeedbackScreenshot: (uri: string) => mockRemoveScreenshot(uri),
+}));
+jest.mock("../../lib/db/settings", () => ({
+  getAppSetting: (...args: unknown[]) => mockGetAppSetting(...args),
+  setAppSetting: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock("@/components/ui/bna-toast", () => ({
+  useToast: () => ({ info: mockToastInfo }),
 }));
 jest.mock("react-native/Libraries/AppState/AppState", () => ({
   __esModule: true,
@@ -50,6 +59,8 @@ describe("ShakeToReportBridge", () => {
     mockCapture.mockReset();
     mockSetPending.mockReset();
     mockRemoveScreenshot.mockReset();
+    mockToastInfo.mockReset();
+    mockGetAppSetting.mockReset().mockResolvedValue(null);
     const announceSpy = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
     announceSpy.mockReset();
     announceSpy.mockImplementation(jest.fn());
@@ -93,6 +104,14 @@ describe("ShakeToReportBridge", () => {
     });
     expect(mockSetPending).toHaveBeenCalledWith({ status: "failed", uri: null });
     expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockToastInfo).toHaveBeenCalledWith("Screenshot unavailable");
+  });
+
+  it("does not subscribe when the persisted setting is disabled", async () => {
+    mockGetAppSetting.mockResolvedValue("0");
+    render(<ShakeToReportBridge />);
+    await act(async () => {});
+    expect(mockSensorListener).toBeUndefined();
   });
 
   it("does not let a stale deferred capture reset or navigate over a newer launch", async () => {

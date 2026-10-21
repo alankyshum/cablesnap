@@ -1,7 +1,30 @@
+import { getAppSetting, setAppSetting } from "@/lib/db/settings";
+
+export const SHAKE_TO_REPORT_KEY = "shake_to_report";
 export const SHAKE_THRESHOLD = 2.4;
 export const SHAKE_COOLDOWN_MS = 2500;
 
 export type AccelerometerSample = { x: number; y: number; z: number };
+type SettingListener = (enabled: boolean) => void;
+const settingListeners = new Set<SettingListener>();
+
+export function canListenForShake(platform: string, enabled: boolean, foreground: boolean, available: boolean): boolean {
+  return platform !== "web" && enabled && foreground && available;
+}
+
+export async function getShakeToReportEnabled(): Promise<boolean> {
+  return (await getAppSetting(SHAKE_TO_REPORT_KEY)) !== "0";
+}
+
+export async function setShakeToReportEnabled(enabled: boolean): Promise<void> {
+  await setAppSetting(SHAKE_TO_REPORT_KEY, enabled ? "1" : "0");
+  settingListeners.forEach((listener) => listener(enabled));
+}
+
+export function subscribeShakeToReport(listener: SettingListener): () => void {
+  settingListeners.add(listener);
+  return () => settingListeners.delete(listener);
+}
 
 /** Detects a sharp change in acceleration while suppressing repeat launches. */
 export class ShakeDetector {

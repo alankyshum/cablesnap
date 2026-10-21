@@ -25,6 +25,7 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 import { ScreenshotSection } from "@/components/feedback/ScreenshotSection";
 import { useFeedbackScreenshot } from "@/hooks/useFeedbackScreenshot";
 import { withScreenshotAttachmentNote } from "@/lib/feedback-submission";
+import { radii, spacing } from "@/constants/design-tokens";
 
 const MAX_TITLE = 150;
 
@@ -150,7 +151,7 @@ export default function FeedbackScreen() {
 
   const startCooldown = useCallback(() => setCooldown(5), []);
 
-  const includeScreenshot = screenshot.state === "ready" && screenshot.consented;
+  const includeScreenshot = screenshot.state === "ready" && screenshot.included;
   const reportPayload = useMemo(() => ({
     type,
     title: title.trim(),
@@ -162,7 +163,7 @@ export default function FeedbackScreen() {
   }), [type, title, desc, errors, interactions, consoleLogs, diag, includeScreenshot]);
 
   const handleScreenshotShare = useCallback(async () => {
-    if (typeof screenshot.uri !== "string" || !screenshot.consented) return;
+    if (typeof screenshot.uri !== "string") return;
     try {
       await Sharing.shareAsync(screenshot.uri, {
         mimeType: "image/png",
@@ -171,7 +172,7 @@ export default function FeedbackScreen() {
     } catch {
       toast.error(t({ id: "feedback.screenshot.shareFailure", message: "Unable to share screenshot" }));
     }
-  }, [screenshot.uri, screenshot.consented, toast]);
+  }, [screenshot.uri, toast]);
 
   const handleShare = useCallback(async () => {
     if (!valid) return;
@@ -262,8 +263,10 @@ export default function FeedbackScreen() {
       colors={colors}
       state={screenshot.state}
       uri={screenshot.uri}
-      consented={screenshot.consented}
-      onConsentChange={screenshot.setConsented}
+      included={screenshot.included}
+      capturing={screenshot.capturing}
+      onIncludedChange={screenshot.setIncluded}
+      onCapture={screenshot.capture}
       onRemove={screenshot.remove}
       onShare={handleScreenshotShare}
     />
@@ -302,12 +305,12 @@ export default function FeedbackScreen() {
         renderItem={() => (
           <View style={styles.form} accessibilityViewIsModal={fromShake || undefined} testID="feedback-form">
             {shakeContext}
-            <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
+            <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: spacing.sm }}>
               Report Type
             </Text>
             {typePicker}
 
-      <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: 16, marginBottom: 8 }}>
+      <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: spacing.base, marginBottom: spacing.sm }}>
         Title ({title.length}/{MAX_TITLE})
       </Text>
       <Input
@@ -323,7 +326,7 @@ export default function FeedbackScreen() {
 
       {screenshotSection}
 
-      <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: 16, marginBottom: 8 }}>
+      <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: spacing.base, marginBottom: spacing.sm }}>
         Description{type !== "crash" ? " (required)" : " (optional)"}
       </Text>
       <Input
@@ -400,26 +403,26 @@ export default function FeedbackScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: spacing.base, paddingBottom: spacing.lg * 2 },
   form: { width: "100%", maxWidth: 600, alignSelf: "center" },
-  shakeContext: { marginBottom: 16 },
-  lockedType: { minHeight: 44, justifyContent: "center", paddingHorizontal: 16, borderRadius: 8, marginBottom: 8 },
-  segment: { marginBottom: 8 },
-  input: { marginBottom: 4 },
+  shakeContext: { marginBottom: spacing.base },
+  lockedType: { minHeight: 44, justifyContent: "center", paddingHorizontal: spacing.base, borderRadius: radii.md, marginBottom: spacing.sm },
+  segment: { marginBottom: spacing.sm },
+  input: { marginBottom: spacing.xs },
   diagHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 16,
-    marginBottom: 8,
-    gap: 12,
+    marginTop: spacing.base,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
   },
   preview: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.base,
   },
   btn: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     minHeight: 48,
   },
 });

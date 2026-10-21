@@ -11827,28 +11827,28 @@
     "origin": "human"
   },
   "feedback.screenshot.previewA11y": {
-    "message": "開啟意見回饋前所擷取畫面的預覽",
-    "srcHash": "48e92e2dbacb",
+    "message": "螢幕截圖預覽",
+    "srcHash": "626a796ab7aa",
     "origin": "human"
   },
   "feedback.screenshot.privacy": {
-    "message": "螢幕截圖可能包含姓名、通知、訓練內容或其他可見的個人資訊，絕不會自動附加。",
-    "srcHash": "7d62d0f88d1f",
+    "message": "分享前請檢查螢幕截圖是否包含敏感資訊。",
+    "srcHash": "049998951111",
     "origin": "human"
   },
   "feedback.screenshot.remove": {
-    "message": "移除螢幕截圖",
-    "srcHash": "765fbf1dc874",
+    "message": "移除",
+    "srcHash": "2d304036338e",
     "origin": "human"
   },
   "feedback.screenshot.removeHint": {
-    "message": "立即刪除暫存螢幕截圖",
-    "srcHash": "72b339614ac3",
+    "message": "移除並刪除暫存螢幕截圖",
+    "srcHash": "988cf9bff936",
     "origin": "human"
   },
   "feedback.screenshot.share": {
-    "message": "另行分享螢幕截圖",
-    "srcHash": "6a25049f234b",
+    "message": "分享螢幕截圖",
+    "srcHash": "eaf74e0120d5",
     "origin": "human"
   },
   "feedback.screenshot.shareAction": {
@@ -11867,8 +11867,8 @@
     "origin": "human"
   },
   "feedback.screenshot.shareHint": {
-    "message": "同意後，為此 PNG 開啟系統分享選單",
-    "srcHash": "200ac9491254",
+    "message": "將 PNG 與回報內容分開分享",
+    "srcHash": "e24fa4ca4bc7",
     "origin": "human"
   },
   "feedback.screenshot.title": {
@@ -11899,6 +11899,66 @@
   "feedback.shake.preparing": {
     "message": "正在準備意見回饋",
     "srcHash": "8fac052b3ba5",
+    "origin": "human"
+  },
+  "feedback.screenshot.captureSuccess": {
+    "message": "已擷取螢幕截圖",
+    "srcHash": "5b3e9a495e2f",
+    "origin": "human"
+  },
+  "feedback.screenshot.include": {
+    "message": "包含螢幕截圖",
+    "srcHash": "9be5c493ce1f",
+    "origin": "human"
+  },
+  "feedback.screenshot.includeA11y": {
+    "message": "分享時包含螢幕截圖",
+    "srcHash": "8c9960f6939b",
+    "origin": "human"
+  },
+  "feedback.screenshot.retake": {
+    "message": "重新擷取",
+    "srcHash": "1e6828423fec",
+    "origin": "human"
+  },
+  "feedback.screenshot.retakeHint": {
+    "message": "取代目前的螢幕截圖",
+    "srcHash": "e9d692bee5b8",
+    "origin": "human"
+  },
+  "feedback.screenshot.tryAgain": {
+    "message": "再試一次",
+    "srcHash": "37274f773c8d",
+    "origin": "human"
+  },
+  "feedback.screenshot.tryAgainHint": {
+    "message": "再次嘗試擷取目前畫面",
+    "srcHash": "cbdd13bee69f",
+    "origin": "human"
+  },
+  "feedback.screenshot.unavailable": {
+    "message": "無法取得螢幕截圖",
+    "srcHash": "8ac1334571ba",
+    "origin": "human"
+  },
+  "settings.feedback.shake": {
+    "message": "搖晃以回報",
+    "srcHash": "252a940bc71f",
+    "origin": "human"
+  },
+  "settings.feedback.shakeA11y": {
+    "message": "搖晃以回報",
+    "srcHash": "079de24ed7dd",
+    "origin": "human"
+  },
+  "settings.feedback.shakeA11yHint": {
+    "message": "搖晃手機時開啟意見回饋並擷取目前畫面",
+    "srcHash": "a0f68b9218d3",
+    "origin": "human"
+  },
+  "settings.feedback.shakeHint": {
+    "message": "搖晃手機即可開啟附有螢幕截圖的意見回饋。",
+    "srcHash": "da1dde77b97f",
     "origin": "human"
   }
 }
