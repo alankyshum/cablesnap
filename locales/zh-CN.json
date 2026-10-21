@@ -11888,5 +11888,125 @@
     "message": "API 凭证无效，已略过；其他资料已汇入。",
     "srcHash": "e43f4a144f16",
     "origin": "human"
+  },
+  "feedback.closeA11y": {
+    "message": "关闭意见回馈并返回上一个画面",
+    "srcHash": "211af4997c66",
+    "origin": "human"
+  },
+  "feedback.github.openDraft": {
+    "message": "开启 GitHub 草稿",
+    "srcHash": "bf6f7a516da2",
+    "origin": "human"
+  },
+  "feedback.screenshot.captured": {
+    "message": "已撷取萤幕截图。分享前请先检查内容。",
+    "srcHash": "bf8533f332e2",
+    "origin": "human"
+  },
+  "feedback.screenshot.consent": {
+    "message": "我已检查此萤幕截图，并同意分享",
+    "srcHash": "c3f3fe36e04e",
+    "origin": "human"
+  },
+  "feedback.screenshot.consentA11y": {
+    "message": "同意分享已检查的萤幕截图",
+    "srcHash": "cd357cdb4eab",
+    "origin": "human"
+  },
+  "feedback.screenshot.failed": {
+    "message": "无法取得萤幕截图。你仍可传送意见回馈与诊断资料。",
+    "srcHash": "1b71f62f1ec5",
+    "origin": "human"
+  },
+  "feedback.screenshot.manualMessage": {
+    "message": "GitHub 草稿会包含说明，但无法自动附加 PNG。请另行分享已检查的萤幕截图，再自行附加至草稿。",
+    "srcHash": "c3e9b3ca2658",
+    "origin": "human"
+  },
+  "feedback.screenshot.manualTitle": {
+    "message": "手动附加萤幕截图",
+    "srcHash": "3bfc8a48b6dd",
+    "origin": "human"
+  },
+  "feedback.screenshot.noRetry": {
+    "message": "因意见回馈浮层已显示，因此不会再次撷取。",
+    "srcHash": "0401f7481251",
+    "origin": "human"
+  },
+  "feedback.screenshot.previewA11y": {
+    "message": "开启意见回馈前所撷取画面的预览",
+    "srcHash": "48e92e2dbacb",
+    "origin": "human"
+  },
+  "feedback.screenshot.privacy": {
+    "message": "萤幕截图可能包含姓名、通知、训练内容或其他可见的个人资讯，绝不会自动附加。",
+    "srcHash": "7d62d0f88d1f",
+    "origin": "human"
+  },
+  "feedback.screenshot.remove": {
+    "message": "移除萤幕截图",
+    "srcHash": "765fbf1dc874",
+    "origin": "human"
+  },
+  "feedback.screenshot.removeHint": {
+    "message": "立即删除暂存萤幕截图",
+    "srcHash": "72b339614ac3",
+    "origin": "human"
+  },
+  "feedback.screenshot.share": {
+    "message": "另行分享萤幕截图",
+    "srcHash": "6a25049f234b",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareAction": {
+    "message": "分享萤幕截图",
+    "srcHash": "5de8792dba40",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareDialog": {
+    "message": "分享已检查的萤幕截图",
+    "srcHash": "ac316e92eabe",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareFailure": {
+    "message": "无法分享萤幕截图",
+    "srcHash": "a9cbaaef46b0",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareHint": {
+    "message": "同意后，为此 PNG 开启系统分享选单",
+    "srcHash": "200ac9491254",
+    "origin": "human"
+  },
+  "feedback.screenshot.title": {
+    "message": "萤幕截图",
+    "srcHash": "63de4b60ee87",
+    "origin": "human"
+  },
+  "feedback.shake.subtitle": {
+    "message": "系统已在开启此浮层前尝试撷取萤幕截图。",
+    "srcHash": "5d5a75ed7724",
+    "origin": "human"
+  },
+  "feedback.shake.title": {
+    "message": "回报你看到的问题",
+    "srcHash": "3fe244b60f5b",
+    "origin": "human"
+  },
+  "feedback.diagnostics.privacy": {
+    "message": "诊断资料可能包含最近的画面、操作、错误、装置详细资料及可见的记录内容。分享前请先检查预览。",
+    "srcHash": "fc19f5084d50",
+    "origin": "human"
+  },
+  "feedback.header": {
+    "message": "意见回馈与问题回报",
+    "srcHash": "1b3860a00589",
+    "origin": "human"
+  },
+  "feedback.shake.preparing": {
+    "message": "正在准备意见回馈",
+    "srcHash": "8fac052b3ba5",
+    "origin": "human"
   }
 }

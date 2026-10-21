@@ -19,6 +19,13 @@ export async function skipOnboarding(page: Page) {
   await page.waitForTimeout(500);
 }
 
+/** Disable the asynchronous update modal for deterministic visual assertions. */
+export async function suppressUpdatePrompt(page: Page) {
+  await page.addInitScript(() => {
+    (window as unknown as Record<string, unknown>).__E2E_SUPPRESS_UPDATE_PROMPT__ = true;
+  });
+}
+
 /**
  * Navigate to a route. The __SKIP_ONBOARDING__ init script persists
  * across navigations within the same page context, so each goto()

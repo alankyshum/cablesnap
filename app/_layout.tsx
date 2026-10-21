@@ -44,6 +44,7 @@ import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
 import { filterLocalhostEvents } from '@/lib/sentry-localhost-filter';
 import { redactSentryBreadcrumb } from '@/lib/ai/redact';
 import { isSentryEnabled, resolveSentryDsn } from '@/lib/sentry-enabled';
+import { ShakeToReportBridge } from '@/components/ShakeToReportBridge';
 
 const sentryEnabled = isSentryEnabled(Constants.expoConfig?.extra);
 const sentryDsn = resolveSentryDsn(Constants.expoConfig?.extra);
@@ -155,6 +156,7 @@ export default Sentry.wrap(function RootLayout() {
         <ThemePreferenceProvider><LanguageProvider><I18nProvider>
       <BNAThemeProvider>
         <ToastProvider>
+          <ShakeToReportBridge />
           <BottomSheetModalProvider>
           <LayoutToastBridge />
           <UpdatePromptBridge />

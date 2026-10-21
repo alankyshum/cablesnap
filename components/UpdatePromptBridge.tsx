@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AppState, Linking, useWindowDimensions } from "react-native";
+import { AppState, Linking, Platform, useWindowDimensions } from "react-native";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { fontSizes, spacing } from "@/constants/design-tokens";
 import { checkForUpdate, clearLastCheckedAt, dismissUpdate, type AvailableUpdate } from "@/lib/update-check";
@@ -15,13 +15,19 @@ export function UpdatePromptBridge() {
   const { height } = useWindowDimensions();
   const [update, setUpdate] = useState<AvailableUpdate | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const e2eSuppressed = Platform.OS === "web" &&
+    typeof navigator !== "undefined" && navigator.webdriver &&
+    typeof window !== "undefined" &&
+    Boolean((window as unknown as Record<string, unknown>).__E2E_SUPPRESS_UPDATE_PROMPT__);
   useEffect(() => {
+    if (e2eSuppressed) return;
     let mounted = true;
     const check = async () => { const available = await checkForUpdate(); if (mounted && available) { setUpdate(available); setIsVisible(true); } };
     void check();
     const sub = AppState.addEventListener("change", (state) => { if (state === "active") void check(); });
     return () => { mounted = false; sub.remove(); };
-  }, []);
+  }, [e2eSuppressed]);
+  if (e2eSuppressed) return null;
   if (!update) return null;
   const description = [`${update.currentVersion} → ${update.version}`, update.name].filter(Boolean).join("\n\n");
   const dismiss = () => dismissUpdate(update.tag);

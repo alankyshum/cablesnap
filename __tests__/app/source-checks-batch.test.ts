@@ -39,9 +39,9 @@ describe("Exercise category chip active/inactive styling (BLD-189)", () => {
 describe("feedback screen padding (BLD-177)", () => {
   const src = readSrc("app/feedback.tsx");
 
-  it("FlashList contentContainerStyle includes styles.content with vertical padding", () => {
+  it("FlatList contentContainerStyle keeps vertical padding and adds safe-area clearance", () => {
     expect(src).toContain(
-      "contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}"
+      "contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding, paddingBottom: Math.max(40, insets.bottom + 24) }]}"
     );
     expect(src).toMatch(/content:\s*\{[^}]*padding:\s*16/);
     expect(src).toMatch(/content:\s*\{[^}]*paddingBottom:\s*40/);
