@@ -36,7 +36,7 @@ import FeedbackCard from '../../components/settings/FeedbackCard';
 import ReminderSection from '../../components/settings/ReminderSection';
 import ReleaseNotesModal from '../../components/ReleaseNotesModal';
 import { useThemeColors } from '@/hooks/useThemeColors';
-import { spacing } from '@/constants/design-tokens';
+import { radii, spacing } from '@/constants/design-tokens';
 import { useSettingsData } from '@/hooks/useSettingsData';
 import BackupCategorySheet from '@/components/settings/BackupCategorySheet';
 import { handleExport, pickImportBackup, pickImportWorkoutsCsv } from '@/lib/settings-handlers';
@@ -52,6 +52,7 @@ import { getEnabled as getMacroCoachEnabled } from '@/lib/db/macro-coach-setting
 import { getEnabled as getTrainingDayMacrosEnabled } from '@/lib/db/training-day-settings';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearImportSession, createImportSession } from '@/lib/import-session';
+import { ShakeToReportRow } from '@/components/settings/ShakeToReportRow';
 
 /**
  * Extra bottom clearance below the floating tab bar zone, derived from spacing
@@ -365,6 +366,8 @@ export default function Settings() {
             onErrors={() => router.push('/errors')}
             bareContent
           />
+          <Separator style={styles.tileDivider} />
+          <ShakeToReportRow colors={colors} />
         </SettingsTile>
 
         {/* ── 9. About ── */}
@@ -417,7 +420,7 @@ export default function Settings() {
               style={{
                 borderWidth: 1,
                 borderColor: colors.border,
-                borderRadius: 8,
+                borderRadius: radii.md,
                 padding: spacing.xs,
                 marginTop: spacing.sm,
                 alignSelf: 'flex-start',
@@ -439,7 +442,7 @@ export default function Settings() {
               style={{
                 borderWidth: 1,
                 borderColor: colors.border,
-                borderRadius: 8,
+                borderRadius: radii.md,
                 padding: spacing.xs,
                 marginTop: spacing.md,
                 alignSelf: 'flex-start',

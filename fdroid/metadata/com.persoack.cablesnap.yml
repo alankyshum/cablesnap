@@ -41,6 +41,7 @@ Builds:
       - node_modules/@react-native-community/netinfo/android/build.gradle
       - node_modules/react-native-safe-area-context/android/build.gradle
       - node_modules/react-native-view-shot/android/build.gradle
+      - node_modules/expo-sensors/android/build.gradle
     scandelete:
       - node_modules
     build:
@@ -70,6 +71,7 @@ Builds:
       - node_modules/@react-native-community/netinfo/android/build.gradle
       - node_modules/react-native-safe-area-context/android/build.gradle
       - node_modules/react-native-view-shot/android/build.gradle
+      - node_modules/expo-sensors/android/build.gradle
     scandelete:
       - node_modules
     build:
@@ -99,6 +101,7 @@ Builds:
       - node_modules/@react-native-community/netinfo/android/build.gradle
       - node_modules/react-native-safe-area-context/android/build.gradle
       - node_modules/react-native-view-shot/android/build.gradle
+      - node_modules/expo-sensors/android/build.gradle
     scandelete:
       - node_modules
     build:
@@ -128,6 +131,7 @@ Builds:
       - node_modules/@react-native-community/netinfo/android/build.gradle
       - node_modules/react-native-safe-area-context/android/build.gradle
       - node_modules/react-native-view-shot/android/build.gradle
+      - node_modules/expo-sensors/android/build.gradle
     scandelete:
       - node_modules
     build:

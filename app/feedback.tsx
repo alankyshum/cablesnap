@@ -21,6 +21,10 @@ import { recent as recentInteractions } from "../lib/interactions";
 import { getRecentConsoleLogs } from "../lib/console-log-buffer";
 import type { ConsoleLogEntry, ErrorEntry, Interaction, ReportType } from "../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { ScreenshotSection } from "@/components/feedback/ScreenshotSection";
+import { useFeedbackScreenshot } from "@/hooks/useFeedbackScreenshot";
+import { showScreenshotAttachmentNotice } from "@/lib/feedback-screenshot";
+import { radii, spacing } from "@/constants/design-tokens";
 
 const MAX_TITLE = 150;
 
@@ -88,7 +92,8 @@ export default function FeedbackScreen() {
   const colors = useThemeColors();
   const typeOptions = getTypeOptions();
   const layout = useLayout();
-  const params = useLocalSearchParams<{ type?: string }>();
+  const params = useLocalSearchParams<{ type?: string; screenshotAudit?: string }>();
+  const screenshot = useFeedbackScreenshot(params.screenshotAudit);
 
   const initial = (params.type === "bug" || params.type === "feature" || params.type === "crash")
     ? params.type
@@ -164,7 +169,19 @@ export default function FeedbackScreen() {
     }
   }, [valid, reportPayload, diag, errors, interactions, consoleLogs, startCooldown, toast]);
 
-  const handleGitHub = useCallback(async () => {
+  const handleScreenshotShare = useCallback(async () => {
+    if (!screenshot.uri) return;
+    try {
+      await Sharing.shareAsync(screenshot.uri, {
+        mimeType: "image/png",
+        dialogTitle: t({ id: "feedback.screenshot.share", message: "Share Screenshot" }),
+      });
+    } catch {
+      toast.error(t({ id: "feedback.screenshot.shareFailure", message: "Unable to share screenshot" }));
+    }
+  }, [screenshot.uri, toast]);
+
+  const openGitHub = useCallback(async () => {
     if (!valid) return;
     const state = await NetInfo.fetch();
     if (!state.isConnected) {
@@ -178,6 +195,15 @@ export default function FeedbackScreen() {
     startCooldown();
      toast.info(t({ id: "feedback.github.opened", message: "Report opened in browser" }));
   }, [valid, reportPayload, handleShare, startCooldown, toast]);
+
+  const handleGitHub = useCallback(async () => {
+    if (!valid) return;
+    if (!screenshot.uri || !screenshot.included) {
+      await openGitHub();
+      return;
+    }
+    showScreenshotAttachmentNotice(openGitHub, handleScreenshotShare);
+  }, [valid, screenshot.uri, screenshot.included, openGitHub, handleScreenshotShare]);
 
   const diagText = buildDiagText(type, interactions, errors, consoleLogs);
 
@@ -200,8 +226,8 @@ export default function FeedbackScreen() {
         style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
         contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
         renderItem={() => (
-          <View>
-            <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
+          <View style={styles.form}>
+            <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: spacing.sm }}>
               Report Type
             </Text>
             <SegmentedControl
@@ -213,7 +239,7 @@ export default function FeedbackScreen() {
               style={styles.segment}
             />
 
-      <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: 16, marginBottom: 8 }}>
+      <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: spacing.base, marginBottom: spacing.sm }}>
         Title ({title.length}/{MAX_TITLE})
       </Text>
       <Input
@@ -226,7 +252,7 @@ export default function FeedbackScreen() {
          accessibilityLabel={t({ id: "feedback.title.a11y", message: "Report title" })}
       />
 
-      <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: 16, marginBottom: 8 }}>
+      <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: spacing.base, marginBottom: spacing.sm }}>
         Description{type !== "crash" ? " (required)" : " (optional)"}
       </Text>
       <Input
@@ -238,6 +264,18 @@ export default function FeedbackScreen() {
         rows={4}
         inputStyle={{ ...styles.input, minHeight: 100 }}
          accessibilityLabel={t({ id: "feedback.description.a11y", message: "Report description" })}
+      />
+
+      <ScreenshotSection
+        colors={colors}
+        uri={screenshot.uri}
+        unavailable={screenshot.unavailable}
+        included={screenshot.included}
+        capturing={screenshot.capturing}
+        onIncludedChange={screenshot.setIncluded}
+        onCapture={screenshot.capture}
+        onRemove={screenshot.remove}
+        onShare={handleScreenshotShare}
       />
 
       <View style={styles.diagHeader}>
@@ -301,23 +339,24 @@ export default function FeedbackScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 16, paddingBottom: 40 },
-  segment: { marginBottom: 8 },
-  input: { marginBottom: 4 },
+  content: { padding: spacing.base, paddingBottom: spacing.lg * 2 },
+  form: { width: "100%", maxWidth: 960, alignSelf: "center" },
+  segment: { marginBottom: spacing.sm },
+  input: { marginBottom: spacing.xs },
   diagHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 16,
-    marginBottom: 8,
-    gap: 12,
+    marginTop: spacing.base,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
   },
   preview: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.base,
   },
   btn: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     minHeight: 48,
   },
 });
