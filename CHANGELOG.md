@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- On Android, shake the phone to open a bug-report overlay with an optional, review-before-sharing screenshot of the previous screen.
 
 ## v0.26.121 — 2026-10-20
 <!-- versionCode: 187006 -->

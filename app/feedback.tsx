@@ -1,17 +1,18 @@
 import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Linking, StyleSheet, Switch, View, FlatList } from "react-native";
+import { AccessibilityInfo, Alert, findNodeHandle, KeyboardAvoidingView, Linking, Platform, StyleSheet, Switch, TextInput, View, FlatList } from "react-native";
 import { useLayout } from "../lib/layout";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useToast } from "@/components/ui/bna-toast";
-import { ChevronUp, ChevronDown, ExternalLink, Share2 } from "lucide-react-native";
+import { ChevronUp, ChevronDown, ExternalLink, Share2, X } from "lucide-react-native";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import NetInfo from "@react-native-community/netinfo";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   generateGitHubURL,
   generateShareText,
@@ -21,6 +22,9 @@ import { recent as recentInteractions } from "../lib/interactions";
 import { getRecentConsoleLogs } from "../lib/console-log-buffer";
 import type { ConsoleLogEntry, ErrorEntry, Interaction, ReportType } from "../lib/types";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { ScreenshotSection } from "@/components/feedback/ScreenshotSection";
+import { useFeedbackScreenshot } from "@/hooks/useFeedbackScreenshot";
+import { withScreenshotAttachmentNote } from "@/lib/feedback-submission";
 
 const MAX_TITLE = 150;
 
@@ -88,12 +92,17 @@ export default function FeedbackScreen() {
   const colors = useThemeColors();
   const typeOptions = getTypeOptions();
   const layout = useLayout();
-  const params = useLocalSearchParams<{ type?: string }>();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const titleRef = useRef<TextInput>(null);
+  const params = useLocalSearchParams<{ type?: string; source?: string; screenshotAudit?: string }>();
+  const fromShake = params.source === "shake";
+  const screenshot = useFeedbackScreenshot(params.screenshotAudit);
 
   const initial = (params.type === "bug" || params.type === "feature" || params.type === "crash")
     ? params.type
     : "bug";
-  const locked = params.type === "crash";
+  const locked = params.type === "crash" || fromShake;
 
   const [type, setType] = useState<ReportType>(initial);
   const [title, setTitle] = useState("");
@@ -117,6 +126,14 @@ export default function FeedbackScreen() {
   }, []);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      const node = findNodeHandle(titleRef.current);
+      if (node) AccessibilityInfo.setAccessibilityFocus(node);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     if (cooldown <= 0) {
       if (timer.current) clearInterval(timer.current);
       timer.current = null;
@@ -133,15 +150,28 @@ export default function FeedbackScreen() {
 
   const startCooldown = useCallback(() => setCooldown(5), []);
 
+  const includeScreenshot = screenshot.state === "ready" && screenshot.consented;
   const reportPayload = useMemo(() => ({
     type,
     title: title.trim(),
-    description: desc.trim(),
+    description: withScreenshotAttachmentNote(desc, includeScreenshot),
     errors,
     interactions,
     consoleLogs,
     includeDiag: diag,
-  }), [type, title, desc, errors, interactions, consoleLogs, diag]);
+  }), [type, title, desc, errors, interactions, consoleLogs, diag, includeScreenshot]);
+
+  const handleScreenshotShare = useCallback(async () => {
+    if (typeof screenshot.uri !== "string" || !screenshot.consented) return;
+    try {
+      await Sharing.shareAsync(screenshot.uri, {
+        mimeType: "image/png",
+        dialogTitle: t({ id: "feedback.screenshot.shareDialog", message: "Share reviewed screenshot" }),
+      });
+    } catch {
+      toast.error(t({ id: "feedback.screenshot.shareFailure", message: "Unable to share screenshot" }));
+    }
+  }, [screenshot.uri, screenshot.consented, toast]);
 
   const handleShare = useCallback(async () => {
     if (!valid) return;
@@ -164,7 +194,7 @@ export default function FeedbackScreen() {
     }
   }, [valid, reportPayload, diag, errors, interactions, consoleLogs, startCooldown, toast]);
 
-  const handleGitHub = useCallback(async () => {
+  const openGitHub = useCallback(async () => {
     if (!valid) return;
     const state = await NetInfo.fetch();
     if (!state.isConnected) {
@@ -179,6 +209,23 @@ export default function FeedbackScreen() {
      toast.info(t({ id: "feedback.github.opened", message: "Report opened in browser" }));
   }, [valid, reportPayload, handleShare, startCooldown, toast]);
 
+  const handleGitHub = useCallback(async () => {
+    if (!valid) return;
+    if (!includeScreenshot) {
+      await openGitHub();
+      return;
+    }
+    Alert.alert(
+      t({ id: "feedback.screenshot.manualTitle", message: "Attach screenshot manually" }),
+      t({ id: "feedback.screenshot.manualMessage", message: "The GitHub draft includes a note, but cannot attach the PNG. Share the reviewed screenshot separately, then attach it to the draft yourself." }),
+      [
+        { text: t({ id: "common.cancel", message: "Cancel" }), style: "cancel" },
+        { text: t({ id: "feedback.screenshot.shareAction", message: "Share screenshot" }), onPress: handleScreenshotShare },
+        { text: t({ id: "feedback.github.openDraft", message: "Open GitHub draft" }), onPress: () => { void openGitHub(); } },
+      ],
+    );
+  }, [valid, includeScreenshot, openGitHub, handleScreenshotShare]);
+
   const diagText = buildDiagText(type, interactions, errors, consoleLogs);
 
   const buttons = useMemo(
@@ -191,32 +238,78 @@ export default function FeedbackScreen() {
   );
 
   const ITEMS = ["form"] as const;
+  const shakeIntro = fromShake ? (
+    <View style={styles.modalIntro}>
+      <View style={styles.modalIntroCopy}>
+        <Text variant="subtitle" style={{ color: colors.onSurface }} accessibilityRole="header">
+          {t({ id: "feedback.shake.title", message: "Report what you saw" })}
+        </Text>
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+          {t({ id: "feedback.shake.subtitle", message: "A screenshot was attempted before this overlay opened." })}
+        </Text>
+      </View>
+      <Button
+        variant="ghost"
+        size="icon"
+        icon={X}
+        onPress={() => router.back()}
+        accessibilityLabel={t({ id: "feedback.closeA11y", message: "Close feedback and return to the previous screen" })}
+        testID="feedback-close"
+      />
+    </View>
+  ) : null;
+  const typePicker = fromShake ? (
+    <View style={[styles.lockedType, { backgroundColor: colors.surfaceVariant }]}>
+      <Text variant="body" style={{ color: colors.onSurface }}>{t({ id: "feedback.type.bug", message: "Bug Report" })}</Text>
+    </View>
+  ) : (
+    <SegmentedControl
+      value={type}
+      onValueChange={(value) => {
+        if (!locked) setType(value as ReportType);
+      }}
+      buttons={buttons}
+      style={styles.segment}
+    />
+  );
+  const screenshotSection = fromShake ? (
+    <ScreenshotSection
+      colors={colors}
+      state={screenshot.state}
+      uri={screenshot.uri}
+      consented={screenshot.consented}
+      onConsentChange={screenshot.setConsented}
+      onRemove={screenshot.remove}
+      onShare={handleScreenshotShare}
+    />
+  ) : null;
 
   return (
-    <>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={80}
+    >
       <FlatList
         data={ITEMS}
         keyExtractor={(item) => item}
-        style={StyleSheet.flatten([styles.container, { backgroundColor: colors.background }])}
-        contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding, paddingBottom: Math.max(40, insets.bottom + 24) }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         renderItem={() => (
-          <View>
+          <View style={styles.form} accessibilityViewIsModal={fromShake || undefined} testID="feedback-form">
+            {shakeIntro}
             <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
               Report Type
             </Text>
-            <SegmentedControl
-              value={type}
-              onValueChange={(v) => {
-                if (!locked) setType(v as ReportType);
-              }}
-              buttons={buttons}
-              style={styles.segment}
-            />
+            {typePicker}
 
       <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: 16, marginBottom: 8 }}>
         Title ({title.length}/{MAX_TITLE})
       </Text>
       <Input
+        ref={titleRef}
         variant="outline"
          placeholder={t({ id: "feedback.title.placeholder", message: "Brief summary of the issue" })}
         value={title}
@@ -225,6 +318,8 @@ export default function FeedbackScreen() {
         inputStyle={styles.input}
          accessibilityLabel={t({ id: "feedback.title.a11y", message: "Report title" })}
       />
+
+      {screenshotSection}
 
       <Text variant="subtitle" style={{ color: colors.onSurface, marginTop: 16, marginBottom: 8 }}>
         Description{type !== "crash" ? " (required)" : " (optional)"}
@@ -246,7 +341,7 @@ export default function FeedbackScreen() {
             Include diagnostic data
           </Text>
           <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-            Diagnostic data helps us fix issues faster. No personal data is collected.
+            {t({ id: "feedback.diagnostics.privacy", message: "Diagnostic data can include recent screens, actions, errors, device details, and visible log content. Review the preview before sharing." })}
           </Text>
         </View>
         <Switch
@@ -295,13 +390,17 @@ export default function FeedbackScreen() {
           </View>
         )}
       />
-    </>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 16, paddingBottom: 40 },
+  form: { width: "100%", maxWidth: 600, alignSelf: "center" },
+  modalIntro: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 },
+  modalIntroCopy: { flex: 1, gap: 4 },
+  lockedType: { minHeight: 44, justifyContent: "center", paddingHorizontal: 16, borderRadius: 8, marginBottom: 8 },
   segment: { marginBottom: 8 },
   input: { marginBottom: 4 },
   diagHeader: {

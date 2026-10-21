@@ -11888,5 +11888,115 @@
     "message": "Creating workout template",
     "srcHash": "c71e91ff884b",
     "origin": "human"
+  },
+  "feedback.closeA11y": {
+    "message": "Close feedback and return to the previous screen",
+    "srcHash": "211af4997c66",
+    "origin": "human"
+  },
+  "feedback.github.openDraft": {
+    "message": "Open GitHub draft",
+    "srcHash": "bf6f7a516da2",
+    "origin": "human"
+  },
+  "feedback.screenshot.captured": {
+    "message": "Screenshot captured. Review it before sharing.",
+    "srcHash": "bf8533f332e2",
+    "origin": "human"
+  },
+  "feedback.screenshot.consent": {
+    "message": "I reviewed this screenshot and consent to sharing it",
+    "srcHash": "c3f3fe36e04e",
+    "origin": "human"
+  },
+  "feedback.screenshot.consentA11y": {
+    "message": "Consent to share reviewed screenshot",
+    "srcHash": "cd357cdb4eab",
+    "origin": "human"
+  },
+  "feedback.screenshot.failed": {
+    "message": "Screenshot unavailable. You can still send feedback and diagnostics.",
+    "srcHash": "1b71f62f1ec5",
+    "origin": "human"
+  },
+  "feedback.screenshot.manualMessage": {
+    "message": "The GitHub draft includes a note, but cannot attach the PNG. Share the reviewed screenshot separately, then attach it to the draft yourself.",
+    "srcHash": "c3e9b3ca2658",
+    "origin": "human"
+  },
+  "feedback.screenshot.manualTitle": {
+    "message": "Attach screenshot manually",
+    "srcHash": "3bfc8a48b6dd",
+    "origin": "human"
+  },
+  "feedback.screenshot.noRetry": {
+    "message": "Capture was not retried because the feedback overlay is now visible.",
+    "srcHash": "0401f7481251",
+    "origin": "human"
+  },
+  "feedback.screenshot.previewA11y": {
+    "message": "Preview of the screen captured before feedback opened",
+    "srcHash": "48e92e2dbacb",
+    "origin": "human"
+  },
+  "feedback.screenshot.privacy": {
+    "message": "Screenshots can contain names, notifications, workout details, or other visible personal information. It is never attached automatically.",
+    "srcHash": "7d62d0f88d1f",
+    "origin": "human"
+  },
+  "feedback.screenshot.remove": {
+    "message": "Remove screenshot",
+    "srcHash": "765fbf1dc874",
+    "origin": "human"
+  },
+  "feedback.screenshot.removeHint": {
+    "message": "Deletes the temporary screenshot now",
+    "srcHash": "72b339614ac3",
+    "origin": "human"
+  },
+  "feedback.screenshot.share": {
+    "message": "Share screenshot separately",
+    "srcHash": "6a25049f234b",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareAction": {
+    "message": "Share screenshot",
+    "srcHash": "5de8792dba40",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareDialog": {
+    "message": "Share reviewed screenshot",
+    "srcHash": "ac316e92eabe",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareFailure": {
+    "message": "Unable to share screenshot",
+    "srcHash": "a9cbaaef46b0",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareHint": {
+    "message": "Opens the system share sheet for this PNG after consent",
+    "srcHash": "200ac9491254",
+    "origin": "human"
+  },
+  "feedback.screenshot.title": {
+    "message": "Screenshot",
+    "srcHash": "63de4b60ee87",
+    "origin": "human"
+  },
+  "feedback.shake.subtitle": {
+    "message": "A screenshot was attempted before this overlay opened.",
+    "srcHash": "5d5a75ed7724",
+    "origin": "human"
+  },
+  "feedback.shake.title": {
+    "message": "Report what you saw",
+    "srcHash": "3fe244b60f5b",
+    "origin": "human"
+  },
+  "feedback.diagnostics.privacy": {
+    "message": "Diagnostic data can include recent screens, actions, errors, device details, and visible log content. Review the preview before sharing.",
+    "srcHash": "fc19f5084d50",
+    "origin": "human"
   }
 }

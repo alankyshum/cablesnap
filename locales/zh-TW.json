@@ -11780,5 +11780,115 @@
     "message": "API 憑證無效，已略過；其他資料已匯入。",
     "srcHash": "e43f4a144f16",
     "origin": "human"
+  },
+  "feedback.closeA11y": {
+    "message": "關閉意見回饋並返回上一個畫面",
+    "srcHash": "211af4997c66",
+    "origin": "human"
+  },
+  "feedback.github.openDraft": {
+    "message": "開啟 GitHub 草稿",
+    "srcHash": "bf6f7a516da2",
+    "origin": "human"
+  },
+  "feedback.screenshot.captured": {
+    "message": "已擷取螢幕截圖。分享前請先檢查內容。",
+    "srcHash": "bf8533f332e2",
+    "origin": "human"
+  },
+  "feedback.screenshot.consent": {
+    "message": "我已檢查此螢幕截圖，並同意分享",
+    "srcHash": "c3f3fe36e04e",
+    "origin": "human"
+  },
+  "feedback.screenshot.consentA11y": {
+    "message": "同意分享已檢查的螢幕截圖",
+    "srcHash": "cd357cdb4eab",
+    "origin": "human"
+  },
+  "feedback.screenshot.failed": {
+    "message": "無法取得螢幕截圖。你仍可傳送意見回饋與診斷資料。",
+    "srcHash": "1b71f62f1ec5",
+    "origin": "human"
+  },
+  "feedback.screenshot.manualMessage": {
+    "message": "GitHub 草稿會包含說明，但無法自動附加 PNG。請另行分享已檢查的螢幕截圖，再自行附加至草稿。",
+    "srcHash": "c3e9b3ca2658",
+    "origin": "human"
+  },
+  "feedback.screenshot.manualTitle": {
+    "message": "手動附加螢幕截圖",
+    "srcHash": "3bfc8a48b6dd",
+    "origin": "human"
+  },
+  "feedback.screenshot.noRetry": {
+    "message": "因意見回饋浮層已顯示，因此不會再次擷取。",
+    "srcHash": "0401f7481251",
+    "origin": "human"
+  },
+  "feedback.screenshot.previewA11y": {
+    "message": "開啟意見回饋前所擷取畫面的預覽",
+    "srcHash": "48e92e2dbacb",
+    "origin": "human"
+  },
+  "feedback.screenshot.privacy": {
+    "message": "螢幕截圖可能包含姓名、通知、訓練內容或其他可見的個人資訊，絕不會自動附加。",
+    "srcHash": "7d62d0f88d1f",
+    "origin": "human"
+  },
+  "feedback.screenshot.remove": {
+    "message": "移除螢幕截圖",
+    "srcHash": "765fbf1dc874",
+    "origin": "human"
+  },
+  "feedback.screenshot.removeHint": {
+    "message": "立即刪除暫存螢幕截圖",
+    "srcHash": "72b339614ac3",
+    "origin": "human"
+  },
+  "feedback.screenshot.share": {
+    "message": "另行分享螢幕截圖",
+    "srcHash": "6a25049f234b",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareAction": {
+    "message": "分享螢幕截圖",
+    "srcHash": "5de8792dba40",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareDialog": {
+    "message": "分享已檢查的螢幕截圖",
+    "srcHash": "ac316e92eabe",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareFailure": {
+    "message": "無法分享螢幕截圖",
+    "srcHash": "a9cbaaef46b0",
+    "origin": "human"
+  },
+  "feedback.screenshot.shareHint": {
+    "message": "同意後，為此 PNG 開啟系統分享選單",
+    "srcHash": "200ac9491254",
+    "origin": "human"
+  },
+  "feedback.screenshot.title": {
+    "message": "螢幕截圖",
+    "srcHash": "63de4b60ee87",
+    "origin": "human"
+  },
+  "feedback.shake.subtitle": {
+    "message": "系統已在開啟此浮層前嘗試擷取螢幕截圖。",
+    "srcHash": "5d5a75ed7724",
+    "origin": "human"
+  },
+  "feedback.shake.title": {
+    "message": "回報你看到的問題",
+    "srcHash": "3fe244b60f5b",
+    "origin": "human"
+  },
+  "feedback.diagnostics.privacy": {
+    "message": "診斷資料可能包含最近的畫面、操作、錯誤、裝置詳細資料及可見的記錄內容。分享前請先檢查預覽。",
+    "srcHash": "fc19f5084d50",
+    "origin": "human"
   }
 }
