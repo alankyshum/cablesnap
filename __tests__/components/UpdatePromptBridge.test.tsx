@@ -5,6 +5,9 @@ import { UpdatePromptBridge } from "@/components/UpdatePromptBridge";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { ToastProvider } from "@/components/ui/bna-toast";
 
+let mockPathname = "/";
+jest.mock("expo-router", () => ({ usePathname: () => mockPathname }));
+
 jest.mock("react-native-reanimated", () => {
   const reanimated = jest.requireActual("../../__mocks__/react-native-reanimated");
   return {
@@ -37,6 +40,7 @@ const mockedSet = require("@/lib/db/settings").setAppSetting as jest.Mock;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockPathname = "/";
 });
 
 afterEach(() => {
@@ -73,6 +77,14 @@ describe("UpdatePromptBridge", () => {
     expect(screen.queryByText("## What's New")).toBeNull();
     expect(screen.queryByText("<!-- versionCode: 172 -->")).toBeNull();
     expect(screen.getByText("A".repeat(500))).toBeTruthy();
+    screen.unmount();
+  });
+
+  it("does not cover the feedback route", async () => {
+    mockPathname = "/feedback";
+    const screen = renderBridge();
+    await waitFor(() => expect(require("@/lib/update-check").checkForUpdate).toHaveBeenCalled());
+    expect(screen.queryByTestId("update-available-dialog")).toBeNull();
     screen.unmount();
   });
 

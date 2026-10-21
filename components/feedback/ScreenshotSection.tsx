@@ -36,7 +36,7 @@ export function ScreenshotSection(props: Props) {
             resizeMode="contain"
             style={[styles.thumbnail, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}
             accessibilityRole="image"
-            accessibilityLabel={t({ id: "feedback.screenshot.previewA11y", message: "Screenshot preview, included by default" })}
+            accessibilityLabel={t({ id: "feedback.screenshot.previewA11y", message: "Screenshot preview" })}
             testID="feedback-screenshot-thumbnail"
           />
           <View style={[styles.actions, layout.compact && styles.actionsCompact]}>
@@ -68,9 +68,11 @@ export function ScreenshotSection(props: Props) {
           />
         </View>
       )}
-      <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-        {t({ id: "feedback.screenshot.privacy", message: "Review the screenshot for sensitive information before sharing." })}
-      </Text>
+      {uri && (
+        <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
+          {t({ id: "feedback.screenshot.privacy", message: "Review the screenshot for sensitive information before sharing." })}
+        </Text>
+      )}
     </View>
   );
 }

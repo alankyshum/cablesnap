@@ -8,11 +8,13 @@ import { ReleaseBody } from "@/components/release-notes/ReleaseBody";
 import { ScrollView } from "@/components/ui/scroll-view";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { stripHtmlComments, stripInternalRefs } from "@/lib/release-notes-markdown";
+import { usePathname } from "expo-router";
 
 export function UpdatePromptBridge() {
   const { error: showError } = useToast();
   const colors = useThemeColors();
   const { height } = useWindowDimensions();
+  const pathname = usePathname();
   const [update, setUpdate] = useState<AvailableUpdate | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   useEffect(() => {
@@ -22,7 +24,7 @@ export function UpdatePromptBridge() {
     const sub = AppState.addEventListener("change", (state) => { if (state === "active") void check(); });
     return () => { mounted = false; sub.remove(); };
   }, []);
-  if (!update) return null;
+  if (!update || pathname === "/feedback") return null;
   const description = [`${update.currentVersion} → ${update.version}`, update.name].filter(Boolean).join("\n\n");
   const dismiss = () => dismissUpdate(update.tag);
   const download = async () => {
