@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Shake your phone to open a feedback report with a reviewable screenshot, with a persisted opt-out in Settings and separate screenshot sharing for GitHub reports.
 
 ## v0.26.121 — 2026-10-20
 <!-- versionCode: 187006 -->
