@@ -11935,28 +11935,28 @@
     "origin": "human"
   },
   "feedback.screenshot.previewA11y": {
-    "message": "Preview of the screen captured before feedback opened",
-    "srcHash": "48e92e2dbacb",
+    "message": "Screenshot preview",
+    "srcHash": "626a796ab7aa",
     "origin": "human"
   },
   "feedback.screenshot.privacy": {
-    "message": "Screenshots can contain names, notifications, workout details, or other visible personal information. It is never attached automatically.",
-    "srcHash": "7d62d0f88d1f",
+    "message": "Review the screenshot for sensitive information before sharing.",
+    "srcHash": "049998951111",
     "origin": "human"
   },
   "feedback.screenshot.remove": {
-    "message": "Remove screenshot",
-    "srcHash": "765fbf1dc874",
+    "message": "Remove",
+    "srcHash": "2d304036338e",
     "origin": "human"
   },
   "feedback.screenshot.removeHint": {
-    "message": "Deletes the temporary screenshot now",
-    "srcHash": "72b339614ac3",
+    "message": "Removes and deletes the temporary screenshot",
+    "srcHash": "988cf9bff936",
     "origin": "human"
   },
   "feedback.screenshot.share": {
-    "message": "Share screenshot separately",
-    "srcHash": "6a25049f234b",
+    "message": "Share Screenshot",
+    "srcHash": "eaf74e0120d5",
     "origin": "human"
   },
   "feedback.screenshot.shareAction": {
@@ -11975,8 +11975,8 @@
     "origin": "human"
   },
   "feedback.screenshot.shareHint": {
-    "message": "Opens the system share sheet for this PNG after consent",
-    "srcHash": "200ac9491254",
+    "message": "Shares the PNG separately from the report",
+    "srcHash": "e24fa4ca4bc7",
     "origin": "human"
   },
   "feedback.screenshot.title": {
@@ -12007,6 +12007,66 @@
   "feedback.shake.preparing": {
     "message": "Preparing feedback",
     "srcHash": "8fac052b3ba5",
+    "origin": "human"
+  },
+  "feedback.screenshot.captureSuccess": {
+    "message": "Screenshot captured",
+    "srcHash": "5b3e9a495e2f",
+    "origin": "human"
+  },
+  "feedback.screenshot.include": {
+    "message": "Include screenshot",
+    "srcHash": "9be5c493ce1f",
+    "origin": "human"
+  },
+  "feedback.screenshot.includeA11y": {
+    "message": "Include screenshot when sharing",
+    "srcHash": "8c9960f6939b",
+    "origin": "human"
+  },
+  "feedback.screenshot.retake": {
+    "message": "Retake",
+    "srcHash": "1e6828423fec",
+    "origin": "human"
+  },
+  "feedback.screenshot.retakeHint": {
+    "message": "Replaces the current screenshot",
+    "srcHash": "e9d692bee5b8",
+    "origin": "human"
+  },
+  "feedback.screenshot.tryAgain": {
+    "message": "Try Again",
+    "srcHash": "37274f773c8d",
+    "origin": "human"
+  },
+  "feedback.screenshot.tryAgainHint": {
+    "message": "Attempts to capture the current screen again",
+    "srcHash": "cbdd13bee69f",
+    "origin": "human"
+  },
+  "feedback.screenshot.unavailable": {
+    "message": "Screenshot unavailable",
+    "srcHash": "8ac1334571ba",
+    "origin": "human"
+  },
+  "settings.feedback.shake": {
+    "message": "Shake to report",
+    "srcHash": "252a940bc71f",
+    "origin": "human"
+  },
+  "settings.feedback.shakeA11y": {
+    "message": "Shake to report",
+    "srcHash": "079de24ed7dd",
+    "origin": "human"
+  },
+  "settings.feedback.shakeA11yHint": {
+    "message": "Opens feedback and captures the current screen when you shake your phone",
+    "srcHash": "a0f68b9218d3",
+    "origin": "human"
+  },
+  "settings.feedback.shakeHint": {
+    "message": "Shake your phone to open feedback with a screenshot.",
+    "srcHash": "da1dde77b97f",
     "origin": "human"
   }
 }

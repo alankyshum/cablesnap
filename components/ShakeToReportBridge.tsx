@@ -3,19 +3,28 @@ import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, AppState, Platform } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { Accelerometer } from "expo-sensors";
+import { useToast } from "@/components/ui/bna-toast";
 import {
   captureFeedbackScreenshot,
   removeFeedbackScreenshot,
   setPendingFeedbackScreenshot,
 } from "@/lib/feedback-screenshot";
-import { ShakeDetector, ShakeLaunchGate } from "@/lib/shake-to-report";
+import {
+  canListenForShake,
+  getShakeToReportEnabled,
+  ShakeDetector,
+  ShakeLaunchGate,
+  subscribeShakeToReport,
+} from "@/lib/shake-to-report";
 
 export function ShakeToReportBridge() {
   const pathname = usePathname();
   const router = useRouter();
+  const toast = useToast();
   const gate = useRef(new ShakeLaunchGate());
   const wasOnFeedback = useRef(pathname === "/feedback");
   const [foreground, setForeground] = useState(AppState.currentState === "active");
+  const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
     if (wasOnFeedback.current && pathname !== "/feedback") {
@@ -25,7 +34,13 @@ export function ShakeToReportBridge() {
   }, [pathname]);
 
   useEffect(() => {
-    if (Platform.OS !== "android") return;
+    if (Platform.OS === "web") return;
+    getShakeToReportEnabled().then(setEnabled).catch(() => setEnabled(false));
+    return subscribeShakeToReport(setEnabled);
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
     const subscription = AppState.addEventListener("change", (next) => {
       setForeground(next === "active");
     });
@@ -33,7 +48,7 @@ export function ShakeToReportBridge() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS !== "android" || !foreground || pathname === "/feedback") return;
+    if (!canListenForShake(Platform.OS, enabled, foreground, true) || pathname === "/feedback") return;
     let mounted = true;
     let activeToken: number | null = null;
     let navigationCommitted = false;
@@ -42,7 +57,7 @@ export function ShakeToReportBridge() {
     const launchGate = gate.current;
 
     void Accelerometer.isAvailableAsync().then((available) => {
-      if (!mounted || !available) return;
+      if (!mounted || !canListenForShake(Platform.OS, enabled, foreground, available)) return;
       Accelerometer.setUpdateInterval(100);
       sensorSubscription = Accelerometer.addListener((sample) => {
         if (!detector.add(sample, Date.now())) return;
@@ -58,8 +73,14 @@ export function ShakeToReportBridge() {
           let result: { status: "ready"; uri: string } | { status: "failed"; uri: null };
           try {
             result = { status: "ready", uri: await capturePromise };
+            AccessibilityInfo.announceForAccessibility(
+              t({ id: "feedback.screenshot.captureSuccess", message: "Screenshot captured" }),
+            );
           } catch {
             result = { status: "failed", uri: null };
+            const message = t({ id: "feedback.screenshot.unavailable", message: "Screenshot unavailable" });
+            toast.info(message);
+            AccessibilityInfo.announceForAccessibility(message);
           }
 
           if (!mounted || !launchGate.owns(token)) {
@@ -85,7 +106,7 @@ export function ShakeToReportBridge() {
       if (activeToken !== null && !navigationCommitted) launchGate.cancel(activeToken);
       sensorSubscription?.remove();
     };
-  }, [foreground, pathname, router]);
+  }, [enabled, foreground, pathname, router, toast]);
 
   return null;
 }

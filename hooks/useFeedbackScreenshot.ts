@@ -1,6 +1,9 @@
+import { t } from "@lingui/core/macro";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
+import { AccessibilityInfo, Platform } from "react-native";
+import { useToast } from "@/components/ui/bna-toast";
 import {
+  captureFeedbackScreenshot,
   removeFeedbackScreenshot,
   takePendingFeedbackScreenshot,
 } from "@/lib/feedback-screenshot";
@@ -20,21 +23,45 @@ export function useFeedbackScreenshot(auditState?: string) {
   const [state, setState] = useState<FeedbackScreenshotState>(
     auditFailed || initial?.status === "failed" ? "failed" : initialUri ? "ready" : "none",
   );
-  const [consented, setConsented] = useState(false);
+  const [included, setIncluded] = useState(Boolean(initialUri));
+  const [capturing, setCapturing] = useState(false);
   const currentUri = useRef(uri);
+  const toast = useToast();
 
   useEffect(() => { currentUri.current = uri; }, [uri]);
   useEffect(() => () => {
     if (typeof currentUri.current === "string") removeFeedbackScreenshot(currentUri.current);
   }, []);
 
+  const capture = useCallback(async () => {
+    setCapturing(true);
+    try {
+      const nextUri = await captureFeedbackScreenshot();
+      if (typeof currentUri.current === "string") removeFeedbackScreenshot(currentUri.current);
+      currentUri.current = nextUri;
+      setUri(nextUri);
+      setState("ready");
+      setIncluded(true);
+      AccessibilityInfo.announceForAccessibility(
+        t({ id: "feedback.screenshot.captureSuccess", message: "Screenshot captured" }),
+      );
+    } catch {
+      if (!currentUri.current) setState("failed");
+      const message = t({ id: "feedback.screenshot.unavailable", message: "Screenshot unavailable" });
+      toast.info(message);
+      AccessibilityInfo.announceForAccessibility(message);
+    } finally {
+      setCapturing(false);
+    }
+  }, [toast]);
+
   const remove = useCallback(() => {
     if (typeof currentUri.current === "string") removeFeedbackScreenshot(currentUri.current);
     currentUri.current = null;
     setUri(null);
     setState("none");
-    setConsented(false);
+    setIncluded(false);
   }, []);
 
-  return { uri, state, consented, setConsented, remove };
+  return { uri, state, included, setIncluded, capturing, capture, remove };
 }
