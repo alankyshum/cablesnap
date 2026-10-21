@@ -29,6 +29,7 @@ describe("GitHub #963 shake detection", () => {
 
   it("listens only when native, enabled, foreground, and available", () => {
     expect(canListenForShake("android", true, true, true)).toBe(true);
+    expect(canListenForShake("ios", true, true, true)).toBe(true);
     expect(canListenForShake("web", true, true, true)).toBe(false);
     expect(canListenForShake("android", false, true, true)).toBe(false);
     expect(canListenForShake("android", true, false, true)).toBe(false);
