@@ -1,6 +1,6 @@
 {
   "name": "cablesnap",
-  "version": "0.26.121",
+  "version": "0.26.122",
   "license": "AGPL-3.0-or-later",
   "main": "index.js",
   "engines": {

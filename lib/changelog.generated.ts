@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.122",
+    "date": "2026-10-21",
+    "versionCode": 187007,
+    "body": "- On Android, shake the phone to open a bug-report overlay with an optional, review-before-sharing screenshot of the previous screen.\n- Shake reporting now has a default-on Settings toggle, screenshot retake and retry controls, and responsive review actions for phones and unfolded screens."
+  },
+  {
     "version": "0.26.121",
     "date": "2026-10-20",
     "versionCode": 187006,

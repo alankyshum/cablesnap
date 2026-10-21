@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.122 — 2026-10-21
+<!-- versionCode: 187007 -->
+
 - On Android, shake the phone to open a bug-report overlay with an optional, review-before-sharing screenshot of the previous screen.
 - Shake reporting now has a default-on Settings toggle, screenshot retake and retry controls, and responsive review actions for phones and unfolded screens.
 
