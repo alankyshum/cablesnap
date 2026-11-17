@@ -355,7 +355,7 @@ export async function createExtensionTables(database: SQLite.SQLiteDatabase): Pr
 
     CREATE TABLE IF NOT EXISTS strava_connection (
       id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-      athlete_id INTEGER NOT NULL,
+      athlete_id TEXT NOT NULL,
       athlete_name TEXT NOT NULL,
       connected_at INTEGER NOT NULL
     );

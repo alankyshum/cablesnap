@@ -24,6 +24,29 @@ async function addPerformanceIndexes(database: SQLite.SQLiteDatabase): Promise<v
   `);
 }
 
+async function migrateStravaAthleteId(database: SQLite.SQLiteDatabase): Promise<void> {
+  const columns = await database.getAllAsync<{ name: string }>(
+    "SELECT name FROM pragma_table_info('strava_connection') WHERE name = 'athlete_id' AND upper(type) = 'INTEGER'",
+  );
+  if (columns.length === 0) return;
+
+  // Cast inside SQLite, never through a JS number, and rebuild atomically.
+  await database.withTransactionAsync(async () => {
+    await database.execAsync(`
+      CREATE TABLE strava_connection_text (
+        id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        athlete_id TEXT NOT NULL,
+        athlete_name TEXT NOT NULL,
+        connected_at INTEGER NOT NULL
+      );
+      INSERT INTO strava_connection_text (id, athlete_id, athlete_name, connected_at)
+        SELECT id, CAST(athlete_id AS TEXT), athlete_name, connected_at FROM strava_connection;
+      DROP TABLE strava_connection;
+      ALTER TABLE strava_connection_text RENAME TO strava_connection;
+    `);
+  });
+}
+
 /**
  * migrate() uses a strict four-phase ordering to prevent the class of crash
  * seen in BLD-1094 ("no such column: gym_id"), where a CREATE INDEX in
@@ -204,6 +227,7 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
   // Keeping this invocation in Phase 2 makes the additive chat DDL part of the
   // migration phase without changing the existing extension-table ordering.
   await createExtensionTables(database);
+  await migrateStravaAthleteId(database);
   // BLD: assistant attribution. Nullable so all existing messages remain valid.
   await addColumnIfMissing(database, "coach_messages", "model_id", "TEXT DEFAULT NULL");
   } catch (err) {

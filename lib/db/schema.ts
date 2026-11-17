@@ -410,7 +410,7 @@ export const achievementsEarned = sqliteTable("achievements_earned", {
 
 export const stravaConnection = sqliteTable("strava_connection", {
   id: integer("id").primaryKey().default(1),
-  athlete_id: integer("athlete_id").notNull(),
+  athlete_id: text("athlete_id").notNull(),
   athlete_name: text("athlete_name").notNull(),
   connected_at: integer("connected_at").notNull(),
 });

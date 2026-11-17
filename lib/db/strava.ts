@@ -18,7 +18,7 @@ export async function getStravaConnection(): Promise<StravaConnection | null> {
 }
 
 export async function saveStravaConnection(
-  athleteId: number,
+  athleteId: string,
   athleteName: string
 ): Promise<void> {
   const db = await getDrizzle();

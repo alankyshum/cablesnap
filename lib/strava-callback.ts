@@ -6,6 +6,7 @@ import * as SecureStore from "expo-secure-store";
 import { uuid } from "./uuid";
 import { saveStravaConnection, getStravaConnection } from "./db";
 import { StravaError } from "./strava-error";
+import { stravaId } from "./strava-id";
 import {
   captureStravaError,
   stravaBreakcrumb,
@@ -104,7 +105,7 @@ let oauthConnectionSucceeded = false;
 
 export async function completeStravaCallback(
   url: string,
-): Promise<{ athleteId: number; athleteName: string } | null> {
+): Promise<{ athleteId: string; athleteName: string } | null> {
   if (Platform.OS === "web") return null;
   if (!url.startsWith(APP_DEEP_LINK)) return null;
 
@@ -181,15 +182,18 @@ export async function completeStravaCallback(
       throw err;
     }
 
+    const athlete = data.athlete as Record<string, unknown> | undefined;
+    const athleteId = stravaId(athlete);
+    if (!athleteId) throw new StravaError("unknown", "Strava returned an invalid athlete ID");
+
     await saveTokens(
       data.access_token as string,
       data.refresh_token as string,
       data.expires_at as number,
     );
 
-    const athleteId = (data.athlete as Record<string, unknown>)?.id as number ?? 0;
     const athleteName =
-      [(data.athlete as Record<string, unknown>)?.firstname, (data.athlete as Record<string, unknown>)?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
+      [athlete?.firstname, athlete?.lastname].filter(Boolean).join(" ") || "Strava Athlete";
 
     await saveStravaConnection(athleteId, athleteName);
     oauthConnectionSucceeded = true;
@@ -208,7 +212,7 @@ export async function completeStravaCallback(
 
 // eslint-disable-next-line complexity
 export async function connectStrava(): Promise<{
-  athleteId: number;
+  athleteId: string;
   athleteName: string;
 } | null> {
   if (Platform.OS === "web") return null;
