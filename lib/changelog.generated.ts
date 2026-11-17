@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.123",
+    "date": "2026-11-17",
+    "versionCode": 187008,
+    "body": "- Strava sync now supports larger activity and athlete IDs without losing precision.\n- Strava connection now rejects invalid athlete IDs instead of saving inaccurate ones."
+  },
+  {
     "version": "0.26.122",
     "date": "2026-10-21",
     "versionCode": 187007,

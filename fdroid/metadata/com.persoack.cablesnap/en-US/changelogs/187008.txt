@@ -1,0 +1,2 @@
+- Strava sync now supports larger activity and athlete IDs without losing precision.
+- Strava connection now rejects invalid athlete IDs instead of saving inaccurate ones.

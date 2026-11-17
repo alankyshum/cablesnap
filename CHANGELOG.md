@@ -22,6 +22,11 @@ marker) at release time.
 
 ## Unreleased
 
+_No user-facing changes yet._
+
+## v0.26.123 — 2026-11-17
+<!-- versionCode: 187008 -->
+
 - Strava sync now supports larger activity and athlete IDs without losing precision.
 - Strava connection now rejects invalid athlete IDs instead of saving inaccurate ones.
 
