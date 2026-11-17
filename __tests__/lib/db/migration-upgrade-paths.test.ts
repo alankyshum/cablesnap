@@ -410,24 +410,33 @@ describe("BLD-1059 — migrate() upgrade-path regression", () => {
     );
   });
 
-  it("rolls back the legacy Strava table rebuild when migration fails", async () => {
+  it("restores the original Strava table after a post-drop failure and retries successfully", async () => {
     const raw = createDb();
     buildPreBld1059Schema(raw);
     raw.exec("INSERT INTO strava_connection VALUES (1, 18014398509481985, 'Jane Doe', 123)");
     const db = wrapDb(raw);
     const exec = db.execAsync;
+    let injectFailure = true;
     db.execAsync = async (sql: string) => {
-      if (sql.includes("CREATE TABLE strava_connection_text")) {
-        raw.exec("CREATE TABLE strava_connection_text (id INTEGER)");
-        throw new Error("simulated migration failure");
+      if (injectFailure && sql.includes("DROP TABLE strava_connection;")) {
+        injectFailure = false;
+        await exec(sql.replace("ALTER TABLE strava_connection_text RENAME TO strava_connection;", "SELECT * FROM simulated_migration_failure;"));
+        return;
       }
       await exec(sql);
     };
 
-    await expect(migrate(db as never)).rejects.toThrow("simulated migration failure");
-    expect(raw.prepare("SELECT CAST(athlete_id AS TEXT) AS athlete_id FROM strava_connection").get())
-      .toEqual({ athlete_id: "18014398509481985" });
+    await expect(migrate(db as never)).rejects.toThrow("simulated_migration_failure");
+    expect(raw.prepare("SELECT CAST(athlete_id AS TEXT) AS athlete_id, athlete_name, connected_at FROM strava_connection").get())
+      .toEqual({ athlete_id: "18014398509481985", athlete_name: "Jane Doe", connected_at: 123 });
+    expect(raw.prepare("PRAGMA table_info(strava_connection)").all()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "athlete_id", type: "INTEGER", notnull: 1 })]),
+    );
     expect(tableExists(raw, "strava_connection_text")).toBe(false);
+
+    await migrate(db as never);
+    expect(raw.prepare("SELECT athlete_id, typeof(athlete_id) AS storage FROM strava_connection").get())
+      .toEqual({ athlete_id: "18014398509481985", storage: "text" });
   });
   /**
    * Test 1: Pre-BLD-1059 upgrade path.
