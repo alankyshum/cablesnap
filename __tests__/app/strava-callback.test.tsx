@@ -40,7 +40,7 @@ describe("StravaCallbackScreen Component", () => {
   it("handles successful callback, displays success toast, and redirects to settings", async () => {
     mockParams = { code: "some-auth-code", state: "some-state-uuid" };
     mockCompleteStravaCallback.mockResolvedValueOnce({
-      athleteId: 123,
+      athleteId: "123",
       athleteName: "Jane Doe",
     });
 

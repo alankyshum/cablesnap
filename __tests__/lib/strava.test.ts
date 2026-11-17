@@ -1,3 +1,4 @@
+// Strava large-ID regression: lossless activity and athlete identifiers.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable max-lines */
 /* eslint-disable max-lines-per-function */
@@ -335,10 +336,10 @@ describe("Strava Integration — Behavioral", () => {
 
     const result = await strava.connectStrava();
 
-    expect(result).toEqual({ athleteId: 42, athleteName: "Jane Doe" });
+    expect(result).toEqual({ athleteId: "42", athleteName: "Jane Doe" });
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith("strava_access_token", "at-1");
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith("strava_refresh_token", "rt-1");
-    expect(db.saveStravaConnection).toHaveBeenCalledWith(42, "Jane Doe");
+    expect(db.saveStravaConnection).toHaveBeenCalledWith("42", "Jane Doe");
     // Verify proxy URL is used
     expect(mockFetch.mock.calls[0][0]).toBe("https://test-proxy.example.com/token");
     // Verify body sends code but NOT code_verifier (Strava does not support PKCE),
@@ -1393,6 +1394,35 @@ describe("Strava Integration — Behavioral", () => {
         expect(mockFetch.mock.calls[1][1].method).toBe("PUT");
       });
 
+      it("preserves a large upload id_str in the sync log and PUT URL", async () => {
+        const id = "18014398509481985";
+        mockFetch.mockResolvedValueOnce({
+          ok: true, text: async () => '{"id":18014398509481985,"id_str":"18014398509481985"}',
+        }).mockResolvedValueOnce({ ok: true });
+
+        const result = await strava.syncSessionToStrava("s-phase4");
+
+        expect(result).toEqual({ status: "synced", activityId: id });
+        expect(db.markSyncSuccess).toHaveBeenCalledWith("s-phase4", id);
+        expect(mockFetch.mock.calls[1][0]).toBe(`https://www.strava.com/api/v3/activities/${id}`);
+      });
+
+      it("preserves a large duplicate id_str for GET, PUT, and the sync log", async () => {
+        const id = "18014398509481985";
+        const raw = '[{"id":18014398509481985,"id_str":"18014398509481985","name":"Leg Day","elapsed_time":3600}]';
+        mockFetch.mockResolvedValueOnce({ ok: false, status: 409 })
+          .mockResolvedValueOnce({ ok: true, json: async () => JSON.parse(raw) })
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ description: "Old" }) })
+          .mockResolvedValueOnce({ ok: true });
+
+        const result = await strava.syncSessionToStrava("s-phase4");
+
+        expect(result).toEqual({ status: "synced", activityId: id });
+        expect(db.markSyncSuccess).toHaveBeenCalledWith("s-phase4", id);
+        expect(mockFetch.mock.calls[2][0]).toBe(`https://www.strava.com/api/v3/activities/${id}`);
+        expect(mockFetch.mock.calls[3][0]).toBe(`https://www.strava.com/api/v3/activities/${id}`);
+      });
+
       it("PUT on post-sync caption edit", async () => {
         const Sentry = require("@sentry/react-native");
         db.getSyncLogForSession.mockResolvedValue({
@@ -2116,7 +2146,7 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
     Linking.__simulateUrl("cablesnap://strava-callback?code=dl-code&state=mock-state-uuid");
 
     const result = await connectPromise;
-    expect(result).toEqual({ athleteId: 77, athleteName: "Android User" });
+    expect(result).toEqual({ athleteId: "77", athleteName: "Android User" });
     expect(WebBrowser.dismissAuthSession).toHaveBeenCalled();
     const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(fetchBody.code).toBe("dl-code");
@@ -2131,7 +2161,7 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
     mockTokenFetch({ athlete: { id: 88, firstname: "iOS", lastname: "User" } });
 
     const result = await strava.connectStrava();
-    expect(result).toEqual({ athleteId: 88, athleteName: "iOS User" });
+    expect(result).toEqual({ athleteId: "88", athleteName: "iOS User" });
     // Listener was registered and removed
     expect(Linking.addEventListener).toHaveBeenCalledWith("url", expect.any(Function));
     const sub = Linking.addEventListener.mock.results[0].value;
@@ -2167,7 +2197,7 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
     mockTokenFetch({ athlete: { id: 55, firstname: "Cold", lastname: "Start" } });
 
     const result = await strava.connectStrava();
-    expect(result).toEqual({ athleteId: 55, athleteName: "Cold Start" });
+    expect(result).toEqual({ athleteId: "55", athleteName: "Cold Start" });
     // Browser should NOT have been opened — cold-start bypasses it
     expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
     expect(Linking.getInitialURL).toHaveBeenCalled();
@@ -2228,7 +2258,7 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
 
     const result = await strava.connectStrava();
     // Despite uuid() returning a different value, cold-start succeeds using persisted state.
-    expect(result).toEqual({ athleteId: 99, athleteName: "Cross Process" });
+    expect(result).toEqual({ athleteId: "99", athleteName: "Cross Process" });
     expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
     const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(fetchBody.code).toBe("cross-process-code");
@@ -2276,7 +2306,7 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
     Linking.__simulateUrl("cablesnap://strava-callback?code=real-code&state=mock-state-uuid");
 
     const result = await connectPromise;
-    expect(result).toEqual({ athleteId: 77, athleteName: "Android User" });
+    expect(result).toEqual({ athleteId: "77", athleteName: "Android User" });
     const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(fetchBody.code).toBe("real-code");
   });
@@ -2317,7 +2347,7 @@ describe("Strava Integration — Deep-link fallback (BLD-1193)", () => {
       jest.runAllTimers();
 
       const result = await connectPromise;
-      expect(result).toEqual({ athleteId: 99, athleteName: "Late Link" });
+      expect(result).toEqual({ athleteId: "99", athleteName: "Late Link" });
       expect(mockFetch).toHaveBeenCalledTimes(1);
       const fetchBody = JSON.parse(mockFetch.mock.calls[0][1].body);
       expect(fetchBody.code).toBe("late-code");
@@ -2363,6 +2393,28 @@ describe("Strava Integration — completeStravaCallback Behavior", () => {
     global.fetch = originalFetch;
   });
 
+  it("preserves a large athlete id_str from the raw token response", async () => {
+    await SecureStore.setItemAsync("strava_pending_oauth_state", "large-state");
+    const raw = '{"access_token":"at","refresh_token":"rt","expires_at":123,"athlete":{"id":18014398509481985,"id_str":"18014398509481985","firstname":"Jane"}}';
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => JSON.parse(raw) });
+
+    const result = await strava.completeStravaCallback("cablesnap://strava-callback?code=ok&state=large-state");
+
+    expect(result).toEqual({ athleteId: "18014398509481985", athleteName: "Jane" });
+    expect(db.saveStravaConnection).toHaveBeenCalledWith("18014398509481985", "Jane");
+  });
+
+  it("rejects an unsafe legacy numeric athlete ID instead of saving a rounded ID", async () => {
+    await SecureStore.setItemAsync("strava_pending_oauth_state", "unsafe-state");
+    const raw = '{"access_token":"at","refresh_token":"rt","expires_at":123,"athlete":{"id":18014398509481985}}';
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => JSON.parse(raw) });
+
+    await expect(strava.completeStravaCallback("cablesnap://strava-callback?code=ok&state=unsafe-state"))
+      .rejects.toThrow("invalid athlete ID");
+    expect(db.saveStravaConnection).not.toHaveBeenCalled();
+    expect(SecureStore.setItemAsync).not.toHaveBeenCalledWith("strava_access_token", expect.anything());
+  });
+
   it("(a) happy path — persisted state + matching code → exchanges once, saveTokens + saveStravaConnection called, returns {athleteId,athleteName}", async () => {
     await SecureStore.setItemAsync("strava_pending_oauth_state", "happy-state");
 
@@ -2379,10 +2431,10 @@ describe("Strava Integration — completeStravaCallback Behavior", () => {
     const url = "cablesnap://strava-callback?code=happy-code&state=happy-state";
     const result = await strava.completeStravaCallback(url);
 
-    expect(result).toEqual({ athleteId: 101, athleteName: "John Happy" });
+    expect(result).toEqual({ athleteId: "101", athleteName: "John Happy" });
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith("strava_access_token", "happy-access-token");
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith("strava_refresh_token", "happy-refresh-token");
-    expect(db.saveStravaConnection).toHaveBeenCalledWith(101, "John Happy");
+    expect(db.saveStravaConnection).toHaveBeenCalledWith("101", "John Happy");
     expect(mockFetch).toHaveBeenCalledTimes(1);
 
     const pendingState = await SecureStore.getItemAsync("strava_pending_oauth_state");
@@ -2437,7 +2489,7 @@ describe("Strava Integration — completeStravaCallback Behavior", () => {
     const url = "cablesnap://strava-callback?code=some-code&state=single-state";
 
     const result1 = await strava.completeStravaCallback(url);
-    expect(result1).toEqual({ athleteId: 102, athleteName: "Single User" });
+    expect(result1).toEqual({ athleteId: "102", athleteName: "Single User" });
     expect(mockFetch).toHaveBeenCalledTimes(1);
 
     const result2 = await strava.completeStravaCallback(url);
@@ -2490,7 +2542,7 @@ describe("Strava Integration — completeStravaCallback Behavior", () => {
     const [result1, result2] = await Promise.all([p1, p2]);
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(result1).toEqual({ athleteId: 103, athleteName: "Concurrent User" });
+    expect(result1).toEqual({ athleteId: "103", athleteName: "Concurrent User" });
     expect(result2).toBeNull();
   });
 

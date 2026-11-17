@@ -17,6 +17,7 @@
  *      gym_profiles / cable_stacks / stack_calibrations tables.
  *   2. Fresh install — no tables at all.
  *   3. Idempotency — migrate() twice in a row must not throw.
+ *   4. Strava athlete IDs migrate losslessly from INTEGER to TEXT.
  */
 
 import { DatabaseSync } from "node:sqlite";
@@ -43,6 +44,16 @@ function wrapDb(db: InstanceType<typeof DatabaseSync>) {
     runAsync: async (sql: string, params?: unknown[]): Promise<{ changes: number }> => {
       const result = db.prepare(sql).run(...((params ?? []) as SqlParam[]));
       return { changes: Number(result.changes) };
+    },
+    withTransactionAsync: async (fn: () => Promise<void>): Promise<void> => {
+      db.exec("BEGIN");
+      try {
+        await fn();
+        db.exec("COMMIT");
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
     },
   };
 }
@@ -382,6 +393,51 @@ function insertLegacyData(db: InstanceType<typeof DatabaseSync>): void {
 // ── Test suite ──
 
 describe("BLD-1059 — migrate() upgrade-path regression", () => {
+  it("converts legacy Strava integer IDs to exact text and remains idempotent", async () => {
+    const raw = createDb();
+    buildPreBld1059Schema(raw);
+    raw.exec("INSERT INTO strava_connection VALUES (1, 18014398509481985, 'Jane Doe', 123)");
+    const db = wrapDb(raw);
+
+    await migrate(db as never);
+    await migrate(db as never);
+
+    expect(raw.prepare("SELECT athlete_id, typeof(athlete_id) AS storage, athlete_name, connected_at FROM strava_connection").get()).toEqual({
+      athlete_id: "18014398509481985", storage: "text", athlete_name: "Jane Doe", connected_at: 123,
+    });
+    expect(raw.prepare("PRAGMA table_info(strava_connection)").all()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "athlete_id", type: "TEXT" })]),
+    );
+  });
+
+  it("restores the original Strava table after a post-drop failure and retries successfully", async () => {
+    const raw = createDb();
+    buildPreBld1059Schema(raw);
+    raw.exec("INSERT INTO strava_connection VALUES (1, 18014398509481985, 'Jane Doe', 123)");
+    const db = wrapDb(raw);
+    const exec = db.execAsync;
+    let injectFailure = true;
+    db.execAsync = async (sql: string) => {
+      if (injectFailure && sql.includes("DROP TABLE strava_connection;")) {
+        injectFailure = false;
+        await exec(sql.replace("ALTER TABLE strava_connection_text RENAME TO strava_connection;", "SELECT * FROM simulated_migration_failure;"));
+        return;
+      }
+      await exec(sql);
+    };
+
+    await expect(migrate(db as never)).rejects.toThrow("simulated_migration_failure");
+    expect(raw.prepare("SELECT CAST(athlete_id AS TEXT) AS athlete_id, athlete_name, connected_at FROM strava_connection").get())
+      .toEqual({ athlete_id: "18014398509481985", athlete_name: "Jane Doe", connected_at: 123 });
+    expect(raw.prepare("PRAGMA table_info(strava_connection)").all()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "athlete_id", type: "INTEGER", notnull: 1 })]),
+    );
+    expect(tableExists(raw, "strava_connection_text")).toBe(false);
+
+    await migrate(db as never);
+    expect(raw.prepare("SELECT athlete_id, typeof(athlete_id) AS storage FROM strava_connection").get())
+      .toEqual({ athlete_id: "18014398509481985", storage: "text" });
+  });
   /**
    * Test 1: Pre-BLD-1059 upgrade path.
    *

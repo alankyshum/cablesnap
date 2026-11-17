@@ -18,6 +18,7 @@ import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
+import { stravaId } from "./strava-id";
 import { GITHUB_REPO_URL } from "@/constants/github";
 import {
   getStravaConnection,
@@ -682,7 +683,7 @@ async function uploadActivity(
   if (raw && raw.trim().length > 0) {
     try {
       const activity = JSON.parse(raw);
-      if (activity && activity.id != null) activityId = String(activity.id);
+      activityId = stravaId(activity);
     } catch { /* fall through to resolve */ }
   }
   if (!activityId) {
@@ -871,7 +872,8 @@ async function resolveExistingActivityId(
       return null;
     }
     const activities: Array<{
-      id: number | string;
+      id?: number | string;
+      id_str?: string;
       name?: string;
       start_date_local?: string;
       start_date?: string;
@@ -925,7 +927,7 @@ async function resolveExistingActivityId(
 
         return 0;
       });
-      return String(matches[0].id);
+      return stravaId(matches[0]);
     }
 
     // API returned OK but no matching activity — treat as synced with no ID
