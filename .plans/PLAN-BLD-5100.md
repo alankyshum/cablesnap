@@ -12,7 +12,7 @@
 - [x] Commit and push to `bld-5100-agent-access`.
 - [x] Create `bld-5100-integration` from `origin/main` and merge the accepted Agent access and AI Coach removal branches with merge commits.
 - [x] Merge updated Agent access tip `0d4b87e9` with AI Coach removal `00a938a8`, resolve privacy/feature-map/CHANGELOG/e2e conflicts, and verify the full integrated tree.
-- [ ] Commit and push the integration branch (E2E against currently deployed relay attempted once; blocked because deployed owner prompt lacks updated curl guidance and Codex's Python client receives 403; no integration-side redeploy per lead).
+- [x] Commit and push `bld-5100-integration` (pre-push gates passed). E2E against the currently deployed relay was attempted once; blocked because the deployed owner prompt lacks updated curl guidance and Codex's Python client receives 403. No integration-side redeploy was performed, per lead.
 
 ## Decisions / status
 - Kept the worker independent of `workers/strava-proxy`.
