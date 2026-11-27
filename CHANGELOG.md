@@ -24,6 +24,7 @@ marker) at release time.
 
 - Added **Agent access** in Settings: share a temporary workout snapshot with your own AI agent, review proposed templates, and import them only after approval.
 - Agent access now enforces shorter requestable session lifetimes, strict export scope validation, and verified expiry/revocation boundaries.
+- Agent access now shows exercise names when reviewing proposals, blocks unavailable exercise IDs, recovers active native sessions securely, and supports long paste-back proposals.
 
 ## v0.26.123 — 2026-11-17
 <!-- versionCode: 187008 -->
