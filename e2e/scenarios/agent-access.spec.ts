@@ -6,7 +6,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const execFileAsync = promisify(execFile);
-const EVIDENCE = "/tmp/bld-5100-evidence/slice1";
+const EVIDENCE = "/tmp/bld-5100-evidence/integration";
+
+function redactTokens(value: string): string {
+  return value.replace(/([?&]token=)[A-Za-z0-9_-]+/g, "$1<redacted>")
+    .replace(/(Bearer\s+)[A-Za-z0-9_-]+/gi, "$1<redacted>");
+}
 
 test.describe("BLD-5100 Agent access slice one", () => {
   test("BLD-5100 AC2-AC4 real deployed relay, agent, review and import", async ({ page, context }, testInfo) => {
@@ -26,7 +31,7 @@ test.describe("BLD-5100 Agent access slice one", () => {
     expect(prompt).toContain("/v1/skill.md");
     expect(prompt).toContain("/v1/schema.json");
     expect(prompt).toContain("/snapshot?token=");
-    await writeFile(path.join(EVIDENCE, "copied-prompt.txt"), prompt);
+    await writeFile(path.join(EVIDENCE, "copied-prompt.txt"), redactTokens(prompt));
 
     const transcriptPath = path.join(EVIDENCE, "real-agent-transcript.txt");
     let agentOutput = "";
@@ -40,10 +45,10 @@ test.describe("BLD-5100 Agent access slice one", () => {
     } catch (error) {
       const child = error as { stdout?: string; stderr?: string; message?: string };
       agentOutput = `${child.stdout ?? ""}\n${child.stderr ?? ""}\n${child.message ?? String(error)}`;
-      await writeFile(transcriptPath, agentOutput);
+      await writeFile(transcriptPath, redactTokens(agentOutput));
       throw error;
     }
-    await writeFile(transcriptPath, agentOutput);
+    await writeFile(transcriptPath, redactTokens(agentOutput));
 
     const proposal = page.getByTestId("agent-proposal-card").first();
     await expect(proposal).toBeVisible({ timeout: 45_000 });

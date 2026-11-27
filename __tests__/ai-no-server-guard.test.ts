@@ -53,7 +53,7 @@ describe("BLD-5100 Agent access network guard", () => {
     const privacy = readFileSync(join(ROOT, "docs/privacy-policy.md"), "utf8");
     const featureMap = readFileSync(join(ROOT, ".agents/feature-map/README.md"), "utf8");
     const changelog = readFileSync(join(ROOT, "CHANGELOG.md"), "utf8");
-    const unreleased = changelog.slice(changelog.indexOf("## Unreleased"), changelog.indexOf("## v"));
+    const unreleased = changelog.match(/## Unreleased\n([\s\S]*?)(?=\n## v|$)/)?.[1] ?? "";
 
     expect(privacy).toContain("does not contact a third-party AI provider");
     expect(privacy).toContain("nutrition data is excluded");

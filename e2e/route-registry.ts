@@ -54,6 +54,7 @@ export const STANDALONE_SCREENS: Screen[] = [
 ];
 
 export const SETTINGS_SCREENS: Screen[] = [
+  { name: "Agent Access Settings", path: "/settings/agent-access" },
   { name: "Advanced Sets Settings", path: "/settings/advanced-sets" },
   { name: "Backups Settings", path: "/settings/backups" },
   { name: "Gym Profiles Settings", path: "/settings/gym-profiles" },
