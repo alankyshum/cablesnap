@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Added **Agent access** in Settings: share a temporary workout snapshot with your own AI agent, review proposed templates, and import them only after approval.
 
 ## v0.26.123 — 2026-11-17
 <!-- versionCode: 187008 -->

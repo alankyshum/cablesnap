@@ -31,6 +31,7 @@ export default function SettingsLayout() {
       }}
     >
       <Stack.Screen name="ai-key" options={{ title: "AI Provider" }} />
+      <Stack.Screen name="agent-access" options={{ title: t({ id: "settings.agentAccess.title", message: "Agent access" }) }} />
       <Stack.Screen name="import-workouts" options={{ title: t({ id: "settings.importWorkoutHistory.title", message: "Import Workout History" }) }} />
       <Stack.Screen name="backups" options={{ title: t({ id: "settings.backups.title", message: "Backups" }) }} />
       <Stack.Screen name="import-backup" options={{ title: t({ id: "settings.importBackup.title", message: "Import Backup" }) }} />

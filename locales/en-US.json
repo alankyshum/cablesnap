@@ -1,4 +1,24 @@
 {
+  "settings.integrations.agentAccess": {
+    "message": "Agent access",
+    "srcHash": "4651ea5ab936",
+    "origin": "human"
+  },
+  "settings.integrations.agentAccessCaption": {
+    "message": "Share temporary workout access with your own AI agent.",
+    "srcHash": "b6717bfac4ea",
+    "origin": "human"
+  },
+  "settings.integrations.agentAccessA11y": {
+    "message": "Open Agent access settings",
+    "srcHash": "53c87a22638a",
+    "origin": "human"
+  },
+  "settings.agentAccess.title": {
+    "message": "Agent access",
+    "srcHash": "5ca57c559d90",
+    "origin": "human"
+  },
   "components.plates.calculator.barBreakdown": {
     "message": " (bar {active}{unit} + 2×{0}{unit})",
     "srcHash": "7246cbf44b2f",

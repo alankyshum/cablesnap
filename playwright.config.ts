@@ -40,7 +40,7 @@ export default defineConfig({
     },
     {
       name: "mobile",
-      use: { viewport: { width: 390, height: 844 } },
+      use: { viewport: { width: 390, height: 844 }, launchOptions: process.env.PLAYWRIGHT_CHROME_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROME_PATH } : {} },
     },
     {
       name: "mobile-large",
