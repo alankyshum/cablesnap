@@ -89,7 +89,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-image-picker",
       {
         photosPermission:
-          "CableSnap uses your photo library only when you choose a gym photo to send to your selected AI Coach model.",
+          "CableSnap uses your photo library when you choose to add or import your own fitness photos.",
       },
     ],
     [

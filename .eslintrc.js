@@ -28,7 +28,7 @@ module.exports = {
   rules: {
     // The repository-wide baseline contains legacy magic spacing values. The
     // pre-commit command promotes this rule to an error for staged files;
-    // coach UI is already fully enforced during the normal lint/editor path.
+    // Staged UI changes promote the rule to an error before commit.
     "design-tokens": "off",
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
@@ -59,10 +59,6 @@ module.exports = {
     ],
   },
   overrides: [
-    {
-      files: ["components/coach/**"],
-      rules: { "design-tokens": "error" },
-    },
     {
       files: [
         "constants/theme.ts",

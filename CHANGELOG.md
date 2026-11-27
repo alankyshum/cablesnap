@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- Removed the in-app AI Coach, its stored conversations and provider-key setting. Existing installs delete the obsolete local data and credential during upgrade; Agent access replaces it with user-controlled temporary sharing outside the app.
 
 ## v0.26.123 — 2026-11-17
 <!-- versionCode: 187008 -->

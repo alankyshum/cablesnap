@@ -1,9 +1,8 @@
 AntiFeatures:
   NonFreeNet:
     en-US: Optional Strava integration uses Strava OAuth + api/v3 via the Cloudflare
-      Worker proxy at strava-proxy.alankyshum.workers.dev. Optional AI Coach requests
-      go directly to OpenRouter and the selected hosted model using a user-supplied
-      API key. Core workout/nutrition tracking is local-first and works fully offline.
+      Worker proxy at strava-proxy.alankyshum.workers.dev. Core workout/nutrition
+      tracking is local-first and works fully offline.
 Categories:
   - Sports & Health
   - Workout

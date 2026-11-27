@@ -95,6 +95,12 @@ export function useAppInit() {
     getDatabase()
       .then(async () => {
         try {
+          const { cleanupLegacyProviderCredential } = await import("../lib/legacy-provider-cleanup");
+          await cleanupLegacyProviderCredential();
+        } catch {
+          console.warn("Legacy credential cleanup failed; it will be retried on the next launch.");
+        }
+        try {
           const id = await getOrCreateAnonUserId();
           Sentry.setUser({ id });
         } catch (err) {

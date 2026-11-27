@@ -223,13 +223,8 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
 
   // body_settings table
   await addColumnIfMissing(database, "body_settings", "sex", "TEXT NOT NULL DEFAULT 'male'");
-  // Chat tables are declared by createExtensionTables and are safe to re-run.
-  // Keeping this invocation in Phase 2 makes the additive chat DDL part of the
-  // migration phase without changing the existing extension-table ordering.
   await createExtensionTables(database);
   await migrateStravaAthleteId(database);
-  // BLD: assistant attribution. Nullable so all existing messages remain valid.
-  await addColumnIfMissing(database, "coach_messages", "model_id", "TEXT DEFAULT NULL");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`Migration phase 2 failed: ${msg}`, { cause: err });
@@ -469,6 +464,16 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     DROP INDEX IF EXISTS idx_hc_sync_log_status;
     DROP TABLE IF EXISTS health_connect_sync_log;
     DELETE FROM app_settings WHERE key = 'health_connect_enabled';
+  `);
+
+  // BLD-5100: AI Coach is removed. Delete obsolete child tables first so the
+  // cleanup also succeeds on databases created with foreign-key enforcement.
+  await database.execAsync(`
+    DROP TABLE IF EXISTS coach_messages;
+    DROP TABLE IF EXISTS coach_workout_draft_revisions;
+    DROP TABLE IF EXISTS coach_workout_drafts;
+    DROP TABLE IF EXISTS coach_sessions;
+    DELETE FROM app_settings WHERE key LIKE 'ai_coach.%';
   `);
   migrateBreadcrumb("phase_4_complete");
 }

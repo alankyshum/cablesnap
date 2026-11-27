@@ -18,8 +18,6 @@ export const TAB_SCREENS: Screen[] = [
 ];
 
 export const AI_SCREENS: Screen[] = [
-  { name: "AI Coach", path: "/ai-coach" },
-  { name: "AI Provider Settings", path: "/settings/ai-key" },
 ];
 
 export const STORE_SCREENS: Screen[] = [

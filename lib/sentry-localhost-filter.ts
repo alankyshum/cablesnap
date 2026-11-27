@@ -19,7 +19,7 @@
  */
 
 import type { ErrorEvent } from '@sentry/core';
-import { redactSentryEvent } from './ai/redact';
+import { redactSentryEvent } from './sentry-redact';
 
 /** Hosts that always indicate a local dev / CI environment. */
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0']);
