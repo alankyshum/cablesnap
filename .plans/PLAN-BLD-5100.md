@@ -11,8 +11,8 @@
 - [x] Update feature map and CHANGELOG.
 - [x] Commit and push to `bld-5100-agent-access`.
 - [x] Create `bld-5100-integration` from `origin/main` and merge the accepted Agent access and AI Coach removal branches with merge commits.
-- [ ] Resolve integration conflicts, reconcile privacy/feature-map/CHANGELOG/AC annotations, and verify the full integrated tree.
-- [ ] Commit and push the integration branch.
+- [x] Merge updated Agent access tip `0d4b87e9` with AI Coach removal `00a938a8`, resolve privacy/feature-map/CHANGELOG/e2e conflicts, and verify the full integrated tree.
+- [ ] Commit and push the integration branch (E2E against currently deployed relay attempted once; blocked because deployed owner prompt lacks updated curl guidance and Codex's Python client receives 403; no integration-side redeploy per lead).
 
 ## Decisions / status
 - Kept the worker independent of `workers/strava-proxy`.
@@ -44,11 +44,18 @@
 - [x] **AC14** Published `/v1/skill.md` and `/v1/schema.json` cannot drift from app proposal schema. [test: `__tests__/lib/agent-access.test.ts::"BLD-5100 AC14 keeps validator and published JSON schema version aligned"`]
 
 ### AI Coach removal (owned by parallel worker)
-- [ ] **AC15** No AI Coach routes, imports, locale keys, or `openrouter.ai` references remain. [test: `__tests__/ai-no-server-guard.test.ts::"contains no legacy AI-provider SDK or direct-provider references in app source"`]
-- [ ] **AC16** Upgrade migration drops Coach tables on an existing database without harming unrelated data. [test: `__tests__/lib/db/coach-tables-removal-migration.test.ts::"drops the legacy tables and settings from an existing database"`]
-- [ ] **AC17** Upgrade deletes the OpenRouter key from secure storage. [test: `__tests__/lib/legacy-provider-cleanup.test.ts::"deletes the stored credential once and records completion"`]
-- [ ] **AC18** Privacy policy, feature map, and CHANGELOG describe Agent access and no longer advertise in-app AI coaching. [test: `__tests__/ai-no-server-guard.test.ts::"documents Agent access without advertising the removed coach"`]
-- [ ] **AC19** The replacement has a local/no-server import guard; pasted proposals never require the removed server path. [test: `__tests__/ai-no-server-guard.test.ts::"allows Agent-access networking only through the configured relay host"`]
+- [x] **AC15** No AI Coach routes, imports, locale keys, or legacy provider-host references remain. [test: `__tests__/ai-no-server-guard.test.ts::"contains no legacy AI-provider SDK or direct-provider references in app source"`]
+- [x] **AC16** Upgrade migration drops Coach tables on an existing database without harming unrelated data. [test: `__tests__/lib/db/coach-tables-removal-migration.test.ts::"drops the legacy tables and settings from an existing database"`]
+- [x] **AC17** Upgrade deletes the legacy AI-provider key from secure storage. [test: `__tests__/lib/legacy-provider-cleanup.test.ts::"deletes the stored credential once and records completion"`]
+- [x] **AC18** Privacy policy, feature map, and CHANGELOG describe Agent access and no longer advertise in-app AI coaching. [test: `__tests__/ai-no-server-guard.test.ts::"documents Agent access without advertising the removed coach"`]
+- [x] **AC19** The replacement has a local/no-server import guard; pasted proposals never require the removed server path. [test: `__tests__/ai-no-server-guard.test.ts::"allows Agent-access networking only through the configured relay host"`]
+
+## Integration evidence
+- Integrated branch includes merge commits for accepted Agent access (`8957128569d9` plus updated hardening tip `0d4b87e9`) and AI Coach removal (`00a938a8`).
+- `npm run lint`, `npm run typecheck`, `npm run i18n:check`, `npm run feature-map:check`, license and AC audits pass.
+- Full Jest: 485 suites, 5820 tests, 3 snapshots pass; wall time 118.85s (<150s).
+- Migration test passes with a populated pre-existing Coach database; grep acceptance output is saved at `/tmp/bld-5100-evidence/integration/grep-acceptance.txt`.
+- Playwright Agent access E2E attempted with the installed Chrome binary. Session creation succeeded, but the deployed relay's legacy prompt led Codex to use a scripted Python client that received 403 for public skill/schema plus snapshot; no proposal was submitted. Evidence: `/tmp/bld-5100-evidence/integration/agent-access-playwright.log` and redacted transcript. No redeploy was performed, per lead.
 
 ## Evidence (slice one)
 - `/tmp/bld-5100-evidence/slice1/01-agent-access-active.png` — real web app with deployed relay session active.
