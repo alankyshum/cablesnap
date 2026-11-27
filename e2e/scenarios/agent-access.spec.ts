@@ -80,6 +80,7 @@ async function pasteProposal(page: Page, proposal: unknown) {
 test.describe("BLD-5100 Agent access hardening", () => {
   test("BLD-5100 AC5-AC12 deployed relay negative matrix", async ({ page }, testInfo) => {
     void page;
+    test.skip(process.env.CI === "true", "Live relay verification runs in release evidence, not CI");
     test.skip(testInfo.project.name !== "mobile", "Single deployed matrix run");
     test.setTimeout(120_000);
     await execFileAsync(process.execPath, ["--import", "tsx", "scripts/verify-agent-relay.ts"], {
@@ -89,6 +90,7 @@ test.describe("BLD-5100 Agent access hardening", () => {
   });
 
   test("BLD-5100 AC2-AC4, AC10, AC13, AC21 seeded real-agent and paste-back flows", async ({ page, context }, testInfo) => {
+    test.skip(process.env.CI === "true", "Real-agent relay flow runs in release evidence, not CI");
     test.skip(testInfo.project.name !== "mobile", "Single evidence capture on mobile viewport");
     test.setTimeout(300_000);
     await mkdir(EVIDENCE, { recursive: true });

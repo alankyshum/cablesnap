@@ -6,7 +6,7 @@
 - [x] Merge hardening tip into integration and resolve conflicts while preserving coach removal and one coherent Agent access design (merge `f9f2aff3`). Conflicts in plan, CHANGELOG, route registry and e2e were combined; privacy policy gained final logging/URL-retention wording.
 - [x] Run final repository, worker, migration, removal, acceptance-criteria and live gates; record `/tmp/bld-5100-evidence/final/` outputs.
 - [x] Run final seeded Codex and paste-back Playwright acceptance, with distinct proposal names and targeted screenshots for both reviews, unknown-ID blocking and both imported rows (1 passed, 53.2s).
-- [ ] Push only `bld-5100-integration`, open one draft PR to `main`, and reconcile CI until green without merging.
+- [ ] Push only `bld-5100-integration`, open one draft PR to `main`, and reconcile CI until green without merging. Initial PR #971 CI exposed two inherited infrastructure failures: `ubuntu-latest` advanced to unsupported 26.04 for Playwright; F-Droid metadata lagged current release `0.26.123/187008`. Fixes pin supported Ubuntu 24.04, refresh release metadata, and skip credentialed live-relay scenarios in CI while retaining local release evidence.
 
 ## Decisions / status
 - Kept the Worker independent of `workers/strava-proxy`; shared proposal schema and validator live in `shared/agent-access.ts`.
@@ -57,3 +57,4 @@
 - Worker: TypeScript passed and 2/2 node security tests plus sensitive-logging guard passed.
 - Final Playwright: 1/1 seeded Codex + paste-back flow passed in 53.2s; Codex fetched skill/schema/snapshot and POSTed `Agent POST Progression`; pasted `Browse-only Paste Progression` imported separately; unknown-ID proposal was visibly blocked. Both names were asserted on the Templates list.
 - Final evidence: `/tmp/bld-5100-evidence/final/` (`lint.txt`, `typecheck.txt`, `jest-full.txt`, `i18n-check.txt`, `feature-map-check.txt`, `license-check.txt`, `acceptance-audit.txt`, `worker-tsc.txt`, `worker-tests.txt`, `verify-agent-relay.txt`, `playwright-agent-access.log`, screenshots `02`–`05`, transcripts and assertions).
+- Authorized push exception: vs-main changelog 0 → 1 passed and all non-changelog pre-push gates were manually rerun on the pushed HEAD; see `changelog-gate-vs-main.txt` and `pre-push-manual.txt`.
