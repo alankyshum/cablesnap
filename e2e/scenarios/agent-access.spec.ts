@@ -59,7 +59,7 @@ async function assertSeededSnapshot(page: Page, snapshotUrl: string) {
 
 async function runRealAgent(prompt: string) {
   const transcriptPath = path.join(EVIDENCE, "real-agent-transcript-redacted.txt");
-  const requested = `${prompt}\n\nAcceptance requirement: name the POSTed proposal exactly "${AGENT_NAME}" so the UI evidence can distinguish it from the later pasted proposal.`;
+  const requested = `${prompt}\n\nAcceptance requirements: use curl with User-Agent CableSnapAgent/1.0 for every relay request (Cloudflare blocks Python's default User-Agent with 1010); do not use Python for HTTP. Name the POSTed proposal exactly "${AGENT_NAME}" so the UI evidence can distinguish it from the later pasted proposal.`;
   const result = await execFileAsync("/bin/sh", [
     "-c",
     'exec codex exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check -C /tmp "$1" </dev/null',
@@ -78,8 +78,8 @@ async function pasteProposal(page: Page, proposal: unknown) {
 }
 
 test.describe("BLD-5100 Agent access hardening", () => {
-  test("BLD-5100 AC5-AC12 deployed relay negative matrix", async (fixtures, testInfo) => {
-    void fixtures;
+  test("BLD-5100 AC5-AC12 deployed relay negative matrix", async ({ page }, testInfo) => {
+    void page;
     test.skip(testInfo.project.name !== "mobile", "Single deployed matrix run");
     test.setTimeout(120_000);
     await execFileAsync(process.execPath, ["--import", "tsx", "scripts/verify-agent-relay.ts"], {
@@ -135,7 +135,7 @@ test.describe("BLD-5100 Agent access hardening", () => {
     await pasteProposal(page, unknown);
     const unknownCard = page.getByTestId("agent-proposal-card").filter({ hasText: UNKNOWN_NAME });
     await expect(unknownCard.getByTestId("agent-proposal-library-warning")).toBeVisible();
-    await expect(unknownCard.getByTestId("agent-import-proposal")).toBeDisabled();
+    await expect(unknownCard.getByTestId("agent-import-proposal")).toHaveAttribute("aria-disabled", "true");
     await unknownCard.screenshot({ path: path.join(EVIDENCE, "04-unknown-exercise-blocked.png") });
 
     await page.goto("/");

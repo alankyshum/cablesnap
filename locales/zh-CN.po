@@ -735,22 +735,6 @@ msgstr ""
 #~ msgstr "与Strava连线时发生错误。请再试一次。"
 
 #. js-lingui-explicit-id
-#: app/settings/import-backup.tsx:108
-#~ msgid "settings.importBackup.aiCoachCounts"
-#~ msgstr "{sessions} 个工作阶段 · {messages} 条消息"
-
-#. js-lingui-explicit-id
-#: components/settings/BackupCategorySheet.tsx:48
-#~ msgid "settings.backup.aiCoach"
-#~ msgstr "AI 教练"
-
-#. js-lingui-explicit-id
-#: app/settings/import-backup.tsx:58
-#: app/settings/import-backup.tsx:201
-#~ msgid "settings.importBackup.aiCoach"
-#~ msgstr "AI 教练"
-
-#. js-lingui-explicit-id
 #. placeholder {0}: state.side
 #: components/plates/PlateCalculatorContent.tsx:114
 msgid "components.plates.calculator.barBreakdown"

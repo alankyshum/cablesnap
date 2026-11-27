@@ -735,10 +735,6 @@ msgstr ""
 #~ msgstr "Something went wrong connecting to Strava. Please try again."
 
 #. js-lingui-explicit-id
-#~ msgid "settings.importBackup.aiCoachCounts"
-#~ msgstr "{sessions} sessions · {messages} messages"
-
-#. js-lingui-explicit-id
 #. placeholder {0}: state.side
 #: components/plates/PlateCalculatorContent.tsx:114
 msgid "components.plates.calculator.barBreakdown"

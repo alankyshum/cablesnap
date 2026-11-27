@@ -3,9 +3,9 @@
 ## Steps
 - [x] Create isolated integration worktree from `origin/main` and merge accepted Agent access (`0d4b87e9`) and AI Coach removal (`00a938a8`) with merge commits.
 - [x] Harden Agent access: observability/logging disabled, exercise names and unknown-ID blocking, session recovery, schema sync, live verification, and Python User-Agent retry/paste fallback (`a1874d21`).
-- [ ] Merge hardening tip into integration and resolve conflicts while preserving coach removal and one coherent Agent access design.
-- [ ] Run final repository, worker, migration, removal, acceptance-criteria and live gates; record `/tmp/bld-5100-evidence/final/` outputs.
-- [ ] Run final seeded real-agent and paste-back Playwright acceptance, with distinct proposal names and targeted screenshots for review, unknown-ID blocking and both imported rows.
+- [x] Merge hardening tip into integration and resolve conflicts while preserving coach removal and one coherent Agent access design (merge `f9f2aff3`). Conflicts in plan, CHANGELOG, route registry and e2e were combined; privacy policy gained final logging/URL-retention wording.
+- [x] Run final repository, worker, migration, removal, acceptance-criteria and live gates; record `/tmp/bld-5100-evidence/final/` outputs.
+- [x] Run final seeded Codex and paste-back Playwright acceptance, with distinct proposal names and targeted screenshots for both reviews, unknown-ID blocking and both imported rows (1 passed, 53.2s).
 - [ ] Push only `bld-5100-integration`, open one draft PR to `main`, and reconcile CI until green without merging.
 
 ## Decisions / status
@@ -50,6 +50,10 @@
 - [x] **AC19** Paste import never requires the removed server path. [test: `__tests__/ai-no-server-guard.test.ts::"allows Agent-access networking only through the configured relay host"`]
 
 ## Integration evidence
-- Merge conflicts pending final resolution; final evidence and exact gate counts will replace inherited summaries below.
-- Inherited hardening evidence: `/tmp/bld-5100-evidence/hardening/` (31-check live verifier, deployed version, real Codex flow and paste-back screenshots).
-- Final evidence destination: `/tmp/bld-5100-evidence/final/`.
+- Merge `f9f2aff3` resolved four conflicts: plan content combined both AC sets; CHANGELOG became one removal/replacement bullet; route registry uses `Agent Access`; Playwright kept hardening behavior plus stronger distinct-path evidence. Privacy MD/HTML now disclose disabled Worker logs and the token-in-GET-URL history risk.
+- Merged `workers/agent-relay` is byte-identical to deployed `a1874d21`; no redeploy was performed.
+- Jest: 487 suites, 5,826 tests and 3 snapshots passed in 115.41s wall time (114.252s Jest, below 150s).
+- Deployed verifier: 31/31 passed in 38s; covers missing/wrong/cross-role tokens, schema/size/rate limits, expiry/revoke and capability separation.
+- Worker: TypeScript passed and 2/2 node security tests plus sensitive-logging guard passed.
+- Final Playwright: 1/1 seeded Codex + paste-back flow passed in 53.2s; Codex fetched skill/schema/snapshot and POSTed `Agent POST Progression`; pasted `Browse-only Paste Progression` imported separately; unknown-ID proposal was visibly blocked. Both names were asserted on the Templates list.
+- Final evidence: `/tmp/bld-5100-evidence/final/` (`lint.txt`, `typecheck.txt`, `jest-full.txt`, `i18n-check.txt`, `feature-map-check.txt`, `license-check.txt`, `acceptance-audit.txt`, `worker-tsc.txt`, `worker-tests.txt`, `verify-agent-relay.txt`, `playwright-agent-access.log`, screenshots `02`–`05`, transcripts and assertions).
