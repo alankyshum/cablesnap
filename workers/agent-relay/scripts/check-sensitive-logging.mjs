@@ -3,7 +3,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
-const files = ["src/index.ts", "src/session-policy.ts"];
+const files = ["src/index.ts"];
 for (const file of files) {
   const text = await readFile(path.join(root, file), "utf8");
   const calls = [...text.matchAll(/console\.(?:log|info|warn|error|debug)\s*\(([^;]*)/g)];

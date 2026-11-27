@@ -1,12 +1,23 @@
 // BLD-5100: covers AC1, AC9, AC10, AC13 and AC14 from PLAN-BLD-5100.md.
+import fs from "node:fs";
+import path from "node:path";
 import { parsePastedProposal } from "../../lib/agent-access-proposal";
 import {
   AGENT_ACCESS_JSON_SCHEMA,
   AGENT_ACCESS_SCHEMA_VERSION,
   AGENT_ACCESS_SKILL,
   MAX_PROPOSAL_BYTES,
+  validateAgentSnapshot,
   validateAgentTemplateProposal,
 } from "../../shared/agent-access";
+
+const snapshot = {
+  schemaVersion: AGENT_ACCESS_SCHEMA_VERSION,
+  generatedAt: "2026-11-27T00:00:00.000Z",
+  range: { from: "2026-08-29T00:00:00.000Z", to: "2026-11-27T00:00:00.000Z", days: 90 },
+  scope: { sessions: true, templates: true, exerciseLibrary: true, personalRecords: true },
+  sessions: [], templates: [], exerciseLibrary: [], personalRecords: [],
+};
 
 const valid = {
   schemaVersion: AGENT_ACCESS_SCHEMA_VERSION,
@@ -36,9 +47,11 @@ describe("BLD-5100 Agent access contract", () => {
   });
 
   it("BLD-5100 AC10 excludes nutrition from the shared snapshot scope", () => {
-    expect(validateAgentTemplateProposal(valid).success).toBe(true);
+    expect(validateAgentSnapshot(snapshot).success).toBe(true);
+    expect(validateAgentSnapshot({ ...snapshot, nutrition: [] }).success).toBe(false);
+    expect(validateAgentSnapshot({ ...snapshot, scope: { ...snapshot.scope, nutrition: true } }).success).toBe(false);
+    expect(JSON.stringify(snapshot)).not.toMatch(/nutrition/i);
     expect(Object.keys(AGENT_ACCESS_JSON_SCHEMA.properties.template.properties).sort()).toEqual(["exercises", "name", "notes"]);
-    expect(JSON.stringify(AGENT_ACCESS_JSON_SCHEMA)).not.toMatch(/nutrition/i);
   });
 
   it("BLD-5100 AC13 accepts fenced paste JSON through the shared validator", () => {
@@ -49,5 +62,12 @@ describe("BLD-5100 Agent access contract", () => {
     expect(AGENT_ACCESS_JSON_SCHEMA.properties.schemaVersion.const).toBe(AGENT_ACCESS_SCHEMA_VERSION);
     expect(AGENT_ACCESS_JSON_SCHEMA.properties.kind.const).toBe(valid.kind);
     expect(AGENT_ACCESS_JSON_SCHEMA.$id).toBe("https://cablesnap-agent-relay.alankyshum.workers.dev/v1/schema.json");
+  });
+
+  it("BLD-5100 AC12 relay contains no payload/token logging and alarm deletes relay rows", () => {
+    const source = fs.readFileSync(path.join(process.cwd(), "workers/agent-relay/src/index.ts"), "utf8");
+    expect(source).not.toMatch(/console\.(?:log|info|warn|error|debug)/);
+    expect(source).toMatch(/DELETE FROM proposals/);
+    expect(source).toMatch(/DELETE FROM session/);
   });
 });

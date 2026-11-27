@@ -42,6 +42,9 @@ export type AgentSnapshot = {
 export type ProposalValidation =
   | { success: true; data: AgentTemplateProposal }
   | { success: false; error: string };
+export type SnapshotValidation =
+  | { success: true; data: AgentSnapshot }
+  | { success: false; error: string };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -49,6 +52,34 @@ const boundedString = (value: unknown, max: number): value is string =>
   typeof value === "string" && value.length > 0 && value.length <= max;
 const hasOnlyKeys = (value: Record<string, unknown>, allowed: string[]): boolean =>
   Object.keys(value).every((key) => allowed.includes(key));
+
+const validDate = (value: unknown): value is string =>
+  typeof value === "string" && Number.isFinite(Date.parse(value));
+
+function validateSnapshotScope(value: unknown): value is AgentAccessScope {
+  if (!isRecord(value)) return false;
+  const fields = ["sessions", "templates", "exerciseLibrary", "personalRecords"] as const;
+  return Object.keys(value).length === fields.length && fields.every((field) => typeof value[field] === "boolean");
+}
+
+export function validateAgentSnapshot(value: unknown): SnapshotValidation {
+  if (!isRecord(value) || value.schemaVersion !== AGENT_ACCESS_SCHEMA_VERSION) {
+    return { success: false, error: "Unsupported or missing schemaVersion" };
+  }
+  const expectedKeys = ["schemaVersion", "generatedAt", "range", "scope", "sessions", "templates", "exerciseLibrary", "personalRecords"];
+  if (Object.keys(value).some((key) => !expectedKeys.includes(key)) || !validDate(value.generatedAt) || !isRecord(value.range)) {
+    return { success: false, error: "Snapshot shape is invalid" };
+  }
+  const { range } = value;
+  if (!validDate(range.from) || !validDate(range.to) || !Number.isInteger(range.days) ||
+      (range.days as number) < 1 || (range.days as number) > 3650 || !validateSnapshotScope(value.scope)) {
+    return { success: false, error: "Snapshot range or scope is invalid" };
+  }
+  if (![value.sessions, value.templates, value.exerciseLibrary, value.personalRecords].every(Array.isArray)) {
+    return { success: false, error: "Snapshot collections must be arrays" };
+  }
+  return { success: true, data: value as AgentSnapshot };
+}
 
 function validateExercise(value: unknown, index: number): AgentTemplateExercise | string {
   if (!isRecord(value) || !hasOnlyKeys(value, ["exerciseId", "targetSets", "targetReps", "restSeconds"]) ||

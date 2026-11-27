@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - Added **Agent access** in Settings: share a temporary workout snapshot with your own AI agent, review proposed templates, and import them only after approval.
+- Agent access now enforces shorter requestable session lifetimes, strict export scope validation, and verified expiry/revocation boundaries.
 
 ## v0.26.123 — 2026-11-17
 <!-- versionCode: 187008 -->
