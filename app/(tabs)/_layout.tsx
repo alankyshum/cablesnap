@@ -115,13 +115,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="ai-coach"
-        options={{
-          title: t({ id: "floatingTabBar.tabs.aiCoach", message: "AI Coach" }),
-          headerTitle: renderHeaderTitle("robot", t({ id: "floatingTabBar.tabs.aiCoach", message: "AI Coach" })),
-        }}
-      />
-      <Tabs.Screen
         name="progress"
         options={{
            title: t({ id: "tabs.progress.title", message: "Progress" }),

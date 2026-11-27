@@ -1,12 +1,11 @@
 import { useMemo, useState, useEffect } from "react";
-import { FlatList, StyleSheet, Switch, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useLayout } from "../../lib/layout";
 import {
   importData,
   getImportCompletionMessage,
   getBackupCategoryCounts,
-  getBackupCounts,
   BACKUP_CATEGORY_LABELS,
   BACKUP_CATEGORY_ORDER,
   BACKUP_TABLE_LABELS,
@@ -23,19 +22,17 @@ import { useToast } from "@/components/ui/bna-toast";
 import { clearImportSession, getImportSession } from "@/lib/import-session";
 import { i18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
+import { radii, spacing } from "@/constants/design-tokens";
 
 type ImportResult = {
   inserted: number;
   skipped: number;
   perTable: Record<string, { inserted: number; skipped: number; skipped_existing?: number }>;
-  credentialWarning?: "invalid" | "failed";
 };
 
 function PreviewList({
   categoriesToShow, categoryCounts, version, totalRecords, exportedAt, appVersion,
   importProgress, loading, onImport, onCancel,
-  hasCredentials, confirmCredentials, onConfirmCredentials,
-  aiCoachCounts,
 }: {
   categoriesToShow: BackupCategoryName[];
   categoryCounts: Partial<Record<BackupCategoryName, number>>;
@@ -47,16 +44,10 @@ function PreviewList({
   loading: boolean;
   onImport: () => void;
   onCancel: () => void;
-  hasCredentials: boolean;
-  confirmCredentials: boolean;
-  onConfirmCredentials: (value: boolean) => void;
-  aiCoachCounts: { sessions: number; messages: number };
 }) {
   const colors = useThemeColors();
   const layout = useLayout();
-  const categoryLabel = (category: BackupCategoryName) => category === "ai_coach"
-    ? t({ id: "components.coach.aiCoachName", message: "AI Coach" })
-    : BACKUP_CATEGORY_LABELS[category];
+  const categoryLabel = (category: BackupCategoryName) => BACKUP_CATEGORY_LABELS[category];
   return (
     <FlatList
       data={categoriesToShow}
@@ -64,7 +55,7 @@ function PreviewList({
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
       ListHeaderComponent={
         <>
-          <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 16 }}>
+          <Text variant="heading" style={{ color: colors.onBackground, marginBottom: spacing.base }}>
             Import Preview
           </Text>
           {(exportedAt || appVersion) && (
@@ -83,10 +74,10 @@ function PreviewList({
           )}
           <Card style={styles.card}>
             <CardContent>
-              <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: 8 }}>
+              <Text variant="subtitle" style={{ color: colors.onSurface, marginBottom: spacing.sm }}>
                 Categories to Import
               </Text>
-              <View style={{ flexDirection: "row", paddingVertical: 8 }}>
+              <View style={{ flexDirection: "row", paddingVertical: spacing.sm }}>
                 <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>{t({ id: "settings.importBackup.category", message: "Category" })}</Text>
                 <Text variant="caption" style={{ width: 60, textAlign: "right", color: colors.onSurfaceVariant }}>{t({ id: "settings.importBackup.count", message: "Count" })}</Text>
               </View>
@@ -98,44 +89,25 @@ function PreviewList({
       renderItem={({ item: category }) => {
         const count = categoryCounts[category] ?? 0;
         return (
-          <View style={{ paddingHorizontal: 0 }}>
-            <View style={{ flexDirection: "row", paddingVertical: 10 }} accessibilityLabel={`${categoryLabel(category)}: ${count} records`}>
+          <View style={{ paddingHorizontal: radii.none }}>
+            <View style={{ flexDirection: "row", paddingVertical: spacing.sm }} accessibilityLabel={`${categoryLabel(category)}: ${count} records`}>
                 <Text variant="body" style={{ flex: 1, color: colors.onSurface }}>{categoryLabel(category)}</Text>
                 <Text variant="body" style={{ width: 60, textAlign: "right", color: colors.onSurface }}>{count}</Text>
               </View>
-              {category === "ai_coach" && (
-                <Text variant="caption" style={{ color: colors.onSurfaceVariant, paddingBottom: 8 }}>
-                  {aiCoachCounts.sessions} {t({ id: "history.templateFilter.sessions", message: "sessions" })} · {aiCoachCounts.messages} {t({ id: "components.coach.loadEarlier", message: "Load earlier messages" })}
-                </Text>
-              )}
             <Separator />
           </View>
         );
       }}
       ListFooterComponent={
         <>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 8 }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: spacing.sm }}>
             Only the selected categories will be imported. Unchecked categories in your current app data will be left untouched.
           </Text>
-          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: 16 }}>
+          <Text variant="caption" style={{ color: colors.onSurfaceVariant, marginBottom: spacing.base }}>
                    Existing history and seeded content remain idempotent. User preferences from the backup are restored.
           </Text>
-          {hasCredentials && (
-            <View style={[styles.credentialRow, { backgroundColor: colors.surfaceVariant }]}>
-              <View style={{ flex: 1 }}>
-                <Text variant="body" style={{ color: colors.onSurface, fontWeight: "600" }}>
-                  {t({ id: "settings.importBackup.importCredentials", message: "Import API credential" })}
-                </Text>
-                <Text variant="caption" style={{ color: colors.onSurfaceVariant }}>
-                  {t({ id: "settings.importBackup.credentialsWarning", message: "Only confirm if you trust this backup. The key will be stored securely." })}
-                </Text>
-              </View>
-              <Switch value={confirmCredentials} onValueChange={onConfirmCredentials}
-                accessibilityRole="switch" accessibilityLabel={t({ id: "settings.importBackup.importCredentialsA11y", message: "Confirm importing API credential" })} />
-            </View>
-          )}
           {importProgress && (
-            <Text variant="caption" style={{ color: colors.primary, marginBottom: 8 }} accessibilityLiveRegion="polite" accessibilityLabel={importProgress}>
+            <Text variant="caption" style={{ color: colors.primary, marginBottom: spacing.sm }} accessibilityLiveRegion="polite" accessibilityLabel={importProgress}>
               {importProgress}
             </Text>
           )}
@@ -156,9 +128,7 @@ function PreviewList({
 function ResultList({ result, onDone }: { result: ImportResult; onDone: () => void }) {
   const colors = useThemeColors();
   const layout = useLayout();
-  const categoryLabel = (category: BackupCategoryName) => category === "ai_coach"
-    ? t({ id: "components.coach.aiCoachName", message: "AI Coach" })
-    : BACKUP_CATEGORY_LABELS[category];
+  const categoryLabel = (category: BackupCategoryName) => BACKUP_CATEGORY_LABELS[category];
   const resultTables = useMemo(
     () => IMPORT_TABLE_ORDER.filter((t) => (result.perTable[t]?.inserted ?? 0) > 0 || (result.perTable[t]?.skipped ?? 0) > 0),
     [result],
@@ -180,27 +150,27 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
       contentContainerStyle={[styles.content, { paddingHorizontal: layout.horizontalPadding }]}
       ListHeaderComponent={
         <>
-          <Text variant="heading" style={{ color: colors.onBackground, marginBottom: 16 }}>
+          <Text variant="heading" style={{ color: colors.onBackground, marginBottom: spacing.base }}>
                 {t({ id: "settings.importBackup.complete", message: "Import Complete" })}
           </Text>
           <Card style={styles.card}>
             <CardContent>
-              <Text variant="subtitle" style={{ color: colors.primary, marginBottom: 8 }}>
+              <Text variant="subtitle" style={{ color: colors.primary, marginBottom: spacing.sm }}>
                 {result.inserted} records imported
               </Text>
               {result.skipped > 0 && (
-                <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: 12 }}>
+                <Text variant="body" style={{ color: colors.onSurfaceVariant, marginBottom: spacing.md }}>
                 {getImportCompletionMessage(result.inserted, result.skipped)}
                 </Text>
               )}
-              <View style={{ flexDirection: "row", paddingVertical: 8 }}>
+              <View style={{ flexDirection: "row", paddingVertical: spacing.sm }}>
                 <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>{t({ id: "settings.importBackup.data", message: "Data" })}</Text>
                 <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>{t({ id: "settings.importBackup.imported", message: "Imported" })}</Text>
                 <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>{t({ id: "settings.importBackup.skipped", message: "Skipped" })}</Text>
               </View>
               <Separator />
               {categoryResults.map(({ category, inserted, skipped }) => (
-                <View key={category} style={{ flexDirection: "row", paddingVertical: 8 }}>
+                <View key={category} style={{ flexDirection: "row", paddingVertical: spacing.sm }}>
                   <Text variant="caption" style={{ flex: 1, color: colors.onSurfaceVariant }}>{categoryLabel(category)}</Text>
                   <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>{inserted}</Text>
                   <Text variant="caption" style={{ width: 70, textAlign: "right", color: colors.onSurfaceVariant }}>{skipped}</Text>
@@ -211,9 +181,9 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
         </>
       }
       renderItem={({ item: tableName }) => (
-        <View style={{ paddingHorizontal: 0 }}>
+        <View style={{ paddingHorizontal: radii.none }}>
           <View
-            style={{ flexDirection: "row", paddingVertical: 10 }}
+            style={{ flexDirection: "row", paddingVertical: spacing.sm }}
             accessibilityLabel={`${BACKUP_TABLE_LABELS[tableName]}: ${result.perTable[tableName]?.inserted ?? 0} imported, ${result.perTable[tableName]?.skipped ?? 0} skipped`}
           >
             <Text variant="body" style={{ flex: 1, color: colors.onSurface }}>{BACKUP_TABLE_LABELS[tableName]}</Text>
@@ -224,7 +194,7 @@ function ResultList({ result, onDone }: { result: ImportResult; onDone: () => vo
         </View>
       )}
       ListFooterComponent={
-         <Button variant="default" onPress={onDone} style={{ marginTop: 16 }} accessibilityLabel={t({ id: "common.doneReturnA11y", message: "Done, return to settings" })} accessibilityRole="button">
+         <Button variant="default" onPress={onDone} style={{ marginTop: spacing.base }} accessibilityLabel={t({ id: "common.doneReturnA11y", message: "Done, return to settings" })} accessibilityRole="button">
            {t({ id: "common.done", message: "Done" })}
         </Button>
       }
@@ -277,7 +247,6 @@ export default function ImportBackup() {
   const [loading, setLoading] = useState(false);
   const [importProgress, setImportProgress] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
-  const [confirmCredentials, setConfirmCredentials] = useState(false);
   const { parsed, fileLoading, fileError } = useBackupData(filePath, importToken);
 
   const version = parsed ? Number(parsed.version ?? 0) : 0;
@@ -295,14 +264,6 @@ export default function ImportBackup() {
     () => (parsed ? getBackupCategoryCounts(parsed) : ({} as Partial<Record<BackupCategoryName, number>>)),
     [parsed],
   );
-  const backupCounts = useMemo<Record<string, number>>(
-    () => (parsed ? getBackupCounts(parsed) : {}),
-    [parsed],
-  );
-  const aiCoachCounts = {
-    sessions: backupCounts.coach_sessions ?? 0,
-    messages: backupCounts.coach_messages ?? 0,
-  };
   const categoriesToShow = useMemo(() => {
     if (!parsed) return [];
     const base = selectedCategories.length > 0
@@ -314,15 +275,9 @@ export default function ImportBackup() {
     () => categoriesToShow.reduce((sum, category) => sum + (categoryCounts[category] ?? 0), 0),
     [categoriesToShow, categoryCounts],
   );
-  const aiSection = parsed?.data && typeof parsed.data === "object"
-    ? (parsed.data as Record<string, unknown>).ai_coach
-    : undefined;
-  const hasCredentials = version >= 8 && typeof aiSection === "object" && aiSection !== null
-    && typeof (aiSection as Record<string, unknown>).openrouter_api_key === "string";
-
   if (fileLoading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, padding: spacing.xl }]}>
         <Text variant="body" style={{ color: colors.onBackground }}>{t({ id: "settings.importBackup.loading", message: "Loading backup file…" })}</Text>
       </View>
     );
@@ -330,9 +285,9 @@ export default function ImportBackup() {
 
   if (fileError) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, padding: spacing.xl }]}>
         <Text variant="body" style={{ color: colors.error }}>{t({ id: "settings.importBackup.readFailed", message: "Failed to read backup file." })}</Text>
-          <Button variant="default" onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityLabel={t({ id: "settings.importBackup.goBackA11y", message: "Go back" })} accessibilityRole="button">
+          <Button variant="default" onPress={() => router.back()} style={{ marginTop: spacing.base }} accessibilityLabel={t({ id: "settings.importBackup.goBackA11y", message: "Go back" })} accessibilityRole="button">
            {t({ id: "settings.importBackup.goBackButton", message: "Go Back" })}
         </Button>
       </View>
@@ -341,11 +296,11 @@ export default function ImportBackup() {
 
   if ((!importToken && !filePath) || !parsed) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, padding: 24 }]}>
+      <View style={[styles.container, { backgroundColor: colors.background, padding: spacing.xl }]}>
         <Text variant="body" style={{ color: !importToken && !filePath ? colors.onBackground : colors.error }}>
           {!importToken && !filePath ? t({ id: "settings.importBackup.noData", message: "No backup data provided." }) : t({ id: "settings.importBackup.invalidData", message: "Invalid backup data." })}
         </Text>
-          <Button variant="default" onPress={() => router.back()} style={{ marginTop: 16 }} accessibilityLabel={t({ id: "settings.importBackup.goBackA11y", message: "Go back" })} accessibilityRole="button">
+          <Button variant="default" onPress={() => router.back()} style={{ marginTop: spacing.base }} accessibilityLabel={t({ id: "settings.importBackup.goBackA11y", message: "Go back" })} accessibilityRole="button">
            {t({ id: "settings.importBackup.goBackButton", message: "Go Back" })}
         </Button>
       </View>
@@ -366,14 +321,9 @@ export default function ImportBackup() {
         setImportProgress(i18n._({ id: "settings.importBackup.progress", message: "Importing {label}... ({tableIndex}/{totalTables}){hasRows, select, true { {rowIndex}/{rowCount}} false {}}", values: { label, tableIndex: progress.tableIndex + 1, totalTables: progress.totalTables, hasRows: progress.rowCount ? "true" : "false", rowIndex: progress.rowIndex ?? 0, rowCount: progress.rowCount ?? 0 } }));
           }
         },
-        selectedCategories.length > 0 ? { selectedCategories, confirmCredentials } : { confirmCredentials },
+        selectedCategories.length > 0 ? { selectedCategories } : undefined,
       );
       setResult(importResult);
-      if (importResult.credentialWarning === "invalid") {
-        toast.info(t({ id: "settings.importBackup.invalidCredential", message: "The API credential was invalid and was skipped; other data was imported." }));
-      } else if (importResult.credentialWarning === "failed") {
-        toast.info(t({ id: "settings.importBackup.credentialFailed", message: "The API credential could not be saved; other data was imported." }));
-      }
        toast.success(t({ id: "settings.importBackup.completeToast", message: `Import complete — ${getImportCompletionMessage(importResult.inserted, importResult.skipped)}` }));
     } catch {
        toast.error(t({ id: "settings.importBackup.failed", message: "Import failed — all changes have been rolled back" }));
@@ -397,10 +347,6 @@ export default function ImportBackup() {
           loading={loading}
           onImport={handleImport}
           onCancel={() => router.back()}
-          hasCredentials={hasCredentials}
-          confirmCredentials={confirmCredentials}
-          onConfirmCredentials={setConfirmCredentials}
-          aiCoachCounts={aiCoachCounts}
         />
       ) : (
         <ResultList result={result} onDone={() => router.back()} />
@@ -414,27 +360,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingTop: 16,
-    paddingBottom: 48,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.xxxl,
   },
   card: {
-    marginBottom: 16,
-    borderRadius: 12,
+    marginBottom: spacing.base,
+    borderRadius: radii.lg,
   },
   actions: {
     flexDirection: "row",
-    gap: 12,
+    gap: spacing.md,
     justifyContent: "flex-end",
   },
   actionBtn: {
     minWidth: 120,
-  },
-  credentialRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    marginBottom: 16,
-    borderRadius: 12,
-    minHeight: 64,
   },
 });

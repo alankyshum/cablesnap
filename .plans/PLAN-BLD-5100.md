@@ -10,6 +10,9 @@
 - [x] Drive the real web app and Codex through create → curl proposal POST → review → import; save evidence.
 - [x] Update feature map and CHANGELOG.
 - [x] Commit and push to `bld-5100-agent-access`.
+- [x] Create `bld-5100-integration` from `origin/main` and merge the accepted Agent access and AI Coach removal branches with merge commits.
+- [ ] Resolve integration conflicts, reconcile privacy/feature-map/CHANGELOG/AC annotations, and verify the full integrated tree.
+- [ ] Commit and push the integration branch.
 
 ## Decisions / status
 - Kept the worker independent of `workers/strava-proxy`.
@@ -38,11 +41,11 @@
 - [x] **AC14** Published `/v1/skill.md` and `/v1/schema.json` cannot drift from app proposal schema. [test: `__tests__/lib/agent-access.test.ts::"BLD-5100 AC14 keeps validator and published JSON schema version aligned"`]
 
 ### AI Coach removal (owned by parallel worker)
-- [ ] **AC15** No AI Coach routes, imports, locale keys, or `openrouter.ai` references remain. [TODO-test: BLD-5100]
-- [ ] **AC16** Upgrade migration drops Coach tables on an existing database without harming unrelated data. [TODO-test: BLD-5100]
-- [ ] **AC17** Upgrade deletes the OpenRouter key from secure storage. [TODO-test: BLD-5100]
-- [ ] **AC18** Privacy policy, feature map, and CHANGELOG describe Agent access and no longer advertise in-app AI coaching. [TODO-test: BLD-5100]
-- [ ] **AC19** The replacement has a local/no-server import guard; pasted proposals never require the removed server path. [TODO-test: BLD-5100]
+- [ ] **AC15** No AI Coach routes, imports, locale keys, or `openrouter.ai` references remain. [test: `__tests__/ai-no-server-guard.test.ts::"contains no legacy AI-provider SDK or direct-provider references in app source"`]
+- [ ] **AC16** Upgrade migration drops Coach tables on an existing database without harming unrelated data. [test: `__tests__/lib/db/coach-tables-removal-migration.test.ts::"drops the legacy tables and settings from an existing database"`]
+- [ ] **AC17** Upgrade deletes the OpenRouter key from secure storage. [test: `__tests__/lib/legacy-provider-cleanup.test.ts::"deletes the stored credential once and records completion"`]
+- [ ] **AC18** Privacy policy, feature map, and CHANGELOG describe Agent access and no longer advertise in-app AI coaching. [test: `__tests__/ai-no-server-guard.test.ts::"documents Agent access without advertising the removed coach"`]
+- [ ] **AC19** The replacement has a local/no-server import guard; pasted proposals never require the removed server path. [test: `__tests__/ai-no-server-guard.test.ts::"allows Agent-access networking only through the configured relay host"`]
 
 ## Evidence (slice one)
 - Screenshots and transcript under `/tmp/bld-5100-evidence/slice1/`.

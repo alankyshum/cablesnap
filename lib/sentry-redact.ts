@@ -1,15 +1,13 @@
 import type { Breadcrumb, ErrorEvent } from "@sentry/core";
-import { keyFormat } from "./key-vault";
 
 const REDACTED = "[REDACTED]";
 const PHOTO_REDACTED = "[PHOTO_REDACTED]";
+const LEGACY_SECRET_PATTERN = /sk-or-v1-[a-f0-9]{64}/g;
 
 function redact(value: unknown, seen = new WeakSet<object>()): unknown {
   if (typeof value === "string") {
     return value
-      .replace(/sk-or-v1-[a-f0-9]{64}/g, (candidate) =>
-      keyFormat(candidate) ? REDACTED : candidate
-      )
+      .replace(LEGACY_SECRET_PATTERN, REDACTED)
       .replace(/(?:file|content|ph|assets-library|data):[^\s"']+/gi, PHOTO_REDACTED)
       .replace(/(?:base64|exif|location|latitude|longitude|image_url|imageUri|photoUri)\s*[:=][^,}\s]+/gi, PHOTO_REDACTED);
   }
@@ -39,5 +37,3 @@ export function redactSentryEvent(event: ErrorEvent): ErrorEvent {
 export function redactSentryBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb {
   return redact(breadcrumb) as Breadcrumb;
 }
-
-export { keyFormat };

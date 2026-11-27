@@ -62,12 +62,11 @@ type Deps = {
 export async function handleExport(
   { toast, setLoading, setExportProgress }: Deps,
   selectedCategories?: BackupCategoryName[],
-  includeCredentials = false,
 ) {
   setLoading(true);
     setExportProgress(t({ id: 'settingsHandlers.export.preparing', message: 'Preparing export...' }));
   try {
-    const data = await exportAllData({ selectedCategories, includeCredentials }, (progress: ExportProgress) => {
+    const data = await exportAllData({ selectedCategories }, (progress: ExportProgress) => {
       if (progress.table === 'done') {
         setExportProgress(null);
       } else {
