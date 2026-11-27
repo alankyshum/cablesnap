@@ -1,4 +1,24 @@
 {
+  "settings.integrations.agentAccess": {
+    "message": "代理存取",
+    "srcHash": "4651ea5ab936",
+    "origin": "human"
+  },
+  "settings.integrations.agentAccessCaption": {
+    "message": "與你自己的 AI 代理分享暫時的運動資料。",
+    "srcHash": "b6717bfac4ea",
+    "origin": "human"
+  },
+  "settings.integrations.agentAccessA11y": {
+    "message": "開啟代理存取設定",
+    "srcHash": "53c87a22638a",
+    "origin": "human"
+  },
+  "settings.agentAccess.title": {
+    "message": "代理存取",
+    "srcHash": "5ca57c559d90",
+    "origin": "human"
+  },
   "components.plates.calculator.barBreakdown": {
     "message": "(槓片{active}{unit} + 2×{0}{unit})",
     "srcHash": "7246cbf44b2f",

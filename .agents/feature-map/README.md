@@ -7,6 +7,7 @@ For vague or feature-level work, search aliases below, open the matching feature
 
 | ID | Title | User vocabulary / aliases | Routes |
 | --- | --- | --- | --- |
+| [agent-access](./agent-access.md) | Agent access | Agent access, AI agent, ChatGPT, Claude, Codex, workout snapshot, proposal, paste proposal | `/settings/agent-access` |
 | [ai-coach](./ai-coach.md) | AI Coach | coach, chat, AI workout, workout draft, OpenRouter, API key, gym photo | `/ai-coach`, `/settings/ai-key` |
 | [body](./body.md) | Body Metrics, Goals, and Progress Photos | body weight, measurements, body fat, progress pictures, before and after, weight goal, body profile | `/body/compare`, `/body/goals`, `/body/measurements`, `/body/photos` |
 | [exercises](./exercises.md) | Exercise Library and Exercise Progress | exercise list, movement library, custom exercise, exercise details, exercise chart, strength goal, substitute exercise | `/exercise/[id]`, `/exercise/create`, `/exercise/edit/[id]`, `/exercises` |
@@ -57,6 +58,7 @@ For vague or feature-level work, search aliases below, open the matching feature
 | `/session/summary/[id]` | [Workout Session and Rest Timer](./session.md) |
 | `/settings` | [Settings, Backups, and Imports](./settings-data.md) |
 | `/settings/advanced-sets` | [Settings, Backups, and Imports](./settings-data.md) |
+| `/settings/agent-access` | [Agent access](./agent-access.md) |
 | `/settings/ai-key` | [AI Coach](./ai-coach.md) |
 | `/settings/backups` | [Settings, Backups, and Imports](./settings-data.md) |
 | `/settings/gym-profiles` | [Settings, Backups, and Imports](./settings-data.md) |

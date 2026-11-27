@@ -13955,3 +13955,23 @@ msgstr "This workout could not be started. Please try again."
 #. js-lingui-explicit-id
 msgid "components.coach.restoreRevisionError"
 msgstr "This revision could not be restored. Please try again."
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:
+msgid "settings.integrations.agentAccess"
+msgstr "Agent access"
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:
+msgid "settings.integrations.agentAccessCaption"
+msgstr "Share temporary workout access with your own AI agent."
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:
+msgid "settings.integrations.agentAccessA11y"
+msgstr "Open Agent access settings"
+
+#. js-lingui-explicit-id
+#: app/settings/_layout.tsx:
+msgid "settings.agentAccess.title"
+msgstr "Agent access"

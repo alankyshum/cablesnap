@@ -13819,3 +13819,23 @@ msgstr "AI 教练正在思考"
 msgid "components.coach.usingTool"
 msgstr "使用工具：{tool}"
 
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:
+msgid "settings.integrations.agentAccess"
+msgstr "Agent access"
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:
+msgid "settings.integrations.agentAccessCaption"
+msgstr "Share temporary workout access with your own AI agent."
+
+#. js-lingui-explicit-id
+#: app/(tabs)/settings.tsx:
+msgid "settings.integrations.agentAccessA11y"
+msgstr "Open Agent access settings"
+
+#. js-lingui-explicit-id
+#: app/settings/_layout.tsx:
+msgid "settings.agentAccess.title"
+msgstr "Agent access"
