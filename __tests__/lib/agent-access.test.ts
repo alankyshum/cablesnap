@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parsePastedProposal } from "../../lib/agent-access-proposal";
+import { AGENT_RELAY_ORIGIN, resolveAgentRelayOrigin } from "../../lib/agent-access-client";
 import { randomCapability, safeCapabilityEqual } from "../../workers/agent-relay/src/security";
 import {
   AGENT_ACCESS_JSON_SCHEMA,
@@ -65,6 +66,15 @@ describe("BLD-5100 Agent access contract", () => {
     expect(AGENT_ACCESS_JSON_SCHEMA.properties.kind.const).toBe(valid.kind);
     expect(AGENT_ACCESS_JSON_SCHEMA.$id).toBe("https://cablesnap-agent-relay.alankyshum.workers.dev/v1/schema.json");
     expect(AGENT_ACCESS_SKILL).toContain(`/v1/schema.json (schemaVersion "${AGENT_ACCESS_SCHEMA_VERSION}")`);
+  });
+
+  it("BLD-5100 network boundary rejects arbitrary and AI-provider relay origins", () => {
+    expect(resolveAgentRelayOrigin()).toBe(AGENT_RELAY_ORIGIN);
+    expect(resolveAgentRelayOrigin(AGENT_RELAY_ORIGIN, false)).toBe(AGENT_RELAY_ORIGIN);
+    expect(resolveAgentRelayOrigin("http://localhost:8090", true)).toBe("http://localhost:8090");
+    expect(() => resolveAgentRelayOrigin("https://openrouter.ai", false)).toThrow("not allowed");
+    expect(() => resolveAgentRelayOrigin("https://arbitrary.example", false)).toThrow("not allowed");
+    expect(() => resolveAgentRelayOrigin("http://127.0.0.1:8090", false)).toThrow("not allowed");
   });
 
   it("BLD-5100 AC22 Worker capabilities are 256-bit and constant-time compared", () => {

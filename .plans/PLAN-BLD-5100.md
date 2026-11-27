@@ -6,7 +6,7 @@
 - [x] Merge hardening tip into integration and resolve conflicts while preserving coach removal and one coherent Agent access design (merge `f9f2aff3`). Conflicts in plan, CHANGELOG, route registry and e2e were combined; privacy policy gained final logging/URL-retention wording.
 - [x] Run final repository, worker, migration, removal, acceptance-criteria and live gates; record `/tmp/bld-5100-evidence/final/` outputs.
 - [x] Run final seeded Codex and paste-back Playwright acceptance, with distinct proposal names and targeted screenshots for both reviews, unknown-ID blocking and both imported rows (1 passed, 53.2s).
-- [ ] Push only `bld-5100-integration`, open one draft PR to `main`, and reconcile CI until green without merging. Initial PR #971 CI exposed two inherited infrastructure failures: `ubuntu-latest` advanced to unsupported 26.04 for Playwright; F-Droid metadata lagged current release `0.26.123/187008`. Fixes pin supported Ubuntu 24.04, refresh release metadata, and skip credentialed live-relay scenarios in CI while retaining local release evidence.
+- [ ] Push only `bld-5100-integration`, open one draft PR to `main`, and reconcile CI until green without merging. Initial PR #971 CI exposed inherited `ubuntu-latest` drift to unsupported 26.04; pinning Ubuntu 24.04 fixes the Playwright infrastructure failure without loosening gates. Credentialed live-relay scenarios run only with explicit `AGENT_ACCESS_LIVE_E2E=1` locally and retain their live evidence. F-Droid release metadata was deliberately not bumped and remains an inherited main failure.
 
 ## Decisions / status
 - Kept the Worker independent of `workers/strava-proxy`; shared proposal schema and validator live in `shared/agent-access.ts`.
@@ -18,7 +18,7 @@
 - Cloudflare `workers.dev` blocks Python urllib's default User-Agent with 403/1010 before Worker execution. The skill retries with `CableSnapAgent/1.0`; persistent HTTP failure falls back to exactly one fenced proposal JSON block.
 - Native owner sessions recover from Expo SecureStore and clear on local/remote expiry, revoke or explicit revocation. Web session state remains transient.
 - Durable Object alarm/revoke deletes snapshot/proposal rows and stores only a one-bit expired tombstone, distinguishing 410 expired from 401 revoked/unknown.
-- Proposal/snapshot limits are 64 KiB/2 MiB; per-session proposal quota is 20 and session creation is rate-limited per IP.
+- Proposal/snapshot limits are 64 KiB/2 MiB; per-session proposal quota is 20 and session creation is rate-limited per IP. Requested lifetimes below 30 seconds are intentionally raised to the 30-second floor; the supported range is `[30, SESSION_TTL_SECONDS]`.
 - Final acceptance uses deployed Worker version `45578436-93b7-482e-9010-ed2b90b3dadf`; do not redeploy when merged `workers/agent-relay` exactly matches `a1874d21`.
 
 ## Acceptance Criteria — whole project

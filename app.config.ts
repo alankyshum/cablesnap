@@ -123,6 +123,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     stravaClientId: "227474",
     stravaProxyUrl: "https://strava-proxy.alankyshum.workers.dev",
-    agentRelayUrl: process.env.EXPO_PUBLIC_AGENT_RELAY_URL ?? "https://cablesnap-agent-relay.alankyshum.workers.dev",
+    agentRelayUrl: "https://cablesnap-agent-relay.alankyshum.workers.dev",
   },
 });

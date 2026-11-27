@@ -49,6 +49,11 @@ describe("BLD-5100 Agent access network guard", () => {
     expect(violations).toEqual([]);
   });
 
+  it("does not register deleted Coach settings routes", () => {
+    const settingsLayout = readFileSync(join(ROOT, "app/settings/_layout.tsx"), "utf8");
+    expect(settingsLayout).not.toMatch(/Stack\.Screen[^\n]+name=["'](?:ai-key|ai-coach|coach)["']/);
+  });
+
   it("documents Agent access without advertising the removed coach", () => {
     const privacy = readFileSync(join(ROOT, "docs/privacy-policy.md"), "utf8");
     const featureMap = readFileSync(join(ROOT, ".agents/feature-map/README.md"), "utf8");

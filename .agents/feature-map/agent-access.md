@@ -13,7 +13,7 @@ Create a short-lived capability-scoped workout snapshot for an AI agent the user
 - Open **Settings → Integrations → Agent access**.
 - Choose snapshot scope/history (90 days by default), start the session, and copy the generated prompt into ChatGPT, Claude, Codex, or another agent.
 - Review incoming proposals, or paste JSON from a browse-only agent, then explicitly import a proposal to workout templates.
-- Revoke at any time; the relay expires after 30 minutes by default.
+- Revoke at any time; the relay expires after 30 minutes by default. Requested lifetimes are bounded to `[30 seconds, SESSION_TTL_SECONDS]`, so a request below 30 seconds is raised to 30 seconds.
 
 ## Code entry points
 - `shared/agent-access.ts` — versioned schema, validator, and generated skill text.

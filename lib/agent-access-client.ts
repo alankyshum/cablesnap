@@ -16,11 +16,26 @@ export type AgentSession = {
   prompt: string;
 };
 
+export const AGENT_RELAY_ORIGIN = "https://cablesnap-agent-relay.alankyshum.workers.dev";
+
+export function resolveAgentRelayOrigin(candidate?: string, allowLocal = __DEV__): string {
+  if (candidate === undefined) return AGENT_RELAY_ORIGIN;
+  try {
+    const url = new URL(candidate);
+    const isProduction = url.origin === AGENT_RELAY_ORIGIN;
+    const isLocal = allowLocal && url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname);
+    if ((isProduction || isLocal) && url.pathname === "/" && !url.search && !url.hash && !url.username && !url.password) {
+      return url.origin;
+    }
+  } catch {
+    // Reject invalid or non-allowlisted origins below.
+  }
+  throw new Error("Agent access relay origin is not allowed.");
+}
+
 export function agentRelayBase(): string {
   const configured = Constants.expoConfig?.extra?.agentRelayUrl;
-  return typeof configured === "string" && configured.length > 0
-    ? configured.replace(/\/$/, "")
-    : "https://cablesnap-agent-relay.alankyshum.workers.dev";
+  return resolveAgentRelayOrigin(typeof configured === "string" ? configured : undefined);
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

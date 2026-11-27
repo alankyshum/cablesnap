@@ -3,6 +3,7 @@ import { validateAgentTemplateProposal, type AgentTemplateProposal } from "@/sha
 import { uuid } from "../uuid";
 import { getDrizzle, withTransaction } from "./helpers";
 import { exercises, templateExercises, workoutTemplates } from "./schema";
+import { getTemplateById } from "./templates";
 
 export async function getAgentExerciseNames(): Promise<Record<string, string>> {
   const db = await getDrizzle();
@@ -47,5 +48,12 @@ export async function importAgentTemplate(value: AgentTemplateProposal): Promise
       });
     }
   });
+
+  // Expo SQLite can swallow an implicit rollback as a successful transaction.
+  // Verify the durable row and child count before the review UI reports success.
+  const persisted = await getTemplateById(templateId);
+  if (!persisted || persisted.exercises?.length !== proposal.exercises.length) {
+    throw new Error("Workout template transaction did not persist completely");
+  }
   return templateId;
 }
