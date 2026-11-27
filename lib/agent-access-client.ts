@@ -35,8 +35,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function createAgentSession(snapshot: AgentSnapshot): Promise<AgentSession> {
-  return request<AgentSession>("/v1/sessions", { method: "POST", body: JSON.stringify({ snapshot }) });
+export async function createAgentSession(snapshot: AgentSnapshot, ttlSeconds?: number): Promise<AgentSession> {
+  return request<AgentSession>("/v1/sessions", {
+    method: "POST",
+    body: JSON.stringify({ snapshot, ...(ttlSeconds === undefined ? {} : { ttlSeconds }) }),
+  });
 }
 
 export async function pollAgentSession(session: Pick<AgentSession, "sessionId" | "ownerToken">) {

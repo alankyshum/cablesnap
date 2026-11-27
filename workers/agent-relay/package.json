@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "check": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test test/*.test.ts && node scripts/check-sensitive-logging.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },

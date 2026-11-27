@@ -4,6 +4,13 @@ import { uuid } from "../uuid";
 import { getDrizzle, withTransaction } from "./helpers";
 import { exercises, templateExercises, workoutTemplates } from "./schema";
 
+export async function getAgentExerciseNames(): Promise<Record<string, string>> {
+  const db = await getDrizzle();
+  const rows = await db.select({ id: exercises.id, name: exercises.name }).from(exercises)
+    .where(isNull(exercises.deleted_at)).all();
+  return Object.fromEntries(rows.map((row) => [row.id, row.name]));
+}
+
 export async function importAgentTemplate(value: AgentTemplateProposal): Promise<string> {
   const validation = validateAgentTemplateProposal(value);
   if (!validation.success) throw new Error(validation.error);

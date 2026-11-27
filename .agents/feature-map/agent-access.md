@@ -23,6 +23,9 @@ Create a short-lived capability-scoped workout snapshot for an AI agent the user
 - `lib/db/agent-access.ts` — user-approved import into template tables.
 
 ## Security boundaries
-- Owner and agent tokens are distinct 256-bit capabilities; only token hashes are stored.
-- Agent requests may read one snapshot and submit proposals; writes never target the app database.
-- Relay and app independently validate the same proposal schema. Revoke deletes data immediately; alarms delete expiry data.
+- Owner and agent tokens are distinct 256-bit capabilities; only token hashes are stored, with constant-time role comparison.
+- Agent requests may read one snapshot and submit proposals; owner requests may list or revoke. Neither capability can cross into the other role or create a credentialed session.
+- The GET snapshot URL intentionally carries the agent capability for browse-only support; Worker request logging is disabled. Agent/chat/proxy history can still retain that URL.
+- Relay and app independently reject schema-invalid proposals and unknown exercise IDs. Limits cover snapshot/proposal bytes, proposals per session, and per-IP session creation.
+- Active native sessions recover from Expo SecureStore. Expiry/revoke clear the stored owner token; relay alarms and revocation delete Durable Object data.
+- Imports show current exercise names and block missing library IDs. Long review cards remain scrollable, and nothing writes to the app DB before explicit import.

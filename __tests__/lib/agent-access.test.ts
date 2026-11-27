@@ -22,12 +22,16 @@ describe("BLD-5100 Agent access contract", () => {
   it("BLD-5100 AC1 publishes the shared schema version and skill", () => {
     expect(validateAgentTemplateProposal(valid).success).toBe(true);
     expect(AGENT_ACCESS_SKILL).toContain("/v1/schema.json");
-    expect(AGENT_ACCESS_SKILL).toContain("If your chat app cannot POST");
+    expect(AGENT_ACCESS_SKILL).toContain("Browse-only agents: output exactly one fenced");
+    expect(AGENT_ACCESS_SKILL).toContain("HTTP-capable agents: POST exactly one");
   });
 
   it("BLD-5100 AC9 rejects schema-invalid and oversized proposals", () => {
     expect(validateAgentTemplateProposal({ ...valid, schemaVersion: "999" }).success).toBe(false);
+    expect(validateAgentTemplateProposal({ ...valid, unexpected: true }).success).toBe(false);
+    expect(validateAgentTemplateProposal({ ...valid, template: { ...valid.template, name: undefined } }).success).toBe(false);
     expect(validateAgentTemplateProposal({ ...valid, template: { ...valid.template, exercises: [] } }).success).toBe(false);
+    expect(validateAgentTemplateProposal({ ...valid, template: { ...valid.template, exercises: [{ ...valid.template.exercises[0], targetSets: 0 }] } }).success).toBe(false);
     expect(() => parsePastedProposal("x".repeat(MAX_PROPOSAL_BYTES + 1))).toThrow("too large");
   });
 

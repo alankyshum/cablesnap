@@ -8,7 +8,8 @@ import {
   type AgentSession,
 } from "@/lib/agent-access-client";
 import { buildAgentSnapshot } from "@/lib/agent-access-snapshot";
-import { importAgentTemplate } from "@/lib/db/agent-access";
+import { clearStoredAgentSession, loadStoredAgentSession, saveStoredAgentSession } from "@/lib/agent-access-session-store";
+import { getAgentExerciseNames, importAgentTemplate } from "@/lib/db/agent-access";
 import type { AgentAccessScope, AgentTemplateProposal } from "@/shared/agent-access";
 
 export const DEFAULT_AGENT_SCOPE: AgentAccessScope = {
@@ -24,8 +25,20 @@ export function useAgentAccess() {
   const [scope, setScope] = useState<AgentAccessScope>(DEFAULT_AGENT_SCOPE);
   const [session, setSession] = useState<AgentSession | null>(null);
   const [proposals, setProposals] = useState<AgentProposal[]>([]);
+  const [exerciseNames, setExerciseNames] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [importedIds, setImportedIds] = useState<Set<string>>(() => new Set());
+
+  const forgetSession = useCallback(async () => {
+    setSession(null);
+    setProposals([]);
+    await clearStoredAgentSession();
+  }, []);
+
+  useEffect(() => {
+    void getAgentExerciseNames().then(setExerciseNames).catch(() => setExerciseNames({}));
+    void loadStoredAgentSession().then(setSession).catch(() => clearStoredAgentSession());
+  }, []);
 
   const poll = useCallback(async () => {
     if (!session) return;
@@ -34,17 +47,20 @@ export function useAgentAccess() {
       setProposals(current.proposals);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not check proposals";
-      if (message.includes("expired") || message.includes("revoked")) setSession(null);
+      if (message.includes("expired") || message.includes("revoked") || message.includes("invalid session")) {
+        await forgetSession();
+      }
       toast.error(message);
     }
-  }, [session, toast]);
+  }, [forgetSession, session, toast]);
 
   useEffect(() => {
     if (!session) return;
     const initial = setTimeout(() => { void poll(); }, 0);
     const timer = setInterval(() => { void poll(); }, 5000);
-    return () => { clearTimeout(initial); clearInterval(timer); };
-  }, [poll, session]);
+    const expiry = setTimeout(() => { void forgetSession(); }, Math.max(0, session.expiresAt - Date.now()));
+    return () => { clearTimeout(initial); clearInterval(timer); clearTimeout(expiry); };
+  }, [forgetSession, poll, session]);
 
   const start = async () => {
     setBusy(true);
@@ -53,6 +69,7 @@ export function useAgentAccess() {
       if (!Number.isInteger(parsedDays) || parsedDays < 1 || parsedDays > 3650) throw new Error("Choose 1–3650 days.");
       const snapshot = await buildAgentSnapshot({ days: parsedDays, scope });
       const created = await createAgentSession(snapshot);
+      await saveStoredAgentSession(created);
       setSession(created);
       setProposals([]);
       setImportedIds(new Set());
@@ -67,8 +84,7 @@ export function useAgentAccess() {
     setBusy(true);
     try {
       await revokeAgentSession(session);
-      setSession(null);
-      setProposals([]);
+      await forgetSession();
       toast.success("Agent access revoked");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not revoke Agent access");
@@ -88,5 +104,5 @@ export function useAgentAccess() {
     } finally { setBusy(false); }
   };
 
-  return { days, setDays, scope, setScope, session, proposals, busy, importedIds, start, poll, revoke, importProposal };
+  return { days, setDays, scope, setScope, session, proposals, exerciseNames, busy, importedIds, start, poll, revoke, importProposal };
 }

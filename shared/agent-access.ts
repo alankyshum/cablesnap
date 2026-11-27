@@ -2,6 +2,7 @@
 export const AGENT_ACCESS_SCHEMA_VERSION = "1" as const;
 export const MAX_PROPOSAL_BYTES = 64 * 1024;
 export const MAX_SNAPSHOT_BYTES = 2 * 1024 * 1024;
+export const MAX_PROPOSALS_PER_SESSION = 20;
 
 export type AgentAccessScope = {
   sessions: boolean;
@@ -46,9 +47,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const boundedString = (value: unknown, max: number): value is string =>
   typeof value === "string" && value.length > 0 && value.length <= max;
+const hasOnlyKeys = (value: Record<string, unknown>, allowed: string[]): boolean =>
+  Object.keys(value).every((key) => allowed.includes(key));
 
 function validateExercise(value: unknown, index: number): AgentTemplateExercise | string {
-  if (!isRecord(value) || !boundedString(value.exerciseId, 128) ||
+  if (!isRecord(value) || !hasOnlyKeys(value, ["exerciseId", "targetSets", "targetReps", "restSeconds"]) ||
+      !boundedString(value.exerciseId, 128) ||
       !Number.isInteger(value.targetSets) || (value.targetSets as number) < 1 || (value.targetSets as number) > 20 ||
       !boundedString(value.targetReps, 40) || !Number.isInteger(value.restSeconds) ||
       (value.restSeconds as number) < 0 || (value.restSeconds as number) > 1800) {
@@ -62,41 +66,27 @@ function validateExercise(value: unknown, index: number): AgentTemplateExercise 
   };
 }
 
-export function validateAgentTemplateProposal(value: unknown): ProposalValidation {
-  if (!isRecord(value) || value.schemaVersion !== AGENT_ACCESS_SCHEMA_VERSION) {
-    return { success: false, error: "Unsupported or missing schemaVersion" };
-  }
-  if (value.kind !== "template-proposal" || !isRecord(value.template)) {
-    return { success: false, error: "Expected a template-proposal" };
-  }
-  const { template } = value;
-  if (!boundedString(template.name, 100)) {
-    return { success: false, error: "template.name must contain 1–100 characters" };
-  }
-  if (template.notes !== undefined && (typeof template.notes !== "string" || template.notes.length > 500)) {
-    return { success: false, error: "template.notes must be at most 500 characters" };
-  }
-  if (!Array.isArray(template.exercises) || template.exercises.length < 1 || template.exercises.length > 30) {
-    return { success: false, error: "template.exercises must contain 1–30 items" };
-  }
+function validateTemplate(value: Record<string, unknown>): AgentTemplateProposal["template"] | string {
+  if (!hasOnlyKeys(value, ["name", "notes", "exercises"]) || !boundedString(value.name, 100)) return "template.name must contain 1–100 characters";
+  if (value.notes !== undefined && (typeof value.notes !== "string" || value.notes.length > 500)) return "template.notes must be at most 500 characters";
+  if (!Array.isArray(value.exercises) || value.exercises.length < 1 || value.exercises.length > 30) return "template.exercises must contain 1–30 items";
   const exercises: AgentTemplateExercise[] = [];
-  for (const [index, item] of template.exercises.entries()) {
+  for (const [index, item] of value.exercises.entries()) {
     const exercise = validateExercise(item, index);
-    if (typeof exercise === "string") return { success: false, error: exercise };
+    if (typeof exercise === "string") return exercise;
     exercises.push(exercise);
   }
-  return {
-    success: true,
-    data: {
-      schemaVersion: AGENT_ACCESS_SCHEMA_VERSION,
-      kind: "template-proposal",
-      template: {
-        name: template.name,
-        ...(typeof template.notes === "string" ? { notes: template.notes } : {}),
-        exercises,
-      },
-    },
-  };
+  return { name: value.name, ...(typeof value.notes === "string" ? { notes: value.notes } : {}), exercises };
+}
+
+export function validateAgentTemplateProposal(value: unknown): ProposalValidation {
+  if (!isRecord(value) || value.schemaVersion !== AGENT_ACCESS_SCHEMA_VERSION) return { success: false, error: "Unsupported or missing schemaVersion" };
+  if (!hasOnlyKeys(value, ["schemaVersion", "kind", "template"]) || value.kind !== "template-proposal" || !isRecord(value.template)) {
+    return { success: false, error: "Expected a template-proposal with only supported fields" };
+  }
+  const template = validateTemplate(value.template);
+  if (typeof template === "string") return { success: false, error: template };
+  return { success: true, data: { schemaVersion: AGENT_ACCESS_SCHEMA_VERSION, kind: "template-proposal", template } };
 }
 
 export const AGENT_ACCESS_JSON_SCHEMA = {
@@ -135,4 +125,4 @@ export const AGENT_ACCESS_JSON_SCHEMA = {
   },
 } as const;
 
-export const AGENT_ACCESS_SKILL = `# CableSnap Agent access\n\nYou may read the user's explicitly shared, temporary workout snapshot, answer questions about it, and propose workout templates. A proposal never changes the user's data: the app user must review and import it.\n\n- Fetch the snapshot URL from the prompt. It is private and expires.\n- Use only exercise IDs present in the snapshot's exerciseLibrary.\n- To submit a proposal, POST JSON to the proposal URL with "Authorization: Bearer <agent token>".\n- Proposal JSON must validate against /v1/schema.json (schemaVersion "${AGENT_ACCESS_SCHEMA_VERSION}").\n- If your chat app cannot POST, return one fenced JSON block for the user to paste into CableSnap. Do not invent exercise IDs.\n- Photos stay with the agent: ask the user to provide equipment photos directly to your chat if useful.\n- Do not expose tokens, and do not ask to store the snapshot beyond the session.\n`;
+export const AGENT_ACCESS_SKILL = `# CableSnap Agent access (schema ${AGENT_ACCESS_SCHEMA_VERSION})\n\nThe shared snapshot is private and temporary. Analyze it without changing user data, and use only IDs from exerciseLibrary. Validate proposal JSON at /v1/schema.json (schemaVersion "${AGENT_ACCESS_SCHEMA_VERSION}").\n\n- HTTP-capable agents: POST exactly one validated template-proposal to the proposal URL with Authorization: Bearer <agent token>. Do not also output JSON.\n- Browse-only agents: output exactly one fenced \`\`\`json block containing the validated proposal, with no second proposal or raw data.\n- Never expose tokens, request owner endpoints, or retain the snapshot beyond this session.\n- Equipment photos stay with the agent: ask the user to provide them directly in chat.\n`;
