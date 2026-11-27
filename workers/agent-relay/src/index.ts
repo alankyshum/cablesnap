@@ -11,6 +11,7 @@ import {
   type AgentSnapshot,
   type AgentTemplateProposal,
 } from "../../../shared/agent-access";
+import { randomCapability, safeCapabilityEqual } from "./security";
 
 type StoredSession = {
   ownerHash: string;
@@ -50,11 +51,6 @@ async function digest(value: string): Promise<string> {
     .join("");
 }
 
-function randomToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-}
-
 function bearer(request: Request): string {
   const value = request.headers.get("Authorization");
   return value?.startsWith("Bearer ") ? value.slice(7) : "";
@@ -62,13 +58,6 @@ function bearer(request: Request): string {
 
 function authorizedToken(request: Request, url: URL): string {
   return bearer(request) || url.searchParams.get("token") || "";
-}
-
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let different = 0;
-  for (let index = 0; index < a.length; index++) different |= a.charCodeAt(index) ^ b.charCodeAt(index);
-  return different === 0;
 }
 
 function numericEnv(value: string | undefined, fallback: number, min: number, max: number): number {
@@ -164,7 +153,7 @@ export class RelaySession extends DurableObject<Env> {
       throw new RequestError("session expired", 410);
     }
     const expected = role === "owner" ? row.owner_hash : row.agent_hash;
-    if (!safeEqual(tokenHash, expected)) throw new RequestError("invalid token", 401);
+    if (!safeCapabilityEqual(tokenHash, expected)) throw new RequestError("invalid token", 401);
     return row;
   }
 }
@@ -204,9 +193,9 @@ async function createSession(request: Request, env: Env): Promise<Response> {
   const ttl = Number.isInteger(body.ttlSeconds)
     ? Math.max(30, Math.min(configuredTtl, body.ttlSeconds!))
     : configuredTtl;
-  const sessionId = randomToken();
-  const ownerToken = randomToken();
-  const agentToken = randomToken();
+  const sessionId = randomCapability();
+  const ownerToken = randomCapability();
+  const agentToken = randomCapability();
   const expiresAt = Date.now() + ttl * 1000;
   const stub = env.AGENT_RELAY.getByName(sessionId);
   await stub.create({
@@ -263,6 +252,7 @@ function caughtResponse(caught: unknown): Response {
   if (caught instanceof RequestError) return error(caught.message, caught.status);
   if (caught instanceof Error) {
     if (caught.message.includes("invalid token")) return error("invalid token", 401);
+    if (caught.message.includes("proposal limit exceeded")) return error("proposal limit exceeded", 429);
     if (caught.message.includes("session expired")) return error("session expired", 410);
     if (caught.message.includes("session revoked or not found")) return error("session revoked or not found", 401);
   }

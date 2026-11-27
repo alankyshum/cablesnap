@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { parsePastedProposal } from "../../lib/agent-access-proposal";
+import { randomCapability, safeCapabilityEqual } from "../../workers/agent-relay/src/security";
 import {
   AGENT_ACCESS_JSON_SCHEMA,
   AGENT_ACCESS_SCHEMA_VERSION,
@@ -33,7 +34,8 @@ describe("BLD-5100 Agent access contract", () => {
   it("BLD-5100 AC1 publishes the shared schema version and skill", () => {
     expect(validateAgentTemplateProposal(valid).success).toBe(true);
     expect(AGENT_ACCESS_SKILL).toContain("/v1/schema.json");
-    expect(AGENT_ACCESS_SKILL).toContain("Browse-only agents: output exactly one fenced");
+    expect(AGENT_ACCESS_SKILL).toContain("act as browse-only and output exactly one fenced");
+    expect(AGENT_ACCESS_SKILL).toContain("error code: 1010");
     expect(AGENT_ACCESS_SKILL).toContain("HTTP-capable agents: POST exactly one");
   });
 
@@ -62,6 +64,13 @@ describe("BLD-5100 Agent access contract", () => {
     expect(AGENT_ACCESS_JSON_SCHEMA.properties.schemaVersion.const).toBe(AGENT_ACCESS_SCHEMA_VERSION);
     expect(AGENT_ACCESS_JSON_SCHEMA.properties.kind.const).toBe(valid.kind);
     expect(AGENT_ACCESS_JSON_SCHEMA.$id).toBe("https://cablesnap-agent-relay.alankyshum.workers.dev/v1/schema.json");
+    expect(AGENT_ACCESS_SKILL).toContain(`/v1/schema.json (schemaVersion "${AGENT_ACCESS_SCHEMA_VERSION}")`);
+  });
+
+  it("BLD-5100 AC22 Worker capabilities are 256-bit and constant-time compared", () => {
+    expect(Buffer.from(randomCapability(), "base64url").byteLength).toBe(32);
+    expect(safeCapabilityEqual("same-hash", "same-hash")).toBe(true);
+    expect(safeCapabilityEqual("same-hash", "other-hash")).toBe(false);
   });
 
   it("BLD-5100 AC12 relay contains no payload/token logging and alarm deletes relay rows", () => {
@@ -69,5 +78,9 @@ describe("BLD-5100 Agent access contract", () => {
     expect(source).not.toMatch(/console\.(?:log|info|warn|error|debug)/);
     expect(source).toMatch(/DELETE FROM proposals/);
     expect(source).toMatch(/DELETE FROM session/);
+    const wrangler = fs.readFileSync(path.join(process.cwd(), "workers/agent-relay/wrangler.toml"), "utf8");
+    expect(wrangler).toMatch(/\[observability\][\s\S]*enabled = false/);
+    expect(wrangler).toMatch(/invocation_logs = false/);
+    expect(wrangler).toMatch(/head_sampling_rate = 0/);
   });
 });
