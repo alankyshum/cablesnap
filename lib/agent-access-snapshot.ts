@@ -2,6 +2,7 @@ import { and, asc, eq, gte, inArray, isNotNull, isNull, max } from "drizzle-orm"
 import {
   AGENT_ACCESS_SCHEMA_VERSION,
   MAX_SNAPSHOT_BYTES,
+  validateAgentSnapshot,
   type AgentAccessScope,
   type AgentSnapshot,
 } from "@/shared/agent-access";
@@ -96,8 +97,10 @@ export async function buildAgentSnapshot(options: AgentSnapshotOptions): Promise
     exerciseLibrary,
     personalRecords,
   };
-  if (new TextEncoder().encode(JSON.stringify(snapshot)).byteLength > MAX_SNAPSHOT_BYTES) {
+  const validated = validateAgentSnapshot(snapshot);
+  if (!validated.success) throw new Error(validated.error);
+  if (new TextEncoder().encode(JSON.stringify(validated.data)).byteLength > MAX_SNAPSHOT_BYTES) {
     throw new Error("Workout snapshot is too large; choose a shorter date range.");
   }
-  return snapshot;
+  return validated.data;
 }

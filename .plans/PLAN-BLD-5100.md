@@ -17,7 +17,10 @@
 - SQLite Durable Objects store each relay session; tokens are stored only as SHA-256 hashes.
 - App imports a validated proposal through Drizzle and never writes agent payloads directly into the app database.
 - Snapshot scope defaults to 90 days and all four required categories; templates/exercise library are unbounded by date because they have no effective event date.
-- Slice one implements creation rate limiting, body limits, agent/owner separation, expiry alarms, and revoke; broader abuse hardening is a follow-up.
+- Owner and agent capability tests now run against the deployed Worker; short TTL is requestable only below `SESSION_TTL_SECONDS` and clamped to `[30, 1800]` seconds.
+- Expiry deletes snapshot/proposal rows and records only a one-bit session-state tombstone so expired requests return 410 while revoked/unknown requests return 401.
+- Verification script `scripts/verify-agent-relay.ts` covers capability separation, short TTL expiry, wrong/revoked tokens, schema/size rejection, read-after-write polling, no-scope expansion, and creation rate limiting.
+- Broader abuse hardening (production observability, replay defenses, quotas, and richer app session recovery) remains a follow-up.
 
 ## Acceptance Criteria — whole project
 
@@ -26,14 +29,14 @@
 - [x] **AC2** The real app creates a temporary session against the deployed worker from `/settings/agent-access`. [test: `e2e/scenarios/agent-access.spec.ts::"BLD-5100 AC2 creates an active session through the real deployed relay"`]
 - [x] **AC3** A real external agent, given only the copied prompt, fetches skill/snapshot and POSTs a schema-valid proposed template. [test: `e2e/scenarios/agent-access.spec.ts::"BLD-5100 AC3 receives and reviews a real agent proposal"`]
 - [x] **AC4** The app polls, shows the proposal for review, and imports it only after user confirmation. [test: `e2e/scenarios/agent-access.spec.ts::"BLD-5100 AC4 imports the reviewed proposal into templates"`]
-- [ ] **AC5** Agent GET/POST capabilities cannot create, poll, or revoke sessions; owner capability cannot submit agent proposals. [TODO-test: BLD-5100]
-- [ ] **AC6** Session expiry uses a configurable TTL; expired agent/owner tokens return 410 and storage is deleted by the Durable Object alarm. [TODO-test: BLD-5100]
-- [ ] **AC7** Revoke immediately invalidates both agent and owner tokens and deletes relay data. [TODO-test: BLD-5100]
-- [ ] **AC8** Wrong/mismatched owner or agent tokens are rejected. [TODO-test: BLD-5100]
+- [x] **AC5** Agent GET/POST capabilities cannot create, poll, or revoke sessions; owner capability cannot submit agent proposals. [gate: `scripts/verify-agent-relay.ts` deployed capability matrix]
+- [x] **AC6** Session expiry uses a configurable TTL; expired agent/owner tokens return 410 and storage is deleted by the Durable Object alarm. [gate: `scripts/verify-agent-relay.ts` deployed 30-second expiry test]
+- [x] **AC7** Revoke immediately invalidates both agent and owner tokens and deletes relay data. [gate: `scripts/verify-agent-relay.ts` deployed revoke test]
+- [x] **AC8** Wrong/mismatched owner or agent tokens are rejected. [gate: `scripts/verify-agent-relay.ts` deployed wrong-token matrix]
 - [x] **AC9** Schema-invalid, oversized, and oversized-array proposals are rejected on the Worker and pasted imports use the same app validator. [test: `__tests__/lib/agent-access.test.ts::"BLD-5100 AC9 rejects schema-invalid and oversized proposals"`]
 - [x] **AC10** Snapshot scope is sessions/workouts, templates, exercise library, and PRs only; date range defaults to 90 days and nutrition is excluded. [test: `__tests__/lib/agent-access.test.ts::"BLD-5100 AC10 excludes nutrition from the shared snapshot scope"`]
-- [ ] **AC11** Snapshot and proposal byte limits and basic per-IP session-creation rate limiting are enforced. [TODO-test: BLD-5100]
-- [ ] **AC12** Relay code does not log tokens or payloads. [TODO-test: BLD-5100]
+- [x] **AC11** Snapshot and proposal byte limits and basic per-IP session-creation rate limiting are enforced. [gate: `scripts/verify-agent-relay.ts` deployed size and 429 rate-limit assertions]
+- [x] **AC12** Relay code does not log tokens or payloads. [test: `__tests__/lib/agent-access.test.ts::"BLD-5100 AC12 relay contains no payload/token logging and alarm deletes relay rows"`]
 - [x] **AC13** Browse-only agents can provide fenced proposal JSON; paste validates, previews, and imports through the same versioned schema. [test: `__tests__/lib/agent-access.test.ts::"BLD-5100 AC13 accepts fenced paste JSON through the shared validator"`]
 - [x] **AC14** Published `/v1/skill.md` and `/v1/schema.json` cannot drift from app proposal schema. [test: `__tests__/lib/agent-access.test.ts::"BLD-5100 AC14 keeps validator and published JSON schema version aligned"`]
 
@@ -45,5 +48,13 @@
 - [ ] **AC19** The replacement has a local/no-server import guard; pasted proposals never require the removed server path. [TODO-test: BLD-5100]
 
 ## Evidence (slice one)
-- Screenshots and transcript under `/tmp/bld-5100-evidence/slice1/`.
-- Include the deployed URL, app active-session screenshot, proposal review screenshot, agent transcript, and template DB/import assertion.
+- `/tmp/bld-5100-evidence/slice1/01-agent-access-active.png` — real web app with deployed relay session active.
+- `/tmp/bld-5100-evidence/slice1/02-proposal-review.png` — relayed proposal rendered for explicit review.
+- `/tmp/bld-5100-evidence/slice1/03-template-imported.png` — imported template visible after approval.
+- `/tmp/bld-5100-evidence/slice1/copied-prompt.txt` — sanitized copy of the prompt supplied to the real agent.
+- `/tmp/bld-5100-evidence/slice1/real-agent-transcript.txt` — Codex tool transcript: curl GET skill/schema/snapshot and curl POST proposal.
+- `/tmp/bld-5100-evidence/slice1/template-import-assertion.txt` — same-run UI assertion for the imported template.
+- `/tmp/bld-5100-evidence/slice1/verify-agent-relay.txt` — deployed capabilities/expiry/revoke/size/rate verification results.
+- `/tmp/bld-5100-evidence/slice1/worker-health.json` and `/tmp/bld-5100-evidence/slice1/worker-deploy-final.txt` — health and deployment version.
+- `/tmp/bld-5100-evidence/slice1/expired-token.txt` — explicit 30-second `200 → 410` deployed expiry check.
+- `/tmp/bld-5100-evidence/slice1/schema.json` and `/tmp/bld-5100-evidence/slice1/skill.md` — published versioned contract.
