@@ -20,7 +20,7 @@ In builds that include Sentry, CableSnap sends crash reports, diagnostic logs, a
 
 ### Agent access (optional)
 
-When you start Agent access, CableSnap sends a read-only snapshot of only the workout-data scope you select to a temporary CableSnap-operated Cloudflare Worker relay. The available scope covers workouts and sessions, templates, the exercise library, and personal records; nutrition data is excluded. Access uses separate long-random owner and agent tokens, and the relay session lasts up to 30 minutes. Its stored snapshot and proposals are deleted when the session expires or you revoke it. CableSnap's app does not contact a third-party AI provider: you separately give the token-scoped prompt and URL to an agent you choose, which processes the data under that provider's own terms. CableSnap can validate a template proposal returned through the relay, but cannot import it until you explicitly review and approve it.
+Agent access creates a temporary, token-scoped relay session on a CableSnap-operated Cloudflare Worker. CableSnap sends only the workouts and sessions, templates, exercise library, and personal records you select within your chosen date range; nutrition data is excluded. Separate long-random owner and agent tokens limit the capabilities of the app and agent. Anyone with the private agent link can read the snapshot until the session expires, so share it only with an AI agent you trust. The relay stores the snapshot and proposals for at most the configured lifetime (30 minutes by default) and deletes them on expiry or immediate revoke. Agent proposals never write to the on-device database; CableSnap adds a proposed template only after you explicitly review and import it. CableSnap's app does not contact a third-party AI provider. You separately provide the token-scoped prompt and URL—and any gym-equipment photo directly—to an agent you choose, which handles information under that provider's privacy terms.
 
 ### Strava (optional)
 
@@ -28,7 +28,7 @@ If you connect Strava, the app uses Strava OAuth and a CableSnap-operated Cloudf
 
 ## Choices, access, and deletion
 
-You can choose whether to start Agent access, connect Strava, or export a backup. You can revoke an Agent access session, delete locally stored records using app features where available, remove saved photos or clips in the app, and disconnect Strava. Removing the app also removes app data according to your device's behavior, but may not remove operating-system backups, exports, or information already received by a provider. To ask a provider about information it holds, contact that provider directly.
+You can choose whether to start Agent access, connect Strava, or export a backup. You can revoke an Agent access session immediately; otherwise it expires automatically after at most the configured lifetime (30 minutes by default). You can delete locally stored records using app features where available, remove saved photos or clips in the app, and disconnect Strava. Removing the app also removes app data according to your device's behavior, but may not remove operating-system backups, exports, or information already received by a provider. To ask a provider about information it holds, contact that provider directly. CableSnap does not set a retention period for providers' copies.
 
 ## Children
 

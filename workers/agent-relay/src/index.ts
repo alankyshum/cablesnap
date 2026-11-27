@@ -5,6 +5,7 @@ import {
   AGENT_ACCESS_SKILL,
   MAX_PROPOSAL_BYTES,
   MAX_SNAPSHOT_BYTES,
+  validateAgentSnapshot,
   validateAgentTemplateProposal,
   type AgentSnapshot,
   type AgentTemplateProposal,
@@ -95,6 +96,7 @@ export class RelaySession extends DurableObject<Env> {
       this.ctx.storage.sql.exec(`
         CREATE TABLE IF NOT EXISTS session (id INTEGER PRIMARY KEY CHECK(id = 1), owner_hash TEXT NOT NULL, agent_hash TEXT NOT NULL, expires_at INTEGER NOT NULL, snapshot TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS proposals (id TEXT PRIMARY KEY, submitted_at TEXT NOT NULL, proposal TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS session_state (id INTEGER PRIMARY KEY CHECK(id = 1), state TEXT NOT NULL);
       `);
     });
   }
@@ -102,6 +104,7 @@ export class RelaySession extends DurableObject<Env> {
   async create(session: StoredSession): Promise<void> {
     this.ctx.storage.sql.exec("INSERT OR REPLACE INTO session VALUES (1, ?, ?, ?, ?)", session.ownerHash, session.agentHash, session.expiresAt, JSON.stringify(session.snapshot));
     this.ctx.storage.sql.exec("DELETE FROM proposals");
+    this.ctx.storage.sql.exec("DELETE FROM session_state");
     await this.ctx.storage.setAlarm(session.expiresAt);
   }
 
@@ -127,23 +130,33 @@ export class RelaySession extends DurableObject<Env> {
 
   async revoke(ownerHash: string): Promise<void> {
     this.active(ownerHash, "owner");
-    this.ctx.storage.sql.exec("DELETE FROM proposals");
-    this.ctx.storage.sql.exec("DELETE FROM session");
+    this.deletePayloads("revoked");
     await this.ctx.storage.deleteAlarm();
   }
 
   async alarm(): Promise<void> {
+    this.deletePayloads("expired");
+  }
+
+  private deletePayloads(state: "expired" | "revoked"): void {
     this.ctx.storage.sql.exec("DELETE FROM proposals");
-    this.ctx.storage.sql.exec("UPDATE session SET owner_hash = '', agent_hash = '', snapshot = '{}' WHERE id = 1");
+    this.ctx.storage.sql.exec("DELETE FROM session");
+    this.ctx.storage.sql.exec("INSERT OR REPLACE INTO session_state VALUES (1, ?)", state);
   }
 
   private active(tokenHash: string, role: "owner" | "agent"): { expires_at: number; snapshot: string } {
     const row = this.ctx.storage.sql.exec<{ owner_hash: string; agent_hash: string; expires_at: number; snapshot: string }>(
       "SELECT owner_hash, agent_hash, expires_at, snapshot FROM session WHERE id = 1",
     ).toArray()[0];
-    if (!row || row.expires_at <= Date.now()) {
-      this.ctx.storage.sql.exec("DELETE FROM proposals; DELETE FROM session");
-      throw new RequestError(row ? "session expired" : "session revoked or not found", row ? 410 : 401);
+    if (!row) {
+      const state = this.ctx.storage.sql.exec<{ state: string }>(
+        "SELECT state FROM session_state WHERE id = 1",
+      ).toArray()[0]?.state;
+      throw new RequestError(state === "expired" ? "session expired" : "session revoked or not found", state === "expired" ? 410 : 401);
+    }
+    if (row.expires_at <= Date.now()) {
+      this.deletePayloads("expired");
+      throw new RequestError("session expired", 410);
     }
     const expected = role === "owner" ? row.owner_hash : row.agent_hash;
     if (!safeEqual(tokenHash, expected)) throw new RequestError("invalid token", 401);
@@ -171,20 +184,17 @@ function publicBase(request: Request, env: Env): string {
   return (env.WORKER_BASE_URL || new URL(request.url).origin).replace(/\/$/, "");
 }
 
-function validSnapshot(value: unknown): value is AgentSnapshot {
-  return typeof value === "object" && value !== null && !Array.isArray(value) &&
-    (value as Record<string, unknown>).schemaVersion === AGENT_ACCESS_SCHEMA_VERSION;
-}
-
 async function createSession(request: Request, env: Env): Promise<Response> {
+  if (bearer(request)) return error("capability tokens cannot create sessions", 401);
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
   const limit = numericEnv(env.CREATE_RATE_LIMIT_PER_MINUTE, 10, 1, 60);
   const allowed = await env.CREATE_LIMITER.getByName(await digest(ip)).allow(limit);
   if (!allowed) return error("session creation rate limit exceeded", 429);
 
   const body = await readJson(request, MAX_SNAPSHOT_BYTES + 1024) as { snapshot?: unknown; ttlSeconds?: number };
-  if (!validSnapshot(body.snapshot)) return error("invalid snapshot", 400);
-  if (new TextEncoder().encode(JSON.stringify(body.snapshot)).byteLength > MAX_SNAPSHOT_BYTES) return error("snapshot too large", 413);
+  const validated = validateAgentSnapshot(body.snapshot);
+  if (!validated.success) return error(validated.error, 400);
+  if (new TextEncoder().encode(JSON.stringify(validated.data)).byteLength > MAX_SNAPSHOT_BYTES) return error("snapshot too large", 413);
   const configuredTtl = numericEnv(env.SESSION_TTL_SECONDS, 1800, 30, 1800);
   const ttl = Number.isInteger(body.ttlSeconds)
     ? Math.max(30, Math.min(configuredTtl, body.ttlSeconds!))
@@ -198,7 +208,7 @@ async function createSession(request: Request, env: Env): Promise<Response> {
     ownerHash: await digest(ownerToken),
     agentHash: await digest(agentToken),
     expiresAt,
-    snapshot: body.snapshot,
+    snapshot: validated.data,
   });
   const base = publicBase(request, env);
   const agentUrl = `${base}/v1/sessions/${sessionId}/snapshot?token=${encodeURIComponent(agentToken)}`;
