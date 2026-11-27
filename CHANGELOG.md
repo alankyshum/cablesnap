@@ -23,6 +23,7 @@ marker) at release time.
 ## Unreleased
 
 - Removed the in-app AI Coach, its stored conversations and provider-key setting. Existing installs delete the obsolete local data and credential during upgrade; Agent access replaces it with user-controlled temporary sharing outside the app.
+- The published privacy policy now describes the temporary Agent access relay, excludes nutrition data, and states that proposals require review before import.
 
 ## v0.26.123 — 2026-11-17
 <!-- versionCode: 187008 -->

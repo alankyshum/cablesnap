@@ -466,7 +466,7 @@ export async function migrate(database: SQLite.SQLiteDatabase): Promise<void> {
     DELETE FROM app_settings WHERE key = 'health_connect_enabled';
   `);
 
-  // BLD-5100: AI Coach is removed. Delete obsolete child tables first so the
+  // BLD-5100: the provider-backed coach is removed. Delete obsolete child tables first so the
   // cleanup also succeeds on databases created with foreign-key enforcement.
   await database.execAsync(`
     DROP TABLE IF EXISTS coach_messages;

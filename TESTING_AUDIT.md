@@ -546,17 +546,17 @@ Direct `jest.mock("…")` target strings extracted: **1834** across the suite in
 
 ## Explicit interpretation and review flags
 
-- `jest.setup.js` supplies inherited mocks for chat streaming, intensity mode, safe-area, virtualization, and the default Testing Library provider. File-local mock extraction cannot measure their impact on individual assertions.
+- `jest.setup.js` supplies inherited mocks for intensity mode, safe-area, virtualization, and the default Testing Library provider. File-local mock extraction cannot measure their impact on individual assertions.
 - `__tests__/helpers/db-test-setup.ts` and consumers use chainable fake Drizzle/Expo SQLite adapters: call/chain checks are not durable persistence acceptance.
 - `__tests__/lib/db/onboarding-flags-rpe.test.ts` uses `node:sqlite` plus Drizzle sqlite-proxy for real SQL but mocks `lib/db/helpers`; this is mixed, not full production DB acceptance. Hand-created `DatabaseSync` schemas can exercise real SQL while bypassing production initialization/serialization.
 - `__tests__/acceptance/history.acceptance.test.tsx` mocks `mockGetFilteredSessions`; UI/filter call assertions do not establish persisted-query acceptance. Similar call-count suites require source/manual review.
 - `__tests__/architecture-formula-ban.test.ts`, `__tests__/architecture-set-write-path.test.ts`, `__tests__/app/source-checks-batch.test.ts`, `__tests__/source-contracts-batch.test.ts`, and `__tests__/ai-no-server-guard.test.ts` are declarative source/config proxies. Retain as policy, never count as runtime behavior verification.
 - Retain legitimate process-boundary checks: `scripts/__tests__/smoke-test-emulator.test.ts` uses fake adb at the external executable boundary; `scripts/__tests__/audit-handoff.test.ts` runs the real script with temporary state and controlled fake clip. Boundary doubles are not inherently invalid pipeline stubs.
-- Browser E2E specs cover their configured browser/UI path only, not native backend by implication. Exclude live OpenRouter coverage from ordinary automated verification; never pass live credentials to it.
+- Browser E2E specs cover their configured browser/UI path only, not native backend by implication.
 - Disposition is retain/refactor, not deletion: preserve security/fail-closed/data-loss checks; replace mock-heavy duplicates only with assertion-mapped acceptance coverage. The tracked file-level inventory and static marker/triage pass are complete (536 paths: 523 suites and 13 support paths); this is not a deep behavioral review. Database upgrade acceptance was attempted, but no test/source changes resulted and no tests were run. Sandbox sentinels verified permitted temp writes and denial of protected writes and network. Jest is installed, but the actual initialization/seed adapter path is incomplete; durable database acceptance remains outstanding. Do not claim full cleanup or runtime acceptance.
 
 ## Execution safety and verification status
 
-- `npm test` invokes `jest.global-setup.js`, which runs `patch-package` and can write to `node_modules`. `npm run test:ai:live` may use `OPENROUTER_TEST_API_KEY` and HTTPS. Playwright builds/removes `.expo/e2e-web-${PORT}`, starts a server, and writes reports; isolate artifacts and do not reuse existing servers.
+- `npm test` invokes `jest.global-setup.js`, which runs `patch-package` and can write to `node_modules`. Playwright builds/removes `.expo/e2e-web-${PORT}`, starts a server, and writes reports; isolate artifacts and do not reuse existing servers.
 - macOS `sandbox-exec` was available; harmless sentinels verified permitted writes inside an approved temp directory and denial of outside writes and network. This proves only the tested profile boundary, not that broad Jest/Playwright execution is safe. No test collection, suite execution, service access, or production mutation occurred for this audit.
 - Source-level inventory is not a claim that every suite passes or every contract was reviewed. See [TESTING.md](TESTING.md) and its shared acceptance skill link.

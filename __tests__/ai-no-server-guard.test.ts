@@ -1,4 +1,4 @@
-// BLD-5100: protects removal of the provider-backed AI Coach and the Agent-access network boundary.
+// BLD-5100: protects removal of the provider-backed coach and the Agent-access network boundary.
 import { readdirSync, readFileSync } from "fs";
 import { extname, join, relative } from "path";
 

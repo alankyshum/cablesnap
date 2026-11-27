@@ -739,14 +739,6 @@ msgstr ""
 #~ msgstr "{sessions} sessions · {messages} messages"
 
 #. js-lingui-explicit-id
-#~ msgid "settings.backup.aiCoach"
-#~ msgstr "AI Coach"
-
-#. js-lingui-explicit-id
-#~ msgid "settings.importBackup.aiCoach"
-#~ msgstr "AI Coach"
-
-#. js-lingui-explicit-id
 #. placeholder {0}: state.side
 #: components/plates/PlateCalculatorContent.tsx:114
 msgid "components.plates.calculator.barBreakdown"
