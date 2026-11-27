@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-- Replaced the in-app AI Coach with **Agent access** in Settings: share a temporary, token-scoped workout snapshot with your own AI agent, review proposed templates, and import them only after approval. Existing installs remove obsolete Coach data and credentials; nutrition is excluded and no third-party AI provider is contacted by the app. Relay sessions enforce bounded lifetimes, strict export scope, expiry, and immediate revocation.
+- Replaced the in-app AI Coach with **Agent access** in Settings: share a temporary, token-scoped workout snapshot with your own AI agent, review proposed templates, and import them only after approval. Existing installs remove obsolete Coach data and credentials; nutrition is excluded and the app does not contact a third-party AI provider. Agent access enforces bounded lifetimes, strict scope and payload limits, expiry/revocation, unknown-exercise blocking, secure native-session recovery, exercise-name review, and fenced paste-back fallback.
 
 ## v0.26.123 — 2026-11-17
 <!-- versionCode: 187008 -->

@@ -76,7 +76,7 @@ export default function AgentAccessScreen() {
           <Text variant="title">Incoming proposals</Text>
           {access.proposals.length === 0 ? <Text variant="caption">No proposals yet.</Text> : null}
           {access.proposals.map((item) => (
-            <ProposalCard key={item.id} proposal={item.proposal} submittedAt={item.submittedAt} imported={access.importedIds.has(item.id)} busy={access.busy} onImport={() => void access.importProposal(item.proposal, item.id)} />
+            <ProposalCard key={item.id} proposal={item.proposal} submittedAt={item.submittedAt} imported={access.importedIds.has(item.id)} busy={access.busy} exerciseNames={access.exerciseNames} onImport={() => void access.importProposal(item.proposal, item.id)} />
           ))}
         </View>
 
@@ -87,7 +87,7 @@ export default function AgentAccessScreen() {
           <Button label="Validate proposal" variant="outline" onPress={previewPaste} testID="agent-validate-paste" />
         </Card>
         {pastedProposal ? (
-          <ProposalCard proposal={pastedProposal} imported={access.importedIds.has("paste")} busy={access.busy} onImport={() => void access.importProposal(pastedProposal, "paste")} />
+          <ProposalCard proposal={pastedProposal} imported={access.importedIds.has("paste")} busy={access.busy} exerciseNames={access.exerciseNames} onImport={() => void access.importProposal(pastedProposal, "paste")} />
         ) : null}
       </ScrollView>
     </>

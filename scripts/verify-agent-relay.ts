@@ -54,6 +54,13 @@ async function verifyCapabilities(session: Session): Promise<void> {
 async function verifyValidation(session: Session): Promise<void> {
   const invalid = await json("POST", session.proposalUrl, session.agentToken, {});
   assert("schema-invalid proposal rejected", invalid.status === 422, String(invalid.status));
+  const extraField = await json("POST", session.proposalUrl, session.agentToken, { schemaVersion: "1", kind: "template-proposal", extra: true, template: { name: "Extra", exercises: [{ exerciseId: "exercise-1", targetSets: 2, targetReps: "8", restSeconds: 90 }] } });
+  assert("extra proposal field rejected", extraField.status === 422, String(extraField.status));
+  const missingField = await json("POST", session.proposalUrl, session.agentToken, { schemaVersion: "1", kind: "template-proposal", template: { name: "Missing" } });
+  assert("missing proposal field rejected", missingField.status === 422, String(missingField.status));
+  const outOfRange = await json("POST", session.proposalUrl, session.agentToken, { schemaVersion: "1", kind: "template-proposal", template: { name: "Range", exercises: [{ exerciseId: "exercise-1", targetSets: 21, targetReps: "8", restSeconds: 90 }] } });
+  assert("out-of-range proposal rejected", outOfRange.status === 422, String(outOfRange.status));
+  assert("owner cannot submit proposal", (await json("POST", session.proposalUrl, session.ownerToken, { schemaVersion: "1", kind: "template-proposal", template: { name: "Owner", exercises: [{ exerciseId: "exercise-1", targetSets: 2, targetReps: "8", restSeconds: 90 }] } })).status === 401);
   const oversized = await json("POST", session.proposalUrl, session.agentToken, `"${"x".repeat(64 * 1024)}"`);
   assert("oversized proposal rejected", oversized.status === 413, String(oversized.status));
   const proposal = {
@@ -66,12 +73,19 @@ async function verifyValidation(session: Session): Promise<void> {
   const polled = await json("GET", session.proposalUrl, session.ownerToken);
   const proposals = (polled.body as { proposals?: unknown[] } | null)?.proposals;
   assert("owner observes proposal after write", polled.status === 200 && proposals?.length === 1);
+  for (let index = 1; index < 20; index += 1) {
+    const status = (await json("POST", session.proposalUrl, session.agentToken, proposal)).status;
+    if (status !== 201) throw new Error(`proposal quota probe ${index} failed with ${status}`);
+  }
+  const limited = await json("POST", session.proposalUrl, session.agentToken, proposal);
+  assert("proposal per-session limit enforced", limited.status === 429, String(limited.status));
 }
 
 async function verifyRevoke(session: Session): Promise<void> {
   assert("owner revokes immediately", (await json("DELETE", `${BASE}/v1/sessions/${session.sessionId}`, session.ownerToken)).status === 204);
   assert("agent snapshot rejected after revoke", (await json("GET", session.agentUrl)).status === 401);
   assert("owner poll rejected after revoke", (await json("GET", session.proposalUrl, session.ownerToken)).status === 401);
+  assert("proposal POST rejected after revoke", (await json("POST", session.proposalUrl, session.agentToken, { schemaVersion: "1", kind: "template-proposal", template: { name: "Late", exercises: [{ exerciseId: "exercise-1", targetSets: 1, targetReps: "8", restSeconds: 60 }] } })).status === 401);
 }
 
 async function verifySnapshotLimit(): Promise<void> {
@@ -89,6 +103,7 @@ async function verifyExpiry(): Promise<void> {
   assert("snapshot available before expiry", (await json("GET", session.agentUrl)).status === 200);
   await new Promise((resolve) => setTimeout(resolve, 31_500));
   assert("expired agent token rejected", (await json("GET", session.agentUrl)).status === 410);
+  assert("expired proposal POST rejected", (await json("POST", session.proposalUrl, session.agentToken, { schemaVersion: "1", kind: "template-proposal", template: { name: "Late", exercises: [{ exerciseId: "exercise-1", targetSets: 1, targetReps: "8", restSeconds: 60 }] } })).status === 410);
   assert("expired owner token rejected", (await json("GET", session.proposalUrl, session.ownerToken)).status === 410);
 }
 

@@ -3,6 +3,7 @@ import {
   AGENT_ACCESS_JSON_SCHEMA,
   AGENT_ACCESS_SCHEMA_VERSION,
   AGENT_ACCESS_SKILL,
+  MAX_PROPOSALS_PER_SESSION,
   MAX_PROPOSAL_BYTES,
   MAX_SNAPSHOT_BYTES,
   validateAgentSnapshot,
@@ -10,6 +11,7 @@ import {
   type AgentSnapshot,
   type AgentTemplateProposal,
 } from "../../../shared/agent-access";
+import { randomCapability, safeCapabilityEqual } from "./security";
 
 type StoredSession = {
   ownerHash: string;
@@ -49,11 +51,6 @@ async function digest(value: string): Promise<string> {
     .join("");
 }
 
-function randomToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-}
-
 function bearer(request: Request): string {
   const value = request.headers.get("Authorization");
   return value?.startsWith("Bearer ") ? value.slice(7) : "";
@@ -63,19 +60,14 @@ function authorizedToken(request: Request, url: URL): string {
   return bearer(request) || url.searchParams.get("token") || "";
 }
 
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let different = 0;
-  for (let index = 0; index < a.length; index++) different |= a.charCodeAt(index) ^ b.charCodeAt(index);
-  return different === 0;
-}
-
 function numericEnv(value: string | undefined, fallback: number, min: number, max: number): number {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= min && parsed <= max ? parsed : fallback;
 }
 
 async function readJson(request: Request, maximum: number): Promise<unknown> {
+  const declared = Number(request.headers.get("Content-Length"));
+  if (Number.isFinite(declared) && declared > maximum) throw new RequestError("request body too large", 413);
   const raw = await request.text();
   if (new TextEncoder().encode(raw).byteLength > maximum) throw new RequestError("request body too large", 413);
   try {
@@ -115,6 +107,8 @@ export class RelaySession extends DurableObject<Env> {
 
   async submit(agentHash: string, proposal: AgentTemplateProposal): Promise<StoredProposal> {
     this.active(agentHash, "agent");
+    const count = Number(this.ctx.storage.sql.exec("SELECT count(*) AS count FROM proposals").toArray()[0]?.count ?? 0);
+    if (count >= MAX_PROPOSALS_PER_SESSION) throw new RequestError("proposal limit exceeded", 429);
     const item = { id: crypto.randomUUID(), submittedAt: new Date().toISOString(), proposal };
     this.ctx.storage.sql.exec("INSERT INTO proposals VALUES (?, ?, ?)", item.id, item.submittedAt, JSON.stringify(proposal));
     return item;
@@ -159,7 +153,7 @@ export class RelaySession extends DurableObject<Env> {
       throw new RequestError("session expired", 410);
     }
     const expected = role === "owner" ? row.owner_hash : row.agent_hash;
-    if (!safeEqual(tokenHash, expected)) throw new RequestError("invalid token", 401);
+    if (!safeCapabilityEqual(tokenHash, expected)) throw new RequestError("invalid token", 401);
     return row;
   }
 }
@@ -199,9 +193,9 @@ async function createSession(request: Request, env: Env): Promise<Response> {
   const ttl = Number.isInteger(body.ttlSeconds)
     ? Math.max(30, Math.min(configuredTtl, body.ttlSeconds!))
     : configuredTtl;
-  const sessionId = randomToken();
-  const ownerToken = randomToken();
-  const agentToken = randomToken();
+  const sessionId = randomCapability();
+  const ownerToken = randomCapability();
+  const agentToken = randomCapability();
   const expiresAt = Date.now() + ttl * 1000;
   const stub = env.AGENT_RELAY.getByName(sessionId);
   await stub.create({
@@ -220,7 +214,7 @@ async function createSession(request: Request, env: Env): Promise<Response> {
     agentToken,
     agentUrl,
     proposalUrl,
-    prompt: `Use the CableSnap Agent access session below to answer my workout question and propose one useful workout template. Use curl for every HTTP request (Cloudflare blocks some scripted clients). First fetch ${base}/v1/skill.md and ${base}/v1/schema.json, then read ${agentUrl}. Submit a proposal with POST ${proposalUrl} and header Authorization: Bearer ${agentToken}. If you cannot POST, give me only the validated JSON proposal block to paste into the CableSnap app.`,
+    prompt: `Read ${base}/v1/skill.md, ${base}/v1/schema.json, and ${agentUrl}. If HTTP works, POST exactly one validated proposal to ${proposalUrl} with Authorization: Bearer ${agentToken}; otherwise return exactly one fenced JSON proposal for paste-back.`, 
   }, 201);
 }
 
@@ -228,8 +222,10 @@ async function handleSession(request: Request, env: Env, url: URL, segments: str
   const [, , sessionId, action] = segments;
   if (!sessionId) return error("not found", 404);
   const stub = env.AGENT_RELAY.getByName(sessionId);
-  const tokenHash = await digest(authorizedToken(request, url));
-  if (request.method === "GET" && action === "snapshot") return response(await stub.snapshot(tokenHash));
+  if (request.method === "GET" && action === "snapshot") {
+    return response(await stub.snapshot(await digest(authorizedToken(request, url))));
+  }
+  const tokenHash = await digest(bearer(request));
   if (request.method === "GET" && action === "proposals") return response(await stub.poll(tokenHash));
   if (request.method === "POST" && action === "proposals") {
     const parsed = await readJson(request, MAX_PROPOSAL_BYTES);
@@ -256,6 +252,7 @@ function caughtResponse(caught: unknown): Response {
   if (caught instanceof RequestError) return error(caught.message, caught.status);
   if (caught instanceof Error) {
     if (caught.message.includes("invalid token")) return error("invalid token", 401);
+    if (caught.message.includes("proposal limit exceeded")) return error("proposal limit exceeded", 429);
     if (caught.message.includes("session expired")) return error("session expired", 410);
     if (caught.message.includes("session revoked or not found")) return error("session revoked or not found", 401);
   }

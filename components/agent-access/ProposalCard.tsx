@@ -10,26 +10,32 @@ type Props = {
   submittedAt?: string;
   imported: boolean;
   busy: boolean;
+  exerciseNames: Record<string, string>;
   onImport: () => void;
 };
 
-export function ProposalCard({ proposal, submittedAt, imported, busy, onImport }: Props) {
+export function ProposalCard({ proposal, submittedAt, imported, busy, exerciseNames, onImport }: Props) {
+  const hasMissingExercise = proposal.template.exercises.some(({ exerciseId }) => !exerciseNames[exerciseId]);
   return (
     <Card variant="outline" testID="agent-proposal-card">
       <Text variant="title" testID="agent-proposal-name">{proposal.template.name}</Text>
       {proposal.template.notes ? <Text variant="caption">{proposal.template.notes}</Text> : null}
       {submittedAt ? <Text variant="caption">Received {new Date(submittedAt).toLocaleTimeString()}</Text> : null}
       <View style={styles.list}>
-        {proposal.template.exercises.map((exercise, index) => (
-          <Text key={`${exercise.exerciseId}-${index}`} variant="caption">
-            {index + 1}. {exercise.exerciseId} · {exercise.targetSets} sets · {exercise.targetReps} reps · {exercise.restSeconds}s rest
-          </Text>
-        ))}
+        {proposal.template.exercises.map((exercise, index) => {
+          const name = exerciseNames[exercise.exerciseId];
+          return (
+            <Text key={`${exercise.exerciseId}-${index}`} variant="caption" testID={name ? "agent-proposal-exercise" : "agent-proposal-missing-exercise"}>
+              {index + 1}. {name || `Unavailable exercise (${exercise.exerciseId})`} · {exercise.targetSets} sets · {exercise.targetReps} reps · {exercise.restSeconds}s rest
+            </Text>
+          );
+        })}
       </View>
+      {hasMissingExercise ? <Text variant="caption" testID="agent-proposal-library-warning">Import blocked: one or more exercises are no longer in your exercise library.</Text> : null}
       <Button
         label={imported ? "Imported" : "Review and import to templates"}
         onPress={onImport}
-        disabled={busy || imported}
+        disabled={busy || imported || hasMissingExercise}
         loading={busy}
         testID="agent-import-proposal"
       />
