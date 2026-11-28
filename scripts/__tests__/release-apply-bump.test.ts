@@ -148,6 +148,10 @@ function makeSandbox(): Sandbox {
     sh("git", ["init", "--initial-branch=main"], runner);
     fs.mkdirSync(path.join(runner, "scripts"));
     fs.copyFileSync(SCRIPT, path.join(runner, "scripts", "release-apply-bump.sh"));
+    fs.copyFileSync(
+        path.join(REPO_ROOT, "scripts", "release-version-code.sh"),
+        path.join(runner, "scripts", "release-version-code.sh"),
+    );
     fs.chmodSync(path.join(runner, "scripts", "release-apply-bump.sh"), 0o755);
 
     fs.writeFileSync(

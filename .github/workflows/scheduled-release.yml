@@ -215,18 +215,21 @@ jobs:
         if: steps.check_commits.outputs.has_new_commits == 'true' && steps.changelog_gate.outputs.should_release == 'true'
         id: next_vcode
         run: |
-          # Republish mode (BLD-1101): use the versionCode already committed
-          # in fdroid metadata (no +1 increment).
+          # BLD-5101: read the base Android code from app.config.ts, verify it
+          # exactly matches fdroid metadata, and reject codes whose highest
+          # VercodeOperation result would exceed Android's integer limit.
+          # CurrentVersionCode is a base code, never an ABI-expanded code.
+          MODE=next
           if [ "${{ inputs.republish_current }}" = "true" ]; then
-            NEXT=$(grep 'CurrentVersionCode:' fdroid/metadata/com.persoack.cablesnap.yml | awk '{print $2}')
-            echo "version_code=$NEXT" >> "$GITHUB_OUTPUT"
-            echo "Republish version code (from fdroid metadata): $NEXT"
-            exit 0
+            MODE=current
           fi
-          CURRENT=$(grep 'CurrentVersionCode:' fdroid/metadata/com.persoack.cablesnap.yml | awk '{print $2}')
-          NEXT=$((CURRENT + 1))
+          NEXT=$(bash scripts/release-version-code.sh "$MODE")
           echo "version_code=$NEXT" >> "$GITHUB_OUTPUT"
-          echo "Next version code: $NEXT"
+          if [ "$MODE" = "current" ]; then
+            echo "Republish version code (from validated app.config.ts): $NEXT"
+          else
+            echo "Next version code (from validated app.config.ts): $NEXT"
+          fi
 
       # Setup Node + deps BEFORE the bump applier — `scripts/release-apply-bump.sh`
       # invokes `npm run changelog:gen` which needs `tsx`. The Android build

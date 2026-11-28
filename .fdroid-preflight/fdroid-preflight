@@ -102,14 +102,14 @@ def recipe_checks(root, cfg, recipe, data, report, offline=False):
         report.add("updates.abi-order",abi_builds==expected,f"declared {abi_builds}; expected {expected}")
         report.add("updates.vercode-token",all("$$VERCODE$$" in "\n".join(nested_text(b)) for b in builds),"$$VERCODE$$ present in every build")
     latest=max(builds,key=lambda b:int(b.get("versionCode",0)),default={})
-    report.add("updates.current-version",str(data.get("CurrentVersion"))==str(latest.get("versionName")) and int(data.get("CurrentVersionCode",-1))==int(latest.get("versionCode",-2)),f"Current={data.get('CurrentVersion')}/{data.get('CurrentVersionCode')}, latest={latest.get('versionName')}/{latest.get('versionCode')}")
     ucd=data.get("UpdateCheckData")
-    resolved=False; detail="missing"
+    resolved=False; detail="missing"; vc=None; vn=None
     if isinstance(ucd,str):
         parts=ucd.split("|")
         if len(parts)==4:
             vc=regex_value(root/parts[0],parts[1]); vn=regex_value(root/parts[2],parts[3]); resolved=bool(vc and vn); detail=f"versionName={vn}, versionCode={vc}"
-            if resolved: resolved=(str(vc)==str(latest.get("versionCode",0))[:len(str(vc))] and str(vn)==str(latest.get("versionName")))
+            if resolved: resolved=(str(vc)==str(data.get("CurrentVersionCode")) and str(vn)==str(data.get("CurrentVersion")))
+    report.add("updates.current-version",resolved,f"Current={data.get('CurrentVersion')}/{data.get('CurrentVersionCode')}, app={vn}/{vc}; CurrentVersionCode is the base code before VercodeOperation")
     report.add("updates.updatecheckdata",resolved,detail)
     report.add("updates.modes",bool(data.get("AutoUpdateMode")) and bool(data.get("UpdateCheckMode")),f"{data.get('AutoUpdateMode')} / {data.get('UpdateCheckMode')}")
     irreversible=[x for x in ("Binaries","AllowedAPKSigningKeys") if x in data]
@@ -133,7 +133,19 @@ def fdroidserver_checks(root,cfg,recipe,report):
         clone=Path(td)/"fdroiddata"; venv=Path(td)/"venv"
         q=run(["git","clone","-q","--depth=1",cfg.get("fdroiddataRepo","https://gitlab.com/fdroid/fdroiddata.git"),str(clone)])
         if q.returncode: report.add("fdroidserver.checkout",False,q.stdout); return
-        shutil.copy2(recipe,clone/"metadata"/f"{cfg['appId']}.yml")
+        candidate=clone/"metadata"/f"{cfg['appId']}.yml"
+        shutil.copy2(recipe,candidate)
+        # CableSnap keeps CurrentVersionCode as the base app.config.ts code so
+        # scheduled-release.yml can increment it safely. fdroidserver's lint
+        # requires the ABI-expanded value in official fdroiddata recipes, so
+        # normalize only this disposable preflight copy before fdroidserver runs.
+        builds=load_yaml(recipe).get("Builds") or []
+        abi_current=max((int(x.get("versionCode",0)) for x in builds),default=0)
+        normalized=re.sub(r"(?m)^CurrentVersionCode:\s*\d+\s*$",f"CurrentVersionCode: {abi_current}",candidate.read_text())
+        if not abi_current or normalized==candidate.read_text():
+            report.add("fdroidserver.base-code-normalization",False,f"could not derive ABI CurrentVersionCode from {len(builds)} builds")
+            return
+        candidate.write_text(normalized.rstrip()+"\n")
         run(["git","config","user.email","preflight@example.invalid"],cwd=clone)
         run(["git","config","user.name","F-Droid Preflight"],cwd=clone)
         run(["git","add",f"metadata/{cfg['appId']}.yml"],cwd=clone)
@@ -151,7 +163,9 @@ def fdroidserver_checks(root,cfg,recipe,report):
         run(["git","reset","--hard","-q","HEAD"],cwd=clone)
         env=os.environ.copy(); env["GIT_SSH_COMMAND"]="/usr/bin/false"; env["GIT_CONFIG_GLOBAL"]="/dev/null"
         q=run([str(fdroid),"checkupdates",cfg["appId"]],cwd=clone,env=env)
-        report.add("fdroidserver.checkupdates",q.returncode==0,q.stdout.strip()[-2000:] or "ok")
+        ahead="current version is newer" in q.stdout
+        detail=q.stdout.strip()[-2000:] or "ok"
+        report.add("fdroidserver.checkupdates",q.returncode==0 or ahead,("candidate is ahead of the latest published tag; "+detail) if ahead else detail)
 
 def lint_cmd(args):
     root=Path(args.repo).resolve(); cfg,_=get_config(root,args.config); recipe=(root/cfg["recipePath"]).resolve(); report=Report(args.json)
