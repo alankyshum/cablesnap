@@ -1,11 +1,11 @@
 AntiFeatures:
   NonFreeNet:
     en-US: Optional Strava integration uses Strava OAuth + api/v3 via the Cloudflare
-      Worker proxy at strava-proxy.alankyshum.workers.dev. Optional Agent access
-      uploads a user-selected, time-limited workout snapshot to a temporary relay
-      at cablesnap-agent-relay.alankyshum.workers.dev so an AI agent chosen by the
-      user can read it and propose templates; nothing is imported without review.
-      Core workout/nutrition tracking is local-first and works fully offline.
+      Worker proxy at strava-proxy.alankyshum.workers.dev. Optional Agent access uploads
+      a user-selected, time-limited workout snapshot to a temporary relay at cablesnap-agent-relay.alankyshum.workers.dev
+      so an AI agent chosen by the user can read it and propose templates; nothing
+      is imported without review. Core workout/nutrition tracking is local-first and
+      works fully offline.
 Categories:
   - Sports & Health
   - Workout
@@ -151,4 +151,4 @@ VercodeOperation:
   - 1000 * %c + 4
 UpdateCheckData: app.config.ts|versionCode:\s*(\d+)|app.config.ts|version:\s*["']([^"']+)["']
 CurrentVersion: 0.26.123
-CurrentVersionCode: 187008
+CurrentVersionCode: 187008004
