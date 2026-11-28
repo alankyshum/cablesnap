@@ -207,7 +207,12 @@ jobs:
           # See the script's own header for the ghost-release caveat and
           # the create-time counterpart in "Create GitHub Release with APK".
           TAG="${{ steps.latest_tag.outputs.tag }}"
-          NEXT=$(bash scripts/compute-next-release-version.sh "$TAG")
+          # A deleted/immutable-poisoned release can leave package.json ahead of
+          # the latest tag while its reservation is invisible to all GET APIs.
+          # Use the committed package version as a floor so the normal bump path
+          # advances past that ghost instead of targeting it again.
+          COMMITTED_VERSION=$(node -p "require('./package.json').version")
+          NEXT=$(bash scripts/compute-next-release-version.sh "$TAG" --floor-version "$COMMITTED_VERSION")
           echo "version=$NEXT" >> "$GITHUB_OUTPUT"
           echo "Next version: $NEXT"
 

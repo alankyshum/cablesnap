@@ -136,6 +136,7 @@ interface StubEnv {
     remoteTags?: string[];
     releases?: string[];
     repo?: string;
+    floorVersion?: string;
 }
 
 interface RunResult {
@@ -159,6 +160,9 @@ function runScript(latestTag: string, stubs: StubEnv = {}): RunResult {
         const args = [SCRIPT, latestTag];
         if (stubs.repo) {
             args.push("--repo", stubs.repo);
+        }
+        if (stubs.floorVersion) {
+            args.push("--floor-version", stubs.floorVersion);
         }
         // PATH-shadow: stubDir first so our git/gh win over the real ones.
         const env: NodeJS.ProcessEnv = {
@@ -202,6 +206,13 @@ describe("scripts/compute-next-release-version.sh (BLD-3223)", () => {
         const r = runScript("v0.26.67");
         expect(r.exitCode).toBe(0);
         expect(r.stdout.trim()).toBe("0.26.68");
+    });
+
+    it("uses the committed package version to skip an invisible immutable-release ghost", () => {
+        const r = runScript("v0.26.123", { floorVersion: "0.26.124" });
+        expect(r.exitCode).toBe(0);
+        expect(r.stdout.trim()).toBe("0.26.125");
+        expect(r.stderr).toContain("committed version v0.26.124 as release floor");
     });
 
     it("skips a version poisoned by a local tag", () => {
