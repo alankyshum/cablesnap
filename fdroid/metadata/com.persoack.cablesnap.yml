@@ -22,9 +22,9 @@ RepoType: git
 Repo: https://github.com/alankyshum/cablesnap.git
 
 Builds:
-  - versionName: 0.26.123
-    versionCode: 187008001
-    commit: 6be70f81bb02a9519b9f0ca2f79642ff0a4def72
+  - versionName: 0.26.124
+    versionCode: 187009001
+    commit: 08c6ac583d30c86ade96a574cdb8a009806c4e3f
     sudo:
       - apt-get update
       - apt-get install -y npm
@@ -52,9 +52,9 @@ Builds:
       - CABLESNAP_FDROID=1 CI=true NODE_ENV=production SENTRY_DISABLE_AUTO_UPLOAD=true
         gradle --no-daemon assembleReleaseFdroid -x lintVitalAnalyzeRelease
 
-  - versionName: 0.26.123
-    versionCode: 187008002
-    commit: 6be70f81bb02a9519b9f0ca2f79642ff0a4def72
+  - versionName: 0.26.124
+    versionCode: 187009002
+    commit: 08c6ac583d30c86ade96a574cdb8a009806c4e3f
     sudo:
       - apt-get update
       - apt-get install -y npm
@@ -82,9 +82,9 @@ Builds:
       - CABLESNAP_FDROID=1 CI=true NODE_ENV=production SENTRY_DISABLE_AUTO_UPLOAD=true
         gradle --no-daemon assembleReleaseFdroid -x lintVitalAnalyzeRelease
 
-  - versionName: 0.26.123
-    versionCode: 187008003
-    commit: 6be70f81bb02a9519b9f0ca2f79642ff0a4def72
+  - versionName: 0.26.124
+    versionCode: 187009003
+    commit: 08c6ac583d30c86ade96a574cdb8a009806c4e3f
     sudo:
       - apt-get update
       - apt-get install -y npm
@@ -112,9 +112,9 @@ Builds:
       - CABLESNAP_FDROID=1 CI=true NODE_ENV=production SENTRY_DISABLE_AUTO_UPLOAD=true
         gradle --no-daemon assembleReleaseFdroid -x lintVitalAnalyzeRelease
 
-  - versionName: 0.26.123
-    versionCode: 187008004
-    commit: 6be70f81bb02a9519b9f0ca2f79642ff0a4def72
+  - versionName: 0.26.124
+    versionCode: 187009004
+    commit: 08c6ac583d30c86ade96a574cdb8a009806c4e3f
     sudo:
       - apt-get update
       - apt-get install -y npm
@@ -151,4 +151,4 @@ VercodeOperation:
   - 1000 * %c + 4
 UpdateCheckData: app.config.ts|versionCode:\s*(\d+)|app.config.ts|version:\s*["']([^"']+)["']
 CurrentVersion: 0.26.124
-CurrentVersionCode: 187008005
+CurrentVersionCode: 187009

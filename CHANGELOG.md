@@ -22,10 +22,10 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Internal: Release CI now keeps Android base version codes separate from F-Droid ABI codes**, preventing an ABI-expanded code from being re-used as the next release base.
 
 ## v0.26.124 — 2026-11-28
-<!-- versionCode: 187008005 -->
+<!-- versionCode: 187009 -->
 
 - Replaced the in-app AI Coach with **Agent access** in Settings: share a temporary, token-scoped workout snapshot with your own AI agent, review proposed templates, and import them only after approval. Existing installs remove obsolete Coach data and credentials; nutrition is excluded and the app does not contact a third-party AI provider. Agent access enforces bounded lifetimes, strict scope and payload limits, expiry/revocation, unknown-exercise blocking, secure native-session recovery, exercise-name review, and fenced paste-back fallback.
 

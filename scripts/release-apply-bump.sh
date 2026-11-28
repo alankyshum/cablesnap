@@ -61,6 +61,9 @@ for f in package.json app.config.ts fdroid/metadata/com.persoack.cablesnap.yml C
     fi
 done
 
+# Reuse the release workflow's guard when the script is invoked directly.
+bash scripts/release-version-code.sh validate "$VCODE"
+
 echo "[bump] applying VERSION=$VERSION VERSION_CODE=$VCODE"
 
 # 1. package.json -----------------------------------------------------------

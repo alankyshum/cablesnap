@@ -46,7 +46,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: "#FF6038", // eslint-disable-line no-restricted-syntax
     },
     package: "com.persoack.cablesnap",
-  versionCode: 187008005,
+    versionCode: 187009,
   },
   web: {
     favicon: "./assets/favicon.png",
