@@ -22,7 +22,7 @@ marker) at release time.
 
 ## Unreleased
 
-_No user-facing changes yet._
+- **Internal: F-Droid recipe CI now trusts its mounted fdroiddata workspace**, allowing the automated four-ABI recipe build to run after a release.
 
 ## v0.26.125 — 2026-11-28
 <!-- versionCode: 187010 -->

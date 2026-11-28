@@ -29,5 +29,5 @@ mkdir -p "$WORK"/{build,logs,repo,tmp,unsigned} "$CACHE"
 stage "workspace setup"
 "$CONTAINER" run --rm --platform linux/amd64 \
   -v "$WORK:/repo" -v "$SERVER:/opt/fdroidserver" -v "$CACHE:/root/.gradle" -w /repo "$IMAGE" \
-  bash -lc 'source /etc/profile.d/bsenv.sh; export PATH=/opt/fdroidserver:$PATH PYTHONPATH=/opt/fdroidserver:/opt/fdroidserver/examples GRADLE_OPTS="-Dorg.gradle.workers.max=2 -Dorg.gradle.parallel=false"; fdroid build --verbose --on-server --no-tarball com.persoack.cablesnap'
+  bash -lc 'git config --global --add safe.directory /repo; source /etc/profile.d/bsenv.sh; export PATH=/opt/fdroidserver:$PATH PYTHONPATH=/opt/fdroidserver:/opt/fdroidserver/examples GRADLE_OPTS="-Dorg.gradle.workers.max=2 -Dorg.gradle.parallel=false"; fdroid build --verbose --on-server --no-tarball com.persoack.cablesnap'
 stage "fdroid recipe build"
