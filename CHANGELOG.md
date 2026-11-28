@@ -24,6 +24,7 @@ marker) at release time.
 
 - **Internal: F-Droid recipe CI now trusts its mounted fdroiddata workspace**, allowing the automated four-ABI recipe build to run after a release.
 - **Internal: F-Droid recipe CI removes a stale scanner ignore**, preventing the current Expo dependency graph from blocking all four ABI builds before Gradle runs.
+- **Internal: F-Droid recipe CI installs shared build packages once**, allowing all four ABI entries to run sequentially in its reusable container.
 
 ## v0.26.125 — 2026-11-28
 <!-- versionCode: 187010 -->
