@@ -24,10 +24,13 @@
 # real actionable escalation, not silent wedging.
 #
 # Usage:
-#   compute-next-release-version.sh <latest-tag> [--repo OWNER/REPO]
+#   compute-next-release-version.sh <latest-tag> [--repo OWNER/REPO] [--floor-version X.Y.Z]
 #
-#   <latest-tag>  Latest v-prefixed tag on the repo (empty → initial 0.1.0).
-#   --repo        Optional; owner/repo for the `gh api` release check.
+#   <latest-tag>     Latest v-prefixed tag on the repo (empty → initial 0.1.0).
+#   --repo           Optional; owner/repo for the `gh api` release check.
+#   --floor-version  Current package/app version; prevents invisible immutable-
+#                    release ghosts from making the pipeline re-target a
+#                    version already committed on main.
 #                 Defaults to $GITHUB_REPOSITORY (populated by Actions).
 #
 # Outputs (stdout):
@@ -47,11 +50,11 @@ set -euo pipefail
 MAX_SKIP=100
 
 usage() {
-    echo "usage: $0 <latest-tag> [--repo OWNER/REPO]" >&2
+    echo "usage: $0 <latest-tag> [--repo OWNER/REPO] [--floor-version X.Y.Z]" >&2
     exit 1
 }
 
-if [ "$#" -lt 1 ] || [ "$#" -gt 3 ]; then
+if [ "$#" -lt 1 ] || [ "$#" -gt 5 ]; then
     usage
 fi
 
@@ -59,10 +62,17 @@ LATEST_TAG="$1"
 shift || true
 
 REPO="${GITHUB_REPOSITORY:-}"
+FLOOR_VERSION=""
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --repo)
+            [ "$#" -ge 2 ] || usage
             REPO="$2"
+            shift 2
+            ;;
+        --floor-version)
+            [ "$#" -ge 2 ] || usage
+            FLOOR_VERSION="$2"
             shift 2
             ;;
         *)
@@ -142,6 +152,25 @@ fi
 MAJOR=$(echo "$VERSION" | cut -d. -f1)
 MINOR=$(echo "$VERSION" | cut -d. -f2)
 PATCH=$(echo "$VERSION" | cut -d. -f3)
+
+if [ -n "$FLOOR_VERSION" ]; then
+    if ! printf '%s' "$FLOOR_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        echo "::error::Floor version '$FLOOR_VERSION' is not a valid X.Y.Z version." >&2
+        exit 1
+    fi
+    FLOOR_MAJOR=$(echo "$FLOOR_VERSION" | cut -d. -f1)
+    FLOOR_MINOR=$(echo "$FLOOR_VERSION" | cut -d. -f2)
+    FLOOR_PATCH=$(echo "$FLOOR_VERSION" | cut -d. -f3)
+    if [ "$FLOOR_MAJOR" -gt "$MAJOR" ] ||
+       { [ "$FLOOR_MAJOR" -eq "$MAJOR" ] && [ "$FLOOR_MINOR" -gt "$MINOR" ]; } ||
+       { [ "$FLOOR_MAJOR" -eq "$MAJOR" ] && [ "$FLOOR_MINOR" -eq "$MINOR" ] && [ "$FLOOR_PATCH" -gt "$PATCH" ]; }; then
+        echo "Using committed version v$FLOOR_VERSION as release floor (ahead of latest tag $LATEST_TAG)." >&2
+        MAJOR="$FLOOR_MAJOR"
+        MINOR="$FLOOR_MINOR"
+        PATCH="$FLOOR_PATCH"
+    fi
+fi
+
 PATCH=$((PATCH + 1))
 NEXT="$MAJOR.$MINOR.$PATCH"
 
