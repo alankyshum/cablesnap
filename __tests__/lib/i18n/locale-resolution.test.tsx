@@ -2,7 +2,7 @@ import { Trans } from "@lingui/react/macro";
 import { i18n } from "@lingui/core";
 import { act, render } from "@testing-library/react-native";
 import { Text } from "react-native";
-import { activateLocale, catalogs, t } from "../../../lib/i18n";
+import { activateLocale, t } from "../../../lib/i18n";
 import { getLocaleFallbacks, resolveLocale } from "../../../lib/i18n/locales";
 import { I18nProvider } from "../../../lib/i18n/provider";
 import { LanguagePreferenceContext } from "../../../lib/language-preference";
@@ -16,11 +16,6 @@ describe("locale resolution", () => {
     ]);
   });
 
-  it("includes the AI Coach floating tab label in every maintained catalog", () => {
-    expect(catalogs["en-US"]!["floatingTabBar.tabs.aiCoach"]).toEqual("AI Coach");
-    expect(catalogs["zh-TW"]!["floatingTabBar.tabs.aiCoach"]).toEqual("AI 教練");
-    expect(catalogs["zh-CN"]!["floatingTabBar.tabs.aiCoach"]).toEqual("AI 教练");
-  });
   it.each([
     ["zh-Hant-TW", "zh-TW"], ["zh-Hant", "zh-TW"], ["zh-Hant-HK", "zh-TW"],
     ["zh-HK", "zh-TW"], ["zh-MO", "zh-TW"], ["zh", "zh-TW"], ["zh-TW", "zh-TW"],

@@ -155,7 +155,7 @@ export async function performAutoBackup(): Promise<{
 
     // Automatic backups are always credential-free, regardless of any manual
     // export preference. They remain safe to retain on device.
-    const data = await exportAllData({ includeCredentials: false });
+    const data = await exportAllData();
     const json = JSON.stringify(data);
     const filename = buildFilename();
     const dir = getBackupDir();

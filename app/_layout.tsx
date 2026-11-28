@@ -42,7 +42,7 @@ import { WEB_UNSUPPORTED_MESSAGE } from "../lib/web-support";
 import * as Sentry from '@sentry/react-native';
 import { mediaSurfaceMountCount } from '@/lib/media/replay-gate';
 import { filterLocalhostEvents } from '@/lib/sentry-localhost-filter';
-import { redactSentryBreadcrumb } from '@/lib/ai/redact';
+import { redactSentryBreadcrumb } from '@/lib/sentry-redact';
 import { isSentryEnabled, resolveSentryDsn } from '@/lib/sentry-enabled';
 import { ShakeToReportBridge } from '@/components/ShakeToReportBridge';
 

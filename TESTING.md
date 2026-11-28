@@ -9,5 +9,4 @@ For a claimed regression, identify the production root cause and demonstrate RED
 ## Known test-command hazards
 
 - `npm test` invokes `jest.global-setup.js`, which runs `patch-package` and writes into `node_modules`; don't run it against the working checkout without a verified isolated process/filesystem boundary.
-- `npm run test:ai:live` uses provider credentials and HTTPS. Never use it as part of ordinary local verification; do not expose real credentials to test processes.
 - Playwright/E2E commands create and remove `.expo/e2e-web-${PORT}`, launch a server, and write reports. Isolate those paths and do not reuse an existing server before running them.

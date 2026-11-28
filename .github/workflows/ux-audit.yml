@@ -45,7 +45,7 @@ permissions:
 jobs:
   vocab-audit:
     name: Vocab consistency audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - name: Checkout
@@ -61,7 +61,7 @@ jobs:
     # AC6: advisory only — do NOT add to branch protection required checks until
     # Phase 2 (≥50 PR runs + ≥98% pass rate observed). BLD-2861.
     if: github.event_name == 'pull_request' || github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     concurrency:
       group: scenario-gate-pr-${{ github.ref }}
@@ -121,7 +121,7 @@ jobs:
     # Only run the heavy screenshot capture on schedule or manual dispatch,
     # not on every PR/push (where we only need the vocab audit).
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - name: Checkout

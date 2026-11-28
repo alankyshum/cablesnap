@@ -18,8 +18,6 @@ export const TAB_SCREENS: Screen[] = [
 ];
 
 export const AI_SCREENS: Screen[] = [
-  { name: "AI Coach", path: "/ai-coach" },
-  { name: "AI Provider Settings", path: "/settings/ai-key" },
 ];
 
 export const STORE_SCREENS: Screen[] = [
@@ -56,6 +54,7 @@ export const STANDALONE_SCREENS: Screen[] = [
 ];
 
 export const SETTINGS_SCREENS: Screen[] = [
+  { name: "Agent Access", path: "/settings/agent-access" },
   { name: "Advanced Sets Settings", path: "/settings/advanced-sets" },
   { name: "Backups Settings", path: "/settings/backups" },
   { name: "Gym Profiles Settings", path: "/settings/gym-profiles" },

@@ -53,6 +53,7 @@ import { getEnabled as getTrainingDayMacrosEnabled } from '@/lib/db/training-day
 import { useQueryClient } from '@tanstack/react-query';
 import { clearImportSession, createImportSession } from '@/lib/import-session';
 import { ShakeToReportRow } from '@/components/settings/ShakeToReportRow';
+import { AgentAccessLink } from '@/components/settings/AgentAccessLink';
 
 /**
  * Extra bottom clearance below the floating tab bar zone, derived from spacing
@@ -329,6 +330,8 @@ export default function Settings() {
             bareContent
           />
           <Separator style={styles.tileDivider} />
+          <AgentAccessLink colors={colors} />
+          <Separator style={styles.tileDivider} />
           <ShareSettingsCard colors={colors} bareContent />
         </SettingsTile>
 
@@ -486,9 +489,9 @@ export default function Settings() {
         initialSelected={BACKUP_CATEGORY_ORDER}
         loading={loading}
         onClose={() => setExportSheetVisible(false)}
-        onConfirm={(selectedCategories, includeCredentials) => {
+        onConfirm={(selectedCategories) => {
           setExportSheetVisible(false);
-          void handleExport(deps, selectedCategories, includeCredentials);
+          void handleExport(deps, selectedCategories);
         }}
       />
       <BackupCategorySheet

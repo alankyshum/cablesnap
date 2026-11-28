@@ -68,10 +68,6 @@ jest.mock("../../lib/db/import-export", () => ({
   exportAllData: jest.fn(),
 }));
 
-jest.mock("../../lib/ai/key-vault", () => ({
-  get: jest.fn(),
-}));
-
 const mockGetAppSetting = getAppSetting as jest.Mock;
 const mockSetAppSetting = setAppSetting as jest.Mock;
   const mockExportAllData = exportAllData as jest.Mock;
@@ -109,16 +105,9 @@ describe("lib/backup", () => {
     });
   });
 
-  it("automatic backups never include credentials", async () => {
-    const credential = "sk-or-v1-" + "c".repeat(64);
-    mockExportAllData.mockImplementation(async (options: { includeCredentials?: boolean }) => ({
-      version: 8,
-      data: { ai_coach: options.includeCredentials ? { openrouter_api_key: credential } : {} },
-      counts: {},
-    }));
+  it("automatic backups use the supported export path", async () => {
     await backup.performAutoBackup();
-    expect(mockExportAllData).toHaveBeenCalledWith({ includeCredentials: false });
-    expect(JSON.stringify(mockFiles)).not.toContain(credential);
+    expect(mockExportAllData).toHaveBeenCalledWith();
   });
 
   describe("isAutoBackupEnabled", () => {
