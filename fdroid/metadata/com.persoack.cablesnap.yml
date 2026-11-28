@@ -22,9 +22,9 @@ RepoType: git
 Repo: https://github.com/alankyshum/cablesnap.git
 
 Builds:
-  - versionName: 0.26.119
-    versionCode: 187001
-    commit: 35db6e07662d1dd1885c872c11b22d92bb5ec57c
+  - versionName: 0.26.123
+    versionCode: 187008001
+    commit: 6be70f81bb02a9519b9f0ca2f79642ff0a4def72
     sudo:
       - apt-get update
       - apt-get install -y npm
@@ -52,9 +52,9 @@ Builds:
       - CABLESNAP_FDROID=1 CI=true NODE_ENV=production SENTRY_DISABLE_AUTO_UPLOAD=true
         gradle --no-daemon assembleReleaseFdroid -x lintVitalAnalyzeRelease
 
-  - versionName: 0.26.119
-    versionCode: 187002
-    commit: 35db6e07662d1dd1885c872c11b22d92bb5ec57c
+  - versionName: 0.26.123
+    versionCode: 187008002
+    commit: 6be70f81bb02a9519b9f0ca2f79642ff0a4def72
     sudo:
       - apt-get update
       - apt-get install -y npm
@@ -82,9 +82,9 @@ Builds:
       - CABLESNAP_FDROID=1 CI=true NODE_ENV=production SENTRY_DISABLE_AUTO_UPLOAD=true
         gradle --no-daemon assembleReleaseFdroid -x lintVitalAnalyzeRelease
 
-  - versionName: 0.26.119
-    versionCode: 187003
-    commit: 35db6e07662d1dd1885c872c11b22d92bb5ec57c
+  - versionName: 0.26.123
+    versionCode: 187008003
+    commit: 6be70f81bb02a9519b9f0ca2f79642ff0a4def72
     sudo:
       - apt-get update
       - apt-get install -y npm
@@ -112,9 +112,9 @@ Builds:
       - CABLESNAP_FDROID=1 CI=true NODE_ENV=production SENTRY_DISABLE_AUTO_UPLOAD=true
         gradle --no-daemon assembleReleaseFdroid -x lintVitalAnalyzeRelease
 
-  - versionName: 0.26.119
-    versionCode: 187004
-    commit: 35db6e07662d1dd1885c872c11b22d92bb5ec57c
+  - versionName: 0.26.123
+    versionCode: 187008004
+    commit: 6be70f81bb02a9519b9f0ca2f79642ff0a4def72
     sudo:
       - apt-get update
       - apt-get install -y npm
