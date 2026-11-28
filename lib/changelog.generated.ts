@@ -10,6 +10,12 @@ export interface ReleaseEntry {
 
 export const CHANGELOG: ReleaseEntry[] = [
   {
+    "version": "0.26.125",
+    "date": "2026-11-28",
+    "versionCode": 187010,
+    "body": "- **Internal: Release CI now keeps Android base version codes separate from F-Droid ABI codes**, preventing an ABI-expanded code from being re-used as the next release base. It also advances past immutable-release tag reservations that are invisible to the GitHub release API."
+  },
+  {
     "version": "0.26.124",
     "date": "2026-11-28",
     "versionCode": 187009,

@@ -150,5 +150,5 @@ VercodeOperation:
   - 1000 * %c + 3
   - 1000 * %c + 4
 UpdateCheckData: app.config.ts|versionCode:\s*(\d+)|app.config.ts|version:\s*["']([^"']+)["']
-CurrentVersion: 0.26.124
-CurrentVersionCode: 187009
+CurrentVersion: 0.26.125
+CurrentVersionCode: 187010
